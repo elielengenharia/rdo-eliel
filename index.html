@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0F172A">
+  <title>Eliel Engenharia — Gestão Multi-Obras</title>
+  <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { -webkit-tap-highlight-color: transparent; user-select: none; }
+    input, textarea, select { user-select: text; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans pb-24">
+
+  <header class="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <div class="bg-white p-1 rounded-xl shadow w-12 h-12 flex items-center justify-center overflow-hidden">
+        <img src="WA_1786840644654.jpeg" alt="Eliel Engenharia" class="object-cover w-full h-full rounded-lg">
+      </div>
+      <div>
+        <h1 class="font-bold text-base text-sky-400 leading-tight">Eliel Engenharia</h1>
+        <p class="text-[10px] text-slate-300">CREA-PA 1520297858PA • (94) 99140-5022</p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="abrirGerenciadorObras()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg transition flex items-center gap-1.5 border border-slate-700 shadow">
+        <i class="fa-solid fa-folder-tree text-sky-400"></i> Obras
+      </button>
+      <button onclick="exportarRelatorio()" class="bg-sky-600 active:bg-sky-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow">
+        <i class="fa-solid fa-file-pdf"></i> Exportar
+      </button>
+    </div>
+  </header>
+
+  <div id="pwaBanner" class="hidden bg-sky-600 text-white p-3 mx-4 mt-4 rounded-xl shadow-lg flex justify-between items-center text-xs">
+    <div class="flex items-center gap-2">
+      <i class="fa-solid fa-mobile-screen-button text-lg"></i>
+      <span>Instalar app da <strong>Eliel Engenharia</strong> na tela inicial?</span>
+    </div>
+    <button onclick="instalarPwa()" class="bg-slate-900 text-sky-400 font-bold px-3 py-1.5 rounded-lg shadow">Instalar</button>
+  </div>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+    <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-2">
+      <div class="flex justify-between items-center border-b pb-2">
+        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Obra Selecionada</span>
+        <button onclick="abrirModalNovaObra()" class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full hover:bg-emerald-200 transition flex items-center gap-1">
+          <i class="fa-solid fa-plus"></i> Nova Obra
+        </button>
+      </div>
+      
+      <div>
+        <select id="seletorObraAtiva" onchange="trocarObraAtiva(this.value)" class="w-full text-xs font-bold p-3 border rounded-xl bg-slate-50 text-slate-900 focus:outline-sky-600">
+        </select>
+      </div>
+
+      <div class="flex justify-between items-center text-xs text-slate-500 pt-1">
+        <span id="txtEnderecoObra" class="flex items-center gap-1"><i class="fa-solid fa-location-dot text-sky-600"></i> Tucumã - PA</span>
+        <button onclick="editarObraAtual()" class="text-sky-600 font-semibold hover:underline">Editar Dados/Equipe</button>
+      </div>
+    </section>
+
+    <dialog id="modalGerenciador" class="p-0 rounded-2xl max-w-md w-full bg-white backdrop:bg-slate-900/60 shadow-2xl border-0">
+      <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+        <h3 class="font-bold text-sm text-sky-400 flex items-center gap-2">
+          <i class="fa-solid fa-building-user"></i> Minhas Obras Cadastradas
+        </h3>
+        <button onclick="fecharGerenciadorObras()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+      <div class="p-4 space-y-3">
+        <div id="listaObrasCadastradas" class="space-y-2 max-h-[60vh] overflow-y-auto">
+        </div>
+        <button onclick="abrirModalNovaObra()" class="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl hover:bg-emerald-700 transition text-xs flex items-center justify-center gap-2">
+          <i class="fa-solid fa-plus"></i> Cadastrar Nova Obra
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="modalFormObra" class="p-0 rounded-2xl max-w-md w-full bg-white backdrop:bg-slate-900/60 shadow-2xl border-0">
+      <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+        <h3 id="tituloModalObra" class="font-bold text-sm text-sky-400">Nova Obra</h3>
+        <button onclick="fecharModalObra()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+      <form onsubmit="salvarDadosObra(event)" class="p-4 space-y-3 text-xs max-h-[80vh] overflow-y-auto">
+        <input type="hidden" id="formObraId">
+        <div>
+          <label class="font-bold text-slate-700">Nome da Obra / Projeto</label>
+          <input type="text" id="formNomeObra" placeholder="Ex: Residencial Fase do Cinza (210m²)" class="w-full p-2.5 border rounded-lg bg-slate-50 mt-1" required>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700">Endereço / Localização</label>
+          <input type="text" id="formEnderecoObra" placeholder="Ex: Tucumã - PA" class="w-full p-2.5 border rounded-lg bg-slate-50 mt-1" required>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Equipe de Campo Desta Obra:</label>
+          <span class="text-[10px] text-slate-400 block mb-2">Digite um colaborador por linha (Nome - Cargo):</span>
+          <textarea id="formEquipeObra" rows="4" placeholder="Lucas Amir - Pedreiro Líder&#10;Júnior - Pedreiro 2&#10;Bruno - Ajudante 1" class="w-full p-2.5 border rounded-lg bg-slate-50 font-mono text-xs" required></textarea>
+        </div>
+        <button type="submit" class="w-full bg-sky-600 text-white font-bold p-3 rounded-xl hover:bg-sky-700 transition">
+          💾 Salvar Obra
+        </button>
+      </form>
+    </dialog>
+
+    <form id="diarioForm" onsubmit="salvarRegistro(event)" class="space-y-4">
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+        <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-2">
+          <i class="fa-solid fa-calendar-day text-sky-600"></i> Data & Condições Climáticas
+        </h3>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[11px] font-semibold text-slate-600">Data do Registro</label>
+            <input type="date" id="dataObra" class="w-full text-xs p-3 border rounded-xl bg-slate-50 focus:outline-sky-600 font-medium" required>
+          </div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-600">Tempo / Clima</label>
+            <select id="clima" class="w-full text-xs p-3 border rounded-xl bg-slate-50 focus:outline-sky-600 font-medium">
+              <option value="Ensolarado">☀️ Ensolarado</option>
+              <option value="Nublado">⛅ Nublado</option>
+              <option value="Chuvoso">🌧️ Chuvoso (Praticável)</option>
+              <option value="Chuva Intensa">⛈️ Chuva (Impraticável)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+        <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-2">
+          <i class="fa-solid fa-users text-sky-600"></i> Efetivo Presente Hoje
+        </h3>
+        <div id="containerEquipe" class="grid grid-cols-2 gap-2 text-xs">
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-2">
+        <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-sky-600"></i> Atividades do Dia
+        </h3>
+        <textarea id="atividades" rows="3" placeholder="Descreva os serviços executados hoje..." class="w-full text-xs p-3 border rounded-xl bg-slate-50 focus:outline-sky-600" required></textarea>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-2">
+        <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-2">
+          <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Ocorrências / Materiais
+        </h3>
+        <textarea id="ocorrencias" rows="2" placeholder="Observações, entregas de materiais ou paralisações..." class="w-full text-xs p-3 border rounded-xl bg-slate-50 focus:outline-sky-600"></textarea>
+      </div>
+
+      <button type="submit" class="w-full bg-slate-900 active:bg-slate-800 text-white font-bold p-4 rounded-2xl shadow-lg transition text-sm flex items-center justify-center gap-2">
+        <i class="fa-solid fa-floppy-disk text-sky-400"></i> Salvar Diário Nesta Obra
+      </button>
+    </form>
+
+    <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+      <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center justify-between">
+        <span><i class="fa-solid fa-clock-rotate-left text-sky-600"></i> Histórico Desta Obra</span>
+        <span id="totalRegistros" class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">0 salvos</span>
+      </h3>
+      <div id="historicoList" class="space-y-2 text-xs divide-y">
+        <p class="text-slate-400 text-center py-4">Nenhum diário registrado para esta obra.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('dataObra').valueAsDate = new Date();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Erro:', err));
+    }
+
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('pwaBanner').classList.remove('hidden');
+    });
+
+    function instalarPwa() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            document.getElementById('pwaBanner').classList.add('hidden');
+          }
+          deferredPrompt = null;
+        });
+      }
+    }
+
+    const obrasPadrao = [
+      {
+        id: "obra_1",
+        nome: "Residencial Fase do Cinza (210,38 m²)",
+        endereco: "Tucumã - PA",
+        equipe: [
+          { nome: "Lucas Amir", cargo: "Pedreiro Líder" },
+          { nome: "Júnior", cargo: "Pedreiro 2" },
+          { nome: "Bruno", cargo: "Ajudante 1" },
+          { nome: "Rosinaldo", cargo: "Ajudante 2" }
+        ]
+      }
+    ];
+
+    let obras = JSON.parse(localStorage.getItem('obras_eliel')) || obrasPadrao;
+    let obraAtivaId = localStorage.getItem('obra_ativa_id') || obras[0].id;
+    let diarios = JSON.parse(localStorage.getItem('diarios_eliel_v3')) || [];
+
+    function getObraAtual() {
+      return obras.find(o => o.id === obraAtivaId) || obras[0];
+    }
+
+    function renderSeletor() {
+      const select = document.getElementById('seletorObraAtiva');
+      select.innerHTML = obras.map(o => `
+        <option value="${o.id}" ${o.id === obraAtivaId ? 'selected' : ''}>🏢 ${o.nome}</option>
+      `).join('');
+
+      const atual = getObraAtual();
+      document.getElementById('txtEnderecoObra').innerHTML = `<i class="fa-solid fa-location-dot text-sky-600"></i> ${atual.endereco}`;
+
+      const containerEq = document.getElementById('containerEquipe');
+      containerEq.innerHTML = atual.equipe.map((colab, idx) => `
+        <label class="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer active:bg-sky-50">
+          <input type="checkbox" id="eq_${idx}" checked class="w-4 h-4 rounded text-sky-600">
+          <span><strong>${colab.nome}</strong><br><small class="text-slate-500">${colab.cargo}</small></span>
+        </label>
+      `).join('');
+
+      renderHistorico();
+    }
+
+    function trocarObraAtiva(id) {
+      obraAtivaId = id;
+      localStorage.setItem('obra_ativa_id', id);
+      renderSeletor();
+    }
+
+    function abrirGerenciadorObras() {
+      const lista = document.getElementById('listaObrasCadastradas');
+      lista.innerHTML = obras.map(o => `
+        <div class="p-3 bg-slate-50 border rounded-xl flex justify-between items-center ${o.id === obraAtivaId ? 'border-sky-500 ring-1 ring-sky-500' : ''}">
+          <div>
+            <h4 class="font-bold text-xs text-slate-800">${o.nome}</h4>
+            <p class="text-[10px] text-slate-500">${o.endereco} • ${o.equipe.length} colaboradores</p>
+          </div>
+          <div class="flex gap-1">
+            <button onclick="editarObraId('${o.id}')" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded"><i class="fa-solid fa-pen"></i></button>
+            ${obras.length > 1 ? `<button onclick="excluirObraId('${o.id}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button>` : ''}
+          </div>
+        </div>
+      `).join('');
+      document.getElementById('modalGerenciador').showModal();
+    }
+
+    function fecharGerenciadorObras() {
+      document.getElementById('modalGerenciador').close();
+    }
+
+    function abrirModalNovaObra() {
+      fecharGerenciadorObras();
+      document.getElementById('tituloModalObra').innerText = "Cadastrar Nova Obra";
+      document.getElementById('formObraId').value = "";
+      document.getElementById('formNomeObra').value = "";
+      document.getElementById('formEnderecoObra').value = "";
+      document.getElementById('formEquipeObra').value = "";
+      document.getElementById('modalFormObra').showModal();
+    }
+
+    function editarObraAtual() {
+      editarObraId(obraAtivaId);
+    }
+
+    function editarObraId(id) {
+      fecharGerenciadorObras();
+      const o = obras.find(item => item.id === id);
+      document.getElementById('tituloModalObra').innerText = "Editar Obra";
+      document.getElementById('formObraId').value = o.id;
+      document.getElementById('formNomeObra').value = o.nome;
+      document.getElementById('formEnderecoObra').value = o.endereco;
+      document.getElementById('formEquipeObra').value = o.equipe.map(e => `${e.nome} - ${e.cargo}`).join('\n');
+      document.getElementById('modalFormObra').showModal();
+    }
+
+    function fecharModalObra() {
+      document.getElementById('modalFormObra').close();
+    }
+
+    function salvarDadosObra(e) {
+      e.preventDefault();
+      const idExistente = document.getElementById('formObraId').value;
+      const nome = document.getElementById('formNomeObra').value;
+      const endereco = document.getElementById('formEnderecoObra').value;
+      
+      const linhasEquipe = document.getElementById('formEquipeObra').value.split('\n').filter(l => l.trim() !== '');
+      const equipeFormatada = linhasEquipe.map(linha => {
+        const partes = linha.split('-');
+        return {
+          nome: partes[0] ? partes[0].trim() : 'Colaborador',
+          cargo: partes[1] ? partes[1].trim() : 'Função'
+        };
+      });
+
+      if (idExistente) {
+        const index = obras.findIndex(o => o.id === idExistente);
+        obras[index] = { id: idExistente, nome, endereco, equipe: equipeFormatada };
+      } else {
+        const novoId = "obra_" + Date.now();
+        obras.push({ id: novoId, nome, endereco, equipe: equipeFormatada });
+        obraAtivaId = novoId;
+        localStorage.setItem('obra_ativa_id', novoId);
+      }
+
+      localStorage.setItem('obras_eliel', JSON.stringify(obras));
+      fecharModalObra();
+      renderSeletor();
+      alert('✅ Obra salva com sucesso!');
+    }
+
+    function excluirObraId(id) {
+      if (confirm('Tem certeza que deseja excluir esta obra das suas opções?')) {
+        obras = obras.filter(o => o.id !== id);
+        if (obraAtivaId === id) {
+          obraAtivaId = obras[0].id;
+          localStorage.setItem('obra_ativa_id', obraAtivaId);
+        }
+        localStorage.setItem('obras_eliel', JSON.stringify(obras));
+        abrirGerenciadorObras();
+        renderSeletor();
+      }
+    }
+
+    function renderHistorico() {
+      const list = document.getElementById('historicoList');
+      const total = document.getElementById('totalRegistros');
+      
+      const diariosDaObra = diarios.filter(d => d.obraId === obraAtivaId);
+      total.innerText = `${diariosDaObra.length} salvos`;
+
+      if (diariosDaObra.length === 0) {
+        list.innerHTML = '<p class="text-slate-400 text-center py-4">Nenhum diário registrado para esta obra ainda.</p>';
+        return;
+      }
+
+      list.innerHTML = diariosDaObra.map((d) => `
+        <div class="pt-3 pb-1">
+          <div class="flex justify-between font-bold text-slate-800">
+            <span>📅 ${d.data} (${d.clima})</span>
+            <span class="text-sky-600">${d.equipe.length} presentes</span>
+          </div>
+          <p class="text-slate-600 mt-1 text-xs leading-relaxed">${d.atividades}</p>
+          ${d.ocorrencias ? `<p class="text-amber-800 bg-amber-50 p-2 rounded-lg mt-1.5 text-[11px]">⚠️ ${d.ocorrencias}</p>` : ''}
+        </div>
+      `).join('');
+    }
+
+    function salvarRegistro(e) {
+      e.preventDefault();
+      const atual = getObraAtual();
+      
+      const presentes = [];
+      atual.equipe.forEach((colab, idx) => {
+        const el = document.getElementById(`eq_${idx}`);
+        if(el && el.checked) presentes.push(colab.nome);
+      });
+
+      const registro = {
+        obraId: obraAtivaId,
+        nomeObra: atual.nome,
+        data: document.getElementById('dataObra').value,
+        clima: document.getElementById('clima').value,
+        atividades: document.getElementById('atividades').value,
+        ocorrencias: document.getElementById('ocorrencias').value,
+        equipe: presentes,
+        timestamp: new Date().toISOString()
+      };
+
+      diarios.unshift(registro);
+      localStorage.setItem('diarios_eliel_v3', JSON.stringify(diarios));
+      
+      document.getElementById('atividades').value = '';
+      document.getElementById('ocorrencias').value = '';
+      
+      alert('✅ Diário gravado com sucesso para a obra: ' + atual.nome);
+      renderHistorico();
+    }
+
+    function exportarRelatorio() {
+      const diariosDaObra = diarios.filter(d => d.obraId === obraAtivaId);
+      if(diariosDaObra.length === 0) {
+        alert('Grave ao menos um diário nesta obra para exportar!');
+        return;
+      }
+      window.print();
+    }
+
+    renderSeletor();
+  </script>
+</body>
+</html>
