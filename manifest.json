@@ -1,0 +1,17 @@
+{
+  "name": "Eliel Engenharia - RDO",
+  "short_name": "Eliel Engenharia",
+  "description": "Sistema Diário de Obra e Gestão Multi-Obras — Eng. Eliel Dias Ribeiro",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "icons": [
+    {
+      "src": "WA_1786840644654.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
