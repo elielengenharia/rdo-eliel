@@ -1,403 +1,1940 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0F172A">
-  <title>Eliel Engenharia — Gestão Multi-Obras</title>
-  <link rel="manifest" href="manifest.json">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    body { -webkit-tap-highlight-color: transparent; user-select: none; }
-    input, textarea, select { user-select: text; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0F172A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Eliel Engenharia">
+<title>Eliel Engenharia</title>
+<link rel="manifest" href="manifest.json" id="linkManifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f1f5f9; --card:#fff; --ink:#0f172a; --ink2:#334155; --mut:#64748b; --mut2:#94a3b8; --line:#e2e8f0; --soft:#f8fafc;
+  --navy:#0f172a; --navy2:#1e293b; --sky:#0284c7; --sky2:#e0f2fe; --skyt:#38bdf8;
+  --ok:#059669; --okbg:#d1fae5; --bad:#dc2626; --badbg:#fee2e2; --warn:#b45309; --warnbg:#fef3c7;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-tap-highlight-color:transparent;padding-bottom:40px}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+.hide{display:none!important}
+header.top{background:var(--navy);color:#fff;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand .lg{background:#fff;border-radius:10px;width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.brand .lg img{width:100%;height:100%;object-fit:contain}
+.brand h1{margin:0;font-size:15px;color:var(--skyt);line-height:1.2}
+.brand p{margin:0;font-size:10px;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbtn{background:var(--navy2);border:1px solid #334155;color:#e2e8f0;border-radius:10px;padding:8px 11px;font-size:12px;font-weight:600;white-space:nowrap}
+main{max-width:560px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.lbl{display:block;font-size:11px;font-weight:600;color:var(--ink2);margin:0 0 4px}
+.inp{width:100%;padding:10px 11px;border:1px solid #cbd5e1;border-radius:10px;background:var(--soft);font-size:14px}
+.inp:focus{outline:2px solid var(--sky);outline-offset:-1px;background:#fff}
+textarea.inp{resize:vertical;min-height:70px}
+.row{display:flex;gap:8px;align-items:center}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sp{height:10px}
+.btn{border:0;border-radius:12px;padding:12px 14px;font-weight:700;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.full{width:100%}
+.btn.pri{background:var(--navy);color:#fff}
+.btn.sky{background:var(--sky);color:#fff}
+.btn.ok{background:var(--ok);color:#fff}
+.btn.sec{background:#fff;color:var(--ink2);border:1px solid #cbd5e1}
+.btn.dng{background:#fff;color:var(--bad);border:1px solid #fecaca}
+.btn.sm{padding:7px 10px;font-size:12px;border-radius:9px}
+.lnk{background:none;border:0;color:var(--sky);font-weight:600;font-size:12px;padding:4px}
+.pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:#f1f5f9;color:var(--ink2)}
+.pill.ok{background:var(--okbg);color:#065f46}.pill.bad{background:var(--badbg);color:#991b1b}.pill.warn{background:var(--warnbg);color:#92400e}.pill.sky{background:var(--sky2);color:#075985}
+.mut{color:var(--mut)} .small{font-size:12px} .tiny{font-size:11px}
+.b{font-weight:700}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#e2e8f0;border-radius:12px;padding:4px;margin-bottom:12px;position:sticky;top:var(--hh,64px);z-index:30}
+.tabs button{border:0;background:transparent;border-radius:9px;padding:9px 2px;font-weight:700;font-size:12.5px;color:var(--mut);white-space:nowrap}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.banner{border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:12px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.banner.warn{background:var(--warnbg);color:#78350f;border:1px solid #fde68a}
+.banner.sky{background:var(--sky);color:#fff}
+/* equipe no diário */
+.colab{border:1px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:6px;background:var(--soft)}
+.colab.falta{opacity:.55}
+.colab .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.seg{display:inline-flex;border:1px solid #cbd5e1;border-radius:9px;overflow:hidden;flex:none}
+.seg button{border:0;background:#fff;padding:9px 12px;font-size:13px;font-weight:700;color:var(--mut);min-width:40px}
+.seg button+button{border-left:1px solid #cbd5e1}
+.seg button.on{background:var(--navy);color:#fff}
+.seg button.on.meia{background:var(--warn)}
+.seg button.on.falta{background:var(--bad)}
+.extra{display:flex;align-items:center;gap:6px;margin-top:6px}
+.extra input{padding:6px 8px;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid #cbd5e1;background:#fff;border-radius:99px;padding:7px 11px;font-size:12px;font-weight:600;color:var(--ink2)}
+.chip.on{background:var(--sky);border-color:var(--sky);color:#fff}
+.chip.done{opacity:.6}
+.total-dia{display:flex;justify-content:space-between;align-items:center;background:var(--navy);color:#fff;border-radius:12px;padding:10px 12px;margin-top:8px}
+.total-dia b{font-size:17px;color:var(--skyt)}
+/* histórico */
+.hist{border-top:1px solid var(--line);padding:10px 0}
+.hist:first-child{border-top:0}
+.hist .hd{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.hist p{margin:4px 0 0;font-size:13px;color:var(--ink2);white-space:pre-wrap}
+.oc{background:var(--warnbg);color:#78350f;border-radius:8px;padding:6px 8px;font-size:12px;margin-top:6px;white-space:pre-wrap}
+/* etapas */
+.etapa{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}
+.etapa .hd{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.etapa .nm{font-weight:700;font-size:14px}
+.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;background:var(--sky);border-radius:99px}
+.bar.ok i{background:var(--ok)} .bar.bad i{background:var(--bad)} .bar.warn i{background:#f59e0b}
+.bar .mk{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
+.kv{display:flex;justify-content:space-between;font-size:12px;margin-top:5px;gap:8px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.kpi .t{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);font-weight:700}
+.kpi .v{font-size:18px;font-weight:800;margin-top:2px}
+.kpi .s{font-size:11px;color:var(--mut)}
+.kpi.big{grid-column:1/-1}
+.kpi.pos{border-color:#6ee7b7;background:#ecfdf5}.kpi.pos .v{color:#047857}
+.kpi.neg{border-color:#fca5a5;background:#fef2f2}.kpi.neg .v{color:#b91c1c}
+.alert{font-size:11px;font-weight:600;margin-top:6px;padding:5px 8px;border-radius:7px}
+.alert.bad{background:var(--badbg);color:#991b1b}.alert.warn{background:var(--warnbg);color:#92400e}.alert.ok{background:var(--okbg);color:#065f46}
+table.tb{width:100%;border-collapse:collapse;font-size:12px}
+#tabFolha{overflow-x:auto}
+#tabFolha table.tb td,#tabFolha table.tb th{padding:7px 3px}
+table.tb th{text-align:left;font-size:10px;text-transform:uppercase;color:var(--mut);border-bottom:1px solid var(--line);padding:6px 4px}
+table.tb td{border-bottom:1px solid var(--line);padding:7px 4px;vertical-align:top}
+table.tb .r{text-align:right;white-space:nowrap}
+table.tb tfoot td{font-weight:800;border-bottom:0}
+.anexo{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:6px}
+.anexo .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600}
+.empty{color:var(--mut2);text-align:center;padding:14px 4px;font-size:13px}
+/* diálogos */
+dialog{border:0;padding:0;border-radius:18px;width:min(560px,94vw);max-height:90vh;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(15,23,42,.6)}
+.dh{background:var(--navy);color:var(--skyt);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-weight:700;position:sticky;top:0;z-index:2}
+.dh button{background:none;border:0;color:#94a3b8;font-size:24px;line-height:1;padding:0 4px}
+.db{padding:14px;overflow:auto;max-height:calc(90vh - 50px)}
+.eqrow{display:grid;grid-template-columns:1.4fr 1fr .9fr auto;gap:5px;margin-bottom:5px}
+.eqrow .inp{padding:8px 7px;font-size:13px}
+.xbtn{border:0;background:var(--badbg);color:var(--bad);border-radius:8px;width:32px;font-weight:800}
+.menu button{display:flex;width:100%;text-align:left;gap:10px;align-items:center;border:0;background:#fff;border-bottom:1px solid var(--line);padding:13px 4px;font-size:14px;font-weight:600;color:var(--ink)}
+.menu button small{display:block;font-weight:400;color:var(--mut);font-size:11px}
+.prev{overflow:auto;max-height:240px;border:1px solid var(--line);border-radius:10px}
+.prev table{font-size:11px;border-collapse:collapse;width:100%}
+.prev td,.prev th{border-bottom:1px solid var(--line);padding:4px 6px;white-space:nowrap;text-align:left}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:600;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.3);max-width:90vw;text-align:center}
+#areaImpressao{display:none}
+body.enc .so-admin{display:none!important}
+.so-dispenc{display:none!important}
+body.dispenc .so-dispenc{display:flex!important}
+body.dispenc .so-pin.so-pin{display:none!important}
+.sync{display:block;font-size:10px;color:#cbd5e1;margin-top:2px;cursor:pointer;white-space:nowrap}
+.sync.pend{color:#fcd34d}.sync.err{color:#fca5a5}
+#telaEspera{position:fixed;inset:0;background:var(--bg);z-index:35;padding:90px 14px 20px;overflow:auto}
+details summary{cursor:pointer}
+ol.passos{padding-left:20px;margin:8px 0}ol.passos li{margin-bottom:6px}
+.linkbox{word-break:break-all;font-size:11px;background:var(--soft);border:1px dashed #94a3b8;border-radius:8px;padding:8px;margin:6px 0}
+.so-enc{display:none!important}
+body.enc .so-enc{display:inline-flex!important}
+.modo{display:inline-flex;align-items:center;gap:4px;background:#f59e0b;color:#1c1917;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-top:3px}
+.tabs button .cad{font-size:11px}
+.pinbox{font-size:26px;letter-spacing:12px;text-align:center;font-weight:800}
+/* ======== IMPRESSÃO ======== */
+@media print{
+  @page{size:A4;margin:14mm 12mm}
+  body{background:#fff;padding:0;font-size:11px}
+  body>*:not(#areaImpressao){display:none!important}
+  #areaImpressao{display:block!important;color:#000}
+  .pr-cab{display:flex;align-items:center;gap:12px;border-bottom:2px solid #0f172a;padding-bottom:8px;margin-bottom:10px}
+  .pr-cab img{height:48px}
+  .pr-cab h1{font-size:16px;margin:0}
+  .pr-cab p{margin:0;font-size:10px;color:#333}
+  .pr-info{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;font-size:11px;margin-bottom:10px}
+  .pr-dia{border:1px solid #999;border-radius:4px;padding:6px 8px;margin-bottom:8px;break-inside:avoid}
+  .pr-dia h4{margin:0 0 4px;font-size:12px;display:flex;justify-content:space-between}
+  .pr-dia p{margin:2px 0;white-space:pre-wrap}
+  .pr-t{width:100%;border-collapse:collapse;font-size:10.5px;margin:6px 0}
+  .pr-t th,.pr-t td{border:1px solid #999;padding:3px 5px;text-align:left}
+  .pr-t .r{text-align:right}
+  .pr-t tfoot td{font-weight:700}
+  .pr-ass{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;text-align:center;font-size:10.5px;break-inside:avoid}
+  .pr-ass div{border-top:1px solid #000;padding-top:4px}
+  h2.pr{font-size:13px;margin:12px 0 6px}
+}
+</style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans pb-24">
+<body>
 
-  <header class="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
-    <div class="flex items-center gap-3">
-      <div class="bg-white p-1 rounded-xl shadow w-12 h-12 flex items-center justify-center overflow-hidden">
-        <img src="WA_1786840644654.jpeg" alt="Eliel Engenharia" class="object-cover w-full h-full rounded-lg">
-      </div>
-      <div>
-        <h1 class="font-bold text-base text-sky-400 leading-tight">Eliel Engenharia</h1>
-        <p class="text-[10px] text-slate-300">CREA-PA 1520297858PA • (94) 99140-5022</p>
-      </div>
+<header class="top">
+  <div class="brand">
+    <div class="lg"><img src="logo.jpg" alt="Eliel Engenharia"></div>
+    <div style="min-width:0">
+      <h1>Eliel Engenharia</h1>
+      <p>CREA-PA 1520297858PA • (94) 99140-5022</p>
+      <span class="modo so-enc" id="txtModo">👷 MODO ENCARREGADO</span>
+      <span id="syncStatus" class="sync hide" onclick="sincronizar(true)"></span>
     </div>
-    <div class="flex gap-2">
-      <button onclick="abrirGerenciadorObras()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg transition flex items-center gap-1.5 border border-slate-700 shadow">
-        <i class="fa-solid fa-folder-tree text-sky-400"></i> Obras
-      </button>
-      <button onclick="exportarRelatorio()" class="bg-sky-600 active:bg-sky-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow">
-        <i class="fa-solid fa-file-pdf"></i> Exportar
-      </button>
-    </div>
-  </header>
-
-  <div id="pwaBanner" class="hidden bg-sky-600 text-white p-3 mx-4 mt-4 rounded-xl shadow-lg flex justify-between items-center text-xs">
-    <div class="flex items-center gap-2">
-      <i class="fa-solid fa-mobile-screen-button text-lg"></i>
-      <span>Instalar app da <strong>Eliel Engenharia</strong> na tela inicial?</span>
-    </div>
-    <button onclick="instalarPwa()" class="bg-slate-900 text-sky-400 font-bold px-3 py-1.5 rounded-lg shadow">Instalar</button>
   </div>
+  <button class="hbtn" onclick="abrirMenu()">☰ Menu</button>
+</header>
 
-  <main class="max-w-md mx-auto p-4 space-y-4">
-    <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-2">
-      <div class="flex justify-between items-center border-b pb-2">
-        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Obra Selecionada</span>
-        <button onclick="abrirModalNovaObra()" class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full hover:bg-emerald-200 transition flex items-center gap-1">
-          <i class="fa-solid fa-plus"></i> Nova Obra
-        </button>
-      </div>
-      
-      <div>
-        <select id="seletorObraAtiva" onchange="trocarObraAtiva(this.value)" class="w-full text-xs font-bold p-3 border rounded-xl bg-slate-50 text-slate-900 focus:outline-sky-600">
-        </select>
-      </div>
+<div id="telaEspera" class="hide"><div class="card" style="max-width:520px;margin:0 auto;text-align:center">
+  <div id="esperaTxt" style="font-size:15px;margin:10px 0 14px"></div>
+  <button class="btn sky full" onclick="sincronizar(true)">🔄 Tentar de novo</button>
+  <div class="sp"></div>
+  <p class="small mut">Recebeu um link novo do engenheiro? Cole aqui:</p>
+  <input id="esperaCod" class="inp" placeholder="Cole o link de acesso">
+  <div class="sp"></div>
+  <button class="btn pri full" onclick="conectarEncarregado($('esperaCod').value)">Conectar</button>
+</div></div>
 
-      <div class="flex justify-between items-center text-xs text-slate-500 pt-1">
-        <span id="txtEnderecoObra" class="flex items-center gap-1"><i class="fa-solid fa-location-dot text-sky-600"></i> Tucumã - PA</span>
-        <button onclick="editarObraAtual()" class="text-sky-600 font-semibold hover:underline">Editar Dados/Equipe</button>
-      </div>
-    </section>
+<main>
+  <div id="bannerAtualizacao" class="banner sky hide"><span>🔄 Nova versão do app disponível.</span><button class="btn sm sec" onclick="location.reload()">Atualizar</button></div>
+  <div id="pwaBanner" class="banner sky hide"><span>📲 <b>Coloque o app na tela do celular</b> para abrir mais fácil e funcionar sem internet.</span><span class="row" style="gap:4px;flex:none"><button class="btn sm sec" onclick="abrirInstalar()">Instalar</button><button class="btn sm" style="background:transparent;color:#fff;padding:4px" onclick="adiarInstalar()" aria-label="Fechar">✕</button></span></div>
+  <div id="bannerBackup" class="banner warn hide so-admin"><span id="txtBackup">💾 Faça um backup dos seus dados.</span><button class="btn sm sec" onclick="fazerBackup()">Backup</button></div>
 
-    <dialog id="modalGerenciador" class="p-0 rounded-2xl max-w-md w-full bg-white backdrop:bg-slate-900/60 shadow-2xl border-0">
-      <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
-        <h3 class="font-bold text-sm text-sky-400 flex items-center gap-2">
-          <i class="fa-solid fa-building-user"></i> Minhas Obras Cadastradas
-        </h3>
-        <button onclick="fecharGerenciadorObras()" class="text-slate-400 hover:text-white text-lg">&times;</button>
-      </div>
-      <div class="p-4 space-y-3">
-        <div id="listaObrasCadastradas" class="space-y-2 max-h-[60vh] overflow-y-auto">
-        </div>
-        <button onclick="abrirModalNovaObra()" class="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl hover:bg-emerald-700 transition text-xs flex items-center justify-center gap-2">
-          <i class="fa-solid fa-plus"></i> Cadastrar Nova Obra
-        </button>
-      </div>
-    </dialog>
+  <section class="card">
+    <h3><span>Obra selecionada</span><button class="pill ok so-admin" style="border:0;padding:4px 10px" onclick="abrirObra()">＋ Nova obra</button></h3>
+    <select id="seletorObra" class="inp b" onchange="trocarObra(this.value)"></select>
+    <div class="row" style="justify-content:space-between;margin-top:6px">
+      <span id="txtEndereco" class="small mut"></span>
+      <button class="lnk so-admin" onclick="abrirObra(S.obraAtivaId)">Editar obra / equipe</button>
+    </div>
+  </section>
 
-    <dialog id="modalFormObra" class="p-0 rounded-2xl max-w-md w-full bg-white backdrop:bg-slate-900/60 shadow-2xl border-0">
-      <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
-        <h3 id="tituloModalObra" class="font-bold text-sm text-sky-400">Nova Obra</h3>
-        <button onclick="fecharModalObra()" class="text-slate-400 hover:text-white text-lg">&times;</button>
-      </div>
-      <form onsubmit="salvarDadosObra(event)" class="p-4 space-y-3 text-xs max-h-[80vh] overflow-y-auto">
-        <input type="hidden" id="formObraId">
-        <div>
-          <label class="font-bold text-slate-700">Nome da Obra / Projeto</label>
-          <input type="text" id="formNomeObra" placeholder="Ex: Residencial Fase do Cinza (210m²)" class="w-full p-2.5 border rounded-lg bg-slate-50 mt-1" required>
-        </div>
-        <div>
-          <label class="font-bold text-slate-700">Endereço / Localização</label>
-          <input type="text" id="formEnderecoObra" placeholder="Ex: Tucumã - PA" class="w-full p-2.5 border rounded-lg bg-slate-50 mt-1" required>
-        </div>
-        <div>
-          <label class="font-bold text-slate-700 block mb-1">Equipe de Campo Desta Obra:</label>
-          <span class="text-[10px] text-slate-400 block mb-2">Digite um colaborador por linha (Nome - Cargo):</span>
-          <textarea id="formEquipeObra" rows="4" placeholder="Lucas Amir - Pedreiro Líder&#10;Júnior - Pedreiro 2&#10;Bruno - Ajudante 1" class="w-full p-2.5 border rounded-lg bg-slate-50 font-mono text-xs" required></textarea>
-        </div>
-        <button type="submit" class="w-full bg-sky-600 text-white font-bold p-3 rounded-xl hover:bg-sky-700 transition">
-          💾 Salvar Obra
-        </button>
-      </form>
-    </dialog>
+  <nav class="tabs">
+    <button data-tab="diario" onclick="irAba('diario')">📝 Diário</button>
+    <button data-tab="crono" onclick="irAba('crono')"><span class="cad so-enc">🔒</span><span class="so-admin">📅</span> Cronograma</button>
+    <button data-tab="fin" onclick="irAba('fin')"><span class="cad so-enc">🔒</span><span class="so-admin">💰</span> Financeiro</button>
+  </nav>
 
-    <form id="diarioForm" onsubmit="salvarRegistro(event)" class="space-y-4">
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-        <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-2">
-          <i class="fa-solid fa-calendar-day text-sky-600"></i> Data & Condições Climáticas
-        </h3>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-[11px] font-semibold text-slate-600">Data do Registro</label>
-            <input type="date" id="dataObra" class="w-full text-xs p-3 border rounded-xl bg-slate-50 focus:outline-sky-600 font-medium" required>
-          </div>
-          <div>
-            <label class="text-[11px] font-semibold text-slate-600">Tempo / Clima</label>
-            <select id="clima" class="w-full text-xs p-3 border rounded-xl bg-slate-50 focus:outline-sky-600 font-medium">
+  <!-- ================= ABA DIÁRIO ================= -->
+  <div id="aba-diario">
+    <form id="formDiario" onsubmit="salvarDiario(event)">
+      <div id="avisoEdicao" class="banner warn hide"><span>✏️ Editando o diário de <b id="txtEditando"></b></span><button type="button" class="btn sm sec" onclick="cancelarEdicao()">Cancelar</button></div>
+      <section class="card">
+        <h3>📆 Data e clima</h3>
+        <div class="g2">
+          <div><label class="lbl" for="dData">Data</label><input type="date" id="dData" class="inp" required></div>
+          <div><label class="lbl" for="dClima">Tempo</label>
+            <select id="dClima" class="inp">
               <option value="Ensolarado">☀️ Ensolarado</option>
               <option value="Nublado">⛅ Nublado</option>
-              <option value="Chuvoso">🌧️ Chuvoso (Praticável)</option>
-              <option value="Chuva Intensa">⛈️ Chuva (Impraticável)</option>
+              <option value="Chuvoso">🌧️ Chuvoso (praticável)</option>
+              <option value="Chuva Intensa">⛈️ Chuva (impraticável)</option>
             </select>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-        <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-2">
-          <i class="fa-solid fa-users text-sky-600"></i> Efetivo Presente Hoje
-        </h3>
-        <div id="containerEquipe" class="grid grid-cols-2 gap-2 text-xs">
+      <section class="card">
+        <h3><span>👷 Equipe de hoje</span><span id="txtPresentes" class="pill sky"></span></h3>
+        <div id="listaEquipeDia"></div>
+        <div class="tiny mut" style="margin-top:4px">Dia = dia inteiro • ½ = meio dia • ✖ = faltou.<span class="so-admin"> Em “extra” coloque hora extra, alimentação, transporte etc.</span></div>
+      </section>
+
+      <section class="card">
+        <h3>🧱 Etapa(s) trabalhada(s) hoje</h3>
+        <div id="chipsEtapas" class="chips"></div>
+        <div id="progressoEtapas"></div>
+      </section>
+
+      <section class="card">
+        <h3>📋 Serviços executados</h3>
+        <textarea id="dAtividades" class="inp" rows="3" placeholder="Descreva os serviços executados hoje..." required></textarea>
+        <div class="sp"></div>
+        <label class="lbl" for="dOcorrencias">Ocorrências / materiais</label>
+        <textarea id="dOcorrencias" class="inp" rows="2" placeholder="Entregas de material, paralisações, visitas..."></textarea>
+        <div class="so-admin">
+        <div class="sp"></div>
+        <label class="lbl">Outras despesas do dia (opcional)</label>
+        <div class="row">
+          <input id="dOutrasValor" class="inp" inputmode="decimal" placeholder="R$ 0,00" style="flex:0 0 110px" oninput="atualizarTotalDia()">
+          <input id="dOutrasDesc" class="inp" placeholder="Ex.: frete, aluguel de betoneira">
         </div>
-      </div>
+        <div class="total-dia"><span>Custo do dia</span><b id="txtCustoDia">R$ 0,00</b></div>
+        </div>
+      </section>
 
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-2">
-        <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-2">
-          <i class="fa-solid fa-list-check text-sky-600"></i> Atividades do Dia
-        </h3>
-        <textarea id="atividades" rows="3" placeholder="Descreva os serviços executados hoje..." class="w-full text-xs p-3 border rounded-xl bg-slate-50 focus:outline-sky-600" required></textarea>
-      </div>
-
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-2">
-        <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-2">
-          <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Ocorrências / Materiais
-        </h3>
-        <textarea id="ocorrencias" rows="2" placeholder="Observações, entregas de materiais ou paralisações..." class="w-full text-xs p-3 border rounded-xl bg-slate-50 focus:outline-sky-600"></textarea>
-      </div>
-
-      <button type="submit" class="w-full bg-slate-900 active:bg-slate-800 text-white font-bold p-4 rounded-2xl shadow-lg transition text-sm flex items-center justify-center gap-2">
-        <i class="fa-solid fa-floppy-disk text-sky-400"></i> Salvar Diário Nesta Obra
-      </button>
+      <button type="submit" id="btnSalvarDiario" class="btn pri full">💾 Salvar diário</button>
     </form>
 
-    <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-      <h3 class="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center justify-between">
-        <span><i class="fa-solid fa-clock-rotate-left text-sky-600"></i> Histórico Desta Obra</span>
-        <span id="totalRegistros" class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">0 salvos</span>
-      </h3>
-      <div id="historicoList" class="space-y-2 text-xs divide-y">
-        <p class="text-slate-400 text-center py-4">Nenhum diário registrado para esta obra.</p>
-      </div>
+    <div class="sp"></div>
+    <section class="card">
+      <h3><span>🕘 Histórico desta obra</span><span id="txtTotalDiarios" class="pill"></span></h3>
+      <div id="listaHistorico"></div>
     </section>
-  </main>
+  </div>
 
-  <script>
-    document.getElementById('dataObra').valueAsDate = new Date();
+  <!-- ================= ABA CRONOGRAMA ================= -->
+  <div id="aba-crono" class="hide">
+    <section class="card">
+      <h3>📥 Cronograma da obra</h3>
+      <div class="g2">
+        <button class="btn sky sm" onclick="document.getElementById('arqExcel').click()">📊 Importar Excel</button>
+        <button class="btn sec sm" onclick="novaEtapa()">＋ Etapa manual</button>
+      </div>
+      <input type="file" id="arqExcel" accept=".xlsx,.xlsm,.csv" class="hide" onchange="lerPlanilha(this)">
+      <div class="tiny mut" style="margin-top:8px">A planilha precisa ter as colunas: <b>Etapa</b>, <b>Início</b>, <b>Término</b> e <b>Valor</b> da empreita. <a href="modelo-cronograma.xlsx" download class="lnk" style="padding:0">Baixar planilha modelo</a></div>
+    </section>
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Erro:', err));
-    }
+    <section class="card">
+      <h3><span>🧱 Etapas e preço de empreita</span><span id="txtTotalEmpreita" class="pill ok"></span></h3>
+      <div id="listaEtapas"></div>
+    </section>
 
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      document.getElementById('pwaBanner').classList.remove('hidden');
+    <section class="card">
+      <h3><span>📎 Arquivos anexados</span><button class="btn sec sm" onclick="document.getElementById('arqAnexo').click()">＋ Anexar</button></h3>
+      <input type="file" id="arqAnexo" class="hide" multiple onchange="anexarArquivos(this)">
+      <div id="listaAnexos"></div>
+      <div class="tiny mut">Cronograma em PDF, foto do contrato, projeto… ficam guardados no celular e entram no backup.</div>
+    </section>
+  </div>
+
+  <!-- ================= ABA FINANCEIRO ================= -->
+  <div id="aba-fin" class="hide">
+    <div id="kpis" class="kpis"></div>
+    <section class="card">
+      <h3>📊 Resultado por etapa</h3>
+      <div id="finEtapas"></div>
+    </section>
+    <section class="card">
+      <h3>💵 Folha de pagamento (diárias)</h3>
+      <div class="chips" style="margin-bottom:8px">
+        <button class="chip" data-per="semana" onclick="periodoFolha('semana')">Esta semana</button>
+        <button class="chip" data-per="passada" onclick="periodoFolha('passada')">Semana passada</button>
+        <button class="chip" data-per="mes" onclick="periodoFolha('mes')">Este mês</button>
+        <button class="chip" data-per="tudo" onclick="periodoFolha('tudo')">Tudo</button>
+      </div>
+      <div class="g2">
+        <div><label class="lbl">De</label><input type="date" id="fDe" class="inp" onchange="renderFolha()"></div>
+        <div><label class="lbl">Até</label><input type="date" id="fAte" class="inp" onchange="renderFolha()"></div>
+      </div>
+      <label class="small row" style="margin:8px 0"><input type="checkbox" id="fTodas" onchange="renderFolha()"> Somar todas as obras</label>
+      <div id="tabFolha"></div>
+      <div class="sp"></div>
+      <div class="g2">
+        <button class="btn sky sm" onclick="abrirVale()">💸 Lançar vale</button>
+        <button class="btn sec sm" onclick="imprimirFolha()">🖨️ Imprimir folha</button>
+      </div>
+      <div id="listaVales"></div>
+    </section>
+  </div>
+</main>
+
+<!-- ================= DIÁLOGOS ================= -->
+<dialog id="dlgMenu"><div class="dh"><span>Menu</span><button onclick="fechar('dlgMenu')">×</button></div>
+  <div class="db menu">
+    <button id="menuInstalar" class="hide" onclick="fechar('dlgMenu');abrirInstalar()">📲 <span>Instalar o app<small>Colocar o ícone na tela inicial do celular</small></span></button>
+    <button onclick="fechar('dlgMenu');abrirRelatorio()">🖨️ <span>Relatórios / PDF<small>RDO em PDF para o cliente<span class="so-admin">, resumo financeiro</span></small></span></button>
+    <button class="so-dispenc" onclick="fechar('dlgMenu');abrirNuvem()">☁️ <span>Sincronização<small>Enviar e receber diários</small></span></button>
+    <button class="so-enc so-pin" onclick="fechar('dlgMenu');pedirPin(() => toast('🔓 Acesso do engenheiro liberado'))">🔓 <span>Entrar como engenheiro<small>Digite a senha para ver cronograma e valores</small></span></button>
+    <div class="so-admin">
+    <button onclick="fechar('dlgMenu');temPin() ? bloquear() : abrirSenha()">🔒 <span id="txtMenuSenha">Senha e modo encarregado<small>Crie uma senha para o encarregado usar só o diário</small></span></button>
+    <button onclick="fechar('dlgMenu');abrirSenha()" id="btnTrocarSenha">🔑 <span>Trocar ou remover senha<small>Alterar a senha do engenheiro</small></span></button>
+    <button onclick="fechar('dlgMenu');abrirNuvem()">☁️ <span>Nuvem e encarregados<small>Encarregado lança o diário no celular dele e aparece aqui</small></span></button>
+    <button onclick="fechar('dlgMenu');abrirGerenciador()">🏗️ <span>Minhas obras<small>Trocar, editar ou excluir obras</small></span></button>
+    <button onclick="fazerBackup()">💾 <span>Fazer backup<small id="txtUltBackup">Salva tudo num arquivo (mande pro seu Drive/WhatsApp)</small></span></button>
+    <button onclick="document.getElementById('arqBackup').click()">♻️ <span>Restaurar backup<small>Carregar um arquivo de backup (substitui os dados atuais)</small></span></button>
+    <input type="file" id="arqBackup" accept=".json,application/json" class="hide" onchange="restaurarBackup(this)">
+    </div>
+    <p class="tiny mut so-admin" style="margin:12px 0 0">Os dados ficam salvos neste aparelho. Faça backup toda semana para não perder nada se trocar ou formatar o celular.</p>
+  </div>
+</dialog>
+
+<dialog id="dlgObras"><div class="dh"><span>🏗️ Minhas obras</span><button onclick="fechar('dlgObras')">×</button></div>
+  <div class="db"><div id="listaObras"></div><button class="btn ok full" onclick="fechar('dlgObras');abrirObra()">＋ Cadastrar nova obra</button></div>
+</dialog>
+
+<dialog id="dlgObra"><div class="dh"><span id="tituloObra">Nova obra</span><button onclick="fechar('dlgObra')">×</button></div>
+  <form class="db" onsubmit="salvarObra(event)">
+    <input type="hidden" id="oId">
+    <label class="lbl">Nome da obra / projeto</label>
+    <input id="oNome" class="inp" required placeholder="Ex.: Residencial Fase do Cinza (210 m²)">
+    <div class="sp"></div>
+    <div class="g2">
+      <div><label class="lbl">Endereço / cidade</label><input id="oEndereco" class="inp" placeholder="Tucumã - PA"></div>
+      <div><label class="lbl">Contratante</label><input id="oContratante" class="inp" placeholder="Nome do cliente"></div>
+    </div>
+    <div class="sp"></div>
+    <label class="lbl">Equipe de campo e valor da diária</label>
+    <div class="eqrow tiny mut b"><span>Nome</span><span>Função</span><span>Diária R$</span><span></span></div>
+    <div id="oEquipe"></div>
+    <button type="button" class="btn sec sm" onclick="addLinhaEquipe()">＋ Colaborador</button>
+    <div class="sp"></div><div class="sp"></div>
+    <button type="submit" class="btn sky full">💾 Salvar obra</button>
+  </form>
+</dialog>
+
+<dialog id="dlgEtapa"><div class="dh"><span id="tituloEtapa">Etapa</span><button onclick="fechar('dlgEtapa')">×</button></div>
+  <form class="db" onsubmit="salvarEtapa(event)">
+    <input type="hidden" id="eId">
+    <label class="lbl">Etapa / serviço</label><input id="eNome" class="inp" required placeholder="Ex.: Alvenaria">
+    <div class="sp"></div>
+    <div class="g2">
+      <div><label class="lbl">Início</label><input type="date" id="eInicio" class="inp"></div>
+      <div><label class="lbl">Término</label><input type="date" id="eFim" class="inp"></div>
+    </div>
+    <div class="sp"></div>
+    <div class="g2">
+      <div><label class="lbl">Valor da empreita (R$)</label><input id="eValor" class="inp" inputmode="decimal" placeholder="0,00"></div>
+      <div><label class="lbl">% executado</label><input id="eExec" class="inp" type="number" min="0" max="100" step="5" placeholder="0"></div>
+    </div>
+    <div class="sp"></div>
+    <button type="submit" class="btn sky full">💾 Salvar etapa</button>
+    <div class="sp"></div>
+    <button type="button" id="btnExcluirEtapa" class="btn dng full sm" onclick="excluirEtapa()">🗑️ Excluir etapa</button>
+  </form>
+</dialog>
+
+<dialog id="dlgImport"><div class="dh"><span>📊 Importar cronograma</span><button onclick="fechar('dlgImport')">×</button></div>
+  <div class="db">
+    <div id="impAba" class="hide"><label class="lbl">Aba da planilha</label><select id="impSheet" class="inp" onchange="impTrocarAba()"></select><div class="sp"></div></div>
+    <p class="small mut" style="margin-top:0">Confira se cada coluna foi reconhecida certo:</p>
+    <div class="g2">
+      <div><label class="lbl">Etapa / serviço *</label><select id="mapNome" class="inp" onchange="impPreview()"></select></div>
+      <div><label class="lbl">Valor da empreita</label><select id="mapValor" class="inp" onchange="impPreview()"></select></div>
+      <div><label class="lbl">Início</label><select id="mapInicio" class="inp" onchange="impPreview()"></select></div>
+      <div><label class="lbl">Término</label><select id="mapFim" class="inp" onchange="impPreview()"></select></div>
+      <div><label class="lbl">Duração (dias)</label><select id="mapDur" class="inp" onchange="impPreview()"></select></div>
+      <div><label class="lbl">Linha do cabeçalho</label><input id="mapLinha" type="number" min="1" class="inp" onchange="impReMapear()"></div>
+    </div>
+    <div class="sp"></div>
+    <div class="prev" id="impPrev"></div>
+    <div id="impResumo" class="small b" style="margin:8px 0"></div>
+    <div id="impModoBox">
+      <label class="small row"><input type="radio" name="impModo" value="subst" checked> Substituir as etapas atuais</label>
+      <label class="small row"><input type="radio" name="impModo" value="add"> Adicionar às etapas atuais</label>
+    </div>
+    <label class="small row" style="margin-top:6px"><input type="checkbox" id="impAnexar" checked> Guardar a planilha nos anexos da obra</label>
+    <div class="sp"></div>
+    <button class="btn sky full" onclick="confirmarImport()">✅ Importar etapas</button>
+  </div>
+</dialog>
+
+<dialog id="dlgVale"><div class="dh"><span id="tituloVale">💸 Lançar vale</span><button onclick="fechar('dlgVale')">×</button></div>
+  <form class="db" onsubmit="salvarVale(event)">
+    <input type="hidden" id="vId">
+    <label class="lbl">Colaborador</label>
+    <select id="vColab" class="inp" onchange="$('vOutroBox').classList.toggle('hide', this.value !== '__outro')"></select>
+    <div id="vOutroBox" class="hide" style="margin-top:6px"><input id="vOutro" class="inp" placeholder="Nome do funcionário"></div>
+    <div class="sp"></div>
+    <div class="g2">
+      <div><label class="lbl">Data</label><input type="date" id="vData" class="inp" required></div>
+      <div><label class="lbl">Valor (R$)</label><input id="vValor" class="inp" inputmode="decimal" placeholder="0,00" required></div>
+    </div>
+    <div class="sp"></div>
+    <label class="lbl">Observação (opcional)</label>
+    <input id="vObs" class="inp" placeholder="Ex.: Pix, dinheiro, remédio do filho...">
+    <p class="tiny mut">O vale é descontado do que a pessoa tem a receber na folha do período. Ele não aumenta o custo da obra — é só um adiantamento.</p>
+    <button type="submit" class="btn sky full">💾 Salvar vale</button>
+    <div class="sp"></div>
+    <button type="button" id="btnExcluirVale" class="btn dng full sm" onclick="excluirVale()">🗑️ Excluir vale</button>
+  </form>
+</dialog>
+
+<dialog id="dlgPin"><div class="dh"><span>🔒 Senha do engenheiro</span><button onclick="fechar('dlgPin')">×</button></div>
+  <form class="db" onsubmit="conferirPin(event)">
+    <p class="small mut" style="margin-top:0">Área restrita (cronograma, valores e financeiro). Digite sua senha:</p>
+    <input id="pinDigitado" class="inp pinbox" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off">
+    <div id="pinErro" class="alert bad hide"></div>
+    <div class="sp"></div>
+    <button type="submit" class="btn pri full">Entrar</button>
+  </form>
+</dialog>
+
+<dialog id="dlgSenha"><div class="dh"><span>🔒 Senha e modo encarregado</span><button onclick="fechar('dlgSenha')">×</button></div>
+  <div class="db">
+    <p class="small" style="margin-top:0">Com uma senha criada, o app <b>sempre abre no modo encarregado</b>: só aparece o diário de obra, sem valores, diárias, cronograma, financeiro, vales ou backup. Para ver tudo, você toca em <b>Menu → Entrar como engenheiro</b> e digita a senha.</p>
+    <div id="senhaStatus" class="alert"></div>
+    <div class="sp"></div>
+    <label class="lbl">Nova senha (4 a 8 números)</label>
+    <input id="pinNovo1" class="inp pinbox" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off">
+    <div class="sp"></div>
+    <label class="lbl">Repita a senha</label>
+    <input id="pinNovo2" class="inp pinbox" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off">
+    <div class="sp"></div>
+    <button class="btn sky full" onclick="definirPin()">💾 Salvar senha</button>
+    <div class="sp"></div>
+    <div id="senhaAcoes">
+      <button class="btn pri full" onclick="bloquear()">👷 Passar para o encarregado agora</button>
+      <div class="sp"></div>
+      <button class="btn dng full sm" onclick="removerPin()">Remover senha</button>
+    </div>
+    <p class="tiny mut">⚠️ Anote a senha. Se esquecer, só é possível recuperar restaurando um backup feito antes de criar a senha.</p>
+  </div>
+</dialog>
+
+<dialog id="dlgNuvem"><div class="dh"><span>☁️ Nuvem e encarregados</span><button onclick="fechar('dlgNuvem')">×</button></div>
+  <div class="db">
+    <!-- celular ainda não conectado -->
+    <div id="nDesconectado">
+      <p class="small" style="margin-top:0">Liga o app a uma <b>planilha do Google no seu Gmail</b>. O encarregado lança o diário no celular dele e aparece aqui no seu. <b>Nenhum valor em R$ vai para a nuvem</b>: diárias, empreita, extras e vales ficam só neste celular.</p>
+      <details class="small"><summary class="b">📋 Passo a passo (faça uma vez só, de preferência no computador)</summary>
+        <ol class="passos">
+          <li>Entre no seu Gmail e abra <b>sheets.new</b> (cria uma planilha nova). Dê o nome <i>Eliel Engenharia – Nuvem</i>.</li>
+          <li>No menu da planilha: <b>Extensões → Apps Script</b>.</li>
+          <li>Apague o que estiver escrito lá, cole o código do servidor (botão abaixo copia) e clique no disquete 💾 para salvar.</li>
+          <li>Clique em <b>Implantar → Nova implantação</b>. Na engrenagem ⚙️ escolha <b>App da Web</b>. Em “Executar como” deixe <b>Eu</b> e em “Quem pode acessar” escolha <b>Qualquer pessoa</b>. Clique em <b>Implantar</b>.</li>
+          <li>O Google vai pedir autorização: <b>Autorizar acesso</b> → sua conta → <b>Avançado</b> → <b>Acessar (não seguro)</b> → <b>Permitir</b>. Pode confiar: o código é seu e roda só na sua conta.</li>
+          <li>Copie o <b>URL do app da Web</b> (termina em <i>/exec</i>) e cole no campo abaixo.</li>
+        </ol>
+        <button class="btn sec sm" onclick="copiarCodigoServidor()">📋 Copiar código do servidor</button>
+      </details>
+      <div class="sp"></div>
+      <label class="lbl">Endereço do App da Web</label>
+      <input id="nUrl" class="inp" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+      <div id="nChaveBox" class="hide"><div class="sp"></div><label class="lbl">Chave do engenheiro (só se estiver trocando de celular sem backup)</label><input id="nChave" class="inp" autocomplete="off"></div>
+      <div class="sp"></div>
+      <button id="btnConectar" class="btn sky full" onclick="conectarEngenheiro()">☁️ Conectar como engenheiro</button>
+      <div class="sp"></div><div class="sp"></div>
+      <details class="small"><summary class="b">👷 Sou encarregado e recebi um link</summary>
+        <div class="sp"></div>
+        <input id="nCodEnc" class="inp" placeholder="Cole aqui o link que o engenheiro mandou">
+        <div class="sp"></div>
+        <button class="btn pri full sm" onclick="conectarEncarregado($('nCodEnc').value)">Conectar como encarregado</button>
+      </details>
+    </div>
+
+    <!-- celular do engenheiro conectado -->
+    <div id="nAdmin" class="hide">
+      <div id="nStatus" class="alert ok"></div>
+      <div class="sp"></div>
+      <button class="btn sec full sm" onclick="sincronizar(true)">🔄 Sincronizar agora</button>
+      <div class="sp"></div>
+      <div class="lbl" style="margin-top:8px">👷 ENCARREGADOS COM ACESSO</div>
+      <div id="nAcessos"><div class="empty">Carregando…</div></div>
+      <div class="etapa" style="background:var(--soft)">
+        <div class="b small">＋ Dar acesso a um encarregado</div>
+        <div class="sp"></div>
+        <input id="nNomeEnc" class="inp" placeholder="Nome do encarregado">
+        <div class="sp"></div>
+        <div class="tiny mut b">Obras em que ele pode lançar diário:</div>
+        <div id="nObras" style="margin:6px 0"></div>
+        <button class="btn sky full sm" onclick="criarAcesso()">Gerar link de acesso</button>
+      </div>
+      <div id="nLink" class="hide etapa" style="border-color:var(--ok)">
+        <div class="b small">✅ Link de acesso de <span id="nLinkNome"></span></div>
+        <div class="linkbox" id="nLinkTxt"></div>
+        <div class="g2"><button class="btn ok sm" onclick="enviarLink()">📲 Enviar pelo WhatsApp</button><button class="btn sec sm" onclick="copiarTexto($('nLinkTxt').textContent)">📋 Copiar</button></div>
+        <p class="tiny mut">Ele abre o link no celular dele e o app já fica configurado, só com o diário. Não repasse esse link para outras pessoas.</p>
+      </div>
+      <details class="small" style="margin-top:10px"><summary class="b">🔑 Chave do engenheiro</summary>
+        <p class="tiny mut">Essa chave dá acesso total à nuvem. Ela vai junto no backup. Só use se trocar de celular sem ter backup.</p>
+        <div class="linkbox" id="nChaveTxt"></div>
+      </details>
+      <div class="sp"></div>
+      <button class="btn dng full sm" onclick="desconectarNuvem()">Desconectar este celular da nuvem</button>
+    </div>
+
+    <!-- celular do encarregado -->
+    <div id="nEnc" class="hide">
+      <div id="nStatusEnc" class="alert ok"></div>
+      <div class="sp"></div>
+      <button class="btn sky full" onclick="sincronizar(true)">🔄 Sincronizar agora</button>
+      <p class="small mut">O app envia os diários sozinho quando tem internet. Se estiver sem sinal na obra, pode salvar normalmente: ele guarda e envia depois.</p>
+      <details class="small"><summary class="b">Recebi um link novo</summary>
+        <div class="sp"></div>
+        <input id="nCodEnc2" class="inp" placeholder="Cole aqui o link novo">
+        <div class="sp"></div>
+        <button class="btn pri full sm" onclick="conectarEncarregado($('nCodEnc2').value)">Conectar</button>
+      </details>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlgInstalar"><div class="dh"><span>📲 Instalar o app</span><button onclick="fechar('dlgInstalar')">×</button></div>
+  <div class="db" id="instalarCorpo"></div>
+</dialog>
+
+<dialog id="dlgBemVindo"><div class="dh"><span>👷 Bem-vindo!</span><button onclick="fechar('dlgBemVindo')">×</button></div>
+  <div class="db">
+    <div class="alert ok" id="bvTitulo" style="font-size:14px"></div>
+    <p class="b" style="margin:14px 0 6px">Como lançar o diário todo dia:</p>
+    <ol class="passos small">
+      <li>Confira a <b>data</b> e o <b>tempo</b>.</li>
+      <li>Em <b>Equipe de hoje</b>, marque quem veio: <b>Dia</b>, <b>½</b> (meio dia) ou <b>✖</b> (faltou).</li>
+      <li>Toque na <b>etapa</b> que foi trabalhada e diga quanto % já está pronto.</li>
+      <li>Escreva os <b>serviços</b> feitos e as <b>ocorrências</b> (material que chegou, chuva, etc.).</li>
+      <li>Toque em <b>💾 Salvar diário</b>. Pronto! Chega para o engenheiro sozinho.</li>
+    </ol>
+    <p class="tiny mut">Sem sinal na obra? Pode salvar do mesmo jeito. O app envia quando pegar internet.</p>
+    <div id="bvInstalar"><button class="btn sky full" onclick="fechar('dlgBemVindo');abrirInstalar()">📲 Colocar o app na tela do celular</button><div class="sp"></div></div>
+    <button class="btn sec full" onclick="fechar('dlgBemVindo')">Entendi</button>
+  </div>
+</dialog>
+
+<dialog id="dlgRel"><div class="dh"><span>🖨️ Relatórios</span><button onclick="fechar('dlgRel')">×</button></div>
+  <div class="db">
+    <label class="lbl">Tipo de relatório</label>
+    <select id="rTipo" class="inp">
+      <option value="rdo">RDO — Diário de obra (para o cliente, sem valores)</option>
+      <option value="rdoc">RDO com custos (uso interno)</option>
+      <option value="fin">Resumo financeiro da obra (uso interno)</option>
+    </select>
+    <div class="sp"></div>
+    <div class="g2">
+      <div><label class="lbl">De</label><input type="date" id="rDe" class="inp"></div>
+      <div><label class="lbl">Até</label><input type="date" id="rAte" class="inp"></div>
+    </div>
+    <p class="tiny mut">Na tela de impressão escolha “Salvar como PDF” para mandar pelo WhatsApp.</p>
+    <button class="btn pri full" onclick="gerarRelatorio()">🖨️ Gerar</button>
+  </div>
+</dialog>
+
+<div id="areaImpressao"></div>
+
+<script>
+/* ============================================================
+   Eliel Engenharia — RDO / Gestão de obras  (v4.5)
+   Dados: localStorage (texto) + IndexedDB (arquivos anexados)
+   ============================================================ */
+const VERSAO_APP = '4.5';
+const CHAVE = 'eliel_rdo_v4';
+
+/* ---------- utilitários ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const jsq = s => esc(JSON.stringify(String(s ?? '')));   // texto seguro dentro de onclick="..."
+const brl = v => (Number(v) || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+const brl0 = v => (Number(v) || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL', maximumFractionDigits:0});
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, '0');
+const isoLocal = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;   // usa o fuso do celular (corrige bug das 21h)
+const hojeISO = () => isoLocal(new Date());
+const dt = iso => new Date(iso + 'T12:00:00');
+const fmtData = iso => iso ? iso.split('-').reverse().join('/') : '—';
+const fmtCurta = iso => iso ? iso.slice(8,10) + '/' + iso.slice(5,7) : '—';
+const semana = iso => ['dom','seg','ter','qua','qui','sex','sáb'][dt(iso).getDay()];
+const diasEntre = (a, b) => Math.round((dt(b) - dt(a)) / 86400000);
+const addDias = (iso, n) => { const d = dt(iso); d.setDate(d.getDate() + n); return isoLocal(d); };
+function num(v) {                       // aceita 1500 | "1.500,50" | "R$ 1.500" | "1500.5"
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  let s = String(v ?? '').replace(/[R$\s]/g, '').trim();
+  if (!s) return 0;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  const n = parseFloat(s); return isFinite(n) ? n : 0;
+}
+const numTxt = v => v ? String(+(+v).toFixed(2)).replace('.', ',') : '';
+function toast(msg, ms = 2600) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), ms);
+}
+const fechar = id => $(id).close();
+
+/* ---------- armazenamento de arquivos (IndexedDB) ---------- */
+const Arq = {
+  _db: null,
+  abrir() {
+    if (this._db) return Promise.resolve(this._db);
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('eliel_anexos', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('arquivos');
+      r.onsuccess = () => { this._db = r.result; res(r.result); };
+      r.onerror = () => rej(r.error);
     });
+  },
+  async op(modo, fn) {
+    const db = await this.abrir();
+    return new Promise((res, rej) => {
+      const tx = db.transaction('arquivos', modo); const st = tx.objectStore('arquivos');
+      const r = fn(st); tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error);
+    });
+  },
+  put(id, blob) { return this.op('readwrite', st => st.put(blob, id)); },
+  get(id) { return this.op('readonly', st => st.get(id)); },
+  del(id) { return this.op('readwrite', st => st.delete(id)); },
+  limpar() { return this.op('readwrite', st => st.clear()); }
+};
 
-    function instalarPwa() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            document.getElementById('pwaBanner').classList.add('hidden');
-          }
-          deferredPrompt = null;
-        });
-      }
+/* ---------- estado ---------- */
+let S;
+const obraPadrao = () => ({
+  id: 'obra_1', nome: 'Residencial Fase do Cinza (210,38 m²)', endereco: 'Tucumã - PA', contratante: '',
+  equipe: [
+    {id: uid(), nome: 'Lucas Amir', cargo: 'Pedreiro Líder', diaria: 0},
+    {id: uid(), nome: 'Júnior', cargo: 'Pedreiro 2', diaria: 0},
+    {id: uid(), nome: 'Bruno', cargo: 'Ajudante 1', diaria: 0},
+    {id: uid(), nome: 'Rosinaldo', cargo: 'Ajudante 2', diaria: 0}
+  ], etapas: [], anexos: []
+});
+
+function migrarVersaoAntiga() {
+  // Lê os dados do app antigo (v3) sem apagá-los
+  let obrasOld = null, diOld = [];
+  try { obrasOld = JSON.parse(localStorage.getItem('obras_eliel')); } catch (e) {}
+  try { diOld = JSON.parse(localStorage.getItem('diarios_eliel_v3')) || []; } catch (e) {}
+  const obras = (obrasOld && obrasOld.length ? obrasOld : [obraPadrao()]).map(o => ({
+    id: o.id || uid(), nome: o.nome || 'Obra', endereco: o.endereco || '', contratante: o.contratante || '',
+    equipe: (o.equipe || []).map(c => ({id: c.id || uid(), nome: c.nome || '', cargo: c.cargo || '', diaria: num(c.diaria)})),
+    etapas: o.etapas || [], anexos: o.anexos || []
+  }));
+  const diarios = diOld.map(d => {
+    const obra = obras.find(o => o.id === d.obraId);
+    return {
+      id: uid(), obraId: d.obraId, data: d.data, clima: d.clima || 'Ensolarado',
+      atividades: d.atividades || '', ocorrencias: d.ocorrencias || '',
+      presentes: (d.equipe || []).map(nome => {
+        const c = obra && obra.equipe.find(x => x.nome === nome);
+        return {colabId: c ? c.id : null, nome, cargo: c ? c.cargo : '', fracao: 1, diaria: null, extra: 0};
+      }),
+      etapaIds: [], outrasValor: 0, outrasDesc: '', criadoEm: d.timestamp || new Date().toISOString()
+    };
+  });
+  const ativa = localStorage.getItem('obra_ativa_id');
+  return {versao: 4, obras, diarios, obraAtivaId: obras.some(o => o.id === ativa) ? ativa : obras[0].id, ultimoBackup: null};
+}
+
+function carregar(dados) {
+  if (dados) S = dados;
+  else { try { S = JSON.parse(localStorage.getItem(CHAVE)); } catch (e) { S = null; } }
+  if (!S || !S.obras) S = migrarVersaoAntiga();
+  if (!S.obras.length && !(S.nuvem && S.nuvem.papel === 'enc')) S.obras.push(obraPadrao());
+  if (!S.obras.some(o => o.id === S.obraAtivaId)) S.obraAtivaId = S.obras[0] ? S.obras[0].id : null;
+  S.pendExcl ||= []; S.pendObraExcl ||= [];
+  S.obras.forEach(o => { o.equipe ||= []; o.etapas ||= []; o.anexos ||= []; });
+  S.vales ||= [];
+  salvar();
+}
+function salvar() {
+  try { localStorage.setItem(CHAVE, JSON.stringify(S)); }
+  catch (e) { alert('⚠️ Não foi possível salvar: memória do navegador cheia. Faça um backup e apague arquivos anexados grandes.'); }
+}
+const obraAtual = () => S.obras.find(o => o.id === S.obraAtivaId);
+const obraPorId = id => S.obras.find(o => o.id === id);
+const diariosDa = obraId => S.diarios.filter(d => d.obraId === obraId);
+
+/* ---------- cálculos de custo ---------- */
+function valorDiaria(p, obra) {
+  if (p.diaria != null && p.diaria > 0) return p.diaria;          // valor gravado no dia
+  const c = obra && (obra.equipe.find(x => x.id === p.colabId) || obra.equipe.find(x => x.nome === p.nome));
+  return c ? num(c.diaria) : 0;                                     // senão usa o valor atual do cadastro
+}
+function custoDiario(d) {
+  const obra = obraPorId(d.obraId);
+  let diarias = 0, extras = 0;
+  d.presentes.forEach(p => { diarias += valorDiaria(p, obra) * p.fracao; extras += num(p.extra); });
+  const outras = num(d.outrasValor);
+  return {diarias, extras, outras, total: diarias + extras + outras};
+}
+function custosPorEtapa(obra) {
+  const m = {}; obra.etapas.forEach(e => m[e.id] = 0);
+  let semEtapa = 0;
+  diariosDa(obra.id).forEach(d => {
+    const t = custoDiario(d).total;
+    const ids = (d.etapaIds || []).filter(id => id in m);
+    if (!ids.length) semEtapa += t; else ids.forEach(id => m[id] += t / ids.length);
+  });
+  return {m, semEtapa};
+}
+function prazoPct(e, hoje = hojeISO()) {
+  if (!e.inicio || !e.fim) return null;
+  const tot = diasEntre(e.inicio, e.fim) + 1; if (tot <= 0) return null;
+  return Math.max(0, Math.min(100, (diasEntre(e.inicio, hoje) + 1) / tot * 100));
+}
+function analiseObra(obra) {
+  const {m, semEtapa} = custosPorEtapa(obra);
+  const etapas = obra.etapas.map(e => {
+    const valor = num(e.valor), gasto = m[e.id] || 0, exec = Math.max(0, Math.min(100, num(e.exec)));
+    const produzido = valor * exec / 100, resultado = produzido - gasto, prazo = prazoPct(e);
+    const custoFinal = exec > 0 ? gasto / (exec / 100) : null;
+    const alertas = [];
+    if (exec >= 100) alertas.push(gasto > valor ? ['bad', `Concluída com prejuízo de ${brl(gasto - valor)}`] : ['ok', `Concluída com lucro de ${brl(valor - gasto)}`]);
+    else {
+      if (gasto > valor && valor > 0) alertas.push(['bad', `Já gastou ${brl(gasto - valor)} a mais que o valor da empreita`]);
+      else if (resultado < 0 && gasto > 0) alertas.push(['bad', `Gastando mais do que produz (${brl(-resultado)} no negativo)`]);
+      if (custoFinal != null && custoFinal > valor && gasto <= valor && valor > 0) alertas.push(['warn', `No ritmo atual, fecha com prejuízo de ${brl(custoFinal - valor)}`]);
+      if (prazo != null && prazo - exec > 15) alertas.push(['warn', `Atrasada: ${Math.round(prazo)}% do prazo passou e só ${Math.round(exec)}% feito`]);
+      if (e.fim && hojeISO() > e.fim) alertas.push(['warn', `Prazo terminou em ${fmtData(e.fim)}`]);
     }
+    return {e, valor, gasto, exec, produzido, resultado, prazo, custoFinal, alertas};
+  });
+  const empreita = etapas.reduce((s, x) => s + x.valor, 0);
+  const gastoEtapas = etapas.reduce((s, x) => s + x.gasto, 0);
+  const gasto = gastoEtapas + semEtapa;
+  const produzido = etapas.reduce((s, x) => s + x.produzido, 0);
+  const resultado = produzido - gasto;
+  const razao = produzido > 0 ? gasto / produzido : null;           // quanto gasta para cada R$1 produzido
+  const lucroPrevisto = razao != null ? empreita - razao * empreita : null;
+  return {etapas, empreita, gasto, semEtapa, produzido, resultado, razao, lucroPrevisto};
+}
 
-    const obrasPadrao = [
-      {
-        id: "obra_1",
-        nome: "Residencial Fase do Cinza (210,38 m²)",
-        endereco: "Tucumã - PA",
-        equipe: [
-          { nome: "Lucas Amir", cargo: "Pedreiro Líder" },
-          { nome: "Júnior", cargo: "Pedreiro 2" },
-          { nome: "Bruno", cargo: "Ajudante 1" },
-          { nome: "Rosinaldo", cargo: "Ajudante 2" }
-        ]
-      }
-    ];
+/* ================= RENDER GERAL ================= */
+function renderTudo() {
+  if (!S.obras.length) { mostrarEspera(); return; }
+  $('telaEspera').classList.add('hide');
+  renderObra(); renderDiarioForm(); renderHistorico(); renderCrono(); renderFin(); renderBackupBanner();
+}
+function renderObra() {
+  $('seletorObra').innerHTML = S.obras.map(o => `<option value="${esc(o.id)}" ${o.id === S.obraAtivaId ? 'selected' : ''}>🏢 ${esc(o.nome)}</option>`).join('');
+  const o = obraAtual();
+  $('txtEndereco').textContent = '📍 ' + (o.endereco || '—') + (o.contratante ? ' • ' + o.contratante : '');
+}
+function trocarObra(id) {
+  if (edicaoId && !confirm('Você está editando um diário. Descartar a edição?')) { renderObra(); return; }
+  edicaoId = null; S.obraAtivaId = id; salvar(); renderTudo();
+}
+function irAba(aba) {
+  if (aba !== 'diario' && !admin()) { pedirPin(() => irAba(aba)); return; }
+  ['diario', 'crono', 'fin'].forEach(a => $('aba-' + a).classList.toggle('hide', a !== aba));
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === aba));
+  try { localStorage.setItem('eliel_aba', aba); } catch (e) {}
+  if (aba === 'fin') renderFin();
+  window.scrollTo({top: 0});
+}
 
-    let obras = JSON.parse(localStorage.getItem('obras_eliel')) || obrasPadrao;
-    let obraAtivaId = localStorage.getItem('obra_ativa_id') || obras[0].id;
-    let diarios = JSON.parse(localStorage.getItem('diarios_eliel_v3')) || [];
+/* ================= DIÁRIO ================= */
+let edicaoId = null;
+let rascunho = null;   // {pres: {chave: {fracao, extra, nome, cargo, colabId, diaria}}, etapas: Set, exec: {}}
 
-    function getObraAtual() {
-      return obras.find(o => o.id === obraAtivaId) || obras[0];
-    }
+function chaveColab(c) { return c.colabId || c.id || ('nome:' + c.nome); }
 
-    function renderSeletor() {
-      const select = document.getElementById('seletorObraAtiva');
-      select.innerHTML = obras.map(o => `
-        <option value="${o.id}" ${o.id === obraAtivaId ? 'selected' : ''}>🏢 ${o.nome}</option>
-      `).join('');
+function novoRascunho(d) {
+  const obra = obraAtual();
+  const r = {pres: {}, ordem: [], etapas: new Set(), exec: {}};
+  obra.equipe.forEach(c => {
+    const k = c.id; r.ordem.push(k);
+    r.pres[k] = {colabId: c.id, nome: c.nome, cargo: c.cargo, fracao: d ? 0 : 1, extra: 0, diaria: null};
+  });
+  if (d) {
+    d.presentes.forEach(p => {
+      const k = p.colabId && r.pres[p.colabId] ? p.colabId : (obra.equipe.find(c => c.nome === p.nome)?.id || chaveColab(p));
+      if (!r.pres[k]) { r.ordem.push(k); r.pres[k] = {colabId: p.colabId, nome: p.nome, cargo: p.cargo, fracao: 0, extra: 0, diaria: p.diaria}; }
+      Object.assign(r.pres[k], {fracao: p.fracao, extra: num(p.extra), diaria: p.diaria});
+    });
+    (d.etapaIds || []).forEach(id => r.etapas.add(id));
+  }
+  r.etapas.forEach(id => { const e = obra.etapas.find(x => x.id === id); if (e) r.exec[id] = num(e.exec); });
+  return r;
+}
 
-      const atual = getObraAtual();
-      document.getElementById('txtEnderecoObra').innerHTML = `<i class="fa-solid fa-location-dot text-sky-600"></i> ${atual.endereco}`;
+function renderDiarioForm(d) {
+  const obra = obraAtual();
+  rascunho = novoRascunho(d); formSujo = false;
+  $('dData').value = d ? d.data : hojeISO();
+  $('dClima').value = d ? d.clima : 'Ensolarado';
+  $('dAtividades').value = d ? d.atividades : '';
+  $('dOcorrencias').value = d ? d.ocorrencias : '';
+  $('dOutrasValor').value = d ? numTxt(d.outrasValor) : '';
+  $('dOutrasDesc').value = d ? (d.outrasDesc || '') : '';
+  $('avisoEdicao').classList.toggle('hide', !d);
+  if (d) $('txtEditando').textContent = fmtData(d.data);
+  $('btnSalvarDiario').innerHTML = d ? '💾 Salvar alterações' : '💾 Salvar diário';
+  renderEquipeDia(); renderChipsEtapas();
+}
 
-      const containerEq = document.getElementById('containerEquipe');
-      containerEq.innerHTML = atual.equipe.map((colab, idx) => `
-        <label class="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer active:bg-sky-50">
-          <input type="checkbox" id="eq_${idx}" checked class="w-4 h-4 rounded text-sky-600">
-          <span><strong>${colab.nome}</strong><br><small class="text-slate-500">${colab.cargo}</small></span>
-        </label>
-      `).join('');
-
-      renderHistorico();
-    }
-
-    function trocarObraAtiva(id) {
-      obraAtivaId = id;
-      localStorage.setItem('obra_ativa_id', id);
-      renderSeletor();
-    }
-
-    function abrirGerenciadorObras() {
-      const lista = document.getElementById('listaObrasCadastradas');
-      lista.innerHTML = obras.map(o => `
-        <div class="p-3 bg-slate-50 border rounded-xl flex justify-between items-center ${o.id === obraAtivaId ? 'border-sky-500 ring-1 ring-sky-500' : ''}">
-          <div>
-            <h4 class="font-bold text-xs text-slate-800">${o.nome}</h4>
-            <p class="text-[10px] text-slate-500">${o.endereco} • ${o.equipe.length} colaboradores</p>
-          </div>
-          <div class="flex gap-1">
-            <button onclick="editarObraId('${o.id}')" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded"><i class="fa-solid fa-pen"></i></button>
-            ${obras.length > 1 ? `<button onclick="excluirObraId('${o.id}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button>` : ''}
+function renderEquipeDia() {
+  const obra = obraAtual();
+  if (!rascunho.ordem.length) {
+    $('listaEquipeDia').innerHTML = `<div class="empty">Nenhum colaborador cadastrado.<br>${admin() ? `<button type="button" class="lnk" onclick="abrirObra(S.obraAtivaId)">Cadastrar equipe</button>` : 'Peça ao engenheiro para cadastrar a equipe.'}</div>`;
+  } else {
+    $('listaEquipeDia').innerHTML = rascunho.ordem.map(k => {
+      const p = rascunho.pres[k];
+      const vd = valorDiaria(p, obra);
+      return `<div class="colab ${p.fracao === 0 ? 'falta' : ''}">
+        <div class="top">
+          <div style="min-width:0"><b>${esc(p.nome)}</b><div class="tiny mut">${esc(p.cargo)}${!admin() ? '' : vd ? ' • diária ' + brl(vd) : ' • <span style="color:var(--bad)">sem diária cadastrada</span>'}</div></div>
+          <div class="seg">
+            <button type="button" class="${p.fracao === 1 ? 'on' : ''}" onclick="setFracao(${jsq(k)},1)">Dia</button>
+            <button type="button" class="meia ${p.fracao === .5 ? 'on' : ''}" onclick="setFracao(${jsq(k)},.5)">½</button>
+            <button type="button" class="falta ${p.fracao === 0 ? 'on' : ''}" onclick="setFracao(${jsq(k)},0)">✖</button>
           </div>
         </div>
-      `).join('');
-      document.getElementById('modalGerenciador').showModal();
-    }
+        ${p.fracao > 0 && admin() ? `<div class="extra"><span class="tiny mut">Extra R$</span><input class="inp" inputmode="decimal" placeholder="0,00" value="${numTxt(p.extra)}" oninput="setExtra(${jsq(k)},this.value)" style="width:100px"></div>` : ''}
+      </div>`;
+    }).join('');
+  }
+  atualizarTotalDia();
+}
+function setFracao(k, f) { rascunho.pres[k].fracao = f; if (!f) rascunho.pres[k].extra = 0; renderEquipeDia(); }
+function setExtra(k, v) { rascunho.pres[k].extra = num(v); atualizarTotalDia(); }
 
-    function fecharGerenciadorObras() {
-      document.getElementById('modalGerenciador').close();
-    }
+function atualizarTotalDia() {
+  const obra = obraAtual(); let tot = 0, n = 0;
+  rascunho.ordem.forEach(k => { const p = rascunho.pres[k]; if (p.fracao > 0) { n += p.fracao; tot += valorDiaria(p, obra) * p.fracao + num(p.extra); } });
+  tot += num($('dOutrasValor').value);
+  $('txtCustoDia').textContent = brl(tot);
+  $('txtPresentes').textContent = `${String(n).replace('.', ',')} diária${n === 1 ? '' : 's'}`;
+}
 
-    function abrirModalNovaObra() {
-      fecharGerenciadorObras();
-      document.getElementById('tituloModalObra').innerText = "Cadastrar Nova Obra";
-      document.getElementById('formObraId').value = "";
-      document.getElementById('formNomeObra').value = "";
-      document.getElementById('formEnderecoObra').value = "";
-      document.getElementById('formEquipeObra').value = "";
-      document.getElementById('modalFormObra').showModal();
-    }
+function renderChipsEtapas() {
+  const obra = obraAtual();
+  if (!obra.etapas.length) {
+    $('chipsEtapas').innerHTML = `<div class="small mut">Nenhuma etapa cadastrada.${admin() ? ` <button type="button" class="lnk" onclick="irAba('crono')">Importar cronograma</button>` : ''}</div>`;
+    $('progressoEtapas').innerHTML = ''; return;
+  }
+  $('chipsEtapas').innerHTML = obra.etapas.map(e => `<button type="button" class="chip ${rascunho.etapas.has(e.id) ? 'on' : ''} ${num(e.exec) >= 100 ? 'done' : ''}" onclick="togEtapa(${jsq(e.id)})">${num(e.exec) >= 100 ? '✔ ' : ''}${esc(e.nome)}</button>`).join('');
+  const sel = obra.etapas.filter(e => rascunho.etapas.has(e.id));
+  $('progressoEtapas').innerHTML = sel.length ? `<div class="sp"></div><div class="tiny mut b" style="margin-bottom:4px">Quanto já está pronto de cada etapa? (atualiza o financeiro)</div>` +
+    sel.map(e => `<div class="row" style="margin-bottom:5px"><span class="small" style="flex:1">${esc(e.nome)}</span>
+      <input class="inp" type="number" min="0" max="100" step="5" value="${rascunho.exec[e.id] ?? num(e.exec)}" oninput="rascunho.exec[${jsq(e.id)}]=num(this.value)" style="width:78px;padding:6px 8px"><span class="small">%</span></div>`).join('') : '';
+}
+function togEtapa(id) {
+  if (rascunho.etapas.has(id)) rascunho.etapas.delete(id);
+  else { rascunho.etapas.add(id); const e = obraAtual().etapas.find(x => x.id === id); rascunho.exec[id] = num(e.exec); }
+  renderChipsEtapas();
+}
 
-    function editarObraAtual() {
-      editarObraId(obraAtivaId);
-    }
+function salvarDiario(ev) {
+  ev.preventDefault();
+  const obra = obraAtual();
+  const data = $('dData').value;
+  const dup = S.diarios.find(d => d.obraId === obra.id && d.data === data && d.id !== edicaoId);
+  if (dup && !confirm(`Já existe um diário em ${fmtData(data)} nesta obra. Salvar outro mesmo assim?`)) return;
+  const presentes = rascunho.ordem.map(k => rascunho.pres[k]).filter(p => p.fracao > 0).map(p => {
+    const c = obra.equipe.find(x => x.id === p.colabId);
+    const vAtual = c ? num(c.diaria) : 0;
+    return {colabId: p.colabId || null, nome: p.nome, cargo: p.cargo, fracao: p.fracao, extra: num(p.extra),
+            diaria: p.diaria > 0 && edicaoId ? p.diaria : (vAtual > 0 ? vAtual : null)};
+  });
+  const reg = {
+    obraId: obra.id, data, clima: $('dClima').value,
+    atividades: $('dAtividades').value.trim(), ocorrencias: $('dOcorrencias').value.trim(),
+    presentes, etapaIds: [...rascunho.etapas],
+    outrasValor: num($('dOutrasValor').value), outrasDesc: $('dOutrasDesc').value.trim(),
+    execs: Object.fromEntries([...rascunho.etapas].map(id => [id, Math.max(0, Math.min(100, num(rascunho.exec[id])))])),
+    pend: !!S.nuvem
+  };
+  // atualiza % executado das etapas
+  Object.entries(rascunho.exec).forEach(([id, v]) => { const e = obra.etapas.find(x => x.id === id); if (e && rascunho.etapas.has(id)) e.exec = Math.max(0, Math.min(100, v)); });
+  if (edicaoId) {
+    const i = S.diarios.findIndex(d => d.id === edicaoId);
+    S.diarios[i] = {...S.diarios[i], ...reg, editadoEm: new Date().toISOString()};
+  } else {
+    S.diarios.push({id: uid(), ...reg, criadoEm: new Date().toISOString()});
+  }
+  const eraEdicao = !!edicaoId; edicaoId = null;
+  salvar(); agendarSync(300);
+  toast(eraEdicao ? '✅ Diário atualizado' : admin() ? `✅ Diário salvo — custo do dia ${brl(custoDiario(reg).total)}` : '✅ Diário salvo');
+  renderDiarioForm(); renderHistorico(); renderCrono(); renderFin(); renderBackupBanner();
+}
 
-    function editarObraId(id) {
-      fecharGerenciadorObras();
-      const o = obras.find(item => item.id === id);
-      document.getElementById('tituloModalObra').innerText = "Editar Obra";
-      document.getElementById('formObraId').value = o.id;
-      document.getElementById('formNomeObra').value = o.nome;
-      document.getElementById('formEnderecoObra').value = o.endereco;
-      document.getElementById('formEquipeObra').value = o.equipe.map(e => `${e.nome} - ${e.cargo}`).join('\n');
-      document.getElementById('modalFormObra').showModal();
-    }
+function editarDiario(id) {
+  const d = S.diarios.find(x => x.id === id); if (!d) return;
+  edicaoId = id; renderDiarioForm(d); window.scrollTo({top: 0, behavior: 'smooth'});
+}
+function cancelarEdicao() { edicaoId = null; renderDiarioForm(); }
+function excluirDiario(id) {
+  const d = S.diarios.find(x => x.id === id);
+  if (!confirm(`Excluir o diário de ${fmtData(d.data)}? Isso não pode ser desfeito.`)) return;
+  S.diarios = S.diarios.filter(x => x.id !== id);
+  if (S.nuvem) { S.pendExcl.push(id); agendarSync(); }
+  if (edicaoId === id) cancelarEdicao();
+  salvar(); renderHistorico(); renderFin(); toast('Diário excluído');
+}
 
-    function fecharModalObra() {
-      document.getElementById('modalFormObra').close();
-    }
+function renderHistorico() {
+  const obra = obraAtual();
+  const lista = diariosDa(obra.id).sort((a, b) => b.data.localeCompare(a.data) || (b.criadoEm || '').localeCompare(a.criadoEm || ''));
+  $('txtTotalDiarios').textContent = `${lista.length} salvo${lista.length === 1 ? '' : 's'}`;
+  if (!lista.length) { $('listaHistorico').innerHTML = '<div class="empty">Nenhum diário registrado para esta obra ainda.</div>'; return; }
+  const etNome = id => obra.etapas.find(e => e.id === id)?.nome;
+  $('listaHistorico').innerHTML = lista.map(d => {
+    const c = custoDiario(d), n = d.presentes.reduce((s, p) => s + p.fracao, 0);
+    const ets = (d.etapaIds || []).map(etNome).filter(Boolean);
+    return `<div class="hist">
+      <div class="hd"><span>📅 ${fmtData(d.data)} <span class="mut tiny">${semana(d.data)} • ${esc(d.clima)}</span></span><span class="so-admin" style="color:var(--sky)">${brl(c.total)}</span></div>
+      ${S.nuvem && (d.lancadoPor || d.pend || d.erroSync) ? `<div class="tiny" style="color:${d.erroSync ? 'var(--bad)' : d.pend ? 'var(--warn)' : 'var(--mut)'}">${d.erroSync ? '⚠️ não aceito pela nuvem (' + esc(textoErro(d.erroSync)) + ')' : d.pend ? '⏳ aguardando internet para enviar' : '☁️ lançado por ' + esc(d.lancadoPor)}</div>` : ''}
+      <div class="tiny mut">${String(n).replace('.', ',')} diária(s): ${esc(d.presentes.map(p => p.nome + (p.fracao === .5 ? ' (½)' : '')).join(', ') || '—')}</div>
+      ${ets.length ? `<div class="chips" style="margin-top:4px">${ets.map(n => `<span class="pill sky">${esc(n)}</span>`).join('')}</div>` : ''}
+      <p>${esc(d.atividades)}</p>
+      ${d.ocorrencias ? `<div class="oc">⚠️ ${esc(d.ocorrencias)}</div>` : ''}
+      <div class="row" style="justify-content:flex-end;margin-top:4px"><button class="lnk" onclick="editarDiario(${jsq(d.id)})">✏️ Editar</button><button class="lnk so-admin" style="color:var(--bad)" onclick="excluirDiario(${jsq(d.id)})">🗑️ Excluir</button></div>
+    </div>`;
+  }).join('');
+}
 
-    function salvarDadosObra(e) {
-      e.preventDefault();
-      const idExistente = document.getElementById('formObraId').value;
-      const nome = document.getElementById('formNomeObra').value;
-      const endereco = document.getElementById('formEnderecoObra').value;
-      
-      const linhasEquipe = document.getElementById('formEquipeObra').value.split('\n').filter(l => l.trim() !== '');
-      const equipeFormatada = linhasEquipe.map(linha => {
-        const partes = linha.split('-');
-        return {
-          nome: partes[0] ? partes[0].trim() : 'Colaborador',
-          cargo: partes[1] ? partes[1].trim() : 'Função'
-        };
+/* ================= OBRAS ================= */
+function abrirGerenciador() {
+  $('listaObras').innerHTML = S.obras.map(o => {
+    const nd = diariosDa(o.id).length;
+    return `<div class="etapa" style="${o.id === S.obraAtivaId ? 'border-color:var(--sky);box-shadow:0 0 0 1px var(--sky)' : ''}">
+      <div class="hd"><div><div class="nm">${esc(o.nome)}</div><div class="tiny mut">${esc(o.endereco)} • ${o.equipe.length} colaboradores • ${o.etapas.length} etapas • ${nd} diários</div></div></div>
+      <div class="row" style="justify-content:flex-end;margin-top:6px">
+        ${o.id !== S.obraAtivaId ? `<button class="btn sky sm" onclick="fechar('dlgObras');trocarObra(${jsq(o.id)})">Abrir</button>` : '<span class="pill sky">aberta</span>'}
+        <button class="btn sec sm" onclick="fechar('dlgObras');abrirObra(${jsq(o.id)})">✏️</button>
+        ${S.obras.length > 1 ? `<button class="btn dng sm" onclick="excluirObra(${jsq(o.id)})">🗑️</button>` : ''}
+      </div></div>`;
+  }).join('');
+  $('dlgObras').showModal();
+}
+function addLinhaEquipe(c = {}) {
+  const div = document.createElement('div'); div.className = 'eqrow';
+  div.dataset.id = c.id || '';
+  div.innerHTML = `<input class="inp eqn" placeholder="Nome" value="${esc(c.nome || '')}">
+    <input class="inp eqc" placeholder="Função" value="${esc(c.cargo || '')}">
+    <input class="inp eqd" inputmode="decimal" placeholder="0,00" value="${numTxt(c.diaria)}">
+    <button type="button" class="xbtn" onclick="this.parentElement.remove()">×</button>`;
+  $('oEquipe').appendChild(div);
+  if (!c.nome) div.querySelector('.eqn').focus();
+}
+function abrirObra(id) {
+  const o = id ? obraPorId(id) : null;
+  $('tituloObra').textContent = o ? 'Editar obra' : 'Cadastrar nova obra';
+  $('oId').value = o ? o.id : '';
+  $('oNome').value = o ? o.nome : ''; $('oEndereco').value = o ? o.endereco : ''; $('oContratante').value = o ? (o.contratante || '') : '';
+  $('oEquipe').innerHTML = '';
+  (o ? o.equipe : []).forEach(c => addLinhaEquipe(c));
+  if (!o || !o.equipe.length) { addLinhaEquipe({nome: ''}); }
+  $('dlgObra').showModal();
+}
+function salvarObra(ev) {
+  ev.preventDefault();
+  const equipe = [...$('oEquipe').querySelectorAll('.eqrow')].map(r => ({
+    id: r.dataset.id || uid(), nome: r.querySelector('.eqn').value.trim(), cargo: r.querySelector('.eqc').value.trim(), diaria: num(r.querySelector('.eqd').value)
+  })).filter(c => c.nome);
+  const id = $('oId').value;
+  const dados = {nome: $('oNome').value.trim(), endereco: $('oEndereco').value.trim(), contratante: $('oContratante').value.trim(), equipe};
+  if (id) marcarObra(Object.assign(obraPorId(id), dados));
+  else { const novo = {id: 'obra_' + Date.now(), ...dados, etapas: [], anexos: []}; S.obras.push(novo); S.obraAtivaId = novo.id; marcarObra(novo); }
+  edicaoId = null; salvar(); fechar('dlgObra'); renderTudo(); toast('✅ Obra salva');
+}
+async function excluirObra(id) {
+  const o = obraPorId(id), nd = diariosDa(id).length;
+  if (!confirm(`Excluir a obra "${o.nome}"${nd ? ` e os ${nd} diários dela` : ''}?\n\nDica: faça um backup antes.`)) return;
+  for (const a of o.anexos) { try { await Arq.del(a.id); } catch (e) {} }
+  S.obras = S.obras.filter(x => x.id !== id);
+  if (S.nuvem) { S.pendObraExcl.push(id); agendarSync(); }
+  S.diarios = S.diarios.filter(d => d.obraId !== id);
+  S.vales = S.vales.filter(v => v.obraId !== id);
+  if (S.obraAtivaId === id) S.obraAtivaId = S.obras[0].id;
+  edicaoId = null; salvar(); fechar('dlgObras'); renderTudo(); toast('Obra excluída');
+}
+
+/* ================= CRONOGRAMA ================= */
+function renderCrono() {
+  const obra = obraAtual();
+  const {m} = custosPorEtapa(obra);
+  const total = obra.etapas.reduce((s, e) => s + num(e.valor), 0);
+  $('txtTotalEmpreita').textContent = brl(total);
+  $('listaEtapas').innerHTML = !obra.etapas.length ? '<div class="empty">Nenhuma etapa ainda. Importe a planilha do cronograma ou crie as etapas manualmente.</div>' :
+    obra.etapas.map(e => {
+      const ex = num(e.exec), pz = prazoPct(e);
+      const cls = ex >= 100 ? 'ok' : (pz != null && pz - ex > 15 ? 'warn' : '');
+      return `<div class="etapa" onclick="editarEtapa(${jsq(e.id)})" style="cursor:pointer">
+        <div class="hd"><div class="nm">${ex >= 100 ? '✔ ' : ''}${esc(e.nome)}</div><div class="b">${brl(e.valor)}</div></div>
+        <div class="tiny mut">${fmtData(e.inicio)} → ${fmtData(e.fim)}${e.inicio && e.fim ? ` (${diasEntre(e.inicio, e.fim) + 1} dias)` : ''} • gasto ${brl(m[e.id] || 0)}</div>
+        <div class="kv"><span>Executado <b>${Math.round(ex)}%</b></span><span class="mut">${pz != null ? `prazo corrido ${Math.round(pz)}%` : ''}</span></div>
+        <div class="bar ${cls}"><i style="width:${ex}%"></i>${pz != null ? `<span class="mk" style="left:${pz}%"></span>` : ''}</div>
+      </div>`;
+    }).join('') + '<div class="tiny mut">Toque numa etapa para editar. A barrinha preta mostra onde o prazo deveria estar hoje.</div>';
+  renderAnexos();
+}
+function novaEtapa() { editarEtapa(null); }
+function editarEtapa(id) {
+  const e = id ? obraAtual().etapas.find(x => x.id === id) : null;
+  $('tituloEtapa').textContent = e ? 'Editar etapa' : 'Nova etapa';
+  $('eId').value = e ? e.id : ''; $('eNome').value = e ? e.nome : '';
+  $('eInicio').value = e ? e.inicio || '' : ''; $('eFim').value = e ? e.fim || '' : '';
+  $('eValor').value = e ? numTxt(e.valor) : ''; $('eExec').value = e ? num(e.exec) : '';
+  $('btnExcluirEtapa').classList.toggle('hide', !e);
+  $('dlgEtapa').showModal();
+}
+function salvarEtapa(ev) {
+  ev.preventDefault();
+  const obra = obraAtual(), id = $('eId').value;
+  const dados = {nome: $('eNome').value.trim(), inicio: $('eInicio').value, fim: $('eFim').value, valor: num($('eValor').value), exec: Math.max(0, Math.min(100, num($('eExec').value)))};
+  if (id) Object.assign(obra.etapas.find(x => x.id === id), dados); else obra.etapas.push({id: uid(), ...dados});
+  marcarObra(obra);
+  salvar(); fechar('dlgEtapa'); renderCrono(); renderFin(); if (!edicaoId) renderDiarioForm(); else renderChipsEtapas();
+}
+function excluirEtapa() {
+  const obra = obraAtual(), id = $('eId').value;
+  const usados = diariosDa(obra.id).filter(d => (d.etapaIds || []).includes(id)).length;
+  if (!confirm(`Excluir esta etapa?${usados ? `\n${usados} diário(s) estão ligados a ela; o custo deles vai para "sem etapa".` : ''}`)) return;
+  obra.etapas = obra.etapas.filter(e => e.id !== id);
+  marcarObra(obra);
+  salvar(); fechar('dlgEtapa'); renderCrono(); renderFin(); if (!edicaoId) renderDiarioForm(); else renderChipsEtapas();
+}
+
+/* ---------- leitor de Excel (.xlsx) sem bibliotecas externas ---------- */
+async function lerZip(buf) {
+  const dv = new DataView(buf); let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('Arquivo não é um .xlsx válido');
+  const n = dv.getUint16(eocd + 10, true); let off = dv.getUint32(eocd + 16, true); const arqs = {};
+  const td = new TextDecoder();
+  for (let k = 0; k < n; k++) {
+    const metodo = dv.getUint16(off + 10, true), tam = dv.getUint32(off + 20, true);
+    const ln = dv.getUint16(off + 28, true), le = dv.getUint16(off + 30, true), lc = dv.getUint16(off + 32, true), loc = dv.getUint32(off + 42, true);
+    arqs[td.decode(new Uint8Array(buf, off + 46, ln))] = {metodo, tam, loc};
+    off += 46 + ln + le + lc;
+  }
+  return async nome => {
+    const f = arqs[nome] || arqs[Object.keys(arqs).find(k => k.toLowerCase() === nome.toLowerCase())];
+    if (!f) return null;
+    const ini = f.loc + 30 + dv.getUint16(f.loc + 26, true) + dv.getUint16(f.loc + 28, true);
+    const dados = new Uint8Array(buf, ini, f.tam);
+    if (f.metodo === 0) return td.decode(dados);
+    const out = await new Response(new Blob([dados]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+    return td.decode(out);
+  };
+}
+const xml = s => new DOMParser().parseFromString(s, 'application/xml');
+const tags = (el, t) => [...el.getElementsByTagName(t)];
+function colIdx(ref) { const l = ref.replace(/\d+/g, ''); let n = 0; for (const ch of l) n = n * 26 + ch.charCodeAt(0) - 64; return n - 1; }
+
+async function lerXlsx(buf) {
+  const ler = await lerZip(buf);
+  const wb = xml(await ler('xl/workbook.xml'));
+  const rels = xml(await ler('xl/_rels/workbook.xml.rels') || '<r/>');
+  const alvo = {}; tags(rels, 'Relationship').forEach(r => alvo[r.getAttribute('Id')] = r.getAttribute('Target'));
+  const ss = await ler('xl/sharedStrings.xml');
+  const strs = ss ? tags(xml(ss), 'si').map(si => tags(si, 't').map(t => t.textContent).join('')) : [];
+  const abas = [];
+  for (const sh of tags(wb, 'sheet')) {
+    const rid = sh.getAttribute('r:id') || [...sh.attributes].find(a => /(^|:)id$/.test(a.name) && a.name !== 'sheetId')?.value;
+    let t = alvo[rid] || ''; t = t.startsWith('/') ? t.slice(1) : 'xl/' + t.replace(/^\.\//, '');
+    const txt = await ler(t); if (!txt) continue;
+    const linhas = [];
+    tags(xml(txt), 'row').forEach(row => {
+      const ri = parseInt(row.getAttribute('r')) - 1; const lin = [];
+      tags(row, 'c').forEach((c, ci) => {
+        const ref = c.getAttribute('r'); const idx = ref ? colIdx(ref) : ci;
+        const tp = c.getAttribute('t'); const v = c.getElementsByTagName('v')[0]?.textContent;
+        let val;
+        if (tp === 's') val = strs[+v] ?? '';
+        else if (tp === 'inlineStr') val = tags(c, 't').map(t => t.textContent).join('');
+        else if (tp === 'str' || tp === 'e') val = v ?? '';
+        else if (tp === 'b') val = v === '1';
+        else val = v != null && v !== '' ? Number(v) : '';
+        lin[idx] = val;
       });
+      linhas[isNaN(ri) ? linhas.length : ri] = lin;
+    });
+    abas.push({nome: sh.getAttribute('name'), linhas: Array.from(linhas, l => Array.from(l || [], x => x ?? ''))});
+  }
+  return abas;
+}
+function lerCsv(txt) {
+  const sep = (txt.split('\n')[0].match(/;/g) || []).length >= (txt.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
+  const linhas = []; let lin = [], cel = '', aspas = false;
+  for (let i = 0; i < txt.length; i++) {
+    const ch = txt[i];
+    if (aspas) { if (ch === '"' && txt[i + 1] === '"') { cel += '"'; i++; } else if (ch === '"') aspas = false; else cel += ch; }
+    else if (ch === '"') aspas = true;
+    else if (ch === sep) { lin.push(cel); cel = ''; }
+    else if (ch === '\n') { lin.push(cel.replace(/\r$/, '')); linhas.push(lin); lin = []; cel = ''; }
+    else cel += ch;
+  }
+  if (cel || lin.length) { lin.push(cel); linhas.push(lin); }
+  return [{nome: 'CSV', linhas}];
+}
+function paraData(v) {
+  if (v === '' || v == null) return '';
+  if (typeof v === 'number') { if (v > 20000 && v < 80000) { const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000); return d.toISOString().slice(0, 10); } return ''; }
+  const s = String(v);
+  let m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  m = s.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
+  if (m) { let a = +m[3]; if (a < 100) a += 2000; return `${a}-${pad(m[2])}-${pad(m[1])}`; }
+  return '';
+}
+const semAcento = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-      if (idExistente) {
-        const index = obras.findIndex(o => o.id === idExistente);
-        obras[index] = { id: idExistente, nome, endereco, equipe: equipeFormatada };
-      } else {
-        const novoId = "obra_" + Date.now();
-        obras.push({ id: novoId, nome, endereco, equipe: equipeFormatada });
-        obraAtivaId = novoId;
-        localStorage.setItem('obra_ativa_id', novoId);
+let IMP = null;   // {abas, aba, arquivo}
+async function lerPlanilha(input) {
+  const f = input.files[0]; input.value = ''; if (!f) return;
+  try {
+    const nome = f.name.toLowerCase();
+    if (nome.endsWith('.xls')) { alert('Esse é o formato antigo (.xls). No Excel, use "Salvar como" → "Pasta de Trabalho do Excel (.xlsx)" e tente de novo.'); return; }
+    const abas = nome.endsWith('.csv') ? lerCsv(await f.text()) : await lerXlsx(await f.arrayBuffer());
+    if (!abas.length) throw new Error('Nenhuma aba encontrada');
+    IMP = {abas, aba: 0, arquivo: f};
+    // escolhe a aba que parece ter o cronograma
+    let melhor = 0, pts = -1;
+    abas.forEach((a, i) => { const p = acharCabecalho(a.linhas).pontos; if (p > pts) { pts = p; melhor = i; } });
+    IMP.aba = melhor;
+    $('impAba').classList.toggle('hide', abas.length < 2);
+    $('impSheet').innerHTML = abas.map((a, i) => `<option value="${i}" ${i === melhor ? 'selected' : ''}>${esc(a.nome)}</option>`).join('');
+    $('impModoBox').classList.toggle('hide', !obraAtual().etapas.length);
+    impTrocarAba();
+    $('dlgImport').showModal();
+  } catch (e) {
+    console.error(e); alert('Não consegui ler essa planilha: ' + e.message + '\n\nConfira se é um arquivo .xlsx ou baixe a planilha modelo.');
+  }
+}
+const PADROES = {
+  nome: /(etapa|servi[cç]o|descri|atividade|tarefa)/,
+  nome2: /(nome|item|disciplina)/,
+  inicio: /(inicio|comeco|data inicial|data de inicio|^de$)/,
+  fim: /(fim|termino|conclus|final|entrega|^ate$)/,
+  valor: /(valor|preco|empreit|total|r\$|custo|mao de obra)/,
+  dur: /(dura|dias|prazo)/
+};
+function acharCabecalho(linhas) {
+  let melhor = {linha: 0, pontos: 0};
+  for (let i = 0; i < Math.min(20, linhas.length); i++) {
+    const l = (linhas[i] || []).map(semAcento); let p = 0;
+    for (const k in PADROES) if (l.some(c => c && typeof c === 'string' && PADROES[k].test(c))) p++;
+    if (p > melhor.pontos) melhor = {linha: i, pontos: p};
+  }
+  return melhor;
+}
+function impTrocarAba() {
+  IMP.aba = +$('impSheet').value || IMP.aba;
+  const h = acharCabecalho(IMP.abas[IMP.aba].linhas);
+  $('mapLinha').value = h.linha + 1;
+  impReMapear();
+}
+function impReMapear() {
+  const linhas = IMP.abas[IMP.aba].linhas, hl = Math.max(0, (+$('mapLinha').value || 1) - 1);
+  const cab = linhas[hl] || [];
+  const ncol = Math.max(...linhas.slice(hl, hl + 50).map(l => (l || []).length), 1);
+  const nomes = Array.from({length: ncol}, (_, i) => String(cab[i] ?? '').trim() || ('Coluna ' + String.fromCharCode(65 + i)));
+  const usado = new Set();
+  const achar = k => { for (let i = 0; i < ncol; i++) if (!usado.has(i) && PADROES[k].test(semAcento(cab[i]))) { usado.add(i); return i; } return -1; };
+  const auto = {};
+  ['inicio', 'fim', 'dur', 'valor', 'nome'].forEach(k => auto[k] = achar(k));
+  if (auto.nome < 0) auto.nome = achar('nome2');
+  if (auto.nome < 0) {   // coluna com mais textos
+    let melhor = -1, qt = 0;
+    for (let i = 0; i < ncol; i++) if (!usado.has(i)) { const q = linhas.slice(hl + 1, hl + 40).filter(l => l && typeof l[i] === 'string' && l[i].trim().length > 2).length; if (q > qt) { qt = q; melhor = i; } }
+    auto.nome = melhor;
+  }
+  const opts = sel => `<option value="-1">— não tem —</option>` + nomes.map((n, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${esc(n)}</option>`).join('');
+  $('mapNome').innerHTML = opts(auto.nome); $('mapInicio').innerHTML = opts(auto.inicio); $('mapFim').innerHTML = opts(auto.fim);
+  $('mapValor').innerHTML = opts(auto.valor); $('mapDur').innerHTML = opts(auto.dur);
+  impPreview();
+}
+function impLinhas() {
+  const linhas = IMP.abas[IMP.aba].linhas, hl = Math.max(0, (+$('mapLinha').value || 1) - 1);
+  const c = {nome: +$('mapNome').value, inicio: +$('mapInicio').value, fim: +$('mapFim').value, valor: +$('mapValor').value, dur: +$('mapDur').value};
+  const g = (l, i) => i >= 0 ? l[i] : '';
+  const out = [];
+  for (let i = hl + 1; i < linhas.length; i++) {
+    const l = linhas[i] || []; const nome = String(g(l, c.nome) ?? '').trim();
+    if (!nome || /^(total|subtotal|soma)\b/.test(semAcento(nome))) continue;
+    const inicio = paraData(g(l, c.inicio));
+    let fim = paraData(g(l, c.fim));
+    const dur = num(String(g(l, c.dur)).replace(/[^\d,.]/g, ''));
+    if (!fim && inicio && dur > 0) fim = addDias(inicio, Math.round(dur) - 1);
+    const valor = num(g(l, c.valor));
+    if (!inicio && !fim && !valor && c.valor >= 0) continue;   // linha de título sem dados
+    out.push({nome, inicio, fim, valor});
+  }
+  return out;
+}
+function impPreview() {
+  if ($('mapNome').value === '-1') { $('impPrev').innerHTML = '<div class="empty">Escolha a coluna das etapas.</div>'; $('impResumo').textContent = ''; return; }
+  const ls = impLinhas();
+  $('impPrev').innerHTML = `<table><tr><th>Etapa</th><th>Início</th><th>Término</th><th>Valor</th></tr>` +
+    ls.map(l => `<tr><td>${esc(l.nome)}</td><td>${fmtData(l.inicio)}</td><td>${fmtData(l.fim)}</td><td>${brl(l.valor)}</td></tr>`).join('') + '</table>';
+  $('impResumo').textContent = `${ls.length} etapas • total da empreita ${brl(ls.reduce((s, l) => s + l.valor, 0))}`;
+}
+async function confirmarImport() {
+  const ls = impLinhas(); if (!ls.length) { alert('Nenhuma etapa encontrada.'); return; }
+  const obra = obraAtual();
+  const modo = obra.etapas.length ? document.querySelector('input[name=impModo]:checked').value : 'subst';
+  const antigas = obra.etapas;
+  const novas = ls.map(l => {
+    const ex = antigas.find(e => semAcento(e.nome) === semAcento(l.nome));   // mantém o vínculo com os diários
+    return {id: ex ? ex.id : uid(), nome: l.nome, inicio: l.inicio, fim: l.fim, valor: l.valor, exec: ex ? num(ex.exec) : 0};
+  });
+  if (modo === 'subst') {
+    const perdidas = antigas.filter(a => !novas.some(n => n.id === a.id));
+    const afetados = diariosDa(obra.id).filter(d => (d.etapaIds || []).some(id => perdidas.some(p => p.id === id))).length;
+    if (afetados && !confirm(`${afetados} diário(s) estão ligados a etapas que não existem na planilha nova. O custo deles vai para "sem etapa". Continuar?`)) return;
+    obra.etapas = novas;
+  } else obra.etapas = antigas.concat(novas.filter(n => !antigas.some(a => a.id === n.id)));
+  marcarObra(obra);
+  if ($('impAnexar').checked) await guardarAnexo(IMP.arquivo);
+  salvar(); fechar('dlgImport'); renderCrono(); renderFin(); if (!edicaoId) renderDiarioForm(); else renderChipsEtapas();
+  toast(`✅ ${ls.length} etapas importadas`);
+}
+
+/* ---------- anexos ---------- */
+async function guardarAnexo(f) {
+  const id = uid();
+  await Arq.put(id, f);
+  obraAtual().anexos.push({id, nome: f.name, tipo: f.type, tamanho: f.size, data: hojeISO()});
+}
+async function anexarArquivos(input) {
+  const fs = [...input.files]; input.value = '';
+  try { for (const f of fs) await guardarAnexo(f); salvar(); renderAnexos(); toast(`📎 ${fs.length} arquivo(s) anexado(s)`); }
+  catch (e) { alert('Não foi possível anexar: ' + e.message); }
+}
+const tamTxt = b => b > 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.ceil(b / 1024) + ' KB';
+function iconeArq(n) { n = n.toLowerCase(); return /\.(xlsx?|csv)$/.test(n) ? '📊' : /\.pdf$/.test(n) ? '📕' : /\.(jpe?g|png|webp|heic)$/.test(n) ? '🖼️' : /\.(docx?)$/.test(n) ? '📄' : '📎'; }
+function renderAnexos() {
+  const obra = obraAtual();
+  $('listaAnexos').innerHTML = !obra.anexos.length ? '<div class="empty">Nenhum arquivo anexado.</div>' :
+    obra.anexos.map(a => `<div class="anexo"><span>${iconeArq(a.nome)}</span><span class="nm" onclick="abrirAnexo(${jsq(a.id)})">${esc(a.nome)}<br><span class="tiny mut" style="font-weight:400">${tamTxt(a.tamanho)} • ${fmtData(a.data)}</span></span>
+      <button class="btn sec sm" onclick="abrirAnexo(${jsq(a.id)})">Abrir</button><button class="xbtn" style="height:30px" onclick="excluirAnexo(${jsq(a.id)})">×</button></div>`).join('');
+}
+async function abrirAnexo(id) {
+  const a = obraAtual().anexos.find(x => x.id === id);
+  const blob = await Arq.get(id);
+  if (!blob) { alert('Arquivo não encontrado neste aparelho. Restaure um backup que contenha ele.'); return; }
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a'); link.href = url; link.target = '_blank';
+  if (!/^(image\/|application\/pdf)/.test(blob.type)) link.download = a.nome;
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+async function excluirAnexo(id) {
+  if (!confirm('Excluir este arquivo anexado?')) return;
+  const obra = obraAtual(); obra.anexos = obra.anexos.filter(a => a.id !== id);
+  try { await Arq.del(id); } catch (e) {}
+  salvar(); renderAnexos();
+}
+
+/* ================= FINANCEIRO ================= */
+function renderFin() {
+  const obra = obraAtual(), A = analiseObra(obra);
+  if (!obra.etapas.length) {
+    $('kpis').innerHTML = `<div class="kpi big"><div class="t">Gasto com a equipe até hoje</div><div class="v">${brl(A.gasto)}</div><div class="s">Cadastre o cronograma com o preço de empreita para ver o lucro. <button class="lnk" onclick="irAba('crono')">Ir para cronograma</button></div></div>`;
+    $('finEtapas').innerHTML = '<div class="empty">Sem etapas cadastradas.</div>';
+  } else {
+    const pos = A.resultado >= 0;
+    const prev = A.lucroPrevisto;
+    $('kpis').innerHTML = `
+      <div class="kpi big ${A.gasto || A.produzido ? (pos ? 'pos' : 'neg') : ''}"><div class="t">${pos ? 'Lucro' : 'Prejuízo'} até hoje</div><div class="v">${brl(Math.abs(A.resultado))}</div>
+        <div class="s">Valor já produzido ${brl(A.produzido)} − gasto ${brl(A.gasto)}</div></div>
+      <div class="kpi"><div class="t">Empreita total</div><div class="v">${brl0(A.empreita)}</div><div class="s">${obra.etapas.length} etapas</div></div>
+      <div class="kpi"><div class="t">Gasto até hoje</div><div class="v">${brl0(A.gasto)}</div><div class="s">${A.empreita ? Math.round(A.gasto / A.empreita * 100) + '% da empreita' : ''}</div></div>
+      <div class="kpi"><div class="t">Obra executada</div><div class="v">${A.empreita ? Math.round(A.produzido / A.empreita * 100) : 0}%</div><div class="s">${brl0(A.produzido)} produzido</div></div>
+      <div class="kpi ${prev == null ? '' : prev >= 0 ? 'pos' : 'neg'}"><div class="t">Previsão no fim</div><div class="v">${prev == null ? '—' : (prev >= 0 ? '' : '−') + brl0(Math.abs(prev))}</div>
+        <div class="s">${prev == null ? 'informe o % executado das etapas' : `no ritmo atual (${prev >= 0 ? 'lucro' : 'prejuízo'})`}</div></div>
+      ${A.semEtapa > 0 ? `<div class="kpi big" style="border-color:#fde68a;background:#fffbeb"><div class="t">Gasto sem etapa definida</div><div class="v" style="font-size:15px">${brl(A.semEtapa)}</div><div class="s">Diários em que nenhuma etapa foi marcada. Entra no gasto total, mas não em nenhuma etapa.</div></div>` : ''}`;
+    $('finEtapas').innerHTML = A.etapas.map(x => {
+      const usoPct = x.valor ? x.gasto / x.valor * 100 : 0;
+      const cls = x.gasto > x.produzido && x.gasto > 0 ? 'bad' : 'ok';
+      return `<div class="etapa">
+        <div class="hd"><div class="nm">${esc(x.e.nome)}</div>${!x.gasto && !x.exec ? '<span class="pill">não iniciada</span>' : `<div class="b" style="color:${x.resultado >= 0 ? 'var(--ok)' : 'var(--bad)'}">${x.resultado >= 0 ? '+' : '−'}${brl(Math.abs(x.resultado))}</div>`}</div>
+        <div class="kv"><span>Empreita <b>${brl(x.valor)}</b></span><span>Gasto <b>${brl(x.gasto)}</b></span></div>
+        <div class="bar ${cls}" style="margin-top:4px"><i style="width:${Math.min(100, usoPct)}%"></i><span class="mk" style="left:${x.exec}%"></span></div>
+        <div class="kv mut"><span>${Math.round(usoPct)}% do valor já gasto</span><span>${Math.round(x.exec)}% executado</span></div>
+        ${x.alertas.map(([c, t]) => `<div class="alert ${c}">${c === 'bad' ? '🔴' : c === 'warn' ? '🟠' : '🟢'} ${esc(t)}</div>`).join('')}
+      </div>`;
+    }).join('') + `<div class="tiny mut">A barra mostra quanto do valor da etapa já foi gasto; a marquinha preta mostra quanto dela já está pronto. Se a barra passar da marquinha, a etapa está dando prejuízo.</div>`;
+  }
+  if (!$('fDe').value) periodoFolha('semana'); else renderFolha();
+}
+function periodoFolha(p) {
+  const h = hojeISO(), d = dt(h), dow = (d.getDay() + 6) % 7;   // segunda = 0
+  const seg = addDias(h, -dow);
+  const faixas = {semana: [seg, addDias(seg, 6)], passada: [addDias(seg, -7), addDias(seg, -1)], mes: [h.slice(0, 8) + '01', h]};
+  if (p === 'tudo') { const ds = S.diarios.map(x => x.data).concat(S.vales.map(x => x.data)).sort(); faixas.tudo = [ds[0] || h, ds[ds.length - 1] || h]; }
+  [$('fDe').value, $('fAte').value] = faixas[p];
+  document.querySelectorAll('[data-per]').forEach(b => b.classList.toggle('on', b.dataset.per === p));
+  renderFolha();
+}
+function calcFolha(de, ate, todas) {
+  const lista = S.diarios.filter(d => (todas || d.obraId === S.obraAtivaId) && d.data >= de && d.data <= ate);
+  const pessoas = {}; let outras = 0;
+  lista.forEach(d => {
+    const obra = obraPorId(d.obraId);
+    d.presentes.forEach(p => {
+      const k = semAcento(p.nome);
+      pessoas[k] ||= {nome: p.nome, cargo: p.cargo, dias: 0, diarias: 0, extras: 0};
+      pessoas[k].dias += p.fracao; pessoas[k].diarias += valorDiaria(p, obra) * p.fracao; pessoas[k].extras += num(p.extra);
+    });
+    outras += num(d.outrasValor);
+  });
+  const vales = S.vales.filter(v => (todas || v.obraId === S.obraAtivaId) && v.data >= de && v.data <= ate).sort((a, b) => a.data.localeCompare(b.data));
+  vales.forEach(v => {
+    const k = semAcento(v.nome);
+    pessoas[k] ||= {nome: v.nome, cargo: v.cargo || '', dias: 0, diarias: 0, extras: 0};
+    pessoas[k].vales = (pessoas[k].vales || 0) + num(v.valor);
+  });
+  const arr = Object.values(pessoas).sort((a, b) => a.nome.localeCompare(b.nome));
+  arr.forEach(p => { p.vales ||= 0; p.ganho = p.diarias + p.extras; p.mensal = !p.dias && !p.ganho; p.saldo = p.mensal ? 0 : p.ganho - p.vales; });
+  const soma = k => arr.reduce((s, p) => s + p[k], 0);
+  return {arr, vales, outras, nDiarios: lista.length, total: soma('ganho'), totalVales: soma('vales'), totalSaldo: soma('saldo')};
+}
+function renderFolha() {
+  const de = $('fDe').value, ate = $('fAte').value; if (!de || !ate) return;
+  const F = calcFolha(de, ate, $('fTodas').checked);
+  const n2 = v => (Number(v) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const saldoTxt = v => v < 0 ? `<span style="color:var(--bad)">−${n2(-v)}</span>` : n2(v);
+  $('tabFolha').innerHTML = !F.arr.length ? '<div class="empty">Nenhum diário ou vale nesse período.</div>' :
+    `<table class="tb"><thead><tr><th>Colaborador</th><th class="r">Ganhou</th><th class="r">Vales</th><th class="r">A pagar R$</th></tr></thead><tbody>` +
+    F.arr.map(p => `<tr><td><b>${esc(p.nome)}</b><div class="tiny mut">${p.dias ? String(p.dias).replace('.', ',') + (p.dias === 1 ? ' dia' : ' dias') : 'sem diárias'}${p.cargo ? ' • ' + esc(p.cargo) : ''}</div></td>
+      <td class="r">${n2(p.ganho)}${p.extras ? `<div class="tiny mut">+${n2(p.extras)} extra</div>` : ''}</td>
+      <td class="r" style="color:var(--warn)">${p.vales ? '−' + n2(p.vales) : '—'}</td><td class="r b">${p.mensal ? '<span class="tiny mut">descontar<br>do salário</span>' : saldoTxt(p.saldo)}</td></tr>`).join('') +
+    `</tbody><tfoot><tr><td>Total</td><td class="r">${n2(F.total)}</td><td class="r">${F.totalVales ? '−' + n2(F.totalVales) : '—'}</td><td class="r">${saldoTxt(F.totalSaldo)}</td></tr>${F.outras ? `<tr><td colspan="3" class="mut tiny" style="font-weight:400">Outras despesas do período (não entram na folha)</td><td class="r">${n2(F.outras)}</td></tr>` : ''}</tfoot></table>` +
+    (F.arr.some(p => p.saldo < 0) ? `<div class="alert warn">🟠 Valor em vermelho: a pessoa pegou mais vale do que ganhou no período. A diferença deve ser descontada no próximo pagamento.</div>` : '');
+  $('listaVales').innerHTML = !F.vales.length ? '' : `<div class="sp"></div><div class="tiny mut b" style="margin-bottom:4px">VALES NO PERÍODO (toque para editar)</div>` +
+    F.vales.map(v => `<div class="anexo" style="cursor:pointer" onclick="abrirVale(${jsq(v.id)})"><span>💸</span><span class="nm">${esc(v.nome)}<br><span class="tiny mut" style="font-weight:400">${fmtData(v.data)}${v.obs ? ' • ' + esc(v.obs) : ''}${$('fTodas').checked ? ' • ' + esc(obraPorId(v.obraId)?.nome || '') : ''}</span></span><b style="color:var(--warn)">${brl(v.valor)}</b></div>`).join('');
+}
+
+/* ---------- vales (adiantamentos) ---------- */
+function abrirVale(id) {
+  const v = id ? S.vales.find(x => x.id === id) : null, obra = v ? obraPorId(v.obraId) : obraAtual();
+  const nomes = obra.equipe.map(c => c.nome);
+  const conhecido = !v || nomes.includes(v.nome);
+  $('vColab').innerHTML = `<option value="">— escolha —</option>` + obra.equipe.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)} (${esc(c.cargo)})</option>`).join('') + `<option value="__outro">Outro funcionário (digitar nome)</option>`;
+  $('vColab').value = v ? (conhecido ? v.nome : '__outro') : '';
+  $('vOutroBox').classList.toggle('hide', conhecido);
+  $('vOutro').value = v && !conhecido ? v.nome : '';
+  $('vId').value = v ? v.id : '';
+  $('vData').value = v ? v.data : hojeISO();
+  $('vValor').value = v ? numTxt(v.valor) : '';
+  $('vObs').value = v ? v.obs || '' : '';
+  $('tituloVale').textContent = v ? '💸 Editar vale' : '💸 Lançar vale';
+  $('btnExcluirVale').classList.toggle('hide', !v);
+  $('dlgVale').showModal();
+}
+function salvarVale(ev) {
+  ev.preventDefault();
+  const sel = $('vColab').value, nome = sel === '__outro' ? $('vOutro').value.trim() : sel;
+  if (!nome) { alert('Escolha o colaborador.'); return; }
+  const valor = num($('vValor').value); if (valor <= 0) { alert('Informe o valor do vale.'); return; }
+  const id = $('vId').value, antigo = id ? S.vales.find(x => x.id === id) : null;
+  const obra = antigo ? obraPorId(antigo.obraId) : obraAtual();
+  const c = obra.equipe.find(x => x.nome === nome);
+  const dados = {obraId: obra.id, nome, cargo: c ? c.cargo : (antigo?.cargo || ''), data: $('vData').value, valor, obs: $('vObs').value.trim()};
+  if (antigo) Object.assign(antigo, dados); else S.vales.push({id: uid(), ...dados, criadoEm: new Date().toISOString()});
+  if (dados.data < $('fDe').value) $('fDe').value = dados.data;
+  if (dados.data > $('fAte').value) $('fAte').value = dados.data;
+  salvar(); fechar('dlgVale'); renderFolha(); toast(`💸 Vale de ${brl(valor)} para ${nome}`);
+}
+function excluirVale() {
+  const id = $('vId').value; if (!confirm('Excluir este vale?')) return;
+  S.vales = S.vales.filter(v => v.id !== id); salvar(); fechar('dlgVale'); renderFolha(); toast('Vale excluído');
+}
+
+/* ================= RELATÓRIOS / IMPRESSÃO ================= */
+function cabecalhoPrint(titulo, obra, de, ate) {
+  return `<div class="pr-cab"><img src="logo.jpg"><div><h1>ELIEL ENGENHARIA — ${esc(titulo)}</h1><p>Eng. Eliel Dias Ribeiro • CREA-PA 1520297858PA • (94) 99140-5022</p></div></div>
+  <div class="pr-info"><div><b>Obra:</b> ${esc(obra ? obra.nome : 'Todas as obras')}</div><div><b>Período:</b> ${fmtData(de)} a ${fmtData(ate)}</div>
+  ${obra ? `<div><b>Local:</b> ${esc(obra.endereco || '—')}</div><div><b>Contratante:</b> ${esc(obra.contratante || '—')}</div>` : ''}
+  <div><b>Emitido em:</b> ${fmtData(hojeISO())}</div></div>`;
+}
+function imprimir(html) {
+  $('areaImpressao').innerHTML = html;
+  const img = $('areaImpressao').querySelector('img');
+  const go = () => setTimeout(() => window.print(), 150);
+  if (img && !img.complete) { img.onload = go; img.onerror = go; } else go();
+}
+function abrirRelatorio() {
+  const tipos = [['rdo', 'RDO — Diário de obra (para o cliente, sem valores)'], ['rdoc', 'RDO com custos (uso interno)'], ['fin', 'Resumo financeiro da obra (uso interno)']];
+  $('rTipo').innerHTML = tipos.filter(t => admin() || t[0] === 'rdo').map(t => `<option value="${t[0]}">${t[1]}</option>`).join('');
+  const ds = diariosDa(S.obraAtivaId).map(d => d.data).sort();
+  $('rDe').value = ds[0] || hojeISO(); $('rAte').value = ds[ds.length - 1] || hojeISO();
+  $('dlgRel').showModal();
+}
+function gerarRelatorio() {
+  const tipo = admin() ? $('rTipo').value : 'rdo', de = $('rDe').value, ate = $('rAte').value, obra = obraAtual();
+  if (tipo === 'fin') { fechar('dlgRel'); return imprimirFinanceiro(); }
+  const lista = diariosDa(obra.id).filter(d => d.data >= de && d.data <= ate).sort((a, b) => a.data.localeCompare(b.data));
+  if (!lista.length) { alert('Nenhum diário nesse período.'); return; }
+  const custos = tipo === 'rdoc';
+  const etNome = id => obra.etapas.find(e => e.id === id)?.nome;
+  let totalP = 0;
+  const html = cabecalhoPrint('RELATÓRIO DIÁRIO DE OBRA', obra, de, ate) + lista.map(d => {
+    const c = custoDiario(d); totalP += c.total;
+    const ets = (d.etapaIds || []).map(etNome).filter(Boolean);
+    return `<div class="pr-dia"><h4><span>${fmtData(d.data)} (${semana(d.data)}) — ${esc(d.clima)}</span>${custos ? `<span>${brl(c.total)}</span>` : ''}</h4>
+      <p><b>Efetivo (${d.presentes.length}):</b> ${esc(d.presentes.map(p => `${p.nome} (${p.cargo}${p.fracao === .5 ? ', ½ dia' : ''})`).join('; ') || '—')}</p>
+      ${ets.length ? `<p><b>Etapas:</b> ${esc(ets.join(', '))}</p>` : ''}
+      <p><b>Serviços executados:</b> ${esc(d.atividades)}</p>
+      ${d.ocorrencias ? `<p><b>Ocorrências / materiais:</b> ${esc(d.ocorrencias)}</p>` : ''}
+      ${custos && (c.extras || c.outras) ? `<p><b>Custos:</b> diárias ${brl(c.diarias)}${c.extras ? ` • extras ${brl(c.extras)}` : ''}${c.outras ? ` • outras ${brl(c.outras)}${d.outrasDesc ? ' (' + esc(d.outrasDesc) + ')' : ''}` : ''}</p>` : ''}
+    </div>`;
+  }).join('') + (custos ? `<p><b>Total do período: ${brl(totalP)}</b></p>` : '') +
+  `<div class="pr-ass"><div>Eng. Eliel Dias Ribeiro<br>Responsável Técnico — CREA-PA 1520297858PA</div><div>${esc(obra.contratante || 'Contratante')}<br>Ciente</div></div>`;
+  fechar('dlgRel'); imprimir(html);
+}
+function imprimirFinanceiro() {
+  const obra = obraAtual(), A = analiseObra(obra);
+  const ds = diariosDa(obra.id).map(d => d.data).sort();
+  const html = cabecalhoPrint('RESUMO FINANCEIRO (USO INTERNO)', obra, ds[0], ds[ds.length - 1] || hojeISO()) +
+    `<table class="pr-t"><thead><tr><th>Etapa</th><th>Prazo</th><th class="r">Empreita</th><th class="r">% exec.</th><th class="r">Produzido</th><th class="r">Gasto</th><th class="r">Resultado</th></tr></thead><tbody>` +
+    A.etapas.map(x => `<tr><td>${esc(x.e.nome)}</td><td>${fmtCurta(x.e.inicio)}–${fmtCurta(x.e.fim)}</td><td class="r">${brl(x.valor)}</td><td class="r">${Math.round(x.exec)}%</td><td class="r">${brl(x.produzido)}</td><td class="r">${brl(x.gasto)}</td><td class="r">${brl(x.resultado)}</td></tr>`).join('') +
+    (A.semEtapa ? `<tr><td colspan="5">Gastos sem etapa definida</td><td class="r">${brl(A.semEtapa)}</td><td class="r">${brl(-A.semEtapa)}</td></tr>` : '') +
+    `</tbody><tfoot><tr><td colspan="2">TOTAL</td><td class="r">${brl(A.empreita)}</td><td class="r">${A.empreita ? Math.round(A.produzido / A.empreita * 100) : 0}%</td><td class="r">${brl(A.produzido)}</td><td class="r">${brl(A.gasto)}</td><td class="r">${brl(A.resultado)}</td></tr></tfoot></table>` +
+    `<p><b>Previsão no fim da obra (ritmo atual):</b> ${A.lucroPrevisto == null ? '—' : (A.lucroPrevisto >= 0 ? 'lucro de ' : 'prejuízo de ') + brl(Math.abs(A.lucroPrevisto))}</p>`;
+  imprimir(html);
+}
+function imprimirFolha() {
+  const de = $('fDe').value, ate = $('fAte').value, todas = $('fTodas').checked, F = calcFolha(de, ate, todas);
+  if (!F.arr.length) { alert('Nenhum diário ou vale nesse período.'); return; }
+  const html = cabecalhoPrint('FOLHA DE DIÁRIAS', todas ? null : obraAtual(), de, ate) +
+    `<table class="pr-t"><thead><tr><th>Colaborador</th><th>Função</th><th class="r">Dias</th><th class="r">Diárias</th><th class="r">Extras</th><th class="r">Vales</th><th class="r">A pagar</th><th>Assinatura</th></tr></thead><tbody>` +
+    F.arr.map(p => `<tr><td>${esc(p.nome)}</td><td>${esc(p.cargo)}</td><td class="r">${String(p.dias).replace('.', ',')}</td><td class="r">${brl(p.diarias)}</td><td class="r">${brl(p.extras)}</td><td class="r">${p.vales ? '−' + brl(p.vales) : '—'}</td><td class="r"><b>${p.mensal ? 'desc. salário' : brl(p.saldo)}</b></td><td style="width:24%"></td></tr>`).join('') +
+    `</tbody><tfoot><tr><td colspan="5">TOTAL</td><td class="r">${F.totalVales ? '−' + brl(F.totalVales) : '—'}</td><td class="r">${brl(F.totalSaldo)}</td><td></td></tr></tfoot></table>` +
+    (F.vales.length ? `<h2 class="pr">Vales (adiantamentos) no período</h2><table class="pr-t"><thead><tr><th>Data</th><th>Colaborador</th><th>Observação</th><th class="r">Valor</th></tr></thead><tbody>` +
+      F.vales.map(v => `<tr><td>${fmtData(v.data)}</td><td>${esc(v.nome)}</td><td>${esc(v.obs || '')}</td><td class="r">${brl(v.valor)}</td></tr>`).join('') + `</tbody></table>` : '');
+  imprimir(html);
+}
+
+/* ================= BACKUP ================= */
+const blobParaB64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+async function fazerBackup() {
+  try {
+    const arquivos = {};
+    for (const o of S.obras) for (const a of o.anexos) { const b = await Arq.get(a.id); if (b) arquivos[a.id] = await blobParaB64(b); }
+    const dados = {app: 'eliel-rdo', versao: 4, exportadoEm: new Date().toISOString(), dados: S, arquivos};
+    const nome = `backup-eliel-obras-${hojeISO()}.json`;
+    const file = new File([JSON.stringify(dados)], nome, {type: 'application/json'});
+    let ok = false;
+    if (navigator.canShare && navigator.canShare({files: [file]})) {
+      try { await navigator.share({files: [file], title: 'Backup Eliel Engenharia'}); ok = true; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    if (!ok) { const url = URL.createObjectURL(file); const l = document.createElement('a'); l.href = url; l.download = nome; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000); }
+    S.ultimoBackup = new Date().toISOString(); salvar(); renderBackupBanner();
+    toast('💾 Backup gerado: ' + nome);
+  } catch (e) { alert('Erro ao gerar backup: ' + e.message); }
+}
+async function restaurarBackup(input) {
+  const f = input.files[0]; input.value = ''; if (!f) return;
+  try {
+    const b = JSON.parse(await f.text());
+    const novo = b.dados || b;
+    if (!novo.obras || !novo.diarios) throw new Error('arquivo não é um backup deste app');
+    if (!confirm(`Restaurar o backup de ${b.exportadoEm ? fmtData(isoLocal(new Date(b.exportadoEm))) : '?'}?\n${novo.obras.length} obra(s), ${novo.diarios.length} diário(s).\n\nOs dados atuais deste aparelho serão SUBSTITUÍDOS.`)) return;
+    await Arq.limpar();
+    for (const [id, url] of Object.entries(b.arquivos || {})) await Arq.put(id, await (await fetch(url)).blob());
+    carregar(novo); fechar('dlgMenu'); edicaoId = null; desbloqueado = false; renderTudo(); aplicarModo(); toast('♻️ Backup restaurado');
+  } catch (e) { alert('Não foi possível restaurar: ' + e.message); }
+}
+function renderBackupBanner() {
+  const dias = S.ultimoBackup ? diasEntre(isoLocal(new Date(S.ultimoBackup)), hojeISO()) : null;
+  const precisa = S.diarios.length > 0 && (dias == null || dias >= 7);
+  $('bannerBackup').classList.toggle('hide', !precisa);
+  $('txtBackup').textContent = dias == null ? '💾 Você ainda não fez backup. Se perder o celular, perde os diários.' : `💾 Último backup há ${dias} dias.`;
+  $('txtUltBackup').textContent = S.ultimoBackup ? `Último: ${fmtData(isoLocal(new Date(S.ultimoBackup)))} — mande o arquivo pro seu Drive/WhatsApp` : 'Salva tudo num arquivo (mande pro seu Drive/WhatsApp)';
+}
+function abrirMenu() {
+  renderBackupBanner();
+  $('txtMenuSenha').innerHTML = temPin() ? 'Bloquear / modo encarregado<small>Passar o celular para o encarregado (só diário)</small>' : 'Senha e modo encarregado<small>Crie uma senha para o encarregado usar só o diário</small>';
+  $('btnTrocarSenha').classList.toggle('hide', !temPin());
+  $('dlgMenu').showModal();
+}
+
+/* ================= SENHA / MODO ENCARREGADO ================= */
+let desbloqueado = false;          // só fica em memória: ao fechar o app, bloqueia de novo
+let aoLiberar = null, tentativas = 0, bloqueadoAte = 0, saiuEm = 0;
+const temPin = () => !!(S.config && S.config.pinHash);
+const ehEncDisp = () => !!(S && S.nuvem && S.nuvem.papel === 'enc');
+const admin = () => !ehEncDisp() && (!temPin() || desbloqueado);
+async function hashPin(pin) {
+  const txt = 'eliel-rdo:' + pin;
+  if (window.crypto && crypto.subtle) {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+  let h = 5381; for (const ch of txt) h = ((h << 5) + h + ch.charCodeAt(0)) | 0; return 'x' + h;
+}
+function aplicarModo() {
+  document.body.classList.toggle('enc', !admin());
+  document.body.classList.toggle('dispenc', ehEncDisp());
+  $('txtModo').textContent = ehEncDisp() ? '👷 ENCARREGADO' + (S.nuvem.nome ? ': ' + S.nuvem.nome.toUpperCase() : '') : '👷 MODO ENCARREGADO';
+  renderSyncStatus();
+  if (!S.obras.length) return;
+  const aba = document.querySelector('.tabs button.on')?.dataset.tab;
+  if (!admin() && aba && aba !== 'diario') irAba('diario');
+  renderEquipeDia(); renderChipsEtapas(); renderHistorico();
+}
+function pedirPin(depois) {
+  if (ehEncDisp()) { toast('🔒 Área só do engenheiro'); return; }
+  if (admin()) { depois && depois(); return; }
+  aoLiberar = depois || null;
+  $('pinDigitado').value = ''; $('pinErro').classList.add('hide');
+  $('dlgPin').showModal(); setTimeout(() => $('pinDigitado').focus(), 50);
+}
+async function conferirPin(ev) {
+  ev.preventDefault();
+  const agora = Date.now();
+  if (agora < bloqueadoAte) { $('pinErro').textContent = `Muitas tentativas. Aguarde ${Math.ceil((bloqueadoAte - agora) / 1000)} segundos.`; $('pinErro').classList.remove('hide'); return; }
+  if (await hashPin($('pinDigitado').value) === S.config.pinHash) {
+    tentativas = 0; desbloqueado = true; fechar('dlgPin'); aplicarModo();
+    const f = aoLiberar; aoLiberar = null; f && f();
+  } else {
+    tentativas++; if (tentativas >= 5) { bloqueadoAte = agora + 60000; tentativas = 0; }
+    $('pinErro').textContent = '❌ Senha errada.'; $('pinErro').classList.remove('hide'); $('pinDigitado').value = '';
+  }
+}
+function abrirSenha() {
+  $('pinNovo1').value = ''; $('pinNovo2').value = '';
+  $('senhaStatus').className = 'alert ' + (temPin() ? 'ok' : 'warn');
+  $('senhaStatus').textContent = temPin() ? '✅ Senha ativa. O app abre sempre no modo encarregado.' : '⚠️ Sem senha: qualquer pessoa que abrir o app vê tudo.';
+  $('senhaAcoes').classList.toggle('hide', !temPin());
+  $('dlgSenha').showModal();
+}
+async function definirPin() {
+  const a = $('pinNovo1').value, b = $('pinNovo2').value;
+  if (!/^\d{4,8}$/.test(a)) { alert('A senha precisa ter de 4 a 8 números.'); return; }
+  if (a !== b) { alert('As duas senhas não são iguais.'); return; }
+  S.config = S.config || {}; S.config.pinHash = await hashPin(a);
+  desbloqueado = true; salvar(); abrirSenha(); toast('🔒 Senha salva');
+}
+function removerPin() {
+  if (!confirm('Remover a senha? Qualquer pessoa que abrir o app vai ver valores e financeiro.')) return;
+  delete S.config.pinHash; salvar(); abrirSenha(); aplicarModo();
+}
+function bloquear() {
+  if (!temPin()) { abrirSenha(); return; }
+  desbloqueado = false; if (edicaoId) cancelarEdicao();
+  document.querySelectorAll('dialog[open]').forEach(d => d.close());
+  aplicarModo(); irAba('diario'); toast('👷 Modo encarregado ativado');
+}
+// app foi para segundo plano por mais de 3 minutos: bloqueia de novo
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) saiuEm = Date.now();
+  else if (desbloqueado && temPin() && saiuEm && Date.now() - saiuEm > 180000) bloquear();
+});
+
+/* ================= NUVEM (sincronização com a planilha do Google) ================= */
+// Regra de ouro: só vai para a nuvem o que o encarregado pode ver. Valores em R$ ficam no celular do engenheiro.
+let sincronizando = false, timerSync = null, erroSync = '', formSujo = false, ultimoLink = null;
+
+const ERROS = {
+  ACESSO_REMOVIDO: 'seu acesso foi removido pelo engenheiro', JA_TEM_ENGENHEIRO: 'essa planilha já está ligada a outro celular de engenheiro',
+  SOMENTE_ENGENHEIRO: 'só o engenheiro pode fazer isso', SEM_ACESSO_OBRA: 'sem acesso a essa obra', OBRA_NAO_EXISTE: 'a obra não existe mais na nuvem',
+  DIARIO_EXCLUIDO: 'o engenheiro excluiu esse diário', CHAVE_INVALIDA: 'chave inválida', SEM_ACESSO: 'sem acesso', INFORME_NOME_E_OBRA: 'informe o nome e ao menos uma obra'
+};
+const textoErro = m => ERROS[m] || (/fetch|network|abort|Load failed|JSON/i.test(m || '') ? 'sem conexão com a nuvem' : (m || 'erro'));
+
+function marcarObra(o) { if (S.nuvem && S.nuvem.papel === 'admin' && o) { o.pend = true; agendarSync(); } }
+function agendarSync(ms = 800) { if (!S.nuvem) return; clearTimeout(timerSync); timerSync = setTimeout(() => sincronizar(), ms); renderSyncStatus(); }
+
+async function api(acao, dados = {}, url = S.nuvem && S.nuvem.url, token = S.nuvem && S.nuvem.token) {
+  const ctrl = new AbortController(), to = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({acao, token, ...dados}), redirect: 'follow', signal: ctrl.signal});
+    const j = await r.json();
+    if (!j.ok) { const e = new Error(j.erro || 'erro'); e.servidor = true; throw e; }
+    return j;
+  } finally { clearTimeout(to); }
+}
+
+// só os campos sem valores — o servidor também filtra, mas aqui já sai limpo
+const obraPublica = o => ({id: o.id, nome: o.nome, endereco: o.endereco || '', contratante: o.contratante || '',
+  equipe: o.equipe.map(c => ({id: c.id, nome: c.nome, cargo: c.cargo})),
+  etapas: o.etapas.map(e => ({id: e.id, nome: e.nome, inicio: e.inicio || '', fim: e.fim || '', exec: num(e.exec)}))});
+const diarioPublico = d => ({id: d.id, obraId: d.obraId, data: d.data, clima: d.clima, atividades: d.atividades, ocorrencias: d.ocorrencias,
+  presentes: d.presentes.map(p => ({colabId: p.colabId || null, nome: p.nome, cargo: p.cargo, fracao: p.fracao})),
+  etapaIds: d.etapaIds || [], execs: d.execs || {}, criadoEm: d.criadoEm || '', editadoEm: d.editadoEm || ''});
+
+const pendentes = () => !S.nuvem ? 0 : S.diarios.filter(d => d.pend).length + S.pendExcl.length +
+  (S.nuvem.papel === 'admin' ? S.obras.filter(o => o.pend).length + S.pendObraExcl.length : 0);
+
+async function sincronizar(manual) {
+  if (!S.nuvem || sincronizando) return;
+  if (!navigator.onLine) { erroSync = 'sem internet'; renderSyncStatus(); if (manual) toast('📵 Sem internet. Os diários ficam guardados e são enviados depois.'); return; }
+  sincronizando = true; renderSyncStatus();
+  try {
+    if (S.nuvem.papel === 'admin') {
+      for (const id of [...S.pendObraExcl]) { await api('excluirObra', {id}); S.pendObraExcl = S.pendObraExcl.filter(x => x !== id); salvar(); }
+      for (const o of S.obras.filter(o => o.pend)) { await api('salvarObra', {obra: obraPublica(o)}); o.pend = false; salvar(); }
+      for (const id of [...S.pendExcl]) { await api('excluirDiario', {id}); S.pendExcl = S.pendExcl.filter(x => x !== id); salvar(); }
+    }
+    for (const d of S.diarios.filter(d => d.pend)) {
+      try { const r = await api('salvarDiario', {diario: diarioPublico(d)}); d.pend = false; delete d.erroSync; d.lancadoPor = r.lancadoPor; salvar(); }
+      catch (e) { if (e.servidor && /OBRA_NAO_EXISTE|SEM_ACESSO_OBRA|DIARIO_EXCLUIDO|DIARIO_INCOMPLETO/.test(e.message)) { d.pend = false; d.erroSync = e.message; salvar(); } else throw e; }
+    }
+    const r = await api('puxar', {desde: S.nuvem.ultimo || 0});
+    mesclar(r);
+    S.nuvem.ultimo = r.agora; S.nuvem.ultimoOk = new Date().toISOString(); S.nuvem.nome = r.nome; delete S.nuvem.removido;
+    erroSync = ''; salvar();
+  } catch (e) {
+    erroSync = e.servidor ? e.message : 'sem conexão';
+    if (e.message === 'ACESSO_REMOVIDO' && ehEncDisp()) { S.nuvem.removido = true; S.obras = []; salvar(); }
+  } finally {
+    sincronizando = false; renderSyncStatus();
+    if (!S.obras.length) renderTudo();
+    if ($('dlgNuvem').open) renderNuvem();
+  }
+  if (manual) toast(erroSync ? '⚠️ ' + textoErro(erroSync) : '☁️ Tudo sincronizado');
+}
+
+function mesclar(r) {
+  const eng = S.nuvem.papel === 'admin';
+  let mudou = false;
+  for (const so of r.obras || []) {
+    const i = S.obras.findIndex(o => o.id === so.id);
+    if (so.excluido) { if (!eng && i >= 0) { S.obras.splice(i, 1); S.diarios = S.diarios.filter(d => d.obraId !== so.id); mudou = true; } continue; }
+    if (eng) {
+      if (i < 0) { S.obras.push({...so, equipe: so.equipe.map(c => ({...c, diaria: 0})), etapas: so.etapas.map(e => ({...e, valor: 0})), anexos: []}); mudou = true; }
+      else if (!S.obras[i].pend) {   // do encarregado só vem o % executado das etapas
+        so.etapas.forEach(se => { const e = S.obras[i].etapas.find(x => x.id === se.id); if (e && num(e.exec) !== num(se.exec)) { e.exec = num(se.exec); mudou = true; } });
       }
-
-      localStorage.setItem('obras_eliel', JSON.stringify(obras));
-      fecharModalObra();
-      renderSeletor();
-      alert('✅ Obra salva com sucesso!');
+    } else {
+      const nova = {id: so.id, nome: so.nome, endereco: so.endereco, contratante: so.contratante, equipe: so.equipe, etapas: so.etapas, anexos: []};
+      if (i < 0) S.obras.push(nova); else S.obras[i] = nova;
+      mudou = true;
     }
-
-    function excluirObraId(id) {
-      if (confirm('Tem certeza que deseja excluir esta obra das suas opções?')) {
-        obras = obras.filter(o => o.id !== id);
-        if (obraAtivaId === id) {
-          obraAtivaId = obras[0].id;
-          localStorage.setItem('obra_ativa_id', obraAtivaId);
-        }
-        localStorage.setItem('obras_eliel', JSON.stringify(obras));
-        abrirGerenciadorObras();
-        renderSeletor();
+  }
+  for (const sd of r.diarios || []) {
+    const i = S.diarios.findIndex(d => d.id === sd.id);
+    if (sd.excluido) { if (i >= 0 && !S.diarios[i].pend) { S.diarios.splice(i, 1); mudou = true; } continue; }
+    const local = i >= 0 ? S.diarios[i] : null;
+    if (local && local.pend) continue;           // alteração local ainda não enviada tem prioridade
+    const obra = obraPorId(sd.obraId);
+    const presentes = (sd.presentes || []).map(p => {
+      const ant = local && local.presentes.find(x => (p.colabId && x.colabId === p.colabId) || x.nome === p.nome);
+      let diaria = ant ? ant.diaria : null;
+      if (eng && !(diaria > 0) && obra) {        // guarda a diária do dia em que chegou (não muda se você reajustar depois)
+        const c = obra.equipe.find(x => x.id === p.colabId) || obra.equipe.find(x => x.nome === p.nome);
+        if (c && num(c.diaria) > 0) diaria = num(c.diaria);
       }
-    }
+      return {...p, extra: ant ? num(ant.extra) : 0, diaria};
+    });
+    const novo = {...sd, presentes, outrasValor: local ? local.outrasValor || 0 : 0, outrasDesc: local ? local.outrasDesc || '' : ''};
+    delete novo.atualizado;
+    if (i >= 0) S.diarios[i] = novo; else S.diarios.push(novo);
+    mudou = true;
+  }
+  if (!S.obras.some(o => o.id === S.obraAtivaId)) S.obraAtivaId = S.obras[0] ? S.obras[0].id : null;
+  if (mudou) { salvar(); renderAposSync(); }
+}
+function renderAposSync() {
+  if (!S.obras.length) { renderTudo(); return; }
+  $('telaEspera').classList.add('hide');
+  renderObra(); renderHistorico(); renderCrono(); renderFin(); renderBackupBanner();
+  if (!edicaoId && !formSujo) renderDiarioForm();   // não apaga o que o encarregado está digitando
+  aplicarModo();
+}
 
-    function renderHistorico() {
-      const list = document.getElementById('historicoList');
-      const total = document.getElementById('totalRegistros');
-      
-      const diariosDaObra = diarios.filter(d => d.obraId === obraAtivaId);
-      total.innerText = `${diariosDaObra.length} salvos`;
+function renderSyncStatus() {
+  const el = $('syncStatus'); if (!el) return;
+  if (!S.nuvem) { el.classList.add('hide'); return; }
+  el.classList.remove('hide');
+  const n = pendentes();
+  el.className = 'sync' + (erroSync && erroSync !== 'sem internet' && !/conex/.test(erroSync) ? ' err' : n ? ' pend' : '');
+  const hora = S.nuvem.ultimoOk ? new Date(S.nuvem.ultimoOk).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) : '';
+  el.textContent = sincronizando ? '🔄 sincronizando…'
+    : n ? `⏳ ${n} para enviar${erroSync ? ' • ' + (erroSync === 'sem internet' || /conex/.test(erroSync) ? 'sem internet' : textoErro(erroSync)) : ''}`
+    : erroSync ? '⚠️ ' + textoErro(erroSync)
+    : '☁️ sincronizado ' + hora;
+}
 
-      if (diariosDaObra.length === 0) {
-        list.innerHTML = '<p class="text-slate-400 text-center py-4">Nenhum diário registrado para esta obra ainda.</p>';
-        return;
-      }
+function mostrarEspera() {
+  $('telaEspera').classList.remove('hide');
+  $('esperaTxt').innerHTML = !S.nuvem ? '⚠️ Nenhuma obra neste celular.'
+    : S.nuvem.removido ? '🚫 <b>Seu acesso foi removido pelo engenheiro.</b><br><span class="small mut">Peça um link novo se precisar.</span>'
+    : sincronizando || !S.nuvem.ultimoOk ? '🔄 Baixando as obras…'
+    : `👷 Olá${S.nuvem.nome ? ', ' + esc(S.nuvem.nome) : ''}! Nenhuma obra liberada para você ainda.<br><span class="small mut">Fale com o engenheiro.</span>`;
+}
 
-      list.innerHTML = diariosDaObra.map((d) => `
-        <div class="pt-3 pb-1">
-          <div class="flex justify-between font-bold text-slate-800">
-            <span>📅 ${d.data} (${d.clima})</span>
-            <span class="text-sky-600">${d.equipe.length} presentes</span>
-          </div>
-          <p class="text-slate-600 mt-1 text-xs leading-relaxed">${d.atividades}</p>
-          ${d.ocorrencias ? `<p class="text-amber-800 bg-amber-50 p-2 rounded-lg mt-1.5 text-[11px]">⚠️ ${d.ocorrencias}</p>` : ''}
-        </div>
-      `).join('');
-    }
+/* ---------- conexão do engenheiro ---------- */
+function abrirNuvem() { renderNuvem(); $('dlgNuvem').showModal(); if (S.nuvem && S.nuvem.papel === 'admin') carregarAcessos(); }
+function renderNuvem() {
+  const papel = S.nuvem ? S.nuvem.papel : null;
+  $('nDesconectado').classList.toggle('hide', !!papel);
+  $('nAdmin').classList.toggle('hide', papel !== 'admin');
+  $('nEnc').classList.toggle('hide', papel !== 'enc');
+  const ult = S.nuvem && S.nuvem.ultimoOk ? `${fmtData(isoLocal(new Date(S.nuvem.ultimoOk)))} às ${new Date(S.nuvem.ultimoOk).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}` : 'ainda não';
+  const n = pendentes();
+  const st = !S.nuvem ? '' : (erroSync ? `⚠️ ${textoErro(erroSync)}. ` : '✅ Conectado. ') + `Última sincronização: ${ult}.` + (n ? ` ${n} alteração(ões) aguardando envio.` : '');
+  if (papel === 'admin') {
+    $('nStatus').className = 'alert ' + (erroSync ? 'warn' : 'ok'); $('nStatus').textContent = st;
+    $('nChaveTxt').textContent = S.nuvem.token;
+    $('nObras').innerHTML = S.obras.map(o => `<label class="small row" style="margin-bottom:4px"><input type="checkbox" value="${esc(o.id)}" ${o.id === S.obraAtivaId ? 'checked' : ''}> ${esc(o.nome)}</label>`).join('');
+  }
+  if (papel === 'enc') {
+    $('nStatusEnc').className = 'alert ' + (erroSync ? 'warn' : 'ok');
+    $('nStatusEnc').textContent = `👷 ${S.nuvem.nome || ''} • ${S.obras.length} obra(s). ` + st;
+  }
+}
+async function copiarTexto(t) {
+  try { await navigator.clipboard.writeText(t); toast('📋 Copiado'); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('📋 Copiado'); } catch (e2) { alert(t); } ta.remove(); }
+}
+async function copiarCodigoServidor() {
+  try { const r = await fetch('servidor/Code.gs', {cache: 'no-store'}); if (!r.ok) throw new Error(); copiarTexto(await r.text()); }
+  catch (e) { alert('Não consegui pegar o código agora. Ele está no arquivo servidor/Code.gs do seu GitHub.'); }
+}
+function gerarChave() { return 'eng-' + [...crypto.getRandomValues(new Uint8Array(24))].map(b => b.toString(16).padStart(2, '0')).join(''); }
+async function conectarEngenheiro() {
+  const url = $('nUrl').value.trim(), chaveExistente = $('nChave').value.trim();
+  if (!/^https:\/\/script\.google(usercontent)?\.com\/.+/.test(url) && !/^http:\/\/localhost[:/]/.test(url)) { alert('Cole o endereço do App da Web. Ele começa com https://script.google.com/macros/s/ e termina em /exec'); return; }
+  const chave = chaveExistente || gerarChave();
+  const btn = $('btnConectar'); btn.disabled = true; btn.textContent = '⏳ Conectando…';
+  try {
+    await api('registrarAdmin', {chave}, url, chave);
+    S.nuvem = {url, token: chave, papel: 'admin', nome: 'Engenheiro', ultimo: 0};
+    if (!chaveExistente) { S.obras.forEach(o => o.pend = true); S.diarios.forEach(d => d.pend = true); }   // primeira vez: envia tudo (sem valores)
+    salvar(); erroSync = '';
+    await sincronizar();
+    renderNuvem(); carregarAcessos(); aplicarModo();
+    toast('☁️ Nuvem conectada');
+  } catch (e) {
+    if (e.message === 'JA_TEM_ENGENHEIRO') { $('nChaveBox').classList.remove('hide'); alert('Essa planilha já está ligada a outro celular de engenheiro.\n\nSe você está trocando de celular, o melhor é restaurar o backup. Ou cole a "chave do engenheiro" no campo que apareceu.'); }
+    else alert('Não foi possível conectar: ' + textoErro(e.message) + '\n\nConfira se o endereço termina em /exec e se em "Quem pode acessar" está "Qualquer pessoa".');
+  } finally { btn.disabled = false; btn.textContent = '☁️ Conectar como engenheiro'; }
+}
+async function desconectarNuvem() {
+  const n = pendentes();
+  if (!confirm(`Desconectar este celular da nuvem?${n ? `\n\n⚠️ ${n} alteração(ões) ainda não foram enviadas e serão perdidas na nuvem.` : ''}\n\nOs dados continuam neste celular.`)) return;
+  if (ehEncDisp()) { S.obras = []; S.diarios = []; }
+  delete S.nuvem; S.diarios.forEach(d => { delete d.pend; delete d.erroSync; }); S.obras.forEach(o => delete o.pend); S.pendExcl = []; S.pendObraExcl = [];
+  if (!S.obras.length) S.obras.push(obraPadrao());
+  if (!S.obras.some(o => o.id === S.obraAtivaId)) S.obraAtivaId = S.obras[0].id;
+  salvar(); fechar('dlgNuvem'); renderTudo(); aplicarModo(); toast('Desconectado da nuvem');
+}
 
-    function salvarRegistro(e) {
-      e.preventDefault();
-      const atual = getObraAtual();
-      
-      const presentes = [];
-      atual.equipe.forEach((colab, idx) => {
-        const el = document.getElementById(`eq_${idx}`);
-        if(el && el.checked) presentes.push(colab.nome);
-      });
+/* ---------- acessos dos encarregados ---------- */
+let acessosCache = [];
+async function carregarAcessos() {
+  try {
+    const r = await api('listarAcessos'); acessosCache = r.acessos;
+    $('nAcessos').innerHTML = !r.acessos.length ? '<div class="empty">Nenhum encarregado ainda.</div>' : r.acessos.map(a => `
+      <div class="anexo"><span>👷</span><span class="nm">${esc(a.nome)}<br><span class="tiny mut" style="font-weight:400">${esc(a.obras.map(id => obraPorId(id)?.nome || 'obra removida').join(', '))}</span></span>
+      <button class="btn sec sm" onclick="mostrarLink(${jsq(a.token)})">Link</button><button class="xbtn" style="height:30px" onclick="removerAcesso(${jsq(a.token)})">×</button></div>`).join('');
+  } catch (e) { $('nAcessos').innerHTML = `<div class="empty">⚠️ ${esc(textoErro(e.message))}</div>`; }
+}
+function linkDoToken(token) {
+  const cod = btoa(JSON.stringify({u: S.nuvem.url, t: token})).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return location.origin + location.pathname + '?conectar=' + cod;
+}
+function mostrarLink(token, nome) {
+  const a = acessosCache.find(x => x.token === token);
+  ultimoLink = {nome: nome || (a ? a.nome : ''), link: linkDoToken(token)};
+  $('nLinkNome').textContent = ultimoLink.nome; $('nLinkTxt').textContent = ultimoLink.link;
+  $('nLink').classList.remove('hide'); $('nLink').scrollIntoView({behavior: 'smooth', block: 'center'});
+}
+async function criarAcesso() {
+  const nome = $('nNomeEnc').value.trim();
+  const obras = [...$('nObras').querySelectorAll('input:checked')].map(i => i.value);
+  if (!nome) { alert('Digite o nome do encarregado.'); return; }
+  if (!obras.length) { alert('Marque pelo menos uma obra.'); return; }
+  try {
+    await sincronizar();                       // garante que as obras já estão na nuvem
+    if (S.obras.some(o => o.pend && obras.includes(o.id))) throw new Error('sem conexão');
+    const r = await api('criarAcesso', {nome, obras});
+    $('nNomeEnc').value = '';
+    await carregarAcessos(); mostrarLink(r.token, nome);
+  } catch (e) { alert('Não foi possível criar o acesso: ' + textoErro(e.message)); }
+}
+async function removerAcesso(token) {
+  const a = acessosCache.find(x => x.token === token);
+  if (!confirm(`Remover o acesso de ${a ? a.nome : 'este encarregado'}? O app dele para de funcionar na próxima sincronização.`)) return;
+  try { await api('removerAcesso', {tokenAcesso: token}); $('nLink').classList.add('hide'); carregarAcessos(); toast('Acesso removido'); }
+  catch (e) { alert('Erro: ' + textoErro(e.message)); }
+}
+async function enviarLink() {
+  if (!ultimoLink) return;
+  const txt = `Olá ${ultimoLink.nome}! Este é o seu acesso ao *Diário de Obra da Eliel Engenharia*.\n\n*1)* Toque no link abaixo:\n${ultimoLink.link}\n\n*2)* O app abre já com a sua obra. Toque em *Instalar* (ou siga o passo a passo que aparece na tela).\n\n*3)* Pronto! Todo dia abra pelo ícone *Eliel Engenharia* na tela do celular.\n\n⚠️ Não repasse este link para ninguém.`;
+  if (navigator.share) { try { await navigator.share({text: txt}); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+}
 
-      const registro = {
-        obraId: obraAtivaId,
-        nomeObra: atual.nome,
-        data: document.getElementById('dataObra').value,
-        clima: document.getElementById('clima').value,
-        atividades: document.getElementById('atividades').value,
-        ocorrencias: document.getElementById('ocorrencias').value,
-        equipe: presentes,
-        timestamp: new Date().toISOString()
-      };
+/* ---------- conexão do encarregado (pelo link) ---------- */
+function lerCodigo(t) {
+  const m = String(t || '').match(/conectar=([A-Za-z0-9_-]+)/);
+  let b = (m ? m[1] : String(t || '').trim()).replace(/-/g, '+').replace(/_/g, '/');
+  while (b.length % 4) b += '=';
+  const o = JSON.parse(atob(b)); if (!o.u || !o.t) throw new Error('código');
+  return o;
+}
+async function conectarEncarregado(cod) {
+  let o; try { o = lerCodigo(cod); } catch (e) { alert('Link inválido. Peça ao engenheiro para mandar de novo.'); return false; }
+  if (S.nuvem && S.nuvem.papel === 'enc' && S.nuvem.token === o.t) { sincronizar(); return true; }   // já está conectado com esse link
+  if (S.nuvem && S.nuvem.papel === 'admin') { alert('Este é o celular do ENGENHEIRO (conectado à nuvem).\nEsse link é para o celular do encarregado. Mande o link para ele pelo WhatsApp.'); return false; }
+  const temDados = S.nuvem ? pendentes() > 0 : S.diarios.length > 0;
+  if (temDados && !confirm('Este celular vai ser configurado como celular do ENCARREGADO.\nOs dados que estão nele agora serão apagados deste aparelho.\n\nContinuar?')) return false;
+  try {
+    const q = await api('quemSou', {}, o.u, o.t);
+    if (q.admin) { alert('Esse link é do engenheiro, não de encarregado.'); return false; }
+    S = {versao: 4, obras: [], diarios: [], vales: [], obraAtivaId: null, pendExcl: [], pendObraExcl: [], config: {}, nuvem: {url: o.u, token: o.t, papel: 'enc', nome: q.nome, ultimo: 0}};
+    desbloqueado = false; edicaoId = null; salvar();
+    document.querySelectorAll('dialog[open]').forEach(d => d.close());
+    aplicarModo(); mostrarEspera();
+    await sincronizar();
+    renderTudo(); aplicarModo(); irAba('diario');
+    boasVindasEncarregado();
+    return true;
+  } catch (e) { alert('Não foi possível conectar: ' + textoErro(e.message)); return false; }
+}
 
-      diarios.unshift(registro);
-      localStorage.setItem('diarios_eliel_v3', JSON.stringify(diarios));
-      
-      document.getElementById('atividades').value = '';
-      document.getElementById('ocorrencias').value = '';
-      
-      alert('✅ Diário gravado com sucesso para a obra: ' + atual.nome);
-      renderHistorico();
-    }
+function iniciarNuvem() {
+  const cod = new URLSearchParams(location.search).get('conectar');
+  if (cod) {
+    // O link fica no endereço até o app ser instalado: o WhatsApp e o iPhone guardam os dados
+    // separados do navegador/app instalado, então quem abrir depois precisa do link para conectar.
+    if (ehInstalado()) history.replaceState(null, '', location.pathname);
+    else if (ehIOS) { const m = $('linkManifest'); if (m) m.remove(); }
+    conectarEncarregado(cod);
+  }
+  else if (S.nuvem) sincronizar();
+  window.addEventListener('online', () => sincronizar());
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sincronizar(); });
+  setInterval(() => { if (!document.hidden) sincronizar(); }, 60000);
+  // qualquer mexida no formulário do diário: não sobrescrever com dados da sincronização
+  $('formDiario').addEventListener('input', () => formSujo = true);
+  $('formDiario').addEventListener('click', e => { if (e.target.closest('button')) formSujo = true; });
+  renderSyncStatus();
+}
 
-    function exportarRelatorio() {
-      const diariosDaObra = diarios.filter(d => d.obraId === obraAtivaId);
-      if(diariosDaObra.length === 0) {
-        alert('Grave ao menos um diário nesta obra para exportar!');
-        return;
-      }
-      window.print();
-    }
+/* ================= PWA ================= */
+let deferredPrompt;
+const UA = navigator.userAgent;
+const ehIOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const ehInstalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const ehNavegadorInterno = /FBAN|FBAV|Instagram|WhatsApp|Line\/|; wv\)/.test(UA);
+const ehSafari = ehIOS && /Safari/.test(UA) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(UA);
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; mostrarBannerInstalar(); });
+window.addEventListener('appinstalled', () => { deferredPrompt = null; $('pwaBanner').classList.add('hide'); fechar('dlgInstalar'); toast('✅ App instalado! Procure o ícone “Eliel Engenharia” na tela do celular.', 5000); });
+function mostrarBannerInstalar() {
+  if (ehInstalado()) { $('pwaBanner').classList.add('hide'); $('menuInstalar').classList.add('hide'); return; }
+  $('menuInstalar').classList.remove('hide');
+  let adiado = 0; try { adiado = +localStorage.getItem('eliel_instalar_adiado') || 0; } catch (e) {}
+  $('pwaBanner').classList.toggle('hide', Date.now() - adiado < 3 * 86400000);
+}
+function adiarInstalar() { try { localStorage.setItem('eliel_instalar_adiado', Date.now()); } catch (e) {} $('pwaBanner').classList.add('hide'); }
+function instalarPwa() {
+  if (!deferredPrompt) { abrirInstalar(); return; }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(r => { if (r.outcome === 'accepted') $('pwaBanner').classList.add('hide'); }).finally(() => { deferredPrompt = null; });
+}
+function abrirInstalar() {
+  const passo = (n, t) => `<div class="row" style="align-items:flex-start;margin-bottom:12px"><span style="flex:none;width:30px;height:30px;border-radius:99px;background:var(--sky);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center">${n}</span><span style="font-size:15px;padding-top:4px">${t}</span></div>`;
+  const copiar = `<button class="btn sec full sm" onclick="copiarTexto(location.href)">📋 Copiar o link desta página</button>`;
+  let h;
+  if (ehInstalado()) h = `<div class="alert ok" style="font-size:14px">✅ O app já está instalado neste celular.</div>`;
+  else if (deferredPrompt) h = `<p style="margin-top:0">É só um toque:</p><button class="btn ok full" style="font-size:17px;padding:16px" onclick="instalarPwa()">📲 Instalar agora</button><p class="small mut">Depois procure o ícone <b>Eliel Engenharia</b> na tela do celular.</p>`;
+  else if (ehNavegadorInterno) h = `<p style="margin-top:0">Esta página abriu <b>dentro do WhatsApp</b> (ou outro app). Para instalar, abra no navegador:</p>` +
+      passo(1, ehIOS ? 'Toque no ícone da <b>bússola</b> ou em <b>⋯</b> e escolha <b>Abrir no Safari</b>.' : 'Toque nos <b>3 pontinhos ⋮</b> lá em cima e escolha <b>Abrir no Chrome</b> (ou “Abrir no navegador”).') +
+      passo(2, 'Lá, toque em <b>Menu → Instalar o app</b>.') + copiar;
+  else if (ehIOS && !ehSafari) h = `<p style="margin-top:0">No iPhone, a instalação funciona melhor pelo <b>Safari</b>:</p>` +
+      passo(1, 'Copie o link abaixo e cole no <b>Safari</b>.') + passo(2, 'No Safari, toque no botão <b>Compartilhar</b> <span style="font-size:18px">⬆️</span>.') + passo(3, 'Toque em <b>Adicionar à Tela de Início</b> e depois em <b>Adicionar</b>.') + copiar;
+  else if (ehIOS) h = `<p style="margin-top:0">No iPhone são 3 toques:</p>` +
+      passo(1, 'Toque no botão <b>Compartilhar</b> <span style="font-size:18px">⬆️</span> (quadradinho com a setinha, embaixo no meio da tela).') +
+      passo(2, 'Role a lista para baixo e toque em <b>Adicionar à Tela de Início</b> ➕.') +
+      passo(3, 'Toque em <b>Adicionar</b> no canto de cima.') + `<p class="small mut">Depois abra sempre pelo ícone <b>Eliel Engenharia</b> na tela do celular.</p>`;
+  else h = `<p style="margin-top:0">No Android:</p>` +
+      passo(1, 'Toque nos <b>3 pontinhos ⋮</b> do navegador (canto de cima, à direita).') +
+      passo(2, 'Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.') +
+      passo(3, 'Confirme em <b>Instalar</b>.') + `<p class="small mut">Se não aparecer a opção, abra este link no <b>Google Chrome</b>.</p>` + copiar;
+  $('instalarCorpo').innerHTML = h;
+  $('dlgInstalar').showModal();
+}
+function boasVindasEncarregado() {
+  $('bvTitulo').innerHTML = `✅ Pronto${S.nuvem && S.nuvem.nome ? ', <b>' + esc(S.nuvem.nome) + '</b>' : ''}! Seu app está ligado a: <b>${esc(S.obras.map(o => o.nome).join(', ') || '—')}</b>`;
+  $('bvInstalar').classList.toggle('hide', ehInstalado());
+  $('dlgBemVindo').showModal();
+}
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  const tinhaControle = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').then(reg => reg.update()).catch(err => console.log('SW erro:', err));
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (tinhaControle) $('bannerAtualizacao').classList.remove('hide'); });
+}
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+// fecha diálogos ao tocar fora
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+// dia virou com o app aberto: atualiza a data se o formulário estiver limpo
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !edicaoId && !$('dAtividades').value) $('dData').value = hojeISO(); });
 
-    renderSeletor();
-  </script>
+/* ================= INÍCIO ================= */
+carregar();
+renderTudo();
+aplicarModo();
+iniciarNuvem();
+mostrarBannerInstalar();
+const ajustarTopo = () => document.documentElement.style.setProperty('--hh', document.querySelector('header.top').offsetHeight + 'px');
+ajustarTopo(); window.addEventListener('resize', ajustarTopo); new ResizeObserver(ajustarTopo).observe(document.querySelector('header.top'));
+let abaIni = 'diario'; try { abaIni = localStorage.getItem('eliel_aba') || 'diario'; } catch (e) {}
+irAba(admin() ? abaIni : 'diario');
+</script>
 </body>
 </html>

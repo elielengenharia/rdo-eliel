@@ -1,17 +1,17 @@
 {
-  "name": "Eliel Engenharia - RDO",
+  "name": "Eliel Engenharia",
   "short_name": "Eliel Engenharia",
-  "description": "Sistema Diário de Obra e Gestão Multi-Obras — Eng. Eliel Dias Ribeiro",
-  "start_url": "index.html",
+  "description": "Diário de obra, cronograma, custos da equipe e lucro por etapa — Eng. Eliel Dias Ribeiro",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0F172A",
   "theme_color": "#0F172A",
+  "lang": "pt-BR",
   "icons": [
-    {
-      "src": "WA_1786840644654.jpeg",
-      "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
-    }
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
   ]
 }
