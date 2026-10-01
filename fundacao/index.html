@@ -308,7 +308,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
         <label>Altura (cm)<input type="number" step="1" id="ci.h"></label>
       </div>
       <h2 style="margin-top:18px">Vergas e contravergas (treliça)</h2>
-      <p class="cap">Padrão: treliça TG12M (altura 12 cm, banzo sup. 6,0 mm, diagonais 4,2 mm, banzo inf. 5,0 mm). Confira o peso com o seu fornecedor.</p>
+      <p class="cap">Padrão: treliça TG8L (altura 8 cm, banzo superior 6,0 mm, diagonais e banzo inferior 4,2 mm), em peça 9×14 cm na altura do tijolo, com 3 cm de concreto em cima e embaixo. Confira o peso com o seu fornecedor.</p>
       <div class="form">
         <label>Treliça<input type="text" id="tr.nome"></label>
         <label>Altura da treliça (cm)<input type="number" step="1" id="tr.h"></label>
@@ -369,7 +369,7 @@ function defaults(){
     walls:JSON.parse(JSON.stringify(WALLS42)), rooms:JSON.parse(JSON.stringify(ROOMS42)),
     vb:{b:15,h:20,bit:"5/16",ga:7,gb:14,est:"4.2",s:15},
     ci:{on:"sim",b:12,h:20},
-    tr:{nome:"TG12M",h:12,kg:0.82,peca:"12",b:9,hv:14,hc:14,apoio:30},
+    tr:{nome:"TG8L",h:8,kg:0.68,peca:"12",b:9,hv:14,hc:14,apoio:30},
     ab:[{n:"P1 entrada",t:"Porta",l:0.80,a:2.10,q:1},{n:"P2 quartos/banho",t:"Porta",l:0.70,a:2.10,q:3},{n:"P3 lavanderia",t:"Porta",l:0.80,a:2.10,q:1},
         {n:"J1 quartos",t:"Janela",l:1.20,a:1.00,q:2},{n:"J2 sala",t:"Janela",l:1.50,a:1.20,q:1},{n:"J3 cozinha",t:"Janela",l:1.20,a:1.00,q:1},{n:"J4 banho",t:"Janela",l:0.60,a:0.60,q:1}],
     pl:{b:12,h:20,bit:"3/8",ga:7,gb:14,est:"4.2",s:15,alt:2.8},
@@ -378,7 +378,7 @@ function defaults(){
   };
 }
 let S;
-try{ const d=defaults(), o=JSON.parse(localStorage.getItem("fund-casa-v1"))||{}; S=Object.assign(d,o); ["vb","pl","br","ci","tr"].forEach(k=>S[k]=Object.assign(d[k]||defaults()[k],o[k]||{})); if(!o.ci) S.ci=defaults().ci; if(!o.ab) S.ab=defaults().ab; if(S.tr.b==12&&S.tr.hv==20&&S.tr.hc==20){ S.tr.b=9; S.tr.hv=14; S.tr.hc=14; } }catch(e){ S = defaults(); }
+try{ const d=defaults(), o=JSON.parse(localStorage.getItem("fund-casa-v1"))||{}; S=Object.assign(d,o); ["vb","pl","br","ci","tr"].forEach(k=>S[k]=Object.assign(d[k]||defaults()[k],o[k]||{})); if(!o.ci) S.ci=defaults().ci; if(!o.ab) S.ab=defaults().ab; if(S.tr.b==12&&S.tr.hv==20&&S.tr.hc==20){ S.tr.b=9; S.tr.hv=14; S.tr.hc=14; } if(S.tr.nome==="TG12M"&&num(S.tr.h)===12){ S.tr.nome="TG8L"; S.tr.h=8; S.tr.kg=0.68; } }catch(e){ S = defaults(); }
 function save(){ try{ localStorage.setItem("fund-casa-v1", JSON.stringify(S)); }catch(e){} }
 
 const f = (n,d=2)=> (isFinite(n)? n.toFixed(d).replace(".",",") : "—");
@@ -615,7 +615,7 @@ function secCI(){
   o+=`</svg>`;
   return o;
 }
-const trCov=h=>Math.max(0.5,Math.min(2.5,(h-num(S.tr.h))/2));
+const trCov=h=>Math.max(0.5,(h-num(S.tr.h))/2);
 function trussSec(cx,yb,k,h){ // yb = fundo da peça
   const T=S.tr, c=trCov(h), base=8, ht=num(T.h);
   const y0=yb-(c+0.25)*k, y1=yb-(c+ht-0.3)*k, xl=cx-base/2*k, xr=cx+base/2*k;
@@ -754,7 +754,8 @@ function render(){
   if(Math.min(cl,cv)<3) w.push(["bad",`Cobrimento do baldrame de ${f(Math.min(cl,cv),1)} cm. Em contato com o solo use no mínimo 3,0 cm: aumente a seção ou use coluna pronta menor.`]);
   if(Q.ciOn){ const cst=S.ci.h>=S.ci.b, cc=Math.min((S.ci.b-(cst?vb.ga:vb.gb))/2,(S.ci.h-(cst?vb.gb:vb.ga))/2); if(cc<2.5) w.push(["warn",`Cobrimento da cinta de ${f(cc,1)} cm, abaixo de 2,5 cm.`]); }
   { const hm=Math.min(S.tr.hv,S.tr.hc), cv=(hm-num(S.tr.h))/2, cl=(S.tr.b-8)/2;
-    if(cv<2.5||cl<2.5) w.push(["warn",`Verga/contraverga ${S.tr.b}×${hm} com treliça de ${S.tr.h} cm: cobrimento de ${f(Math.max(cv,0),1)} cm em cima/embaixo e ${f(Math.max(cl,0),1)} cm nas laterais (base da treliça ≈ 8 cm). Abaixo dos 2,5 cm da NBR 6118; o reboco protege, mas confira. Uma treliça de 8 cm de altura deixa 3 cm em cima e embaixo numa peça de 14 cm.`]); }
+    if(cv<2.5) w.push(["warn",`Verga/contraverga ${S.tr.b}×${hm} com treliça de ${S.tr.h} cm: só ${f(Math.max(cv,0),1)} cm de concreto em cima e embaixo (mínimo 2,5 cm). Use treliça mais baixa ou peça mais alta.`]);
+    else if(cl<2.5) w.push(["warn",`Verga/contraverga com ${S.tr.b} cm de largura: a treliça (base ≈ 8 cm) fica com ${f(Math.max(cl,0),1)} cm de concreto nas laterais. O reboco das duas faces completa a proteção.`]); }
   const cpl=Math.min((pl.b-pl.ga)/2,(pl.h-pl.gb)/2);
   if(cpl<2.5) w.push(["warn",`Cobrimento do pilar de ${f(cpl,1)} cm, abaixo de 2,5 cm.`]);
   const diag=Math.hypot(pl.ga,pl.gb), cbr=(S.br.d-diag)/2;
