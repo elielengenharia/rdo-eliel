@@ -247,6 +247,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
           <div class="form" style="margin-top:10px">
             <label>Página<select id="impPage"></select></label>
             <label>Escala da planta<select id="impScale"><option value="0">Automática</option><option value="20">1:20</option><option value="25">1:25</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option><option value="125">1:125</option><option value="200">1:200</option></select></label>
+            <label>Maior cota externa da planta (m), opcional<input type="number" step="0.01" id="impKnown" placeholder="ex.: 18,60"></label>
           </div>
           <div class="row"><button class="btn pri" id="impPdfGo">Reconhecer paredes do PDF</button></div>
         </div>
@@ -1141,7 +1142,7 @@ document.getElementById("pdfBtn").onclick=async()=>{
 };
 
 /* ---------------- Importar planta ---------------- */
-let IMP=null, impFileObj=null, impDxf=null, impCtl=null, impPdfDoc=null, impPdfLib=null, impPdfSegs=null;
+let IMP=null, impFileObj=null, impDxf=null, impCtl=null, impPdfDoc=null, impPdfLib=null, impPdfSegs=null, impPdfAll=null;
 const $=id=>document.getElementById(id);
 const impMsg=t=>{$("impMsg").textContent=t;};
 function loadScript(src){return new Promise((res,rej)=>{const e=document.createElement("script");e.src=src;e.onload=res;e.onerror=()=>rej(new Error("script"));document.head.appendChild(e);});}
@@ -1171,10 +1172,9 @@ function parseDXF(txt){
   flush(); return {segs,units};
 }
 function wallsFromSegs(segs){
-  const H=[],V=[];
-  segs.forEach(s=>{ const dx=s.x2-s.x1, dy=s.y2-s.y1, L=Math.hypot(dx,dy); if(L<0.1) return;
-    if(Math.abs(dy)<0.02*L) H.push({c:(s.y1+s.y2)/2,a:Math.min(s.x1,s.x2),b:Math.max(s.x1,s.x2)});
-    else if(Math.abs(dx)<0.02*L) V.push({c:(s.x1+s.x2)/2,a:Math.min(s.y1,s.y2),b:Math.max(s.y1,s.y2)}); });
+  // agrupa as linhas por direção (aceita paredes inclinadas), acha o eixo entre as duas faces de cada parede
+  const lines=segs.map(s=>{ const dx=s.x2-s.x1, dy=s.y2-s.y1, L=Math.hypot(dx,dy); let a=Math.atan2(dy,dx)*180/Math.PI; a=((a%180)+180)%180; return {...s,L,a}; }).filter(s=>s.L>=0.1);
+  const dirs=[]; lines.slice().sort((p,q)=>q.L-p.L).forEach(s=>{ const d=dirs.find(d=>{ const df=Math.abs(d.a-s.a); return Math.min(df,180-df)<0.6; }); if(d){ d.len+=s.L; } else dirs.push({a:s.a,len:s.L}); });
   const gaps=[];
   const axes=list=>{ const cl=[];
     list.forEach((s,i)=>{ const cand=[];
@@ -1190,17 +1190,29 @@ function wallsFromSegs(segs){
     groups.forEach(g=>{ const it=g.items.sort((p,q)=>p.a-q.a); const lw=it.reduce((s,x)=>s+(x.b-x.a),0)||1, c=it.reduce((s,x)=>s+x.c*(x.b-x.a),0)/lw, t=it.reduce((s,x)=>Math.max(s,x.t),0);
       let cur={c,a:it[0].a,b:it[0].b,t,g:[]};
       for(let k=1;k<it.length;k++){ const x=it[k]; const gap=x.a-cur.b;
-        if(gap<=1.6){ if(gap>=0.5) cur.g.push(gap); cur.b=Math.max(cur.b,x.b); } else { out.push(cur); cur={c,a:x.a,b:x.b,t,g:[]}; } }
+        if(gap<=3.2){ if(gap>=0.5) cur.g.push(gap); cur.b=Math.max(cur.b,x.b); } else { out.push(cur); cur={c,a:x.a,b:x.b,t,g:[]}; } }
       out.push(cur); });
     // descarta trechos curtos que ficam dentro de uma parede maior paralela (ex.: linhas de janela)
     const kept=out.filter(w=>!out.some(p=>p!==w&&(p.b-p.a)>(w.b-w.a)&&Math.abs(p.c-w.c)<=Math.max(p.t||0.15,0.12)&&p.a<=w.a+0.05&&p.b>=w.b-0.05));
     kept.forEach(w=>gaps.push(...w.g)); return kept; };
-  const h=axes(H), v=axes(V);
-  const ext=(A,B)=>A.forEach(w=>{ ["a","b"].forEach(end=>{ let best=null;
-    B.forEach(p=>{ const reach=(p.t||0.15)+0.12; if(w.c<p.a-reach||w.c>p.b+reach) return; const d=Math.abs(p.c-w[end]); if(d<=(w.t||0.15)+0.15&&(!best||d<best.d)) best={d,p}; });
-    if(best) w[end]=best.p.c; }); });
-  ext(h,v); ext(v,h);
-  const all=[...h.map(w=>({x1:w.a,y1:w.c,x2:w.b,y2:w.c,t:w.t})),...v.map(w=>({x1:w.c,y1:w.a,x2:w.c,y2:w.b,t:w.t}))].filter(w=>Math.hypot(w.x2-w.x1,w.y2-w.y1)>0.3);
+  let W=[];
+  dirs.filter(d=>d.len>=0.6).forEach(d=>{
+    const r=d.a*Math.PI/180, cs=Math.cos(r), sn=Math.sin(r);
+    const loc=lines.filter(s=>{ const df=Math.abs(d.a-s.a); return Math.min(df,180-df)<0.6; }).map(s=>{
+      const u1=s.x1*cs+s.y1*sn, v1=-s.x1*sn+s.y1*cs, u2=s.x2*cs+s.y2*sn, v2=-s.x2*sn+s.y2*cs; return {c:(v1+v2)/2,a:Math.min(u1,u2),b:Math.max(u1,u2)}; });
+    axes(loc).forEach(w=>W.push({x1:w.a*cs-w.c*sn,y1:w.a*sn+w.c*cs,x2:w.b*cs-w.c*sn,y2:w.b*sn+w.c*cs,t:w.t,ux:cs,uy:sn}));
+  });
+  // estende/apara as pontas até o eixo da parede que encontram
+  const inter=(p,q)=>{ const d=p.ux*q.uy-p.uy*q.ux; if(Math.abs(d)<0.17) return null; const t=((q.x1-p.x1)*q.uy-(q.y1-p.y1)*q.ux)/d; return [p.x1+p.ux*t,p.y1+p.uy*t]; };
+  const along=(q,x,y)=>(x-q.x1)*q.ux+(y-q.y1)*q.uy, Lq=q=>Math.hypot(q.x2-q.x1,q.y2-q.y1);
+  W.forEach(w=>{ [["x1","y1","x2","y2"],["x2","y2","x1","y1"]].forEach(([kx,ky,ox,oy])=>{ let best=null;
+    const L0=Math.hypot(w[kx]-w[ox],w[ky]-w[oy])||1, dx=(w[kx]-w[ox])/L0, dy=(w[ky]-w[oy])/L0;
+    W.forEach(q=>{ if(q===w) return; const X=inter(w,q); if(!X) return; const reach=(q.t||0.15)+0.12, s=along(q,X[0],X[1]); if(s<-reach||s>Lq(q)+reach) return;
+      const out=(X[0]-w[kx])*dx+(X[1]-w[ky])*dy; // >0: estende para fora; <0: apara
+      if(out<-((w.t||0.15)+0.15)||out>1.0) return;
+      const d=Math.abs(out); if(!best||d<best.d) best={d,X}; });
+    if(best){ w[kx]=best.X[0]; w[ky]=best.X[1]; } }); });
+  const all=W.filter(w=>Math.hypot(w.x2-w.x1,w.y2-w.y1)>0.3);
   const thick=all.map(w=>w.t);
   const walls=all.map(({x1,y1,x2,y2})=>({x1,y1,x2,y2}));
   return {walls,gaps,thick};
@@ -1210,24 +1222,40 @@ async function pdfSegments(page,lib){
   const OPS=lib.OPS, ol=await page.getOperatorList();
   const mul=(m,n)=>[m[0]*n[0]+m[2]*n[1],m[1]*n[0]+m[3]*n[1],m[0]*n[2]+m[2]*n[3],m[1]*n[2]+m[3]*n[3],m[0]*n[4]+m[2]*n[5]+m[4],m[1]*n[4]+m[3]*n[5]+m[5]];
   const ap=(m,x,y)=>[m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]];
-  let ctm=[1,0,0,1,0,0]; const stack=[], segs=[];
-  const add=(m,a,b)=>{ const p=ap(m,a[0],a[1]), q=ap(m,b[0],b[1]); if(Math.hypot(q[0]-p[0],q[1]-p[1])>0.3) segs.push({x1:p[0],y1:p[1],x2:q[0],y2:q[1]}); };
+  const FILLS=[OPS.fill,OPS.eoFill,OPS.fillStroke,OPS.eoFillStroke,OPS.closeFillStroke,OPS.closeEOFillStroke];
+  let ctm=[1,0,0,1,0,0], fc=0; const stack=[], segs=[], dark=[];
   for(let i=0;i<ol.fnArray.length;i++){ const fn=ol.fnArray[i], ar=ol.argsArray[i];
-    if(fn===OPS.save) stack.push(ctm);
-    else if(fn===OPS.restore) ctm=stack.pop()||[1,0,0,1,0,0];
+    if(fn===OPS.save) stack.push([ctm,fc]);
+    else if(fn===OPS.restore){ const st=stack.pop()||[[1,0,0,1,0,0],0]; ctm=st[0]; fc=st[1]; }
     else if(fn===OPS.transform) ctm=mul(ctm,ar);
-    else if(fn===OPS.paintFormXObjectBegin){ stack.push(ctm); if(Array.isArray(ar[0])&&ar[0].length===6) ctm=mul(ctm,ar[0]); }
-    else if(fn===OPS.paintFormXObjectEnd) ctm=stack.pop()||[1,0,0,1,0,0];
+    else if(fn===OPS.setFillRGBColor) fc=(ar[0]+ar[1]+ar[2])/3;
+    else if(fn===OPS.setFillGray) fc=(Array.isArray(ar)?ar[0]:ar)*255;
+    else if(fn===OPS.paintFormXObjectBegin){ stack.push([ctm,fc]); if(Array.isArray(ar[0])&&ar[0].length===6) ctm=mul(ctm,ar[0]); }
+    else if(fn===OPS.paintFormXObjectEnd){ const st=stack.pop()||[[1,0,0,1,0,0],0]; ctm=st[0]; fc=st[1]; }
     else if(fn===OPS.constructPath){ const ops=ar[0], co=ar[1]; let k=0, cur=null, start=null;
+      const isDark=FILLS.includes(ol.fnArray[i+1])&&fc<130; const out=[];
+      const add=(a,b)=>{ const p=ap(ctm,a[0],a[1]), q=ap(ctm,b[0],b[1]); if(Math.hypot(q[0]-p[0],q[1]-p[1])>0.05) out.push({x1:p[0],y1:p[1],x2:q[0],y2:q[1]}); };
       for(const op of ops){
-        if(op===OPS.moveTo){ cur=[co[k],co[k+1]]; start=cur; k+=2; }
-        else if(op===OPS.lineTo){ const p=[co[k],co[k+1]]; if(cur) add(ctm,cur,p); cur=p; k+=2; }
+        if(op===OPS.moveTo){ if(isDark&&cur&&start&&(cur[0]!==start[0]||cur[1]!==start[1])) add(cur,start); cur=[co[k],co[k+1]]; start=cur; k+=2; }
+        else if(op===OPS.lineTo){ const p=[co[k],co[k+1]]; if(cur) add(cur,p); cur=p; k+=2; }
         else if(op===OPS.curveTo){ cur=[co[k+4],co[k+5]]; k+=6; }
         else if(op===OPS.curveTo2||op===OPS.curveTo3){ cur=[co[k+2],co[k+3]]; k+=4; }
-        else if(op===OPS.closePath){ if(cur&&start) add(ctm,cur,start); cur=start; }
+        else if(op===OPS.closePath){ if(cur&&start) add(cur,start); cur=start; }
         else if(op===OPS.rectangle){ const [x,y,w,h]=co.slice(k,k+4); const P=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
-          for(let j=0;j<4;j++) add(ctm,P[j],P[(j+1)%4]); cur=[x,y]; start=cur; k+=4; } } } }
-  return segs;
+          for(let j=0;j<4;j++) add(P[j],P[(j+1)%4]); cur=[x,y]; start=cur; k+=4; } }
+      if(isDark&&cur&&start&&(cur[0]!==start[0]||cur[1]!==start[1])) add(cur,start);
+      out.forEach(s=>{ if(Math.hypot(s.x2-s.x1,s.y2-s.y1)>0.3) segs.push(s); });
+      if(isDark) dark.push(...out); } }
+  // paredes com hachura cheia: usa só o contorno da hachura (arestas internas aparecem duas vezes e saem)
+  if(dark.length>=12){
+    const key=(x,y)=>Math.round(x*20)+","+Math.round(y*20), cnt=new Map();
+    const ek=s=>{ const a=key(s.x1,s.y1), b=key(s.x2,s.y2); return a<b?a+"|"+b:b+"|"+a; };
+    dark.forEach(s=>{ const k=ek(s); cnt.set(k,(cnt.get(k)||0)+1); });
+    const edge=dark.filter(s=>cnt.get(ek(s))===1);
+    const len=edge.reduce((t,s)=>t+Math.hypot(s.x2-s.x1,s.y2-s.y1),0);
+    if(len>200) return {segs:edge,hatch:true,all:segs};
+  }
+  return {segs,hatch:false,all:segs};
 }
 /* mantém só o maior conjunto de paredes ligadas (descarta carimbo, cortes, fachadas da prancha) */
 function biggestGroup(W,T){
@@ -1256,6 +1284,8 @@ function pdfAutoScale(segsPt){
     const err=Math.abs(med(r.thick)-0.15); // parede típica com reboco ~15 cm
     const score=err-0.002*r.walls.length;
     if(!best||score<best.score) best={...r,score}; });
+  if(best){ const m=med(best.thick); const f=m>0?0.15/m:1;
+    if(Math.abs(f-1)>0.04){ const den=best.den*f; const r=wallsFromPdf(segsPt,den); if(r.walls.length>=3) return {...r,den:Math.round(den)}; } }
   return best;
 }
 function normWalls(walls,flip,step){
@@ -1318,7 +1348,7 @@ async function showPdfPage(n){
   cv.width=vp.width; cv.height=vp.height; ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
   await page.render({canvasContext:ctx,viewport:vp}).promise;
   impFileObj=await new Promise(r=>cv.toBlob(r,"image/png"));
-  impPdfSegs=await pdfSegments(page,impPdfLib);
+  const PR=await pdfSegments(page,impPdfLib); impPdfSegs=PR.segs; impPdfAll=PR.hatch?PR.all:null;
   $("impImg").hidden=false;
   impMsg(impPdfSegs.length>=8?`PDF vetorial: ${impPdfSegs.length} linhas encontradas. Confira a escala e toque em Reconhecer paredes do PDF.`
     :"Este PDF não tem linhas de desenho (parece escaneado ou imagem). Use Reconhecer com o Claude dentro do Claude, ou exporte o PDF/DXF direto do CAD.");
@@ -1327,11 +1357,17 @@ $("impPage").onchange=async()=>{ $("impRes").hidden=true; try{ await showPdfPage
 $("impPdfGo").onclick=()=>{
   if(!impPdfSegs||impPdfSegs.length<8){ impMsg("Este PDF não tem linhas de desenho para ler."); return; }
   const den=+$("impScale").value;
-  const r=den?wallsFromPdf(impPdfSegs,den):pdfAutoScale(impPdfSegs);
+  const run=sg=>den?wallsFromPdf(sg,den):pdfAutoScale(sg);
+  let r=run(impPdfSegs); if((!r||r.walls.length<3)&&impPdfAll) r=run(impPdfAll);
   if(!r||!r.walls.length){ impMsg(den?`Não encontrei paredes na escala 1:${den}. Tente outra escala.`:"Não encontrei paredes. Escolha a escala da planta manualmente."); $("impRes").hidden=true; return; }
-  const W=normWalls(r.walls,true,0.05);
-  const ab=r.gaps.map((g,i)=>({n:`A${i+1}`,t:"Porta",l:+(Math.round(g*20)/20).toFixed(2),q:1}));
-  showImport({walls:W,ab,rooms:[],obs:`escala ${den?"":"detectada "}1:${r.den}. Compare a medida total com a cota da planta; se não bater, troque a escala.`},"PDF vetorial");
+  let fk=1; const known=num($("impKnown").value);
+  if(known>0){ const xs=r.walls.flatMap(w=>[w.x1,w.x2]), ys=r.walls.flatMap(w=>[w.y1,w.y2]); const span=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+    const th=[...(r.thick||[])].sort((p,q)=>p-q), mt=th.length?th[th.length>>1]:0; if(span>0) fk=known/(span+mt); } // a cota externa inclui meia parede de cada lado
+  const Wr=r.walls.map(w=>({x1:w.x1*fk,y1:w.y1*fk,x2:w.x2*fk,y2:w.y2*fk}));
+  const W=normWalls(Wr,true,0.05);
+  const ab=r.gaps.map((g,i)=>({n:`A${i+1}`,t:"Porta",l:+(Math.round(g*fk*20)/20).toFixed(2),q:1}));
+  const esc=known>0?`ajustada pela medida de ${f(known)} m`:`${den?"":"estimada "}1:${r.den}`;
+  showImport({walls:W,ab,rooms:[],obs:`escala ${esc}. Compare com as cotas da planta; se não bater, informe a maior medida da planta e toque de novo.`},"PDF vetorial");
 };
 function handleDxfText(txt){
   impDxf=parseDXF(txt);
