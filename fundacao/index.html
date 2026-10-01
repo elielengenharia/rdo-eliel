@@ -369,7 +369,7 @@ function defaults(){
     walls:JSON.parse(JSON.stringify(WALLS42)), rooms:JSON.parse(JSON.stringify(ROOMS42)),
     vb:{b:15,h:20,bit:"5/16",ga:7,gb:14,est:"4.2",s:15},
     ci:{on:"sim",b:12,h:20},
-    tr:{nome:"TG12M",h:12,kg:0.82,peca:"12",b:12,hv:20,hc:20,apoio:30},
+    tr:{nome:"TG12M",h:12,kg:0.82,peca:"12",b:9,hv:14,hc:14,apoio:30},
     ab:[{n:"P1 entrada",t:"Porta",l:0.80,a:2.10,q:1},{n:"P2 quartos/banho",t:"Porta",l:0.70,a:2.10,q:3},{n:"P3 lavanderia",t:"Porta",l:0.80,a:2.10,q:1},
         {n:"J1 quartos",t:"Janela",l:1.20,a:1.00,q:2},{n:"J2 sala",t:"Janela",l:1.50,a:1.20,q:1},{n:"J3 cozinha",t:"Janela",l:1.20,a:1.00,q:1},{n:"J4 banho",t:"Janela",l:0.60,a:0.60,q:1}],
     pl:{b:12,h:20,bit:"3/8",ga:7,gb:14,est:"4.2",s:15,alt:2.8},
@@ -378,7 +378,7 @@ function defaults(){
   };
 }
 let S;
-try{ const d=defaults(), o=JSON.parse(localStorage.getItem("fund-casa-v1"))||{}; S=Object.assign(d,o); ["vb","pl","br","ci","tr"].forEach(k=>S[k]=Object.assign(d[k]||defaults()[k],o[k]||{})); if(!o.ci) S.ci=defaults().ci; if(!o.ab) S.ab=defaults().ab; }catch(e){ S = defaults(); }
+try{ const d=defaults(), o=JSON.parse(localStorage.getItem("fund-casa-v1"))||{}; S=Object.assign(d,o); ["vb","pl","br","ci","tr"].forEach(k=>S[k]=Object.assign(d[k]||defaults()[k],o[k]||{})); if(!o.ci) S.ci=defaults().ci; if(!o.ab) S.ab=defaults().ab; if(S.tr.b==12&&S.tr.hv==20&&S.tr.hc==20){ S.tr.b=9; S.tr.hv=14; S.tr.hc=14; } }catch(e){ S = defaults(); }
 function save(){ try{ localStorage.setItem("fund-casa-v1", JSON.stringify(S)); }catch(e){} }
 
 const f = (n,d=2)=> (isFinite(n)? n.toFixed(d).replace(".",",") : "—");
@@ -615,8 +615,9 @@ function secCI(){
   o+=`</svg>`;
   return o;
 }
-function trussSec(cx,yb,k){ // yb = fundo da peça
-  const T=S.tr, c=2.5, base=8, ht=num(T.h);
+const trCov=h=>Math.max(0.5,Math.min(2.5,(h-num(S.tr.h))/2));
+function trussSec(cx,yb,k,h){ // yb = fundo da peça
+  const T=S.tr, c=trCov(h), base=8, ht=num(T.h);
   const y0=yb-(c+0.25)*k, y1=yb-(c+ht-0.3)*k, xl=cx-base/2*k, xr=cx+base/2*k;
   let o=`<path d="M${xl} ${y0}L${cx} ${y1}L${xr} ${y0}" class="s-steel" stroke-width="1.4"/>`;
   o+=`<circle class="f-steel" cx="${xl}" cy="${y0}" r="${0.25*k}"/><circle class="f-steel" cx="${xr}" cy="${y0}" r="${0.25*k}"/><circle class="f-steel" cx="${cx}" cy="${y1}" r="${0.3*k}"/>`;
@@ -629,7 +630,7 @@ function secVG(){
   [[c1,T.hv,"VERGA"],[c2,T.hc,"CONTRAVERGA"]].forEach(([cx,h,t])=>{
     const hh=h*k;
     o+=`<rect class="s-con" x="${cx-b/2}" y="${yb-hh}" width="${b}" height="${hh}"/>`;
-    o+=trussSec(cx,yb,k);
+    o+=trussSec(cx,yb,k,h);
     o+=dimH(cx-b/2,cx+b/2,yb+16,f(T.b,0));
     o+=dimV(yb-hh,yb,cx-b/2-12,f(h,0));
     o+=`<text x="${cx}" y="${yb+44}" text-anchor="middle" style="font:600 12px var(--f-display);letter-spacing:.08em">${t}</text>`;
@@ -752,7 +753,8 @@ function render(){
   const st=vb.h>=vb.b, cl=(vb.b-(st?vb.ga:vb.gb))/2, cv=(vb.h-(st?vb.gb:vb.ga))/2;
   if(Math.min(cl,cv)<3) w.push(["bad",`Cobrimento do baldrame de ${f(Math.min(cl,cv),1)} cm. Em contato com o solo use no mínimo 3,0 cm: aumente a seção ou use coluna pronta menor.`]);
   if(Q.ciOn){ const cst=S.ci.h>=S.ci.b, cc=Math.min((S.ci.b-(cst?vb.ga:vb.gb))/2,(S.ci.h-(cst?vb.gb:vb.ga))/2); if(cc<2.5) w.push(["warn",`Cobrimento da cinta de ${f(cc,1)} cm, abaixo de 2,5 cm.`]); }
-  const hmin=num(S.tr.h)+5; if(Math.min(S.tr.hv,S.tr.hc)<hmin) w.push(["warn",`Verga/contraverga com altura menor que ${hmin} cm: a treliça de ${S.tr.h} cm fica sem cobrimento em cima.`]);
+  { const hm=Math.min(S.tr.hv,S.tr.hc), cv=(hm-num(S.tr.h))/2, cl=(S.tr.b-8)/2;
+    if(cv<2.5||cl<2.5) w.push(["warn",`Verga/contraverga ${S.tr.b}×${hm} com treliça de ${S.tr.h} cm: cobrimento de ${f(Math.max(cv,0),1)} cm em cima/embaixo e ${f(Math.max(cl,0),1)} cm nas laterais (base da treliça ≈ 8 cm). Abaixo dos 2,5 cm da NBR 6118; o reboco protege, mas confira. Uma treliça de 8 cm de altura deixa 3 cm em cima e embaixo numa peça de 14 cm.`]); }
   const cpl=Math.min((pl.b-pl.ga)/2,(pl.h-pl.gb)/2);
   if(cpl<2.5) w.push(["warn",`Cobrimento do pilar de ${f(cpl,1)} cm, abaixo de 2,5 cm.`]);
   const diag=Math.hypot(pl.ga,pl.gb), cbr=(S.br.d-diag)/2;
@@ -768,7 +770,7 @@ function render(){
   document.getElementById("corner").innerHTML=corner();
   document.getElementById("secVG").innerHTML=secVG();
   document.getElementById("elevVG").innerHTML=elevVG();
-  document.getElementById("capVG").textContent=`Treliça ${S.tr.nome} (h = ${S.tr.h} cm). Verga ${S.tr.b}×${S.tr.hv} cm e contraverga ${S.tr.b}×${S.tr.hc} cm, cobrimento inferior 2,5 cm.`;
+  document.getElementById("capVG").textContent=`Treliça ${S.tr.nome} (h = ${S.tr.h} cm). Verga ${S.tr.b}×${S.tr.hv} cm e contraverga ${S.tr.b}×${S.tr.hc} cm, na altura do tijolo; cobrimento inferior ${f(trCov(Math.min(S.tr.hv,S.tr.hc)),1)} cm.`;
   document.getElementById("secCI").innerHTML=Q.ciOn?secCI():`<p class="cap">Cinta desativada na aba Dados.</p>`;
   document.getElementById("capCI").textContent=`Seção ${S.ci.b}×${S.ci.h} cm sobre a alvenaria, coluna pronta ${vb.gb}×${vb.ga} ø ${vb.bit}", contínua em todas as paredes.`;
   document.getElementById("capVB").textContent=`Seção ${vb.b}×${vb.h} cm com coluna pronta ${vb.gb}×${vb.ga}, 4 ø ${vb.bit}" e estribos ø ${f(EST[vb.est].mm,1)} c/${vb.s}.`;
@@ -785,7 +787,7 @@ function render(){
     `Impermeabilizar topo e laterais do baldrame antes de levantar a alvenaria.`,
     ...(Q.ciOn?[`Cinta de amarração ${S.ci.b}×${S.ci.h} cm contínua sobre todas as paredes, com a mesma coluna pronta ${vb.gb}×${vb.ga} ø ${vb.bit}", traspasse de ${S.trasp} cm e ferros em L nos cantos e T.`,
     `A coluna pronta do pilar sobe até o topo da cinta (${f(pl.alt)} m acima do baldrame) e fica dentro da coluna pronta da cinta.`]:[]),
-    `Vergas sobre todas as portas e janelas e contravergas sob as janelas com treliça ${S.tr.nome}, passando ${S.tr.apoio} cm para cada lado do vão. Treliça apoiada em espaçadores de 2,5 cm.`,
+    `Vergas sobre todas as portas e janelas e contravergas sob as janelas com treliça ${S.tr.nome}, passando ${S.tr.apoio} cm para cada lado do vão. Peça com ${S.tr.b}×${Math.min(S.tr.hv,S.tr.hc)} cm, na altura da fiada de tijolo. Treliça apoiada em espaçadores para não encostar na forma.`,
     `A verificação das brocas é estimativa com carga linear de ${f(S.q,1)} kN/m e carga admissível de ${f(S.cap,0)} kN por broca, informadas pelo responsável técnico.`
   ].map(t=>`<li>${t}</li>`).join("");
   // quantitativo
