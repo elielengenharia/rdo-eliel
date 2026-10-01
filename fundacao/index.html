@@ -228,7 +228,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <section id="tab-dados" hidden>
     <div class="sheet">
       <h2>Importar planta baixa</h2>
-      <p class="cap">PDF ou foto: o Claude lê paredes, cotas e aberturas. DXF: o app lê as linhas das paredes direto do arquivo. Em todos os casos você confere antes de usar.</p>
+      <p class="cap">PDF exportado do CAD (vetorial) ou DXF: o app lê as linhas das paredes direto do arquivo, sem internet. PDF escaneado ou foto: o Claude lê paredes, cotas e aberturas (só com o app aberto dentro do Claude). Em todos os casos você confere antes de usar.</p>
       <div class="row" style="margin-top:0"><label class="btn pri" for="impFile" style="display:inline-block">Escolher arquivo</label><input type="file" id="impFile" style="position:absolute;width:1px;height:1px;opacity:0"><span class="cap" id="impName" style="margin:0"></span></div>
       <h3>Se o botão não abrir no celular</h3>
       <p class="cap">Cole aqui: uma imagem da planta (copie a imagem e cole), o texto de um arquivo DXF, ou o código de projeto que eu te mandar no chat.</p>
@@ -243,7 +243,14 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       </div>
       <div id="impImg" hidden>
         <canvas id="impCanvas" style="max-width:100%;max-height:260px;border:1px solid var(--line);margin-top:10px;display:block"></canvas>
-        <div class="row"><button class="btn pri" id="impAiGo">Reconhecer com o Claude</button><button class="btn" id="impStop" hidden>Parar</button></div>
+        <div id="impPdf" hidden>
+          <div class="form" style="margin-top:10px">
+            <label>Página<select id="impPage"></select></label>
+            <label>Escala da planta<select id="impScale"><option value="0">Automática</option><option value="20">1:20</option><option value="25">1:25</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option><option value="125">1:125</option><option value="200">1:200</option></select></label>
+          </div>
+          <div class="row"><button class="btn pri" id="impPdfGo">Reconhecer paredes do PDF</button></div>
+        </div>
+        <div class="row"><button class="btn" id="impAiGo">Reconhecer com o Claude</button><button class="btn" id="impStop" hidden>Parar</button></div>
       </div>
       <p class="toast" id="impMsg" role="status" style="margin:8px 0 0"></p>
       <div id="impRes" hidden>
@@ -1134,7 +1141,7 @@ document.getElementById("pdfBtn").onclick=async()=>{
 };
 
 /* ---------------- Importar planta ---------------- */
-let IMP=null, impFileObj=null, impDxf=null, impCtl=null;
+let IMP=null, impFileObj=null, impDxf=null, impCtl=null, impPdfDoc=null, impPdfLib=null, impPdfSegs=null;
 const $=id=>document.getElementById(id);
 const impMsg=t=>{$("impMsg").textContent=t;};
 function loadScript(src){return new Promise((res,rej)=>{const e=document.createElement("script");e.src=src;e.onload=res;e.onerror=()=>rej(new Error("script"));document.head.appendChild(e);});}
@@ -1172,24 +1179,80 @@ function wallsFromSegs(segs){
   const axes=list=>{ const cl=[];
     list.forEach((s,i)=>{ let best=null;
       list.forEach((q,j)=>{ if(i===j) return; const d=Math.abs(q.c-s.c); if(d<0.07||d>0.35) return; const ov=Math.min(s.b,q.b)-Math.max(s.a,q.a); if(ov<0.15) return;
-        if(!best||d<best.d) best={d,q,ov}; });
+        if(!best||ov>best.ov+0.05||(Math.abs(ov-best.ov)<=0.05&&d<best.d)) best={d,q,ov}; });
       if(best) cl.push({c:(s.c+best.q.c)/2,a:Math.max(s.a,best.q.a),b:Math.min(s.b,best.q.b),t:best.d}); });
     cl.sort((p,q)=>p.c-q.c||p.a-q.a);
     const groups=[]; cl.forEach(x=>{ const g=groups.find(g=>Math.abs(g.c-x.c)<0.03); if(g){g.items.push(x);} else groups.push({c:x.c,items:[x]}); });
     const out=[];
-    groups.forEach(g=>{ const it=g.items.sort((p,q)=>p.a-q.a); const c=it.reduce((s,x)=>s+x.c,0)/it.length, t=it.reduce((s,x)=>Math.max(s,x.t),0);
+    groups.forEach(g=>{ const it=g.items.sort((p,q)=>p.a-q.a); const lw=it.reduce((s,x)=>s+(x.b-x.a),0)||1, c=it.reduce((s,x)=>s+x.c*(x.b-x.a),0)/lw, t=it.reduce((s,x)=>Math.max(s,x.t),0);
       let cur={c,a:it[0].a,b:it[0].b,t};
       for(let k=1;k<it.length;k++){ const x=it[k]; const gap=x.a-cur.b;
         if(gap<=1.6){ if(gap>=0.5) gaps.push(gap); cur.b=Math.max(cur.b,x.b); } else { out.push(cur); cur={c,a:x.a,b:x.b,t}; } }
       out.push(cur); });
-    return out; };
+    // descarta trechos curtos que ficam dentro de uma parede maior paralela (ex.: linhas de janela)
+    return out.filter(w=>!out.some(p=>p!==w&&(p.b-p.a)>(w.b-w.a)&&Math.abs(p.c-w.c)<=Math.max(p.t||0.15,0.12)&&p.a<=w.a+0.05&&p.b>=w.b-0.05)); };
   const h=axes(H), v=axes(V);
   const ext=(A,B)=>A.forEach(w=>{ ["a","b"].forEach(end=>{ let best=null;
     B.forEach(p=>{ const reach=(p.t||0.15)+0.12; if(w.c<p.a-reach||w.c>p.b+reach) return; const d=Math.abs(p.c-w[end]); if(d<=(w.t||0.15)+0.15&&(!best||d<best.d)) best={d,p}; });
     if(best) w[end]=best.p.c; }); });
   ext(h,v); ext(v,h);
-  const walls=[...h.map(w=>({x1:w.a,y1:w.c,x2:w.b,y2:w.c})),...v.map(w=>({x1:w.c,y1:w.a,x2:w.c,y2:w.b}))].filter(w=>Math.hypot(w.x2-w.x1,w.y2-w.y1)>0.3);
-  return {walls,gaps};
+  const all=[...h.map(w=>({x1:w.a,y1:w.c,x2:w.b,y2:w.c,t:w.t})),...v.map(w=>({x1:w.c,y1:w.a,x2:w.c,y2:w.b,t:w.t}))].filter(w=>Math.hypot(w.x2-w.x1,w.y2-w.y1)>0.3);
+  const thick=all.map(w=>w.t);
+  const walls=all.map(({x1,y1,x2,y2})=>({x1,y1,x2,y2}));
+  return {walls,gaps,thick};
+}
+/* ---- PDF vetorial: extrai as linhas desenhadas na página (em pontos PDF) ---- */
+async function pdfSegments(page,lib){
+  const OPS=lib.OPS, ol=await page.getOperatorList();
+  const mul=(m,n)=>[m[0]*n[0]+m[2]*n[1],m[1]*n[0]+m[3]*n[1],m[0]*n[2]+m[2]*n[3],m[1]*n[2]+m[3]*n[3],m[0]*n[4]+m[2]*n[5]+m[4],m[1]*n[4]+m[3]*n[5]+m[5]];
+  const ap=(m,x,y)=>[m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]];
+  let ctm=[1,0,0,1,0,0]; const stack=[], segs=[];
+  const add=(m,a,b)=>{ const p=ap(m,a[0],a[1]), q=ap(m,b[0],b[1]); if(Math.hypot(q[0]-p[0],q[1]-p[1])>0.3) segs.push({x1:p[0],y1:p[1],x2:q[0],y2:q[1]}); };
+  for(let i=0;i<ol.fnArray.length;i++){ const fn=ol.fnArray[i], ar=ol.argsArray[i];
+    if(fn===OPS.save) stack.push(ctm);
+    else if(fn===OPS.restore) ctm=stack.pop()||[1,0,0,1,0,0];
+    else if(fn===OPS.transform) ctm=mul(ctm,ar);
+    else if(fn===OPS.paintFormXObjectBegin){ stack.push(ctm); if(Array.isArray(ar[0])&&ar[0].length===6) ctm=mul(ctm,ar[0]); }
+    else if(fn===OPS.paintFormXObjectEnd) ctm=stack.pop()||[1,0,0,1,0,0];
+    else if(fn===OPS.constructPath){ const ops=ar[0], co=ar[1]; let k=0, cur=null, start=null;
+      for(const op of ops){
+        if(op===OPS.moveTo){ cur=[co[k],co[k+1]]; start=cur; k+=2; }
+        else if(op===OPS.lineTo){ const p=[co[k],co[k+1]]; if(cur) add(ctm,cur,p); cur=p; k+=2; }
+        else if(op===OPS.curveTo){ cur=[co[k+4],co[k+5]]; k+=6; }
+        else if(op===OPS.curveTo2||op===OPS.curveTo3){ cur=[co[k+2],co[k+3]]; k+=4; }
+        else if(op===OPS.closePath){ if(cur&&start) add(ctm,cur,start); cur=start; }
+        else if(op===OPS.rectangle){ const [x,y,w,h]=co.slice(k,k+4); const P=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
+          for(let j=0;j<4;j++) add(ctm,P[j],P[(j+1)%4]); cur=[x,y]; start=cur; k+=4; } } } }
+  return segs;
+}
+/* mantém só o maior conjunto de paredes ligadas (descarta carimbo, cortes, fachadas da prancha) */
+function biggestGroup(W,T){
+  const n=W.length, par=W.map((_,i)=>i), fd=i=>par[i]===i?i:(par[i]=fd(par[i]));
+  const onSeg=(px,py,w,tol)=>{ const dx=w.x2-w.x1,dy=w.y2-w.y1,L2=dx*dx+dy*dy; if(!L2) return false; const t=Math.max(0,Math.min(1,((px-w.x1)*dx+(py-w.y1)*dy)/L2)); return Math.hypot(px-(w.x1+t*dx),py-(w.y1+t*dy))<tol; };
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){ const a=W[i],b=W[j], tol=0.4;
+    if(onSeg(a.x1,a.y1,b,tol)||onSeg(a.x2,a.y2,b,tol)||onSeg(b.x1,b.y1,a,tol)||onSeg(b.x2,b.y2,a,tol)) par[fd(i)]=fd(j); }
+  const len={}; W.forEach((w,i)=>{ const r=fd(i); len[r]=(len[r]||0)+Math.hypot(w.x2-w.x1,w.y2-w.y1); });
+  const best=+Object.keys(len).sort((p,q)=>len[q]-len[p])[0];
+  const keep=W.map((_,i)=>fd(i)===best);
+  return {walls:W.filter((_,i)=>keep[i]), thick:T.filter((_,i)=>keep[i])};
+}
+const PT_M=0.0254/72; // 1 ponto PDF em metros no papel
+function wallsFromPdf(segsPt,den){
+  const segs=segsPt.map(s=>({x1:s.x1*PT_M*den,y1:s.y1*PT_M*den,x2:s.x2*PT_M*den,y2:s.y2*PT_M*den}));
+  const r=wallsFromSegs(segs); if(!r.walls.length) return {walls:[],gaps:[],thick:[],den};
+  const g=biggestGroup(r.walls,r.thick);
+  return {walls:g.walls,gaps:r.gaps,thick:g.thick,den};
+}
+function pdfAutoScale(segsPt){
+  const med=a=>{ const s=[...a].sort((p,q)=>p-q); return s.length?s[s.length>>1]:0; };
+  let best=null;
+  [20,25,50,75,100,125,200].forEach(den=>{ const r=wallsFromPdf(segsPt,den); if(r.walls.length<3) return;
+    const xs=r.walls.flatMap(w=>[w.x1,w.x2]), ys=r.walls.flatMap(w=>[w.y1,w.y2]); const span=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+    if(span<2.5||span>80) return;
+    const err=Math.abs(med(r.thick)-0.15); // parede típica com reboco ~15 cm
+    const score=err-0.002*r.walls.length;
+    if(!best||score<best.score) best={...r,score}; });
+  return best;
 }
 function normWalls(walls,flip,step){
   if(!walls.length) return walls;
@@ -1225,23 +1288,47 @@ async function handleFile(file){ $("impRes").hidden=true; $("impDxf").hidden=tru
     return;
   }
   const cv=$("impCanvas"), ctx=cv.getContext("2d");
+  impPdfDoc=null; $("impPdf").hidden=true;
   try{
     if(name.endsWith(".pdf")){
       impMsg("Abrindo o PDF...");
       if(!window.pdfjsLib){ await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"); await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"); }
       const lib=window.pdfjsLib||window["pdfjs-dist/build/pdf"]; lib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      const pdf=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
-      const page=await pdf.getPage(1), vp0=page.getViewport({scale:1}), sc=2400/Math.max(vp0.width,vp0.height), vp=page.getViewport({scale:sc});
-      cv.width=vp.width; cv.height=vp.height; ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
-      await page.render({canvasContext:ctx,viewport:vp}).promise;
+      impPdfLib=lib;
+      impPdfDoc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+      $("impPage").innerHTML=Array.from({length:impPdfDoc.numPages},(_,i)=>`<option value="${i+1}">${i+1} de ${impPdfDoc.numPages}</option>`).join("");
+      $("impPdf").hidden=false; $("impAiGo").classList.remove("pri");
+      await showPdfPage(1);
     } else {
       const img=await createImageBitmap(file); const sc=Math.min(1,2400/Math.max(img.width,img.height));
       cv.width=img.width*sc; cv.height=img.height*sc; ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height); ctx.drawImage(img,0,0,cv.width,cv.height);
+      impFileObj=await new Promise(r=>cv.toBlob(r,"image/png"));
+      $("impAiGo").classList.add("pri");
+      $("impImg").hidden=false; impMsg(pdfNote());
     }
-    impFileObj=await new Promise(r=>cv.toBlob(r,"image/png"));
-    $("impImg").hidden=false; impMsg(pdfNote());
   }catch(err){ impMsg("Não consegui abrir este arquivo. Tente exportar a planta como imagem (PNG/JPG)."); }
 }
+async function showPdfPage(n){
+  const cv=$("impCanvas"), ctx=cv.getContext("2d");
+  const page=await impPdfDoc.getPage(n), vp0=page.getViewport({scale:1}), sc=2400/Math.max(vp0.width,vp0.height), vp=page.getViewport({scale:sc});
+  cv.width=vp.width; cv.height=vp.height; ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+  impFileObj=await new Promise(r=>cv.toBlob(r,"image/png"));
+  impPdfSegs=await pdfSegments(page,impPdfLib);
+  $("impImg").hidden=false;
+  impMsg(impPdfSegs.length>=8?`PDF vetorial: ${impPdfSegs.length} linhas encontradas. Confira a escala e toque em Reconhecer paredes do PDF.`
+    :"Este PDF não tem linhas de desenho (parece escaneado ou imagem). Use Reconhecer com o Claude dentro do Claude, ou exporte o PDF/DXF direto do CAD.");
+}
+$("impPage").onchange=async()=>{ $("impRes").hidden=true; try{ await showPdfPage(+$("impPage").value); }catch(e){ impMsg("Não consegui abrir esta página."); } };
+$("impPdfGo").onclick=()=>{
+  if(!impPdfSegs||impPdfSegs.length<8){ impMsg("Este PDF não tem linhas de desenho para ler."); return; }
+  const den=+$("impScale").value;
+  const r=den?wallsFromPdf(impPdfSegs,den):pdfAutoScale(impPdfSegs);
+  if(!r||!r.walls.length){ impMsg(den?`Não encontrei paredes na escala 1:${den}. Tente outra escala.`:"Não encontrei paredes. Escolha a escala da planta manualmente."); $("impRes").hidden=true; return; }
+  const W=normWalls(r.walls,true,0.05);
+  const ab=r.gaps.map((g,i)=>({n:`A${i+1}`,t:"Porta",l:+(Math.round(g*20)/20).toFixed(2),q:1}));
+  showImport({walls:W,ab,rooms:[],obs:`escala ${den?"":"detectada "}1:${r.den}. Compare a medida total com a cota da planta; se não bater, troque a escala.`},"PDF vetorial");
+};
 function handleDxfText(txt){
   impDxf=parseDXF(txt);
   const cnt={}; impDxf.segs.forEach(s=>cnt[s.l]=(cnt[s.l]||0)+1);
