@@ -1177,20 +1177,24 @@ function wallsFromSegs(segs){
     else if(Math.abs(dx)<0.02*L) V.push({c:(s.x1+s.x2)/2,a:Math.min(s.y1,s.y2),b:Math.max(s.y1,s.y2)}); });
   const gaps=[];
   const axes=list=>{ const cl=[];
-    list.forEach((s,i)=>{ let best=null;
-      list.forEach((q,j)=>{ if(i===j) return; const d=Math.abs(q.c-s.c); if(d<0.07||d>0.35) return; const ov=Math.min(s.b,q.b)-Math.max(s.a,q.a); if(ov<0.15) return;
-        if(!best||ov>best.ov+0.05||(Math.abs(ov-best.ov)<=0.05&&d<best.d)) best={d,q,ov}; });
-      if(best) cl.push({c:(s.c+best.q.c)/2,a:Math.max(s.a,best.q.a),b:Math.min(s.b,best.q.b),t:best.d}); });
+    list.forEach((s,i)=>{ const cand=[];
+      list.forEach((q,j)=>{ if(i===j) return; const d=Math.abs(q.c-s.c); if(d<0.07||d>0.35) return; const ov=Math.min(s.b,q.b)-Math.max(s.a,q.a); if(ov<0.15) return; cand.push({d,q,ov}); });
+      if(!cand.length) return;
+      // espessura escolhida = a que cobre mais comprimento da linha (evita linhas de janela dentro da parede)
+      let bestD=null, bestCov=-1;
+      cand.forEach(x=>{ const cov=cand.filter(y=>Math.abs(y.d-x.d)<=0.02).reduce((t,y)=>t+y.ov,0); if(cov>bestCov+0.05||(Math.abs(cov-bestCov)<=0.05&&x.d<bestD)){ bestCov=cov; bestD=x.d; } });
+      cand.filter(x=>Math.abs(x.d-bestD)<=0.02).forEach(x=>cl.push({c:(s.c+x.q.c)/2,a:Math.max(s.a,x.q.a),b:Math.min(s.b,x.q.b),t:x.d})); });
     cl.sort((p,q)=>p.c-q.c||p.a-q.a);
     const groups=[]; cl.forEach(x=>{ const g=groups.find(g=>Math.abs(g.c-x.c)<0.03); if(g){g.items.push(x);} else groups.push({c:x.c,items:[x]}); });
     const out=[];
     groups.forEach(g=>{ const it=g.items.sort((p,q)=>p.a-q.a); const lw=it.reduce((s,x)=>s+(x.b-x.a),0)||1, c=it.reduce((s,x)=>s+x.c*(x.b-x.a),0)/lw, t=it.reduce((s,x)=>Math.max(s,x.t),0);
-      let cur={c,a:it[0].a,b:it[0].b,t};
+      let cur={c,a:it[0].a,b:it[0].b,t,g:[]};
       for(let k=1;k<it.length;k++){ const x=it[k]; const gap=x.a-cur.b;
-        if(gap<=1.6){ if(gap>=0.5) gaps.push(gap); cur.b=Math.max(cur.b,x.b); } else { out.push(cur); cur={c,a:x.a,b:x.b,t}; } }
+        if(gap<=1.6){ if(gap>=0.5) cur.g.push(gap); cur.b=Math.max(cur.b,x.b); } else { out.push(cur); cur={c,a:x.a,b:x.b,t,g:[]}; } }
       out.push(cur); });
     // descarta trechos curtos que ficam dentro de uma parede maior paralela (ex.: linhas de janela)
-    return out.filter(w=>!out.some(p=>p!==w&&(p.b-p.a)>(w.b-w.a)&&Math.abs(p.c-w.c)<=Math.max(p.t||0.15,0.12)&&p.a<=w.a+0.05&&p.b>=w.b-0.05)); };
+    const kept=out.filter(w=>!out.some(p=>p!==w&&(p.b-p.a)>(w.b-w.a)&&Math.abs(p.c-w.c)<=Math.max(p.t||0.15,0.12)&&p.a<=w.a+0.05&&p.b>=w.b-0.05));
+    kept.forEach(w=>gaps.push(...w.g)); return kept; };
   const h=axes(H), v=axes(V);
   const ext=(A,B)=>A.forEach(w=>{ ["a","b"].forEach(end=>{ let best=null;
     B.forEach(p=>{ const reach=(p.t||0.15)+0.12; if(w.c<p.a-reach||w.c>p.b+reach) return; const d=Math.abs(p.c-w[end]); if(d<=(w.t||0.15)+0.15&&(!best||d<best.d)) best={d,p}; });
