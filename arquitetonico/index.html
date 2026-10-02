@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1A2130">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arquitetônico">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Desenho Arquitetônico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}html{-webkit-text-size-adjust:100%}[hidden]{display:none!important}
+:root{
+  --paper:#EEF0F3; --sheet:#FFFFFF; --ink:#1A2130; --muted:#5B6474; --line:#D5DAE2; --accent:#2446C4;
+  --ok:#2E7A4C; --warn:#A8690F; --bad:#B42318; --okbg:#E4F2E9; --warnbg:#FBF0DC; --badbg:#FBE5E3;
+  --f-display:"Barlow Condensed","Arial Narrow",sans-serif; --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#101319; --sheet:#181D25; --ink:#E4E8EF; --muted:#98A1B0; --line:#2C3340; --accent:#8AA2FF;
+  --ok:#6BCB8F; --warn:#F0B454; --bad:#FF8A7E; --okbg:#173024; --warnbg:#33260F; --badbg:#3A1714; color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#101319; --sheet:#181D25; --ink:#E4E8EF; --muted:#98A1B0; --line:#2C3340; --accent:#8AA2FF;
+  --ok:#6BCB8F; --warn:#F0B454; --bad:#FF8A7E; --okbg:#173024; --warnbg:#33260F; --badbg:#3A1714; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:14px/1.5 var(--f-body);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:16px 16px 48px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-block:4px 14px;border-bottom:2px solid var(--ink)}
+h1{font:700 30px/1 var(--f-display);letter-spacing:.01em;margin:0;text-transform:uppercase}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.stamp{font:12px/1.45 var(--f-mono);color:var(--muted);text-align:right;min-width:0}
+.stamp b{color:var(--ink);font-weight:500}
+nav.tabs{display:flex;gap:4px;margin:14px 0 16px;overflow-x:auto;position:sticky;top:env(safe-area-inset-top,0px);background:var(--paper);z-index:5;padding-block:6px}
+nav.tabs button{font:600 15px var(--f-display);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);background:var(--sheet);color:var(--muted);padding:8px 14px;border-radius:4px;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:16px;margin-bottom:16px;min-width:0}
+.sheet h2{font:700 19px/1.1 var(--f-display);text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px}
+.cap{color:var(--muted);font-size:12.5px;margin:0 0 12px;max-width:72ch}
+.draw{overflow:auto;border:1px solid var(--line);border-radius:4px;background:#fff;-webkit-overflow-scrolling:touch;max-height:78vh}
+.draw svg{display:block;width:100%;height:auto;min-width:min(100%,640px)}
+.draw.zoom svg{width:220%;min-width:900px}
+.draw.pick{cursor:crosshair;outline:3px solid var(--accent)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
+.grid2>*{min-width:0}
+.alert{font-size:13px;padding:8px 12px;border-radius:4px;margin:6px 0;border-left:4px solid}
+.alert.warn{background:var(--warnbg);border-color:var(--warn)} .alert.bad{background:var(--badbg);border-color:var(--bad)} .alert.ok{background:var(--okbg);border-color:var(--ok)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tbl{overflow-x:auto}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px 14px}
+.form label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.form.wide{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+input,select,textarea{font:14px var(--f-mono);color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:7px 8px;width:100%;min-width:0}
+input[type=text]{font-family:var(--f-body)}
+input[type=checkbox]{width:auto}
+.wt td{padding:3px 3px} .wt input,.wt select{padding:5px 5px;font-size:13px}
+.btn{font:600 13px var(--f-body);border:1px solid var(--ink);background:var(--sheet);color:var(--ink);border-radius:4px;padding:8px 12px;cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.sm{padding:4px 8px;font-size:12px}
+.btn.x{border:none;background:none;color:var(--muted);font-size:18px;padding:2px 8px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+h3{font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.06em;margin:18px 0 8px;color:var(--muted)}
+.toast{font-size:12.5px;color:var(--ok)}
+.chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;margin-right:14px}
+.totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:10px 0 4px}
+.tot{border:1px solid var(--line);border-radius:4px;padding:8px 12px}
+.tot b{display:block;font:500 20px/1.1 var(--f-mono)} .tot span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.vhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.vhead b{font:700 15px var(--f-display);letter-spacing:.06em;text-transform:uppercase}
+.banner{position:sticky;top:58px;z-index:6;background:var(--accent);color:#fff;padding:10px 12px;border-radius:4px;margin-bottom:10px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+@media (max-width:520px){h1{font-size:24px}.stamp{text-align:left}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Desenho Arquitetônico</h1>
+      <div class="sub">Planta baixa cotada, cortes e fachadas · prancha em PDF e DXF</div>
+    </div>
+    <div class="stamp" id="stamp"></div>
+  </header>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="planta" aria-selected="true">Planta</button>
+    <button role="tab" data-tab="esq" aria-selected="false">Esquadrias</button>
+    <button role="tab" data-tab="cob" aria-selected="false">Cobertura</button>
+    <button role="tab" data-tab="vistas" aria-selected="false">Cortes e fachadas</button>
+    <button role="tab" data-tab="prancha" aria-selected="false">Prancha</button>
+    <button role="tab" data-tab="dados" aria-selected="false">Dados</button>
+  </nav>
+
+  <!-- PLANTA -->
+  <section id="tab-planta">
+    <div class="banner" id="pickBar" hidden><span id="pickTxt"></span><button class="btn sm" id="pickStop">Cancelar</button></div>
+    <div class="sheet">
+      <div class="vhead"><b>Planta baixa</b><span><button class="btn sm" data-zoom="planDraw">Ampliar</button></span></div>
+      <div id="geoMsg"></div>
+      <div class="draw" id="planDraw"></div>
+      <div class="totals" id="totals"></div>
+      <div class="form" style="margin-top:12px">
+        <label>Lado da frente (rua)<select id="frente"></select></label>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="sheet">
+        <h2>Paredes</h2>
+        <p class="cap">Eixo de cada parede em metros (x para a direita, y para baixo). Paredes em qualquer ângulo. Espessura vazia = padrão da aba Cobertura.</p>
+        <div class="tbl"><table class="wt" id="wtab"></table></div>
+        <div class="row"><button class="btn" id="addWall">+ Parede</button></div>
+      </div>
+      <div class="sheet">
+        <h2>Ambientes</h2>
+        <p class="cap">Nome e um ponto dentro do ambiente (x, y). A área é calculada pelas faces internas das paredes.</p>
+        <div class="tbl"><table class="wt" id="rtab"></table></div>
+        <div class="row"><button class="btn" id="addRoom">+ Ambiente</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESQUADRIAS -->
+  <section id="tab-esq" hidden>
+    <div class="sheet">
+      <h2>Portas e janelas</h2>
+      <p class="cap">Toque em <b>Posicionar</b> e depois na parede, na planta, no ponto onde fica o centro da abertura. A porta abre para o lado em que você tocar. Distância = do início da parede até a lateral da abertura.</p>
+      <div class="tbl"><table class="wt" id="atab"></table></div>
+      <div class="row"><select id="addType" style="width:auto"></select><button class="btn" id="addAb">+ Abertura</button></div>
+    </div>
+    <div class="sheet"><div class="vhead"><b>Planta</b><button class="btn sm" data-zoom="planDraw2">Ampliar</button></div><div class="draw" id="planDraw2"></div></div>
+  </section>
+
+  <!-- COBERTURA -->
+  <section id="tab-cob" hidden>
+    <div class="sheet">
+      <h2>Alturas e cobertura</h2>
+      <div class="form">
+        <label>Pé-direito (m)<input type="number" step="0.05" id="p.pd"></label>
+        <label>Espessura padrão das paredes (m)<input type="number" step="0.01" id="p.t"></label>
+        <label>Piso acima do terreno (m)<input type="number" step="0.05" id="p.hp"></label>
+        <label>Teto<select id="p.forro"><option value="forro">Forro</option><option value="laje">Laje</option><option value="nenhum">Sem forro (telha aparente)</option></select></label>
+        <label>Cobertura<select id="p.cob"><option value="plat">Platibanda com telha embutida</option><option value="duas">Telhado aparente — duas águas</option><option value="uma">Telhado aparente — uma água</option></select></label>
+        <label>Telha<select id="p.telha"><option value="ceramica">Cerâmica</option><option value="fibro">Fibrocimento</option><option value="termo">Termoacústica (sanduíche)</option></select></label>
+        <label>Inclinação (%)<input type="number" step="1" id="p.inc"></label>
+        <label data-for="duas uma">Beiral (m)<input type="number" step="0.05" id="p.beiral"></label>
+        <label data-for="duas">Cumeeira<select id="p.cume"><option value="par">Paralela à frente</option><option value="per">Perpendicular à frente</option></select></label>
+        <label data-for="uma plat">Caimento da água<select id="p.queda"><option value="fundos">Para os fundos</option><option value="frente">Para a frente</option><option value="dir">Para a direita</option><option value="esq">Para a esquerda</option></select></label>
+        <label data-for="plat">Altura da platibanda acima do forro (m)<input type="number" step="0.05" id="p.hplat"></label>
+      </div>
+      <div id="cobWarn"></div>
+    </div>
+    <div class="grid2">
+      <div class="sheet"><div class="vhead"><b>Fachada frontal</b></div><div class="draw" id="cobFr"></div></div>
+      <div class="sheet"><div class="vhead"><b>Corte AA</b></div><div class="draw" id="cobAA"></div></div>
+    </div>
+  </section>
+
+  <!-- VISTAS -->
+  <section id="tab-vistas" hidden>
+    <div class="sheet">
+      <h2>Posição dos cortes</h2>
+      <p class="cap">Automático: o app passa o corte pelo meio dos ambientes, de preferência por janelas e portas, sem correr por dentro de parede. Arraste para mudar.</p>
+      <div class="form wide">
+        <label>Corte AA <span id="cAv"></span><input type="range" min="0.05" max="0.95" step="0.005" id="cutA"></label>
+        <label>Corte BB <span id="cBv"></span><input type="range" min="0.05" max="0.95" step="0.005" id="cutB"></label>
+      </div>
+      <div class="row"><button class="btn sm" id="cutAuto">Voltar ao automático</button></div>
+      <h3>Entram na prancha</h3>
+      <div id="selBox"></div>
+    </div>
+    <div class="grid2" id="views"></div>
+  </section>
+
+  <!-- PRANCHA -->
+  <section id="tab-prancha" hidden>
+    <div class="sheet">
+      <h2>Prancha</h2>
+      <div class="form">
+        <label>Formato<select id="fmt"><option>A3</option><option>A2</option><option>A1</option><option>A4</option></select></label>
+        <label>Escala<select id="den"><option value="">Automática</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option><option value="125">1:125</option><option value="150">1:150</option><option value="200">1:200</option></select></label>
+      </div>
+      <div class="row"><button class="btn pri" id="pdfBtn">Baixar PDF</button><button class="btn" id="dxfBtn">Baixar DXF (AutoCAD)</button><span class="toast" id="outMsg" role="status"></span></div>
+      <p class="cap" style="margin-top:8px" id="pInfo"></p>
+    </div>
+    <div id="sheets"></div>
+  </section>
+
+  <!-- DADOS -->
+  <section id="tab-dados" hidden>
+    <div class="sheet">
+      <h2>Importar planta</h2>
+      <p class="cap"><b>PDF exportado do CAD</b> ou <b>DXF</b>: o app lê as paredes (em qualquer ângulo), as portas pelos vãos e os nomes dos ambientes, sem internet para o DXF. <b>Foto ou PDF escaneado</b>: só com o app aberto dentro do Claude. Sempre confira as medidas antes de usar.</p>
+      <div class="row" style="margin-top:0"><label class="btn pri" for="impFile">Escolher arquivo</label><input type="file" id="impFile" accept=".pdf,.dxf,image/*" style="position:absolute;width:1px;height:1px;opacity:0"><span class="cap" id="impName" style="margin:0"></span></div>
+      <div class="form" style="margin-top:10px">
+        <label>Espessura das paredes na planta (m)<input type="number" step="0.01" id="impT" value="0.15"></label>
+        <label>Escala do PDF<select id="impDen"><option value="">Descobrir sozinho</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option><option value="125">1:125</option><option value="200">1:200</option></select></label>
+        <label>Página<select id="impPage"><option value="1">1</option></select></label>
+      </div>
+      <p class="toast" id="impMsg" role="status" style="margin:8px 0 0"></p>
+      <div id="impImg" hidden><canvas id="impCanvas" style="max-width:100%;max-height:260px;border:1px solid var(--line);margin-top:10px;display:block"></canvas>
+        <div class="row"><button class="btn pri" id="impAiGo">Reconhecer com o Claude</button></div></div>
+      <div id="impRes" hidden>
+        <div class="draw" id="impPrev" style="margin-top:10px"></div>
+        <p class="cap" id="impSum" style="margin-top:8px"></p>
+        <div class="form"><label>Conferir escala: medida real da maior parede (m)<input type="number" step="0.01" id="impReal"></label></div>
+        <div class="row"><button class="btn pri" id="impApply">Usar esta planta</button><button class="btn" id="impDrop">Descartar</button></div>
+      </div>
+      <h3>Código do projeto</h3>
+      <p class="cap">Cole aqui um código ARQ1 (deste app) ou FDNC1 (app de fundação), ou o texto de um DXF.</p>
+      <textarea id="impPaste" rows="3" placeholder="Toque e cole aqui"></textarea>
+      <div class="row"><button class="btn" id="pasteGo">Usar o que colei</button><button class="btn" id="copyArq">Copiar código deste projeto</button><button class="btn" id="copyFdn">Copiar para o app de fundação</button></div>
+    </div>
+    <div class="sheet">
+      <h2>Obra e carimbo</h2>
+      <div class="form wide">
+        <label>Obra<input type="text" id="d.obra"></label>
+        <label>Cliente<input type="text" id="d.cliente"></label>
+        <label>Local<input type="text" id="d.local"></label>
+        <label>Empresa<input type="text" id="d.emp"></label>
+        <label>Responsável técnico<input type="text" id="d.rtNome"></label>
+        <label>CREA<input type="text" id="d.crea"></label>
+        <label>Data<input type="text" id="d.data"></label>
+        <label>Revisão<input type="text" id="d.rev"></label>
+      </div>
+      <div class="row"><button class="btn" id="novo">Novo projeto</button><button class="btn" id="exemplo">Carregar exemplo</button></div>
+      <div class="alert warn" id="novoConf" hidden>Apagar paredes, ambientes e esquadrias do projeto atual? Copie o código antes se quiser guardar.
+        <div class="row"><button class="btn pri" id="novoSim">Sim, apagar</button><button class="btn" id="novoNao">Cancelar</button></div></div>
+    </div>
+  </section>
+</div>
+<script src="core.js"></script>
+<script src="render.js"></script>
+<script src="importar.js"></script>
+<script src="app.js"></script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
+</body>
+</html>
