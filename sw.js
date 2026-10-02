@@ -18,6 +18,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || !req.url.startsWith(self.location.origin)) return;
+  // os apps das subpastas (fundacao/, arquitetonico/) têm service worker próprio
+  if (/\/(fundacao|arquitetonico)\//.test(new URL(req.url).pathname)) return;
   const ehPagina = req.mode === 'navigate' || req.destination === 'document';
   if (ehPagina) {
     e.respondWith(

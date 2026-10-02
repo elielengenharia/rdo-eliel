@@ -1,0 +1,1313 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1A2130">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arquitetônico">
+<title>Projeto Arquitetônico</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}html{-webkit-text-size-adjust:100%}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Mesmo layout do Detalhador de Fundação: cabeçalho com carimbo, abas, desenhos em "folhas" brancas */
+:root{
+  --paper:#EEF0F3; --sheet:#FFFFFF; --ink:#1A2130; --muted:#5B6474; --line:#D5DAE2;
+  --concrete:#C9CED6; --concrete2:#E3E6EA; --soil:#A68B63; --steel:#C4302B; --accent:#2446C4;
+  --ok:#2E7A4C; --warn:#A8690F; --bad:#B42318; --okbg:#E4F2E9; --warnbg:#FBF0DC; --badbg:#FBE5E3;
+  --f-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#101319; --sheet:#181D25; --ink:#E4E8EF; --muted:#98A1B0; --line:#2C3340;
+  --concrete:#3B4454; --concrete2:#2A313C; --soil:#8C7552; --steel:#FF6A5C; --accent:#8AA2FF;
+  --ok:#6BCB8F; --warn:#F0B454; --bad:#FF8A7E; --okbg:#173024; --warnbg:#33260F; --badbg:#3A1714; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#101319; --sheet:#181D25; --ink:#E4E8EF; --muted:#98A1B0; --line:#2C3340;
+  --concrete:#3B4454; --concrete2:#2A313C; --soil:#8C7552; --steel:#FF6A5C; --accent:#8AA2FF;
+  --ok:#6BCB8F; --warn:#F0B454; --bad:#FF8A7E; --okbg:#173024; --warnbg:#33260F; --badbg:#3A1714; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:14px/1.5 var(--f-body);margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding:16px 16px 48px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-block:4px 14px;border-bottom:2px solid var(--ink)}
+h1{font:700 30px/1 var(--f-display);letter-spacing:.01em;margin:0;text-transform:uppercase}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.stamp{font:12px/1.45 var(--f-mono);color:var(--muted);text-align:right;min-width:0}
+.stamp b{color:var(--ink);font-weight:500}
+nav.tabs{display:flex;gap:4px;margin:14px 0 16px;overflow-x:auto;position:sticky;top:env(safe-area-inset-top,0px);background:var(--paper);z-index:5;padding-block:6px}
+nav.tabs button{font:600 15px var(--f-display);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);background:var(--sheet);color:var(--muted);padding:8px 14px;border-radius:4px;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:16px;margin-bottom:16px;min-width:0}
+.sheet h2{font:700 19px/1.1 var(--f-display);text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px}
+.sheet .cap{color:var(--muted);font-size:12.5px;margin:0 0 12px;max-width:68ch}
+.draw{overflow-x:auto}
+.draw svg{display:block;width:100%;height:auto;max-width:100%}
+#plan svg{cursor:crosshair;touch-action:manipulation}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.grid2 > *{min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{font:500 12px var(--f-mono);padding:4px 9px;border-radius:99px;border:1px solid var(--line);background:var(--paper)}
+.alert{font-size:13px;padding:8px 12px;border-radius:4px;margin:6px 0;border-left:4px solid}
+.alert.warn{background:var(--warnbg);border-color:var(--warn)}
+.alert.bad{background:var(--badbg);border-color:var(--bad)}
+.alert.ok{background:var(--okbg);border-color:var(--ok)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.tot td{font-weight:600;border-bottom:0}
+.tbl{overflow-x:auto}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 14px}
+.form label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.form.wide{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+input,select,textarea{font:14px var(--f-mono);color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:7px 8px;width:100%;min-width:0}
+input[type=text]{font-family:var(--f-body)}
+input[type=range]{padding:0;border:0;background:none;accent-color:var(--accent)}
+input[type=checkbox]{width:auto}
+.wt td{padding:4px 3px}
+.wt input,.wt select{padding:6px 5px;font-size:13px}
+.btn{font:600 13px var(--f-body);border:1px solid var(--ink);background:var(--sheet);color:var(--ink);border-radius:4px;padding:8px 12px;cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.x{border:none;background:none;color:var(--muted);font-size:18px;padding:2px 8px}
+.btn.dng{border-color:var(--bad);color:var(--bad)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+h3{font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.06em;margin:18px 0 8px;color:var(--muted)}
+.notes{margin:0;padding-left:18px;font-size:13px;max-width:75ch}
+.notes li{margin-bottom:5px}
+.toast{font-size:12.5px;color:var(--ok)}
+.roofs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 14px}
+.roofs button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:4px;padding:8px 4px 6px;cursor:pointer;font:600 14px var(--f-display);letter-spacing:.05em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:4px}
+.roofs button svg{width:100%;max-width:84px;height:auto}
+.roofs button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset;color:var(--accent)}
+.slide{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.slide input[type=range]{flex:1;min-width:160px}
+.slide input[type=number]{width:90px}
+.panel{border:1px solid var(--accent);border-radius:4px;padding:12px;margin-top:10px;background:var(--paper)}
+.panel h4{margin:0 0 8px;font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
+/* SVG */
+svg text{font-family:var(--f-mono);fill:var(--ink)}
+@media (max-width:520px){h1{font-size:24px}.stamp{text-align:left}.roofs button{font-size:12px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Projeto Arquitetônico</h1>
+      <div class="sub">Planta baixa com áreas e cotas · Corte AA e BB · Planta de cobertura · Quadro de esquadrias</div>
+    </div>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="planta" aria-selected="true">Planta</button>
+    <button role="tab" data-tab="cortes" aria-selected="false">Cortes</button>
+    <button role="tab" data-tab="cob" aria-selected="false">Cobertura</button>
+    <button role="tab" data-tab="dados" aria-selected="false">Dados</button>
+  </nav>
+
+  <!-- PLANTA -->
+  <section id="tab-planta">
+    <div class="sheet">
+      <h2>Planta baixa</h2>
+      <p class="cap">Toque numa <b>parede</b> para colocar porta, janela ou vão naquele ponto. Toque num <b>ambiente</b> para dar o nome. Toque numa porta ou janela para editar. Os números azuis das paredes só aparecem aqui, não saem na prancha.</p>
+      <div class="draw" id="plan"></div>
+      <div id="selPanel" class="panel" hidden></div>
+      <div class="chips" id="planChips"></div>
+      <div id="warnings"></div>
+      <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><span class="toast" id="pdfMsg" role="status"></span></div>
+      <div class="row"><button class="btn pri" data-dxf>Baixar DXF para o AutoCAD</button><button class="btn" data-dxfcopy>Copiar DXF</button><span class="toast" data-dxfmsg role="status"></span></div>
+      <p class="cap" style="margin-top:8px">O PDF sai com 3 pranchas e carimbo: 01 planta baixa com quadros, 02 cortes AA e BB, 03 cobertura. O DXF tem os mesmos desenhos em escala real (metros), cada elemento no seu layer. Dentro do Claude o DXF vem compactado (.zip).</p>
+    </div>
+    <div class="grid2">
+      <div class="sheet"><h2>Quadro de áreas</h2><div class="tbl"><table id="tabAreas"></table></div></div>
+      <div class="sheet"><h2>Quadro de esquadrias</h2><div class="tbl"><table id="tabEsq"></table></div></div>
+    </div>
+  </section>
+
+  <!-- CORTES -->
+  <section id="tab-cortes" hidden>
+    <div class="sheet">
+      <h2>Corte AA</h2>
+      <p class="cap">Linha de corte na horizontal da planta, olhando para cima. Arraste para o corte passar por janelas e portas.</p>
+      <label class="slide">Posição (y, m)<input type="range" id="cAr" step="0.05"><input type="number" id="cAn" step="0.05"></label>
+      <div class="draw" id="secA"></div>
+    </div>
+    <div class="sheet">
+      <h2>Corte BB</h2>
+      <p class="cap">Linha de corte na vertical da planta, olhando para a direita.</p>
+      <label class="slide">Posição (x, m)<input type="range" id="cBr" step="0.05"><input type="number" id="cBn" step="0.05"></label>
+      <div class="draw" id="secB"></div>
+    </div>
+    <div class="sheet">
+      <h2>Alturas</h2>
+      <div class="form">
+        <label>Pé-direito (m)<input type="number" step="0.05" id="pd"></label>
+        <label>Laje / forro (m)<input type="number" step="0.01" id="laje"></label>
+        <label>Piso acima do terreno (m)<input type="number" step="0.05" id="piso"></label>
+      </div>
+    </div>
+  </section>
+
+  <!-- COBERTURA -->
+  <section id="tab-cob" hidden>
+    <div class="sheet">
+      <h2>Telhado</h2>
+      <p class="cap">Escolha o modelo. A planta de cobertura, os cortes e as pranchas mudam na hora.</p>
+      <div class="roofs" id="roofTypes"></div>
+      <div class="form">
+        <label id="lblDir">Direção<select id="tel.dir"></select></label>
+        <label>Telha<select id="tel.telha"><option>Cerâmica</option><option>Concreto</option><option>Fibrocimento</option><option>Metálica</option></select></label>
+        <label>Inclinação (%)<input type="number" step="1" id="tel.inc"></label>
+        <label>Platibanda<select id="tel.plat"><option value="não">Não (com beiral)</option><option value="sim">Sim (telhado escondido)</option></select></label>
+        <label id="lblBeiral">Beiral (m)<input type="number" step="0.05" id="tel.beiral"></label>
+      </div>
+    </div>
+    <div class="sheet">
+      <h2>Planta de cobertura</h2>
+      <p class="cap" id="capCob"></p>
+      <div class="draw" id="cob"></div>
+      <div class="chips" id="cobChips"></div>
+    </div>
+  </section>
+
+  <!-- DADOS -->
+  <section id="tab-dados" hidden>
+    <div class="sheet">
+      <h2>Importar planta baixa</h2>
+      <p class="cap">PDF exportado do CAD (vetorial) ou DXF: o app lê as paredes e os vãos de porta direto do arquivo, sem internet. PDF escaneado ou foto: o Claude lê paredes, cotas, portas e janelas (só com o app aberto dentro do Claude). Em todos os casos você confere antes de usar.</p>
+      <div class="row" style="margin-top:0"><label class="btn pri" for="impFile" style="display:inline-block">Anexar planta</label><input type="file" id="impFile" accept=".pdf,.dxf,image/*" style="position:absolute;width:1px;height:1px;opacity:0"><span class="cap" id="impName" style="margin:0"></span></div>
+      <h3>Se o botão não abrir no celular</h3>
+      <p class="cap">Cole aqui: uma imagem da planta (copie a imagem e cole), o texto de um DXF, ou um código de projeto (deste app ou do Detalhador de Fundação).</p>
+      <textarea id="impPaste" rows="3" placeholder="Toque e cole aqui"></textarea>
+      <div class="row"><button class="btn" id="impPasteGo">Usar o que colei</button><button class="btn" id="projCopy">Copiar código deste projeto</button></div>
+      <div id="impDxf" hidden>
+        <div class="form" style="margin-top:10px">
+          <label>Layer das paredes<select id="impLayer"></select></label>
+          <label>Unidade do desenho<select id="impUnit"><option value="1">metros</option><option value="0.01">centímetros</option><option value="0.001">milímetros</option></select></label>
+        </div>
+        <div class="row"><button class="btn pri" id="impDxfGo">Reconhecer paredes</button></div>
+      </div>
+      <div id="impImg" hidden>
+        <canvas id="impCanvas" style="max-width:100%;max-height:260px;border:1px solid var(--line);margin-top:10px;display:block"></canvas>
+        <div id="impPdf" hidden>
+          <div class="form" style="margin-top:10px">
+            <label>Página<select id="impPage"></select></label>
+            <label>Escala da planta<select id="impScale"><option value="0">Automática</option><option value="20">1:20</option><option value="25">1:25</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option><option value="125">1:125</option><option value="200">1:200</option></select></label>
+            <label>Maior cota externa da planta (m), opcional<input type="number" step="0.01" id="impKnown" placeholder="ex.: 18,60"></label>
+          </div>
+          <div class="row"><button class="btn pri" id="impPdfGo">Reconhecer paredes do PDF</button></div>
+        </div>
+        <div class="row"><button class="btn" id="impAiGo">Reconhecer com o Claude</button><button class="btn" id="impStop" hidden>Parar</button></div>
+      </div>
+      <p class="toast" id="impMsg" role="status" style="margin:8px 0 0"></p>
+      <div id="impRes" hidden>
+        <div class="draw" id="impPrev" style="margin-top:10px;max-width:480px"></div>
+        <p class="cap" id="impSum" style="margin-top:8px"></p>
+        <div class="row"><button class="btn pri" id="impApply">Usar esta planta</button><button class="btn" id="impDrop">Descartar</button></div>
+      </div>
+    </div>
+    <div class="sheet">
+      <h2>Obra</h2>
+      <div class="row" style="margin:4px 0 14px"><button class="btn pri" id="novo">Novo projeto</button><span class="cap" style="margin:0">Apaga paredes, ambientes, aberturas e dados do cliente. Mantém alturas e telhado.</span></div>
+      <div class="alert warn" id="novoConf" hidden>Apagar o projeto atual? Baixe o PDF ou o DXF antes se ainda não baixou.
+        <div class="row"><button class="btn pri" id="novoSim">Sim, começar novo</button><button class="btn" id="novoNao">Cancelar</button></div></div>
+      <div class="form wide">
+        <label>Obra<input type="text" id="obra"></label>
+        <label>Proprietário<input type="text" id="cliente"></label>
+        <label>Local<input type="text" id="local"></label>
+        <label>Empresa<input type="text" id="emp"></label>
+        <label>Responsável técnico<input type="text" id="rtNome"></label>
+        <label>Registro (CREA/CAU)<input type="text" id="crea"></label>
+        <label>Data<input type="text" id="data"></label>
+      </div>
+    </div>
+    <div class="sheet">
+      <h2>Paredes (eixos, em metros)</h2>
+      <p class="cap">Cada linha é um trecho reto de parede, do ponto (x1, y1) ao (x2, y2), pelo eixo. A origem (0, 0) é o canto superior esquerdo; y cresce para baixo. Paredes na horizontal e na vertical fecham os ambientes e entram nas áreas.</p>
+      <div class="form" style="margin-bottom:10px"><label>Espessura das paredes (m)<input type="number" step="0.01" id="esp"></label></div>
+      <div class="tbl"><table class="wt" id="wtab"></table></div>
+      <div class="row">
+        <button class="btn" id="addW">+ Parede</button>
+        <button class="btn" id="preset42">Carregar casa 42 m² (exemplo)</button>
+      </div>
+      <h3>Ambientes (nome e um ponto dentro dele)</h3>
+      <div class="tbl"><table class="wt" id="rtab"></table></div>
+      <div class="row"><button class="btn" id="addR">+ Ambiente</button></div>
+    </div>
+    <div class="sheet">
+      <h2>Portas, janelas e vãos</h2>
+      <p class="cap">Distância = do começo da parede (ponto x1, y1) até o início do vão, pelo eixo. Mais fácil: toque na parede na aba Planta.</p>
+      <div class="tbl"><table class="wt" id="atab"></table></div>
+      <div class="row"><button class="btn" id="addA">+ Abertura</button></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ======================================================================
+   Projeto Arquitetônico — mesmo modelo do Detalhador de Fundação.
+   Unidades: metros. Planta: origem no canto superior esquerdo, y para baixo.
+   Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
+   arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
+   ====================================================================== */
+const $=id=>document.getElementById(id);
+const today=new Date().toLocaleDateString("pt-BR");
+const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
+const num=v=>{ const n=parseFloat(String(v??"").replace(",",".")); return isFinite(n)?n:0; };
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const rk=v=>Math.round(v*10000)/10000;
+const uniq=a=>[...new Set(a.map(rk))].sort((p,q)=>p-q);
+const r05=v=>Math.round(v*20)/20;
+
+/* ---------------- Exemplo: casa 42 m² (mesma do app de fundação) ---------------- */
+const WALLS42=[
+  {x1:0,y1:0,x2:7,y2:0},{x1:7,y1:0,x2:7,y2:6},{x1:7,y1:6,x2:0,y2:6},{x1:0,y1:6,x2:0,y2:0},
+  {x1:3,y1:0,x2:3,y2:6},{x1:0,y1:3,x2:3,y2:3},{x1:3,y1:4.2,x2:7,y2:4.2},{x1:4.8,y1:4.2,x2:4.8,y2:6}
+];
+const ROOMS42=[{n:"Quarto 1",x:1.5,y:1.5},{n:"Quarto 2",x:1.5,y:4.5},{n:"Sala / Cozinha",x:5,y:2.1},{n:"Banho",x:3.9,y:5.1},{n:"Lavanderia",x:5.9,y:5.1}];
+const AB42=[
+  {n:"Entrada",t:"Porta",w:1,d:2.9,l:0.80,a:2.10,p:0},
+  {n:"Quarto 1",t:"Porta",w:4,d:2.0,l:0.70,a:2.10,p:0},
+  {n:"Quarto 2",t:"Porta",w:4,d:3.4,l:0.70,a:2.10,p:0},
+  {n:"Banho",t:"Porta",w:6,d:0.5,l:0.70,a:2.10,p:0},
+  {n:"Lavanderia",t:"Porta",w:6,d:2.4,l:0.80,a:2.10,p:0},
+  {n:"Lavanderia",t:"Porta",w:2,d:0.6,l:0.80,a:2.10,p:0},
+  {n:"Quarto 1",t:"Janela",w:0,d:0.9,l:1.20,a:1.00,p:1.10},
+  {n:"Quarto 2",t:"Janela",w:3,d:0.8,l:1.20,a:1.00,p:1.10},
+  {n:"Sala",t:"Janela",w:0,d:4.2,l:1.50,a:1.20,p:1.00},
+  {n:"Cozinha",t:"Janela",w:1,d:1.2,l:1.20,a:1.00,p:1.10},
+  {n:"Banho",t:"Janela",w:2,d:2.8,l:0.60,a:0.60,p:1.50}
+];
+const TEL0={tipo:2,dir:"h",telha:"Cerâmica",inc:30,beiral:0.60,plat:"não"};
+const INC_TELHA={"Cerâmica":30,"Concreto":30,"Fibrocimento":15,"Metálica":10};
+const ABDEF={Porta:{l:0.80,a:2.10,p:0},Janela:{l:1.20,a:1.00,p:1.10},"Vão":{l:1.00,a:2.10,p:0}};
+function defaults(){
+  return {
+    obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
+    walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
+    pd:2.80, laje:0.10, piso:0.15, tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+  };
+}
+let S;
+try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); }catch(e){ S=defaults(); }
+function save(){ try{ localStorage.setItem("arq-casa-v1",JSON.stringify(S)); }catch(e){} }
+
+/* ======================================================================
+   GEOMETRIA
+   Paredes ortogonais viram retângulos (eixo ± meia espessura). A planta é
+   dividida numa grade pelas bordas desses retângulos: cada célula é parede,
+   vão ou espaço livre. Espaços livres fechados = ambientes (área exata).
+   ====================================================================== */
+function geom(){
+  const t=Math.max(0.05,num(S.esp)), h=t/2;
+  const walls=[];
+  S.walls.forEach((w0,i)=>{
+    const w={x1:num(w0.x1),y1:num(w0.y1),x2:num(w0.x2),y2:num(w0.y2),i};
+    const dx=w.x2-w.x1, dy=w.y2-w.y1; w.L=Math.hypot(dx,dy); if(w.L<0.01) return;
+    w.ux=dx/w.L; w.uy=dy/w.L; w.hz=Math.abs(dy)<1e-6; w.vt=Math.abs(dx)<1e-6;
+    const xa=Math.min(w.x1,w.x2), xb=Math.max(w.x1,w.x2), ya=Math.min(w.y1,w.y2), yb=Math.max(w.y1,w.y2);
+    w.r=w.hz?{x0:xa-h,x1:xb+h,y0:w.y1-h,y1:w.y1+h}:w.vt?{x0:w.x1-h,x1:w.x1+h,y0:ya-h,y1:yb+h}:null;
+    walls.push(w);
+  });
+  const orto=walls.filter(w=>w.r), incl=walls.filter(w=>!w.r);
+  const abs=[];
+  S.ab.forEach((a,k)=>{
+    const w=walls.find(x=>x.i===Math.round(num(a.w))); if(!w) return;
+    const l=Math.max(0.1,num(a.l)), d=Math.max(0,num(a.d));
+    const p0=[w.x1+w.ux*d,w.y1+w.uy*d], p1=[w.x1+w.ux*(d+l),w.y1+w.uy*(d+l)];
+    const g={a,k,w,d,l,p0,p1,tipo:["Porta","Janela","Vão"].includes(a.t)?a.t:"Porta",fora:d+l>w.L+0.001};
+    if(w.r) g.r=w.hz?{x0:Math.min(p0[0],p1[0]),x1:Math.max(p0[0],p1[0]),y0:w.y1-h,y1:w.y1+h}:{x0:w.x1-h,x1:w.x1+h,y0:Math.min(p0[1],p1[1]),y1:Math.max(p0[1],p1[1])};
+    abs.push(g);
+  });
+  const G={t,h,walls,orto,incl,abs,rooms:[],areaC:0,blocos:[],contPar:[],contExt:[]};
+  if(!walls.length){ G.vazio=true; G.bb={x0:0,y0:0,x1:1,y1:1}; G.compAt=()=>({ext:true}); return G; }
+  let bx0=1e9,by0=1e9,bx1=-1e9,by1=-1e9;
+  const addb=(x0,y0,x1,y1)=>{bx0=Math.min(bx0,x0);by0=Math.min(by0,y0);bx1=Math.max(bx1,x1);by1=Math.max(by1,y1);};
+  walls.forEach(w=>{ if(w.r) addb(w.r.x0,w.r.y0,w.r.x1,w.r.y1); else { addb(w.x1-h,w.y1-h,w.x1+h,w.y1+h); addb(w.x2-h,w.y2-h,w.x2+h,w.y2+h); } });
+  const bb=G.bb={x0:bx0,y0:by0,x1:bx1,y1:by1};
+  const xs=uniq([bb.x0-1,bb.x1+1,...orto.flatMap(w=>[w.r.x0,w.r.x1]),...abs.filter(g=>g.r).flatMap(g=>[g.r.x0,g.r.x1])]);
+  const ys=uniq([bb.y0-1,bb.y1+1,...orto.flatMap(w=>[w.r.y0,w.r.y1]),...abs.filter(g=>g.r).flatMap(g=>[g.r.y0,g.r.y1])]);
+  const nx=xs.length-1, ny=ys.length-1;
+  const inR=(r,x,y)=>x>r.x0&&x<r.x1&&y>r.y0&&y<r.y1;
+  const sol=[], par=[];
+  for(let j=0;j<ny;j++){ const cy=(ys[j]+ys[j+1])/2, rs=[], rp=[];
+    for(let i=0;i<nx;i++){ const cx=(xs[i]+xs[i+1])/2, s=orto.some(w=>inR(w.r,cx,cy)); rs.push(s); rp.push(s&&!abs.some(g=>g.r&&inR(g.r,cx,cy))); }
+    sol.push(rs); par.push(rp); }
+  // espaços livres ligados (paredes cheias, sem descontar vãos)
+  const comp=sol.map(r=>r.map(()=>-1)), comps=[];
+  for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){ if(sol[j][i]||comp[j][i]>=0) continue;
+    const c={id:comps.length,cells:[],ext:false,area:0,sx:0,sy:0,x0:1e9,y0:1e9,x1:-1e9,y1:-1e9}; comps.push(c);
+    const st=[[j,i]]; comp[j][i]=c.id;
+    while(st.length){ const [b,a]=st.pop(); c.cells.push([b,a]);
+      const w=xs[a+1]-xs[a], hh=ys[b+1]-ys[b], ar=w*hh; c.area+=ar; c.sx+=ar*(xs[a]+xs[a+1])/2; c.sy+=ar*(ys[b]+ys[b+1])/2;
+      c.x0=Math.min(c.x0,xs[a]); c.x1=Math.max(c.x1,xs[a+1]); c.y0=Math.min(c.y0,ys[b]); c.y1=Math.max(c.y1,ys[b+1]);
+      if(a===0||b===0||a===nx-1||b===ny-1) c.ext=true;
+      [[b-1,a],[b+1,a],[b,a-1],[b,a+1]].forEach(([q,p])=>{ if(q>=0&&q<ny&&p>=0&&p<nx&&!sol[q][p]&&comp[q][p]<0){ comp[q][p]=c.id; st.push([q,p]); } }); } }
+  const idx=(arr,v)=>{ let lo=0,hi=arr.length-2; while(lo<hi){ const m=(lo+hi+1)>>1; if(arr[m]<=v) lo=m; else hi=m-1; } return lo; };
+  G.compAt=(x,y)=>{ if(x<=xs[0]||x>=xs[nx]||y<=ys[0]||y>=ys[ny]) return {ext:true}; const i=idx(xs,x), j=idx(ys,y); return sol[j][i]?null:comps[comp[j][i]]; };
+  // ambientes
+  const rooms=comps.filter(c=>!c.ext&&c.area>=0.3);
+  rooms.forEach(r=>{
+    r.cx=r.sx/r.area; r.cy=r.sy/r.area;
+    if(G.compAt(r.cx,r.cy)!==r){ let best=null; r.cells.forEach(([b,a])=>{ const ar=(xs[a+1]-xs[a])*(ys[b+1]-ys[b]); if(!best||ar>best.ar) best={ar,x:(xs[a]+xs[a+1])/2,y:(ys[b]+ys[b+1])/2}; }); r.cx=best.x; r.cy=best.y; }
+    r.ret=Math.abs((r.x1-r.x0)*(r.y1-r.y0)-r.area)<1e-4;
+    r.labIdx=S.rooms.findIndex(q=>G.compAt(num(q.x),num(q.y))===r);
+    r.n=r.labIdx>=0?String(S.rooms[r.labIdx].n||"").trim():"";
+  });
+  rooms.sort((p,q)=>Math.abs(p.cy-q.cy)>0.3?p.cy-q.cy:p.cx-q.cx);
+  let sem=0; rooms.forEach(r=>{ if(!r.n) r.n="Ambiente "+(++sem); });
+  G.rooms=rooms;
+  // área construída, contornos e blocos de parede
+  const casa=sol.map((row,j)=>row.map((s,i)=>s||!comps[comp[j][i]].ext));
+  for(let j=0;j<ny;j++) for(let i=0;i<nx;i++) if(casa[j][i]) G.areaC+=(xs[i+1]-xs[i])*(ys[j+1]-ys[j]);
+  const bordas=M=>{ const out=[];
+    for(let j=0;j<=ny;j++){ let ini=-1; for(let i=0;i<=nx;i++){ const dif=i<nx&&((j>0&&M[j-1][i])!==(j<ny&&M[j][i])); if(dif&&ini<0) ini=i; if(!dif&&ini>=0){ out.push([xs[ini],ys[j],xs[i],ys[j]]); ini=-1; } } }
+    for(let i=0;i<=nx;i++){ let ini=-1; for(let j=0;j<=ny;j++){ const dif=j<ny&&((i>0&&M[j][i-1])!==(i<nx&&M[j][i])); if(dif&&ini<0) ini=j; if(!dif&&ini>=0){ out.push([xs[i],ys[ini],xs[i],ys[j]]); ini=-1; } } }
+    return out; };
+  G.contPar=bordas(par); G.contExt=bordas(casa);
+  for(let j=0;j<ny;j++){ let i=0; while(i<nx){ if(par[j][i]){ let k=i; while(k+1<nx&&par[j][k+1]) k++; G.blocos.push([xs[i],ys[j],xs[k+1],ys[j+1]]); i=k+1; } else i++; } }
+  G.retangular=Math.abs((bb.x1-bb.x0)*(bb.y1-bb.y0)-G.areaC)<0.01;
+  G.row=(q,c)=>{ // trechos de "dentro da casa" ao longo da linha de corte
+    const out=[]; if(q==="A"){ const j=idx(ys,c); let ini=null; for(let i=0;i<=nx;i++){ const v=i<nx&&casa[j][i]; if(v&&ini===null) ini=xs[i]; if(!v&&ini!==null){ out.push([ini,xs[i]]); ini=null; } } }
+    else { const i=idx(xs,c); let ini=null; for(let j=0;j<=ny;j++){ const v=j<ny&&casa[j][i]; if(v&&ini===null) ini=ys[j]; if(!v&&ini!==null){ out.push([ini,ys[j]]); ini=null; } } }
+    return out; };
+  G.roomRuns=(q,c)=>{ const out=[]; rooms.forEach(r=>{ const cs=r.cells.filter(([b,a])=>q==="A"?(ys[b]<c&&ys[b+1]>c):(xs[a]<c&&xs[a+1]>c));
+      if(!cs.length) return; const u0=Math.min(...cs.map(([b,a])=>q==="A"?xs[a]:ys[b])), u1=Math.max(...cs.map(([b,a])=>q==="A"?xs[a+1]:ys[b+1])); out.push({r,u0,u1}); }); return out; };
+  // lado de abertura das portas: abre para dentro da casa; entre ambientes, para o menor
+  abs.forEach(g=>{
+    const mx=(g.p0[0]+g.p1[0])/2, my=(g.p0[1]+g.p1[1])/2, nX=-g.w.uy, nY=g.w.ux, off=h+0.12;
+    const A=G.compAt(mx+nX*off,my+nY*off), B=G.compAt(mx-nX*off,my-nY*off);
+    const ea=!A||A.ext, eb=!B||B.ext; let s=1;
+    if(ea&&!eb) s=-1; else if(eb&&!ea) s=1; else if(!ea&&!eb) s=A.area<=B.area?1:-1;
+    if(g.a.inv) s=-s; g.lado=s; g.nX=nX; g.nY=nY; g.externa=ea||eb;
+  });
+  return G;
+}
+
+/* ---------------- Esquadrias: códigos P1, J1, V1 por tipo e medida ---------------- */
+function esquadrias(G){
+  const grupos=new Map(), cont={Porta:0,Janela:0,"Vão":0}, pref={Porta:"P",Janela:"J","Vão":"V"};
+  [...G.abs].sort((p,q)=>["Porta","Janela","Vão"].indexOf(p.tipo)-["Porta","Janela","Vão"].indexOf(q.tipo)||p.l-q.l||num(p.a.a)-num(q.a.a)).forEach(g=>{
+    const a=num(g.a.a)||ABDEF[g.tipo].a, p=g.tipo==="Janela"?num(g.a.p):0;
+    const ch=[g.tipo,f(g.l),f(a),f(p)].join("|");
+    if(!grupos.has(ch)) grupos.set(ch,{cod:pref[g.tipo]+(++cont[g.tipo]),tipo:g.tipo,l:g.l,a,p,q:0,locais:[]});
+    const gr=grupos.get(ch); gr.q++; g.cod=gr.cod; const n=String(g.a.n||"").trim(); if(n&&!gr.locais.includes(n)) gr.locais.push(n);
+  });
+  return [...grupos.values()];
+}
+
+/* ---------------- Telhado: 1, 2, 3 ou 4 águas sobre o retângulo da casa ---------------- */
+const LADOS=["cima","baixo","esq","dir"];
+function dirPadrao(tipo,G){ const bb=G.bb; return tipo===1?"baixo":tipo===2?((bb.x1-bb.x0)>=(bb.y1-bb.y0)?"h":"v"):tipo===3?"esq":""; }
+function infoTelhado(G){
+  const T=S.tel, i=Math.max(0,num(T.inc))/100, t=G.t, bb=G.bb, pd=num(S.pd), lj=num(S.laje);
+  const plat=T.plat==="sim", b=plat?0:Math.max(0,num(T.beiral));
+  const R=plat?{x0:bb.x0+t,y0:bb.y0+t,x1:bb.x1-t,y1:bb.y1-t}:{x0:bb.x0-b,y0:bb.y0-b,x1:bb.x1+b,y1:bb.y1+b};
+  const tipo=Math.min(4,Math.max(1,Math.round(num(T.tipo))||2)), dir=T.dir;
+  let bordas;
+  if(tipo===1) bordas=[LADOS.includes(dir)?dir:"baixo"];
+  else if(tipo===2) bordas=dir==="v"?["esq","dir"]:["cima","baixo"];
+  else if(tipo===3) bordas=LADOS.filter(l=>l!==(LADOS.includes(dir)?dir:"esq"));
+  else bordas=LADOS.slice();
+  const H0=pd+lj-(plat?0:i*b);
+  const dist={cima:(x,y)=>y-R.y0,baixo:(x,y)=>R.y1-y,esq:(x,y)=>x-R.x0,dir:(x,y)=>R.x1-x};
+  const z=(x,y)=>H0+i*Math.max(0,Math.min(...bordas.map(e=>dist[e](x,y))));
+  let zmax=H0; for(let a=0;a<=60;a++) for(let c=0;c<=60;c++) zmax=Math.max(zmax,z(R.x0+(R.x1-R.x0)*a/60,R.y0+(R.y1-R.y0)*c/60));
+  const W=R.x1-R.x0, D=R.y1-R.y0, xm=(R.x0+R.x1)/2, ym=(R.y0+R.y1)/2;
+  const cum=[], esp=[];
+  if(tipo===2){ if(dir==="v") cum.push([xm,R.y0,xm,R.y1]); else cum.push([R.x0,ym,R.x1,ym]); }
+  if(tipo===4){
+    if(W>=D){ const r=D/2; cum.push([R.x0+r,ym,R.x1-r,ym]); esp.push([R.x0,R.y0,R.x0+r,ym],[R.x0,R.y1,R.x0+r,ym],[R.x1,R.y0,R.x1-r,ym],[R.x1,R.y1,R.x1-r,ym]); }
+    else { const r=W/2; cum.push([xm,R.y0+r,xm,R.y1-r]); esp.push([R.x0,R.y0,xm,R.y0+r],[R.x1,R.y0,xm,R.y0+r],[R.x0,R.y1,xm,R.y1-r],[R.x1,R.y1,xm,R.y1-r]); }
+  }
+  if(tipo===3){ const g=LADOS.includes(dir)?dir:"esq";
+    if(g==="esq"){ const xe=Math.max(R.x0,R.x1-D/2); cum.push([R.x0,ym,xe,ym]); esp.push([R.x1,R.y0,xe,ym],[R.x1,R.y1,xe,ym]); }
+    if(g==="dir"){ const xe=Math.min(R.x1,R.x0+D/2); cum.push([xe,ym,R.x1,ym]); esp.push([R.x0,R.y0,xe,ym],[R.x0,R.y1,xe,ym]); }
+    if(g==="cima"){ const ye=Math.max(R.y0,R.y1-W/2); cum.push([xm,R.y0,xm,ye]); esp.push([R.x0,R.y1,xm,ye],[R.x1,R.y1,xm,ye]); }
+    if(g==="baixo"){ const ye=Math.min(R.y1,R.y0+W/2); cum.push([xm,ye,xm,R.y1]); esp.push([R.x0,R.y0,xm,ye],[R.x1,R.y0,xm,ye]); }
+  }
+  // setas de caimento: no meio de cada beiral, apontando para ele
+  const centro={cima:[xm,R.y0],baixo:[xm,R.y1],esq:[R.x0,ym],dir:[R.x1,ym]}, normal={cima:[0,1],baixo:[0,-1],esq:[1,0],dir:[-1,0]};
+  const setas=bordas.map(e=>{ const [cx,cy]=centro[e], [nx,ny]=normal[e], mx=Math.max(W,D), st=mx/400; let d=0;
+    while(d<mx){ const x=cx+nx*(d+st), y=cy+ny*(d+st); if(x<R.x0-1e-9||x>R.x1+1e-9||y<R.y0-1e-9||y>R.y1+1e-9) break;
+      const outros=bordas.filter(o=>o!==e).map(o=>dist[o](x,y)); if(outros.length&&Math.min(...outros)<d+st-1e-9) break; d+=st; }
+    return {e,x0:cx+nx*d*0.72,y0:cy+ny*d*0.72,x1:cx+nx*d*0.22,y1:cy+ny*d*0.22}; });
+  const len=s=>Math.hypot(s[2]-s[0],s[3]-s[1]);
+  const Lcum=cum.reduce((s,c)=>s+len(c),0), LespP=esp.reduce((s,c)=>s+len(c),0), Lesp=LespP*Math.sqrt(1+i*i/2);
+  const areaProj=W*D, areaInc=areaProj*Math.sqrt(1+i*i);
+  const topoPlat=plat?Math.ceil((zmax+0.15)*20-1e-6)/20:null;
+  const NOMES={1:"uma água",2:"duas águas",3:"três águas",4:"quatro águas"};
+  return {T,i,plat,b,R,tipo,bordas,H0,z,zmax,cum,esp,setas,Lcum,Lesp,areaProj,areaInc,topoPlat,nome:NOMES[tipo],W,D};
+}
+
+/* ======================================================================
+   PRIMITIVAS (coordenadas em metros; tamanhos de texto e traço em mm de papel)
+   k = metros por mm de papel (1:50 → 0,05)
+   ====================================================================== */
+const Dw=k=>({p:[],k});
+const L=(D,x1,y1,x2,y2,w=.25,l="GERAL",d=false)=>D.p.push({t:"l",x1,y1,x2,y2,w,l,d});
+const RF=(D,x0,y0,x1,y1,l="HACHURA")=>D.p.push({t:"r",x0:Math.min(x0,x1),y0:Math.min(y0,y1),x1:Math.max(x0,x1),y1:Math.max(y0,y1),l});
+const PG=(D,pts,l="HACHURA")=>D.p.push({t:"g",pts,l});
+const PL=(D,pts,w=.25,l="GERAL",d=false)=>{ for(let i=0;i+1<pts.length;i++) L(D,pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1],w,l,d); };
+const AR=(D,cx,cy,x1,y1,x2,y2,w=.18,l="ESQUADRIA")=>D.p.push({t:"a",cx,cy,x1,y1,x2,y2,r:Math.hypot(x1-cx,y1-cy),w,l});
+const CI=(D,cx,cy,r,w=.25,l="GERAL")=>D.p.push({t:"c",cx,cy,r,w,l});
+const TX=(D,x,y,txt,h=2,o={})=>D.p.push({t:"t",x,y,txt:String(txt),h,a:o.a||"m",rot:o.rot||0,b:!!o.b,l:o.l||"TEXTO"});
+function seta(D,x0,y0,x1,y1,l="TELHADO"){ const k=D.k, d=Math.hypot(x1-x0,y1-y0)||1, ux=(x1-x0)/d, uy=(y1-y0)/d, s=1.6*k;
+  L(D,x0,y0,x1,y1,.25,l); PG(D,[[x1,y1],[x1-ux*s*1.8-uy*s*0.6,y1-uy*s*1.8+ux*s*0.6],[x1-ux*s*1.8+uy*s*0.6,y1-uy*s*1.8-ux*s*0.6]],l); }
+/* cota horizontal: linha em y, chamadas a partir de yRef */
+function cotaH(D,xa,xb,y,yRef,txt,alt){ const k=D.k; if(xb-xa<0.005) return; const sg=Math.sign(y-yRef)||-1;
+  L(D,xa,y,xb,y,.18,"COTAS");
+  [xa,xb].forEach(x=>{ L(D,x,yRef+sg*1*k,x,y+sg*1.5*k,.13,"COTAS"); L(D,x-0.9*k,y+0.9*k,x+0.9*k,y-0.9*k,.35,"COTAS"); });
+  const curto=(xb-xa)/k<(String(txt).length*1.7+1.5);
+  TX(D,(xa+xb)/2,y-(curto&&alt?3.6:1.5)*k,txt,1.8,{l:"COTAS"}); }
+function cotaV(D,ya,yb,x,xRef,txt,alt){ const k=D.k; if(yb-ya<0.005) return; const sg=Math.sign(x-xRef)||-1;
+  L(D,x,ya,x,yb,.18,"COTAS");
+  [ya,yb].forEach(y=>{ L(D,xRef+sg*1*k,y,x+sg*1.5*k,y,.13,"COTAS"); L(D,x-0.9*k,y+0.9*k,x+0.9*k,y-0.9*k,.35,"COTAS"); });
+  const curto=(yb-ya)/k<(String(txt).length*1.7+1.5);
+  TX(D,x-(curto&&alt?3.6:1.5)*k,(ya+yb)/2,txt,1.8,{l:"COTAS",rot:-90}); }
+function cadeiaH(D,pts,y,yRef){ let alt=false; for(let i=0;i+1<pts.length;i++){ const d=pts[i+1]-pts[i]; if(d<0.005) continue; const curto=d/D.k<8.5; cotaH(D,pts[i],pts[i+1],y,yRef,f(d),curto&&(alt=!alt)); } }
+function cadeiaV(D,pts,x,xRef){ let alt=false; for(let i=0;i+1<pts.length;i++){ const d=pts[i+1]-pts[i]; if(d<0.005) continue; const curto=d/D.k<8.5; cotaV(D,pts[i],pts[i+1],x,xRef,f(d),curto&&(alt=!alt)); } }
+function nivel(D,x,y,txt,abaixo){ const k=D.k, sg=abaixo?-1:1; L(D,x-2*k,y,x+12*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.2*k,y-sg*2*k],[x+1.2*k,y-sg*2*k]],"COTAS"); TX(D,x+2*k,y-sg*2.6*k,txt,1.8,{a:"s",l:"COTAS"}); }
+
+/* ---------------- Planta baixa ---------------- */
+function posCorte(G,q){
+  const bb=G.bb, A=q==="A", lo=A?bb.y0:bb.x0, hi=A?bb.y1:bb.x1, v=A?S.cA:S.cB;
+  let c=(v===null||v===""||v===undefined)?(lo+hi)/2:num(v); c=Math.min(hi-0.02,Math.max(lo+0.02,c));
+  const ax=G.orto.filter(w=>A?w.hz:w.vt).map(w=>A?w.y1:w.x1);
+  for(let n=0;n<8&&ax.some(a=>Math.abs(a-c)<G.h+0.02);n++) c+=G.h+0.05;   // não deixa a linha de corte em cima de uma parede
+  return Math.min(hi-0.02,c);
+}
+function desenhoPlanta(G,k,ajuda){
+  const D=Dw(k), h=G.h, bb=G.bb;
+  if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
+  G.blocos.forEach(b=>RF(D,...b,"HACHURA"));
+  G.incl.forEach(w=>{ const nx=-w.uy*h, ny=w.ux*h, ex=w.ux*h, ey=w.uy*h;
+    const P=[[w.x1-ex+nx,w.y1-ey+ny],[w.x2+ex+nx,w.y2+ey+ny],[w.x2+ex-nx,w.y2+ey-ny],[w.x1-ex-nx,w.y1-ey-ny]]; PG(D,P,"HACHURA"); PL(D,[...P,P[0]],.5,"PAREDE"); });
+  G.contPar.forEach(s=>L(D,...s,.5,"PAREDE"));
+  // esquadrias
+  G.abs.forEach(g=>{
+    const w=g.w, ln=(s,n)=>[w.x1+w.ux*s+g.nX*n, w.y1+w.uy*s+g.nY*n], s0=g.d, s1=g.d+g.l, sm=(s0+s1)/2;
+    if(g.tipo==="Janela"){ [-h,h].forEach(n=>L(D,...ln(s0,n),...ln(s1,n),.18,"ESQUADRIA")); [-h/3,h/3].forEach(n=>L(D,...ln(s0,n),...ln(s1,n),.25,"ESQUADRIA")); }
+    else if(g.tipo==="Vão"){ L(D,...ln(s0,0),...ln(s1,0),.18,"ESQUADRIA",true); }
+    else { const sH=g.a.dob?s1:s0, sO=g.a.dob?s0:s1, ld=g.lado, face=ld*h;
+      const hinge=ln(sH,face), fim=ln(sH,face+ld*g.l), outro=ln(sO,face);
+      L(D,...hinge,...fim,.35,"ESQUADRIA"); AR(D,...hinge,...fim,...outro,.18,"ESQUADRIA"); }
+    if(g.cod){ const p=ln(sm,-g.lado*(h+2.4*k)); TX(D,p[0],p[1],g.cod,1.8,{b:true,l:"ESQUADRIA"}); }
+  });
+  // ambientes
+  G.rooms.forEach(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; const x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy;
+    TX(D,x,y-2.4*k,r.n.toUpperCase(),2.3,{b:true});
+    TX(D,x,y+0.6*k,`A = ${f(r.area)} m²`,1.8);
+    if(r.ret) TX(D,x,y+3.2*k,`${f(r.x1-r.x0)} x ${f(r.y1-r.y0)}`,1.6,{l:"COTAS"}); });
+  // cotas: faces das paredes (em cima e à esquerda) e totais
+  const fx=uniq([bb.x0,bb.x1,...G.orto.filter(w=>w.vt).flatMap(w=>[w.x1-h,w.x1+h])]), fy=uniq([bb.y0,bb.y1,...G.orto.filter(w=>w.hz).flatMap(w=>[w.y1-h,w.y1+h])]);
+  cadeiaH(D,fx,bb.y0-9*k,bb.y0); cotaH(D,bb.x0,bb.x1,bb.y0-16*k,bb.y0-9*k,f(bb.x1-bb.x0));
+  cadeiaV(D,fy,bb.x0-9*k,bb.x0); cotaV(D,bb.y0,bb.y1,bb.x0-16*k,bb.x0-9*k,f(bb.y1-bb.y0));
+  // linhas de corte
+  const cA=posCorte(G,"A"), cB=posCorte(G,"B"), r=2.6*k;
+  L(D,bb.x0-22*k,cA,bb.x1+7*k,cA,.35,"CORTE",true);
+  [[bb.x0-22*k-r,cA],[bb.x1+7*k+r,cA]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"A",2.2,{b:true,l:"CORTE"}); PG(D,[[x-1.2*k,y-r-0.4*k],[x+1.2*k,y-r-0.4*k],[x,y-r-2.6*k]],"CORTE"); });
+  L(D,cB,bb.y0-22*k,cB,bb.y1+7*k,.35,"CORTE",true);
+  [[cB,bb.y0-22*k-r],[cB,bb.y1+7*k+r]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"B",2.2,{b:true,l:"CORTE"}); PG(D,[[x+r+0.4*k,y-1.2*k],[x+r+0.4*k,y+1.2*k],[x+r+2.6*k,y]],"CORTE"); });
+  if(ajuda) G.walls.forEach(w=>TX(D,(w.x1+w.x2)/2,(w.y1+w.y2)/2,String(w.i+1),1.7,{b:true,l:"AJUDA"}));
+  return D;
+}
+
+/* ---------------- Cortes AA e BB ---------------- */
+function desenhoCorte(G,k,q){
+  const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
+  const A=q==="A", c=posCorte(G,q), h=G.h, pd=num(S.pd), lj=Math.max(0,num(S.laje)), ps=Math.max(0,num(S.piso)), TI=infoTelhado(G);
+  const Y=z=>-z, zr=u=>A?TI.z(u,c):TI.z(c,u);
+  const ext=(u)=>{ const C=A?G.compAt(u,c):G.compAt(c,u); return C!==null&&(!C||C.ext); };
+  const cand=G.orto.filter(w=>A?(w.vt&&c>=w.r.y0&&c<=w.r.y1):(w.hz&&c>=w.r.x0&&c<=w.r.x1));
+  const us=uniq(cand.map(w=>A?w.x1:w.y1));
+  if(!us.length){ TX(D,0,0,"A linha de corte não cruza nenhuma parede. Mude a posição.",3); return D; }
+  const runs=G.row(q,c), u0=A?TI.R.x0:TI.R.y0, u1=A?TI.R.x1:TI.R.y1;
+  const uMin=Math.min(...us)-h, uMax=Math.max(...us)+h;
+  // terreno, contrapiso e laje
+  L(D,Math.min(u0,uMin)-1.2,Y(-ps),Math.max(u1,uMax)+1.2,Y(-ps),.35,"TERRENO");
+  runs.forEach(([a,b])=>{ RF(D,a,Y(0),b,Y(-0.10),"HACHURA"); L(D,a,Y(0),b,Y(0),.35,"PAREDE"); L(D,a,Y(-0.10),b,Y(-0.10),.18,"PAREDE");
+    if(lj>0){ RF(D,a,Y(pd+lj),b,Y(pd),"HACHURA"); L(D,a,Y(pd),b,Y(pd),.35,"PAREDE"); L(D,a,Y(pd+lj),b,Y(pd+lj),.35,"PAREDE"); } else L(D,a,Y(pd),b,Y(pd),.35,"PAREDE"); });
+  // paredes cortadas (com portas e janelas)
+  us.forEach(u=>{
+    const eL=ext(u-h-0.03), eR=ext(u+h+0.03), externa=eL||eR;
+    let topo=pd; if(externa) topo=TI.plat?TI.topoPlat:Math.max(pd+lj,zr(eL?u-h:u+h));
+    const base=externa?-ps:0;
+    const g=G.abs.find(g=>g.r&&(A?g.w.vt:g.w.hz)&&Math.abs((A?g.w.x1:g.w.y1)-u)<1e-6&&c>=(A?g.r.y0:g.r.x0)&&c<=(A?g.r.y1:g.r.x1));
+    const peds=[];
+    if(!g) peds.push([base,topo]);
+    else if(g.tipo==="Janela"){ const p0=num(g.a.p), p1=Math.min(topo,p0+(num(g.a.a)||1)); peds.push([base,p0],[p1,topo]);
+      L(D,u-h,Y(p0),u+h,Y(p0),.25,"ESQUADRIA"); L(D,u-h,Y(p1),u+h,Y(p1),.25,"ESQUADRIA"); L(D,u,Y(p0),u,Y(p1),.18,"ESQUADRIA"); L(D,u-h,Y(p0),u-h,Y(p1),.13,"ESQUADRIA"); L(D,u+h,Y(p0),u+h,Y(p1),.13,"ESQUADRIA"); }
+    else { const p1=Math.min(topo,num(g.a.a)||2.1); peds.push([base,0],[p1,topo]); L(D,u-h,Y(p1),u+h,Y(p1),.18,"ESQUADRIA"); }
+    peds.forEach(([z0,z1])=>{ if(z1-z0<1e-6) return; RF(D,u-h,Y(z1),u+h,Y(z0),"HACHURA"); PL(D,[[u-h,Y(z0)],[u-h,Y(z1)],[u+h,Y(z1)],[u+h,Y(z0)],[u-h,Y(z0)]],.5,"PAREDE"); });
+  });
+  // telhado cortado e vista do que fica atrás
+  const N=240, prof=[], sil=[];
+  for(let n=0;n<=N;n++){ const u=u0+(u1-u0)*n/N, z=zr(u); prof.push([u,Y(z)]);
+    let zb=z; for(let m=0;m<=40;m++){ const v=A?(TI.R.y0+(TI.R.y1-TI.R.y0)*m/40):(TI.R.x0+(TI.R.x1-TI.R.x0)*m/40); zb=Math.max(zb,A?TI.z(u,v):TI.z(v,u)); } sil.push([u,Y(zb)]); }
+  const simp=pts=>pts.filter((p,i)=>i===0||i===pts.length-1||Math.abs((pts[i+1][1]-p[1])*(p[0]-pts[i-1][0])-(p[1]-pts[i-1][1])*(pts[i+1][0]-p[0]))>1e-9);
+  const sp=simp(prof), ss=simp(sil), et=0.06;
+  PL(D,ss,.18,"PROJECAO");   // o que se vê atrás do corte (cumeeira, águas)
+  PL(D,sp,.5,"TELHADO"); PL(D,sp.map(([u,y])=>[u,y-et]),.25,"TELHADO");
+  L(D,sp[0][0],sp[0][1],sp[0][0],sp[0][1]-et,.25,"TELHADO"); L(D,sp[sp.length-1][0],sp[sp.length-1][1],sp[sp.length-1][0],sp[sp.length-1][1]-et,.25,"TELHADO");
+  // nomes dos ambientes
+  G.roomRuns(q,c).forEach(({r,u0:a,u1:b})=>{ if(b-a<0.4) return; TX(D,(a+b)/2,Y(0)-3*k,r.n.toUpperCase(),1.9,{b:true}); });
+  // cotas verticais, níveis e cota horizontal
+  const zTop=TI.plat?TI.topoPlat:Math.max(...sil.map(p=>-p[1]));
+  const xc=Math.min(u0,uMin)-7*k, pts=uniq([-ps,0,pd,pd+lj,zTop]).map(z=>Y(z)).sort((p,q)=>p-q);
+  cadeiaV(D,pts,xc,Math.min(u0,uMin)); cotaV(D,Y(zTop),Y(0),xc-7*k,xc,f(zTop));
+  const xn=Math.max(u1,uMax)+3*k;
+  nivel(D,xn,Y(0),"±0,00"); nivel(D,xn,Y(pd),"+"+f(pd)); nivel(D,xn,Y(zTop),"+"+f(zTop)); if(ps>0) nivel(D,xn,Y(-ps),"-"+f(ps),true);
+  const rr=G.roomRuns(q,c).sort((p,q2)=>(q2.u1-q2.u0)-(p.u1-p.u0))[0]; if(rr) TX(D,(rr.u0+rr.u1)/2,Y(pd/2),`PÉ-DIREITO ${f(pd)}`,1.6,{l:"COTAS"});
+  const fc=uniq(us.flatMap(u=>[u-h,u+h]));
+  cadeiaH(D,fc,Y(-ps)+7*k,Y(-ps)); cotaH(D,fc[0],fc[fc.length-1],Y(-ps)+14*k,Y(-ps)+7*k,f(fc[fc.length-1]-fc[0]));
+  return D;
+}
+
+/* ---------------- Planta de cobertura ---------------- */
+function desenhoCobertura(G,k){
+  const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
+  const TI=infoTelhado(G), R=TI.R, bb=G.bb;
+  G.contExt.forEach(s=>L(D,...s,.2,"PROJECAO",true));
+  if(TI.plat){ PL(D,[[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x1,bb.y1],[bb.x0,bb.y1],[bb.x0,bb.y0]],.5,"PAREDE"); PL(D,[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1],[R.x0,R.y0]],.35,"PAREDE");
+    TI.bordas.forEach(e=>{ const o=0.25; const s={cima:[R.x0,R.y0+o,R.x1,R.y0+o],baixo:[R.x0,R.y1-o,R.x1,R.y1-o],esq:[R.x0+o,R.y0,R.x0+o,R.y1],dir:[R.x1-o,R.y0,R.x1-o,R.y1]}[e]; L(D,...s,.18,"TELHADO",true); });
+    TX(D,(R.x0+R.x1)/2,R.y1-0.25-2*k,"CALHA",1.6,{l:"TELHADO"}); }
+  else PL(D,[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1],[R.x0,R.y0]],.5,"TELHADO");
+  TI.cum.forEach(s=>L(D,...s,.5,"TELHADO")); TI.esp.forEach(s=>L(D,...s,.35,"TELHADO"));
+  TI.setas.forEach(s=>{ seta(D,s.x0,s.y0,s.x1,s.y1); const hz=s.e==="cima"||s.e==="baixo", mx=(s.x0+s.x1)/2, my=(s.y0+s.y1)/2;
+    TX(D,hz?mx+1.5*k:mx,hz?my:my-2*k,`i = ${f(num(S.tel.inc),0)}%`,1.8,{a:hz?"s":"m",l:"TELHADO"}); });
+  if(TI.cum.length){ const c=TI.cum[0], hzc=Math.abs(c[3]-c[1])<1e-9; TX(D,(c[0]+c[2])/2+(hzc?0:-1.6*k),(c[1]+c[3])/2+(hzc?-1.6*k:0),"CUMEEIRA",1.5,{l:"TELHADO",rot:hzc?0:-90}); }
+  TX(D,R.x0+(R.x1-R.x0)*0.27,R.y1-(TI.plat?0.35:0)-4*k,`TELHA ${String(S.tel.telha||"").toUpperCase()}`,1.8,{l:"TELHADO"});
+  // cotas: beiral + projeção + beiral
+  cadeiaH(D,uniq([R.x0,bb.x0,bb.x1,R.x1]),Math.min(R.y0,bb.y0)-8*k,Math.min(R.y0,bb.y0)); cotaH(D,Math.min(R.x0,bb.x0),Math.max(R.x1,bb.x1),Math.min(R.y0,bb.y0)-15*k,Math.min(R.y0,bb.y0)-8*k,f(Math.max(R.x1,bb.x1)-Math.min(R.x0,bb.x0)));
+  cadeiaV(D,uniq([R.y0,bb.y0,bb.y1,R.y1]),Math.min(R.x0,bb.x0)-8*k,Math.min(R.x0,bb.x0)); cotaV(D,Math.min(R.y0,bb.y0),Math.max(R.y1,bb.y1),Math.min(R.x0,bb.x0)-15*k,Math.min(R.x0,bb.x0)-8*k,f(Math.max(R.y1,bb.y1)-Math.min(R.y0,bb.y0)));
+  return D;
+}
+
+/* ---------------- Extensão e SVG ---------------- */
+function extensao(D){
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; const ad=(x,y)=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}; const k=D.k;
+  D.p.forEach(p=>{
+    if(p.t==="l"){ad(p.x1,p.y1);ad(p.x2,p.y2);} else if(p.t==="r"){ad(p.x0,p.y0);ad(p.x1,p.y1);} else if(p.t==="g") p.pts.forEach(q=>ad(...q));
+    else if(p.t==="a"){ ad(p.x1,p.y1); ad(p.x2,p.y2); const mx=(p.x1+p.x2)/2-p.cx, my=(p.y1+p.y2)/2-p.cy, m=Math.hypot(mx,my)||1; ad(p.cx+mx/m*p.r,p.cy+my/m*p.r); }
+    else if(p.t==="c"){ad(p.cx-p.r,p.cy-p.r);ad(p.cx+p.r,p.cy+p.r);}
+    else if(p.t==="t"){ const w=p.txt.length*p.h*0.78*k, hh=p.h*1.2*k; const dx=p.a==="s"?[0,w]:p.a==="e"?[-w,0]:[-w/2,w/2];
+      if(p.rot){ ad(p.x-hh/2,p.y-dx[1]); ad(p.x+hh/2,p.y-dx[0]); } else { ad(p.x+dx[0],p.y-hh/2); ad(p.x+dx[1],p.y+hh/2); } }
+  });
+  if(x0>x1) return {x0:0,y0:0,x1:1,y1:1};
+  return {x0,y0,x1,y1};
+}
+const n2=v=>(Math.round(v*100)/100).toString();
+const COR={PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)"};
+function primsSVG(D,map,k){
+  let s="";
+  D.p.forEach(p=>{ const cor=COR[p.l]||"var(--ink)";
+    if(p.t==="r"){ const [a,b]=map(p.x0,p.y0),[c,d]=map(p.x1,p.y1); s+=`<rect x="${n2(Math.min(a,c))}" y="${n2(Math.min(b,d))}" width="${n2(Math.abs(c-a))}" height="${n2(Math.abs(d-b))}" style="fill:${cor}"/>`; }
+    else if(p.t==="g") s+=`<polygon points="${p.pts.map(q=>map(...q).map(n2).join(",")).join(" ")}" style="fill:${cor}"/>`;
+    else if(p.t==="l"){ const [a,b]=map(p.x1,p.y1),[c,d]=map(p.x2,p.y2); s+=`<line x1="${n2(a)}" y1="${n2(b)}" x2="${n2(c)}" y2="${n2(d)}" style="stroke:${cor}" stroke-width="${p.w}" stroke-linecap="round"${p.d?' stroke-dasharray="2.4 1.2"':""}/>`; }
+    else if(p.t==="a"){ const [a,b]=map(p.x1,p.y1),[c,d]=map(p.x2,p.y2),[cx,cy]=map(p.cx,p.cy); const cr=(a-cx)*(d-cy)-(b-cy)*(c-cx), r=p.r/k;
+      s+=`<path d="M${n2(a)} ${n2(b)}A${n2(r)} ${n2(r)} 0 0 ${cr>0?1:0} ${n2(c)} ${n2(d)}" style="fill:none;stroke:${cor}" stroke-width="${p.w}"/>`; }
+    else if(p.t==="c"){ const [a,b]=map(p.cx,p.cy); s+=`<circle cx="${n2(a)}" cy="${n2(b)}" r="${n2(p.r/k)}" style="fill:none;stroke:${cor}" stroke-width="${p.w}"/>`; }
+    else if(p.t==="t"){ const [a,b]=map(p.x,p.y), an={s:"start",m:"middle",e:"end"}[p.a];
+      s+=`<text x="${n2(a)}" y="${n2(b)}" font-size="${n2(p.h*1.39)}" text-anchor="${an}" dominant-baseline="central"${p.b?' font-weight="600"':""} style="fill:${cor}"${p.rot?` transform="rotate(${p.rot} ${n2(a)} ${n2(b)})"`:""}>${esc(p.txt)}</text>`; }
+  });
+  return s;
+}
+function svgDe(D,id,pad=4){
+  const k=D.k, e=extensao(D), W=(e.x1-e.x0)/k+2*pad, H=(e.y1-e.y0)/k+2*pad;
+  const map=(x,y)=>[pad+(x-e.x0)/k,pad+(y-e.y0)/k];
+  if(id) VIEW[id]={e,k,pad};
+  return `<svg viewBox="0 0 ${n2(W)} ${n2(H)}" xmlns="http://www.w3.org/2000/svg" role="img">${primsSVG(D,map,k)}</svg>`;
+}
+const VIEW={};
+// escala da tela: textos legíveis no celular (a prancha usa a escala real)
+function kTela(G){ const bb=G.bb, base=window.innerWidth<600?92:120; return Math.max(0.02,(Math.max(bb.x1-bb.x0,bb.y1-bb.y0)+2)/base); }
+let estreita=window.innerWidth<600; window.addEventListener("resize",()=>{ const e=window.innerWidth<600; if(e!==estreita){ estreita=e; later(); } });
+
+/* ---------------- Ícones dos telhados ---------------- */
+function iconeTelhado(tp){
+  const R=[8,10,92,58], [x0,y0,x1,y1]=R, xm=(x0+x1)/2, ym=(y0+y1)/2, r=(y1-y0)/2;
+  let o=`<svg viewBox="0 0 100 68" aria-hidden="true"><rect x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" fill="none" stroke="currentColor" stroke-width="3"/>`;
+  if(tp===1) o+=`<path d="M${xm} ${y0+10}V${y1-12}" stroke="currentColor" stroke-width="3"/><path d="M${xm-6} ${y1-18}L${xm} ${y1-8}L${xm+6} ${y1-18}Z" fill="currentColor"/>`;
+  if(tp===2) o+=`<path d="M${x0} ${ym}H${x1}" stroke="currentColor" stroke-width="3"/>`;
+  if(tp===3) o+=`<path d="M${x0} ${ym}H${x1-r}L${x1} ${y0}M${x1-r} ${ym}L${x1} ${y1}" fill="none" stroke="currentColor" stroke-width="3"/>`;
+  if(tp===4) o+=`<path d="M${x0} ${y0}L${x0+r} ${ym}H${x1-r}L${x1} ${y0}M${x0} ${y1}L${x0+r} ${ym}M${x1-r} ${ym}L${x1} ${y1}" fill="none" stroke="currentColor" stroke-width="3"/>`;
+  return o+`</svg>`;
+}
+const DIRS={1:[["baixo","Caimento para baixo"],["cima","Caimento para cima"],["esq","Caimento para a esquerda"],["dir","Caimento para a direita"]],
+  2:[["h","Cumeeira na horizontal"],["v","Cumeeira na vertical"]],
+  3:[["esq","Oitão à esquerda"],["dir","Oitão à direita"],["cima","Oitão em cima"],["baixo","Oitão embaixo"]],
+  4:[["","Automática (pelo lado maior)"]]};
+
+/* ======================================================================
+   RENDER
+   ====================================================================== */
+let GG=null;
+function render(){
+  S.rt=`${S.rtNome||""}${S.crea?" · "+S.crea:""}`;
+  const G=geom(); GG=G; const Q=esquadrias(G), TI=infoTelhado(G), k=kTela(G);
+  $("stamp").innerHTML=`<b>${esc(S.obra||"Obra")}</b>${S.cliente?" · "+esc(S.cliente):""}${S.local?"<br>"+esc(S.local):""}<br>${esc(S.rt)} · ${esc(S.data)}`;
+  $("plan").innerHTML=svgDe(desenhoPlanta(G,k,true),"plan");
+  const util=G.rooms.reduce((s,r)=>s+r.area,0);
+  $("planChips").innerHTML=G.vazio?"":[`Área construída ${f(G.areaC)} m²`,`Área útil ${f(util)} m²`,`Projeção ${f(G.bb.x1-G.bb.x0)} × ${f(G.bb.y1-G.bb.y0)} m`,`${G.rooms.length} ambientes`,`${G.abs.length} esquadrias`].map(t=>`<span class="chip">${t}</span>`).join("");
+  // avisos
+  const w=[];
+  if(G.vazio) w.push(["warn","Cadastre as paredes ou importe a planta na aba Dados."]);
+  if(G.incl.length) w.push(["warn",`${G.incl.length} parede(s) inclinada(s): aparecem na planta, mas os ambientes fechados por elas não entram no quadro de áreas e elas não recebem portas e janelas.`]);
+  G.abs.filter(g=>g.fora).forEach(g=>w.push(["bad",`${g.cod||g.tipo} na parede ${g.w.i+1} passa do fim da parede (${f(g.d+g.l)} m de ${f(g.w.L)} m).`]));
+  S.ab.forEach((a,i)=>{ if(!G.walls.some(x=>x.i===Math.round(num(a.w)))) w.push(["warn",`A abertura ${i+1} (${esc(a.t)}) está numa parede que não existe mais.`]); });
+  if(!G.vazio&&!G.retangular) w.push(["warn","A casa não é um retângulo: o telhado é calculado sobre o retângulo que envolve a casa (formato em L ou U ainda não tem telhado automático). Confira a cobertura."]);
+  if(!G.vazio&&!G.rooms.length) w.push(["warn","Nenhum ambiente fechado encontrado. Confira se as paredes se encontram nas pontas."]);
+  if(!w.length) w.push(["ok","Paredes, ambientes e esquadrias sem conflitos."]);
+  $("warnings").innerHTML=w.map(([c,t])=>`<div class="alert ${c}">${t}</div>`).join("");
+  // quadros
+  $("tabAreas").innerHTML=`<tr><th>Ambiente</th><th class="n">Área (m²)</th><th class="n">Perímetro (m)</th></tr>`+
+    G.rooms.map(r=>{ const per=r.ret?2*((r.x1-r.x0)+(r.y1-r.y0)):null; return `<tr><td>${esc(r.n)}</td><td class="n">${f(r.area)}</td><td class="n">${per?f(per):"—"}</td></tr>`; }).join("")+
+    `<tr class="tot"><td>Área útil</td><td class="n">${f(util)}</td><td></td></tr><tr class="tot"><td>Área construída</td><td class="n">${f(G.areaC)}</td><td></td></tr>`;
+  $("tabEsq").innerHTML=`<tr><th>Cód.</th><th>Tipo</th><th class="n">L × H (m)</th><th class="n">Peitoril</th><th class="n">Qtd</th></tr>`+
+    (Q.length?Q.map(q=>`<tr><td><b>${q.cod}</b></td><td>${q.tipo}${q.locais.length?`<div style="color:var(--muted);font-size:12px">${esc(q.locais.join(", "))}</div>`:""}</td><td class="n">${f(q.l)} × ${f(q.a)}</td><td class="n">${q.tipo==="Janela"?f(q.p):"—"}</td><td class="n">${q.q}</td></tr>`).join(""):`<tr><td colspan="5" style="color:var(--muted)">Nenhuma porta ou janela. Toque numa parede na planta para colocar.</td></tr>`);
+  // cortes
+  ["A","B"].forEach(q=>{ const bb=G.bb, A=q==="A", c=posCorte(G,q), rr=$("c"+q+"r"), nn=$("c"+q+"n");
+    rr.min=n2(A?bb.y0:bb.x0); rr.max=n2(A?bb.y1:bb.x1); if(document.activeElement!==rr) rr.value=c; if(document.activeElement!==nn) nn.value=n2(c);
+    $("sec"+q).innerHTML=svgDe(desenhoCorte(G,k,q)); });
+  // cobertura
+  $("roofTypes").innerHTML=[1,2,3,4].map(tp=>`<button type="button" data-tipo="${tp}" aria-pressed="${TI.tipo===tp}">${iconeTelhado(tp)}${tp} ${tp===1?"água":"águas"}</button>`).join("");
+  const ds=DIRS[TI.tipo]; $("tel.dir").innerHTML=ds.map(([v,t])=>`<option value="${v}"${v===(S.tel.dir||"")?" selected":""}>${t}</option>`).join("");
+  $("lblDir").hidden=TI.tipo===4; $("lblBeiral").hidden=TI.plat;
+  $("cob").innerHTML=svgDe(desenhoCobertura(G,k));
+  $("capCob").textContent=`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}, inclinação ${f(num(S.tel.inc),0)}%${TI.plat?", escondido por platibanda":`, beiral de ${f(TI.b)} m`}. Altura máxima ${f(TI.plat?TI.topoPlat:TI.zmax)} m acima do piso.`;
+  $("cobChips").innerHTML=G.vazio?"":[`Área do telhado ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²)`,TI.Lcum?`Cumeeira ${f(TI.Lcum)} m`:"",TI.Lesp?`Espigões ${f(TI.Lesp)} m`:"",`Cumeeira a ${f(TI.zmax)} m`].filter(Boolean).map(t=>`<span class="chip">${t}</span>`).join("");
+  window.__R={G,Q,TI};
+  save();
+}
+
+/* ======================================================================
+   EDIÇÃO NA PLANTA (toque)
+   ====================================================================== */
+function ptPlanta(ev){
+  const svg=$("plan").querySelector("svg"), v=VIEW.plan; if(!svg||!v) return null;
+  const r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal, mx=(ev.clientX-r.left)/r.width*vb.width, my=(ev.clientY-r.top)/r.height*vb.height;
+  return [v.e.x0+(mx-v.pad)*v.k, v.e.y0+(my-v.pad)*v.k];
+}
+function projParede(w,x,y){ const s=(x-w.x1)*w.ux+(y-w.y1)*w.uy, dd=Math.abs(-(x-w.x1)*w.uy+(y-w.y1)*w.ux); return {s,dd}; }
+$("plan").addEventListener("click",ev=>{
+  const p=ptPlanta(ev); if(!p||!GG||GG.vazio) return; const [x,y]=p, G=GG, tol=G.h+Math.max(0.12,kTela(G)*3);
+  // abertura existente?
+  let best=null;
+  G.abs.forEach(g=>{ const {s,dd}=projParede(g.w,x,y); if(dd<=tol&&s>=g.d-0.1&&s<=g.d+g.l+0.1){ if(!best||dd<best.dd) best={g,dd}; } });
+  if(best){ painelAbertura(best.g.k); return; }
+  let bw=null;
+  G.walls.forEach(w=>{ const {s,dd}=projParede(w,x,y); if(dd<=tol&&s>=-0.05&&s<=w.L+0.05){ if(!bw||dd<bw.dd) bw={w,dd,s}; } });
+  if(bw){ painelParede(bw.w,bw.s); return; }
+  const C=G.compAt(x,y); if(C&&!C.ext) painelAmbiente(C,x,y); else $("selPanel").hidden=true;
+});
+function painelParede(w,s){
+  const P=$("selPanel"); P.hidden=false;
+  P.innerHTML=`<h4>Parede ${w.i+1}</h4><p class="cap" style="margin:0 0 8px">Comprimento ${f(w.L)} m. Ponto tocado a ${f(s)} m do começo.</p>
+    <div class="row" style="margin:0"><button class="btn pri" data-add="Porta">+ Porta aqui</button><button class="btn pri" data-add="Janela">+ Janela aqui</button><button class="btn" data-add="Vão">+ Vão aqui</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
+  P.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ const t=b.dataset.add, df=ABDEF[t], l=Math.min(df.l,Math.max(0.3,w.L-2*GG.h-0.1));
+    const d=r05(Math.min(Math.max(GG.h+0.05,s-l/2),Math.max(0,w.L-GG.h-0.05-l)));
+    S.ab.push({n:"",t,w:w.i,d,l,a:df.a,p:df.p}); renderAb(); render(); painelAbertura(S.ab.length-1); });
+  P.querySelector("[data-close]").onclick=()=>P.hidden=true;
+}
+function painelAbertura(i){
+  const a=S.ab[i], P=$("selPanel"); if(!a){ P.hidden=true; return; } P.hidden=false;
+  const g=GG.abs.find(x=>x.k===i);
+  P.innerHTML=`<h4>${esc(g&&g.cod||a.t)} · parede ${Math.round(num(a.w))+1}</h4>
+    <div class="form">
+      <label>Tipo<select data-c="t">${["Porta","Janela","Vão"].map(t=>`<option${a.t===t?" selected":""}>${t}</option>`).join("")}</select></label>
+      <label>Largura (m)<input type="number" step="0.05" data-c="l" value="${a.l}"></label>
+      <label>Altura (m)<input type="number" step="0.05" data-c="a" value="${a.a}"></label>
+      <label>Peitoril (m)<input type="number" step="0.05" data-c="p" value="${a.p}"${a.t==="Janela"?"":" disabled"}></label>
+      <label>Distância do começo (m)<input type="number" step="0.05" data-c="d" value="${a.d}"></label>
+      <label>Local / nome<input type="text" data-c="n" value="${esc(a.n||"")}"></label>
+    </div>
+    <div class="row">${a.t==="Porta"?`<button class="btn" data-tg="inv">Abrir para o outro lado</button><button class="btn" data-tg="dob">Trocar dobradiça</button>`:""}<button class="btn dng" data-del>Excluir</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
+  P.querySelectorAll("[data-c]").forEach(el=>el.addEventListener("change",()=>{ const c=el.dataset.c; a[c]=(c==="t"||c==="n")?el.value:num(el.value);
+    if(c==="t"){ const df=ABDEF[a.t]; a.a=df.a; a.p=df.p; } renderAb(); render(); painelAbertura(i); }));
+  P.querySelectorAll("[data-tg]").forEach(b=>b.onclick=()=>{ a[b.dataset.tg]=!a[b.dataset.tg]; render(); });
+  P.querySelector("[data-del]").onclick=()=>{ S.ab.splice(i,1); P.hidden=true; renderAb(); render(); };
+  P.querySelector("[data-close]").onclick=()=>P.hidden=true;
+}
+function painelAmbiente(C,x,y){
+  const P=$("selPanel"); P.hidden=false; const r=GG.rooms.find(q=>q===C); const atual=r&&r.labIdx>=0?S.rooms[r.labIdx].n:"";
+  P.innerHTML=`<h4>Ambiente${r?` · ${f(r.area)} m²`:""}</h4><div class="form"><label>Nome<input type="text" id="ambNome" value="${esc(atual)}" placeholder="ex.: Quarto 1"></label></div>
+    <div class="row"><button class="btn pri" id="ambOk">Salvar nome</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
+  $("ambOk").onclick=()=>{ const n=$("ambNome").value.trim(); if(r&&r.labIdx>=0){ S.rooms[r.labIdx].n=n; } else S.rooms.push({n,x:+x.toFixed(2),y:+y.toFixed(2)}); renderRooms(); render(); P.hidden=true; };
+  P.querySelector("[data-close]").onclick=()=>P.hidden=true;
+  setTimeout(()=>$("ambNome").focus(),30);
+}
+
+/* ======================================================================
+   FORMULÁRIOS
+   ====================================================================== */
+const path=id=>id.split(".");
+function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
+function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
+const FIELDS=["obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["obra","cliente","local","emp","rtNome","crea","data","tel.dir","tel.telha","tel.plat"];
+function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; renderWalls(); renderRooms(); renderAb(); }
+let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
+FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
+  el.addEventListener(el.tagName==="SELECT"?"change":"input",()=>{ const v=TEXTOS.includes(id)?el.value:num(el.value); setv(id,v);
+    if(id==="tel.telha"){ S.tel.inc=INC_TELHA[v]||S.tel.inc; $("tel.inc").value=S.tel.inc; }
+    if(el.tagName==="SELECT") render(); else later(); }); });
+$("fmt").onchange=()=>{ S.fmt=$("fmt").value; save(); };
+$("roofTypes").addEventListener("click",e=>{ const b=e.target.closest("[data-tipo]"); if(!b) return; const tp=+b.dataset.tipo; S.tel.tipo=tp; S.tel.dir=dirPadrao(tp,GG||geom()); render(); });
+["A","B"].forEach(q=>{ const set=v=>{ S["c"+q]=num(v); later(); }; $("c"+q+"r").addEventListener("input",e=>{ $("c"+q+"n").value=e.target.value; set(e.target.value); }); $("c"+q+"n").addEventListener("change",e=>set(e.target.value)); });
+
+function renderWalls(){
+  $("wtab").innerHTML=`<tr><th>Nº</th><th>x1</th><th>y1</th><th>x2</th><th>y2</th><th class="n">m</th><th></th></tr>`+S.walls.map((w,i)=>
+    `<tr><td class="n" style="font-size:12px">${i+1}</td>${["x1","y1","x2","y2"].map(c=>`<td><input type="number" step="0.05" data-i="${i}" data-c="${c}" value="${w[c]}" aria-label="Parede ${i+1} ${c}"></td>`).join("")}<td class="n" style="font-size:12px;color:var(--muted)">${f(Math.hypot(num(w.x2)-num(w.x1),num(w.y2)-num(w.y1)))}</td><td><button class="btn x" data-del="${i}" aria-label="Remover parede ${i+1}">×</button></td></tr>`).join("");
+}
+$("wtab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null)return; S.walls[i][c]=num(e.target.value); later();});
+$("wtab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; const i=+d; S.walls.splice(i,1);
+  S.ab=S.ab.filter(a=>Math.round(num(a.w))!==i).map(a=>Math.round(num(a.w))>i?{...a,w:Math.round(num(a.w))-1}:a); renderWalls(); renderAb(); render();});
+$("addW").onclick=()=>{S.walls.push({x1:0,y1:0,x2:1,y2:0}); renderWalls(); render(); const ins=$("wtab").querySelectorAll(`input[data-i="${S.walls.length-1}"]`); if(ins[0]) ins[0].focus();};
+function renderRooms(){
+  $("rtab").innerHTML=`<tr><th>Nome</th><th>x</th><th>y</th><th></th></tr>`+S.rooms.map((r,i)=>
+    `<tr><td><input type="text" data-i="${i}" data-c="n" value="${esc(r.n)}" aria-label="Nome do ambiente"></td><td><input type="number" step="0.1" data-i="${i}" data-c="x" value="${r.x}" aria-label="x"></td><td><input type="number" step="0.1" data-i="${i}" data-c="y" value="${r.y}" aria-label="y"></td><td><button class="btn x" data-del="${i}" aria-label="Remover ambiente">×</button></td></tr>`).join("");
+}
+$("rtab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null)return; S.rooms[i][c]=c==="n"?e.target.value:num(e.target.value); later();});
+$("rtab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; S.rooms.splice(+d,1); renderRooms(); render();});
+$("addR").onclick=()=>{S.rooms.push({n:"Ambiente",x:1,y:1}); renderRooms(); render();};
+function renderAb(){
+  const opW=S.walls.map((_,i)=>i);
+  $("atab").innerHTML=`<tr><th>Tipo</th><th>Parede</th><th>Dist.</th><th>Larg.</th><th>Alt.</th><th>Peit.</th><th>Local</th><th></th></tr>`+S.ab.map((a,i)=>
+    `<tr><td><select data-i="${i}" data-c="t" aria-label="Tipo">${["Porta","Janela","Vão"].map(t=>`<option${a.t===t?" selected":""}>${t}</option>`).join("")}</select></td>
+    <td><select data-i="${i}" data-c="w" aria-label="Parede">${opW.map(j=>`<option value="${j}"${Math.round(num(a.w))===j?" selected":""}>${j+1}</option>`).join("")}</select></td>
+    ${["d","l","a","p"].map(c=>`<td><input type="number" step="0.05" data-i="${i}" data-c="${c}" value="${a[c]}" aria-label="${c}"${c==="p"&&a.t!=="Janela"?" disabled":""}></td>`).join("")}
+    <td><input type="text" data-i="${i}" data-c="n" value="${esc(a.n||"")}" aria-label="Local"></td><td><button class="btn x" data-del="${i}" aria-label="Remover abertura">×</button></td></tr>`).join("");
+}
+$("atab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||e.target.tagName==="SELECT")return; S.ab[i][c]=c==="n"?e.target.value:num(e.target.value); later();});
+$("atab").addEventListener("change",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||e.target.tagName!=="SELECT")return;
+  if(c==="t"){ S.ab[i].t=e.target.value; const df=ABDEF[S.ab[i].t]; S.ab[i].a=df.a; S.ab[i].p=df.p; renderAb(); } else S.ab[i].w=+e.target.value; render();});
+$("atab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; S.ab.splice(+d,1); renderAb(); render();});
+$("addA").onclick=()=>{S.ab.push({n:"",t:"Janela",w:0,d:0.5,l:1.2,a:1.0,p:1.1}); renderAb(); render();};
+$("preset42").onclick=()=>{S.walls=clone(WALLS42); S.rooms=clone(ROOMS42); S.ab=clone(AB42); S.esp=0.15; S.cA=1.8; S.cB=4.5; loadForm(); render();};
+$("novo").onclick=()=>{$("novoConf").hidden=false;};
+$("novoNao").onclick=()=>{$("novoConf").hidden=true;};
+$("novoSim").onclick=()=>{
+  S.obra="Nova obra"; S.cliente=""; S.local=""; S.data=new Date().toLocaleDateString("pt-BR");
+  S.walls=[{x1:0,y1:0,x2:6,y2:0},{x1:6,y1:0,x2:6,y2:7},{x1:6,y1:7,x2:0,y2:7},{x1:0,y1:7,x2:0,y2:0}];
+  S.rooms=[]; S.ab=[]; S.cA=null; S.cB=null;
+  $("novoConf").hidden=true; loadForm(); render(); $("obra").focus();
+};
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
+  ["planta","cortes","cob","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
+});
+
+/* ======================================================================
+   SALVAR ARQUIVOS (igual ao app de fundação)
+   ====================================================================== */
+async function saveFile(name,data,mime){
+  let dl=null; try{ dl=window.claude&&await window.claude.use("downloads"); }catch(e){}
+  if(dl){ const r=await dl.save({filename:name,data}); return r.status; }
+  if(window.claude) throw {code:"unavailable"};
+  const url=URL.createObjectURL(new Blob([data],{type:mime})); const a=document.createElement("a");
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000); return "saved";
+}
+function showText(after,txt){ const ta=document.createElement("textarea"); ta.value=txt; ta.rows=10; ta.style.marginTop="10px"; ta.readOnly=true; after.parentNode.after(ta); ta.select(); }
+function to1252(str){ const o=new Uint8Array(str.length); for(let i=0;i<str.length;i++){const c=str.charCodeAt(i); o[i]=c<256?c:63;} return o; }
+const CRC=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[i]=c>>>0;}return t;})();
+function zipOne(name,data){
+  const nb=new TextEncoder().encode(name); let crc=0xFFFFFFFF; for(const b of data) crc=CRC[(crc^b)&255]^(crc>>>8); crc=(crc^0xFFFFFFFF)>>>0;
+  const lh=new Uint8Array(30+nb.length), cd=new Uint8Array(46+nb.length), end=new Uint8Array(22);
+  const Lh=new DataView(lh.buffer), C=new DataView(cd.buffer), E=new DataView(end.buffer), sz=data.length;
+  Lh.setUint32(0,0x04034b50,true);Lh.setUint16(4,20,true);Lh.setUint16(8,0,true);Lh.setUint16(10,0,true);Lh.setUint16(12,0x21,true);Lh.setUint32(14,crc,true);Lh.setUint32(18,sz,true);Lh.setUint32(22,sz,true);Lh.setUint16(26,nb.length,true);lh.set(nb,30);
+  C.setUint32(0,0x02014b50,true);C.setUint16(4,20,true);C.setUint16(6,20,true);C.setUint16(14,0x21,true);C.setUint32(16,crc,true);C.setUint32(20,sz,true);C.setUint32(24,sz,true);C.setUint16(28,nb.length,true);C.setUint32(42,0,true);cd.set(nb,46);
+  E.setUint32(0,0x06054b50,true);E.setUint16(8,1,true);E.setUint16(10,1,true);E.setUint32(12,cd.length,true);E.setUint32(16,lh.length+sz,true);
+  const out=new Uint8Array(lh.length+sz+cd.length+22); out.set(lh,0); out.set(data,lh.length); out.set(cd,lh.length+sz); out.set(end,lh.length+sz+cd.length); return out;
+}
+const slug=()=>(S.obra||"arquitetonico").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40)||"arquitetonico";
+
+/* ======================================================================
+   PRANCHAS: escala de cada desenho e posição na folha
+   ====================================================================== */
+const ESCALAS=[20,25,50,75,100,125,150,200,250,500];
+function encaixar(gerar,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=s/1000, D=gerar(k), e=extensao(D), w=(e.x1-e.x0)/k, h=(e.y1-e.y0)/k; ult={D,s,k,e,w,h}; if(w<=bw&&h<=bh) return ult; } return ult; }
+function encaixar2(g1,g2,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=s/1000, D1=g1(k), D2=g2(k), e1=extensao(D1), e2=extensao(D2);
+    const a={D:D1,s,k,e:e1,w:(e1.x1-e1.x0)/k,h:(e1.y1-e1.y0)/k}, b={D:D2,s,k,e:e2,w:(e2.x1-e2.x0)/k,h:(e2.y1-e2.y0)/k}; ult=[a,b];
+    if(a.w<=bw&&b.w<=bw&&a.h<=bh&&b.h<=bh) return ult; } return ult; }
+const SHEETS={A4:[297,210],A3:[420,297],A2:[594,420],A1:[841,594]};
+function pranchas(fmt){
+  const [W,H]=SHEETS[fmt]||SHEETS.A3, mo=7, ml=25, cw=fmt==="A4"?118:180, ch=64, TT=11;
+  const G=geom(), Q=esquadrias(G), TI=infoTelhado(G);
+  const area={x0:ml+6,y0:mo+5,x1:W-mo-6,y1:H-mo-ch-5}, aw=area.x1-area.x0, ah=area.y1-area.y0;
+  const side={x0:ml+6,y0:H-mo-ch+2,x1:W-mo-cw-6,y1:H-mo-3};
+  const pl=encaixar(k=>desenhoPlanta(G,k,false),aw,ah-TT);
+  const [ca,cb]=encaixar2(k=>desenhoCorte(G,k,"A"),k=>desenhoCorte(G,k,"B"),aw,(ah-2*TT-6)/2);
+  const co=encaixar(k=>desenhoCobertura(G,k),aw,ah-TT);
+  return {W,H,mo,ml,cw,ch,TT,area,side,G,Q,TI,folhas:[
+    {n:"01/03",conteudo:"PLANTA BAIXA, QUADRO DE ÁREAS E DE ESQUADRIAS",escala:`1:${pl.s}`,itens:[{d:pl,titulo:"PLANTA BAIXA",box:[area.x0,area.y0,aw,ah]}],lado:"quadros"},
+    {n:"02/03",conteudo:"CORTES AA E BB",escala:`1:${ca.s}`,itens:[{d:ca,titulo:"CORTE AA",box:[area.x0,area.y0,aw,ah/2-3]},{d:cb,titulo:"CORTE BB",box:[area.x0,area.y0+ah/2+3,aw,ah/2-3]}],lado:"alturas"},
+    {n:"03/03",conteudo:"PLANTA DE COBERTURA",escala:`1:${co.s}`,itens:[{d:co,titulo:"PLANTA DE COBERTURA",box:[area.x0,area.y0,aw,ah]}],lado:"telhado"}
+  ]};
+}
+function textosLado(P,lado){
+  const {G,Q,TI}=P, pd=num(S.pd);
+  if(lado==="quadros"){
+    const util=G.rooms.reduce((s,r)=>s+r.area,0);
+    return [{t:"QUADRO DE ÁREAS",cols:[["AMBIENTE",0],["ÁREA (m²)",1]],rows:[...G.rooms.map(r=>[r.n,f(r.area)]),["ÁREA ÚTIL",f(util),1],["ÁREA CONSTRUÍDA",f(G.areaC),1]]},
+      {t:"QUADRO DE ESQUADRIAS",cols:[["CÓD.",0],["TIPO",0],["L x H",1],["PEIT.",1],["QTD",1]],rows:Q.map(q=>[q.cod,q.tipo,`${f(q.l)} x ${f(q.a)}`,q.tipo==="Janela"?f(q.p):"-",String(q.q)])}];
+  }
+  if(lado==="alturas") return [{t:"NOTAS",linhas:[`Pé-direito: ${f(pd)} m.`,`Laje/forro: ${f(num(S.laje))} m. Piso a ${f(num(S.piso))} m do terreno.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}, i = ${f(num(S.tel.inc),0)}%.`,`Paredes com ${f(G.t)} m de espessura.`,`Cotas e níveis em metros. Conferir as medidas na obra.`]}];
+  return [{t:"COBERTURA",linhas:[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}.`,`Inclinação ${f(num(S.tel.inc),0)}%.`+(TI.plat?" Platibanda com calha.":` Beiral ${f(TI.b)} m.`),`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`,(TI.Lcum?`Cumeeira: ${f(TI.Lcum)} m.`:"")+(TI.Lesp?` Espigões: ${f(TI.Lesp)} m.`:""),`Altura máxima: ${f(TI.plat?TI.topoPlat:TI.zmax)} m acima do piso.`].filter(Boolean)}];
+}
+
+/* ---------------- DXF ---------------- */
+const LAYERS={PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],GERAL:[7,"CONTINUOUS"]};
+function dxfEnc(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?"); }
+function buildDXF(){
+  const P=pranchas(S.fmt||"A3"), o=[], p=(c,v)=>o.push(String(c),String(v)), n=v=>(+v).toFixed(4);
+  p(0,"SECTION");p(2,"HEADER");p(9,"$ACADVER");p(1,"AC1009");p(9,"$INSUNITS");p(70,6);p(9,"$DWGCODEPAGE");p(3,"ANSI_1252");p(9,"$LTSCALE");p(40,"1.0");p(0,"ENDSEC");
+  p(0,"SECTION");p(2,"TABLES");p(0,"TABLE");p(2,"LTYPE");p(70,2);
+  p(0,"LTYPE");p(2,"CONTINUOUS");p(70,0);p(3,"Solid line");p(72,65);p(73,0);p(40,"0.0");
+  p(0,"LTYPE");p(2,"DASHED");p(70,0);p(3,"__ __ __");p(72,65);p(73,2);p(40,"0.30");p(49,"0.20");p(49,"-0.10");
+  p(0,"ENDTAB");p(0,"TABLE");p(2,"LAYER");p(70,Object.keys(LAYERS).length);
+  Object.entries(LAYERS).forEach(([k,[c,lt]])=>{p(0,"LAYER");p(2,k);p(70,0);p(62,c);p(6,lt);});
+  p(0,"ENDTAB");p(0,"ENDSEC");
+  p(0,"SECTION");p(2,"ENTITIES");
+  const lay=l=>LAYERS[l]?l:"GERAL";
+  const T=(x,y,h,t,l,al=0,rot=0)=>{ p(0,"TEXT");p(8,l);p(10,n(x));p(20,n(y));p(30,0);p(40,n(h));p(1,dxfEnc(t)); if(rot)p(50,n(rot)); p(72,al);p(73,2);p(11,n(x));p(21,n(y));p(31,0); };
+  let cur=0;
+  P.folhas.forEach(fl=>fl.itens.forEach(it=>{
+    const {D,e,k,s}=it.d, dx=cur-e.x0, X=x=>x+dx, Yy=y=>-(y-e.y0);
+    D.p.forEach(q=>{ const l=lay(q.l);
+      if(q.t==="l"){ p(0,"LINE");p(8,l); if(q.d) p(6,"DASHED"); p(10,n(X(q.x1)));p(20,n(Yy(q.y1)));p(30,0);p(11,n(X(q.x2)));p(21,n(Yy(q.y2)));p(31,0); }
+      else if(q.t==="r"){ p(0,"SOLID");p(8,l);p(10,n(X(q.x0)));p(20,n(Yy(q.y0)));p(30,0);p(11,n(X(q.x1)));p(21,n(Yy(q.y0)));p(31,0);p(12,n(X(q.x0)));p(22,n(Yy(q.y1)));p(32,0);p(13,n(X(q.x1)));p(23,n(Yy(q.y1)));p(33,0); }
+      else if(q.t==="g"){ const pts=q.pts; if(pts.length===3||pts.length===4){ const v=pts.length===3?[pts[0],pts[1],pts[2],pts[2]]:[pts[0],pts[1],pts[3],pts[2]];
+          p(0,"SOLID");p(8,l); v.forEach(([x,y],j)=>{ p(10+j,n(X(x))); p(20+j,n(Yy(y))); p(30+j,0); }); } }
+      else if(q.t==="a"){ const a1=Math.atan2(-(q.y1-q.cy),q.x1-q.cx)*180/Math.PI, a2=Math.atan2(-(q.y2-q.cy),q.x2-q.cx)*180/Math.PI; let s0=a1, s1=a2; if(((a2-a1)%360+360)%360>180){ s0=a2; s1=a1; }
+        p(0,"ARC");p(8,l);p(10,n(X(q.cx)));p(20,n(Yy(q.cy)));p(30,0);p(40,n(q.r));p(50,n((s0+360)%360));p(51,n((s1+360)%360)); }
+      else if(q.t==="c"){ p(0,"CIRCLE");p(8,l);p(10,n(X(q.cx)));p(20,n(Yy(q.cy)));p(30,0);p(40,n(q.r)); }
+      else if(q.t==="t") T(X(q.x),Yy(q.y),q.h*k,q.txt,l,{s:0,m:1,e:2}[q.a],-q.rot);
+    });
+    T(cur,0.9*s/50,4*k,`${it.titulo} - ESC. 1:${s}`,"TITULOS",0,0);
+    cur+=(e.x1-e.x0)+3;
+  }));
+  // dados do projeto
+  [S.obra,S.cliente?("Proprietário: "+S.cliente):"",S.local,S.rt,S.data].filter(Boolean).forEach((t,i)=>T(0,-(P.folhas[0].itens[0].d.e.y1-P.folhas[0].itens[0].d.e.y0)-1-i*0.35,0.18,t,"TEXTO",0,0));
+  p(0,"ENDSEC");p(0,"EOF");
+  return o.join("\r\n")+"\r\n";
+}
+const setDxfMsg=t=>document.querySelectorAll("[data-dxfmsg]").forEach(m=>m.textContent=t);
+document.querySelectorAll("[data-dxf]").forEach(b=>b.onclick=async()=>{
+  try{ const bytes=to1252(buildDXF()); let st;
+    if(window.claude) st=await saveFile(slug()+"-DXF.zip",zipOne(slug()+".dxf",bytes),"application/zip");
+    else st=await saveFile(slug()+".dxf",bytes,"application/dxf");
+    setDxfMsg(st==="saved"?"Arquivo salvo.":"Arquivo enviado."); }
+  catch(e){ setDxfMsg(e&&e.code==="declined"?"Download cancelado.":"Não foi possível baixar aqui. Use Copiar DXF."); }
+});
+document.querySelectorAll("[data-dxfcopy]").forEach(b=>b.onclick=async()=>{
+  const txt=buildDXF();
+  try{ await navigator.clipboard.writeText(txt); setDxfMsg("DXF copiado. Cole num arquivo de texto e salve com extensão .dxf."); }
+  catch(e){ showText(b,txt); setDxfMsg("Selecione o texto abaixo, copie e salve como .dxf."); }
+});
+
+/* ---------------- PDF (escrito à mão, sem bibliotecas) ---------------- */
+const PDFCOR={PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3]};
+function pdfTxt(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?").replace(/[\\()]/g,m=>"\\"+m); }
+function buildPDF(fmt){
+  const P=pranchas(fmt), {W,H,mo,ml,cw,ch,TT,side}=P; const n=v=>(+v).toFixed(3); let c=[]; const pages=[];
+  // coordenadas: (x, y) em mm a partir do canto superior esquerdo
+  const gray=(g,f)=>c.push(`${n(g)} ${f?"g":"G"}`);
+  const lw=w=>c.push(`${n(w)} w`);
+  const dash=d=>c.push(d?"[1.6 0.8] 0 d":"[] 0 d");
+  const line=(x1,y1,x2,y2)=>c.push(`${n(x1)} ${n(H-y1)} m ${n(x2)} ${n(H-y2)} l S`);
+  const rect=(x,y,w,h,fill)=>c.push(`${n(x)} ${n(H-y-h)} ${n(w)} ${n(h)} re ${fill?"f":"S"}`);
+  const poly=(pts,fill)=>c.push(pts.map((q,i)=>`${n(q[0])} ${n(H-q[1])} ${i?"l":"m"}`).join(" ")+(fill?" h f":" S"));
+  const text=(x,y,sz,t,bold=false,al=0,rot=0)=>{ if(t===""||t==null) return; const fs=sz*1.39, w=String(t).length*fs*(bold?0.58:0.52)*(al===1?.5:al===2?1:0);
+    const a=-rot*Math.PI/180, cs=Math.cos(a), sn=Math.sin(a); const X=x, Yp=H-y; const tx=X-w*cs+(sz/2)*sn, ty=Yp-w*sn-(sz/2)*cs;
+    c.push(`BT /${bold?"F2":"F1"} ${n(fs)} Tf ${n(cs)} ${n(sn)} ${n(-sn)} ${n(cs)} ${n(tx)} ${n(ty)} Tm (${pdfTxt(t)}) Tj ET`); };
+  const wrap=(t,sz,wmm)=>{ const max=Math.max(8,Math.floor(wmm/(sz*1.39*0.53))); const out=[]; let cur="";
+    String(t).split(" ").forEach(wd=>{ if((cur+" "+wd).trim().length>max){ if(cur.trim()) out.push(cur.trim()); cur=wd; } else cur+=" "+wd; }); if(cur.trim()) out.push(cur.trim()); return out; };
+  const carimbo=(fl)=>{
+    const cx=W-mo-cw, cy=H-mo-ch, q=cw/180; gray(0); lw(.6); rect(ml,mo,W-ml-mo,H-2*mo); lw(.4); rect(cx,cy,cw,ch);
+    const rows=[14,10,10,8,14,8]; let yy=cy; const yl=[]; rows.forEach(h=>{ yy+=h; yl.push(yy); if(yy<cy+ch-0.01){ lw(.25); line(cx,yy,cx+cw,yy); } });
+    gray(0,true); const ts=2.1, lab=1.5;
+    text(cx+3,cy+5,3.6,(S.emp||"").toUpperCase(),true); if(q>0.9) text(cx+118,cy+5,2,"PROJETO ARQUITETÔNICO",true); else text(cx+3,cy+10.5,1.7,"PROJETO ARQUITETÔNICO",true);
+    text(cx+3,yl[0]+2.2,lab,"OBRA"); text(cx+3,yl[0]+6.6,2.4,S.obra||"",true);
+    line(cx+100*q,yl[0],cx+100*q,yl[1]);
+    text(cx+3,yl[1]+2.2,lab,"PROPRIETÁRIO"); text(cx+3,yl[1]+6.6,ts,S.cliente||"-");
+    text(cx+100*q+3,yl[1]+2.2,lab,"LOCAL"); text(cx+100*q+3,yl[1]+6.6,ts,S.local||"-");
+    text(cx+3,yl[2]+2,lab,"CONTEÚDO"); text(cx+3,yl[2]+5.6,ts,fl.conteudo);
+    text(cx+3,yl[3]+2.2,lab,"RESPONSÁVEL TÉCNICO"); text(cx+3,yl[3]+6.6,2.4,S.rtNome||"",true); text(cx+3,yl[3]+11,ts,S.crea||"");
+    lw(.2); line(cx+105*q,yl[3]+9.5,cx+cw-5,yl[3]+9.5); text(cx+105*q+(cw-5-105*q)/2,yl[3]+12,lab,"assinatura",false,1);
+    const bx=[0,45,90,135].map(v=>v*q); bx.slice(1).forEach(x=>line(cx+x,yl[4],cx+x,cy+ch));
+    [["ESCALA",fl.escala],["DATA",S.data||""],["FORMATO",fmt],["PRANCHA",fl.n]].forEach(([a,b],i)=>{ text(cx+bx[i]+3,yl[4]+2.2,lab,a); text(cx+bx[i]+3,yl[4]+6,ts,b,true); });
+  };
+  const desenho=(it)=>{
+    const {D,e,k,s,w,h}=it.d, [bx,by,bw,bh]=it.box;
+    const ox=bx+(bw-w)/2, oy=by+TT+Math.max(0,(bh-TT-h)/2), X=x=>ox+(x-e.x0)/k, Y=y=>oy+(y-e.y0)/k;
+    const tw=it.titulo.length*3.2*1.39*0.68;
+    gray(0,true); text(ox,oy-TT+4,3.2,it.titulo,true); text(ox+tw+3,oy-TT+4,2.2,`ESC. 1:${s}`);
+    lw(.3); gray(0); line(ox,oy-TT+6.5,ox+tw+24,oy-TT+6.5);
+    // preenchimentos primeiro, depois traços e textos
+    D.p.forEach(q=>{ const st=PDFCOR[q.l]||PDFCOR.GERAL;
+      if(q.t==="r"){ gray(st[0],true); rect(X(q.x0),Y(q.y0),(q.x1-q.x0)/k,(q.y1-q.y0)/k,true); }
+      else if(q.t==="g"){ gray(q.l==="HACHURA"?st[0]:0,true); poly(q.pts.map(([x,y])=>[X(x),Y(y)]),true); } });
+    D.p.forEach(q=>{ const st=PDFCOR[q.l]||PDFCOR.GERAL;
+      if(q.t==="l"){ gray(q.l==="HACHURA"?0:st[0]); lw(q.w); dash(q.d); line(X(q.x1),Y(q.y1),X(q.x2),Y(q.y2)); }
+      else if(q.t==="a"){ gray(0); lw(q.w); dash(false); const a0=Math.atan2(q.y1-q.cy,q.x1-q.cx), a1=Math.atan2(q.y2-q.cy,q.x2-q.cx); let d=a1-a0; while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI;
+        const pts=[]; for(let m=0;m<=12;m++){ const a=a0+d*m/12; pts.push([X(q.cx+q.r*Math.cos(a)),Y(q.cy+q.r*Math.sin(a))]); } poly(pts,false); }
+      else if(q.t==="c"){ gray(st[0]); lw(q.w); dash(false); const pts=[]; for(let m=0;m<=24;m++){ const a=m/24*2*Math.PI; pts.push([X(q.cx+q.r*Math.cos(a)),Y(q.cy+q.r*Math.sin(a))]); } poly(pts,false); }
+      else if(q.t==="t"){ gray(q.l==="COTAS"?.25:0,true); text(X(q.x),Y(q.y),q.h,q.txt,q.b,{s:0,m:1,e:2}[q.a],q.rot); } });
+    dash(false);
+  };
+  const ladoBox=(fl)=>{
+    const blocos=textosLado(P,fl.lado), x0=side.x0, x1=side.x1, gap=6, pesos=blocos.map(b=>b.cols&&b.cols.length>2?1.5:1), tot=pesos.reduce((a,b)=>a+b,0);
+    let xc=x0;
+    blocos.forEach((b,bi)=>{ const wcol=(x1-x0-gap*(blocos.length-1))*pesos[bi]/tot, x=xc; xc+=wcol+gap; let y=side.y0+4; gray(0,true); text(x,y,2.4,b.t,true); y+=5;
+      const sz=1.8, lh=3.4;
+      if(b.cols){ const n_=b.cols.length, pc=n_>2?[0.12,0.22,0.32,0.18,0.16]:[0.64,0.36], cwid=b.cols.map((_,i)=>wcol*pc[i]); let xx=x; const cx=[]; cwid.forEach(w=>{ cx.push(xx); xx+=w; });
+        b.cols.forEach(([t,al],i)=>text(al?cx[i]+cwid[i]-1:cx[i],y,1.5,t,true,al?2:0)); lw(.2); gray(0); line(x,y+1.8,x+wcol,y+1.8); y+=lh+0.6;
+        b.rows.forEach(r=>{ if(y>side.y1-1) return; r.slice(0,n_).forEach((t,i)=>text(b.cols[i][1]?cx[i]+cwid[i]-1:cx[i],y,sz,t,!!r[n_]||i===0&&n_>2,b.cols[i][1]?2:0)); y+=lh; });
+        if(!b.rows.length) text(x,y,sz,"Nenhuma.");
+      } else b.linhas.forEach(l=>wrap(l,sz,wcol).forEach(t=>{ if(y<side.y1-1){ text(x,y,sz,t); y+=lh; } }));
+    });
+  };
+  P.folhas.forEach(fl=>{ c=["2.834646 0 0 2.834646 0 0 cm 1 J 1 j"]; carimbo(fl); fl.itens.forEach(desenho); ladoBox(fl); pages.push(c); });
+  const objs=["<< /Type /Catalog /Pages 2 0 R >>",`<< /Type /Pages /Kids [${pages.map((_,i)=>`${5+2*i} 0 R`).join(" ")}] /Count ${pages.length} >>`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"];
+  pages.forEach((pc,i)=>{ const content=pc.join("\n");
+    objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${n(W*2.834646)} ${n(H*2.834646)}] /Contents ${6+2*i} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>`);
+    objs.push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`); });
+  let out="%PDF-1.4\n%\xE2\xE3\xCF\xD3\n"; const offs=[];
+  objs.forEach((o,i)=>{ offs.push(out.length); out+=`${i+1} 0 obj\n${o}\nendobj\n`; });
+  const xr=out.length; out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+offs.map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("");
+  out+=`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF\n`;
+  return to1252(out);
+}
+$("pdfBtn").onclick=async()=>{
+  const msg=$("pdfMsg"), fmt=$("fmt").value;
+  try{ const st=await saveFile(`${slug()}-${fmt}.pdf`,buildPDF(fmt),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }
+  catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar o PDF agora."; }
+};
+
+/* ======================================================================
+   IMPORTAR PLANTA (mesma leitura do app de fundação + posição dos vãos)
+   ====================================================================== */
+let IMP=null, impFileObj=null, impDxf=null, impCtl=null, impPdfDoc=null, impPdfLib=null, impPdfSegs=null, impPdfAll=null;
+const impMsg=t=>{$("impMsg").textContent=t;};
+function loadScript(src){return new Promise((res,rej)=>{const e=document.createElement("script");e.src=src;e.onload=res;e.onerror=()=>rej(new Error("script"));document.head.appendChild(e);});}
+function parseDXF(txt){
+  const Ls=txt.split(/\r?\n/); const pr=[]; for(let i=0;i+1<Ls.length;i+=2) pr.push([Ls[i].trim(),Ls[i+1].trim()]);
+  let units=0, sec="", ent=null; const segs=[]; let poly=null;
+  const flush=()=>{ if(!ent) return;
+    if(ent.t==="LINE") segs.push({l:ent.l,x1:ent[10],y1:ent[20],x2:ent[11],y2:ent[21]});
+    if(ent.t==="LWPOLYLINE"){ const v=ent.v; for(let k=0;k+1<v.length;k++) segs.push({l:ent.l,x1:v[k][0],y1:v[k][1],x2:v[k+1][0],y2:v[k+1][1]}); if(ent.cl&&v.length>2) segs.push({l:ent.l,x1:v[v.length-1][0],y1:v[v.length-1][1],x2:v[0][0],y2:v[0][1]}); }
+    if(ent.t==="VERTEX"&&poly) poly.v.push([ent[10],ent[20]]);
+    ent=null; };
+  for(let i=0;i<pr.length;i++){ const [c,v]=pr[i];
+    if(c==="0"){ flush();
+      if(v==="SECTION"){ sec=pr[i+1]&&pr[i+1][1]; continue; }
+      if(v==="SEQEND"&&poly){ const q=poly.v; for(let k=0;k+1<q.length;k++) segs.push({l:poly.l,x1:q[k][0],y1:q[k][1],x2:q[k+1][0],y2:q[k+1][1]}); if(poly.cl&&q.length>2) segs.push({l:poly.l,x1:q[q.length-1][0],y1:q[q.length-1][1],x2:q[0][0],y2:q[0][1]}); poly=null; continue; }
+      if(sec==="ENTITIES"){ if(v==="POLYLINE"){ poly={l:"0",v:[],cl:false}; ent={t:"POLYHEAD"}; } else ent={t:v,v:[]}; }
+      continue; }
+    if(sec==="HEADER"&&c==="9"&&v==="$INSUNITS"&&pr[i+1]) units=+pr[i+1][1];
+    if(!ent) continue;
+    if(c==="8"){ ent.l=v; if(ent.t==="POLYHEAD"&&poly) poly.l=v; }
+    else if(ent.t==="LWPOLYLINE"&&c==="10") ent.v.push([+v,0]);
+    else if(ent.t==="LWPOLYLINE"&&c==="20") ent.v[ent.v.length-1][1]=+v;
+    else if(c==="70"&&(ent.t==="LWPOLYLINE")) ent.cl=(+v&1)===1;
+    else if(c==="70"&&ent.t==="POLYHEAD"&&poly) poly.cl=(+v&1)===1;
+    else if(["10","20","11","21"].includes(c)) ent[c]=+v;
+  }
+  flush(); return {segs,units};
+}
+function wallsFromSegs(segs){
+  // agrupa as linhas por direção, acha o eixo entre as duas faces de cada parede e guarda onde a parede é interrompida (vãos)
+  const lines=segs.map(s=>{ const dx=s.x2-s.x1, dy=s.y2-s.y1, L0=Math.hypot(dx,dy); let a=Math.atan2(dy,dx)*180/Math.PI; a=((a%180)+180)%180; return {...s,L:L0,a}; }).filter(s=>s.L>=0.1);
+  const dirs=[]; lines.slice().sort((p,q)=>q.L-p.L).forEach(s=>{ const d=dirs.find(d=>{ const df=Math.abs(d.a-s.a); return Math.min(df,180-df)<0.6; }); if(d){ d.len+=s.L; } else dirs.push({a:s.a,len:s.L}); });
+  const gapSegs=[];
+  const axes=list=>{ const cl=[];
+    list.forEach((s,i)=>{ const cand=[];
+      list.forEach((q,j)=>{ if(i===j) return; const d=Math.abs(q.c-s.c); if(d<0.07||d>0.35) return; const ov=Math.min(s.b,q.b)-Math.max(s.a,q.a); if(ov<0.15) return; cand.push({d,q,ov}); });
+      if(!cand.length) return;
+      let bestD=null, bestCov=-1;
+      cand.forEach(x=>{ const cov=cand.filter(y=>Math.abs(y.d-x.d)<=0.02).reduce((t,y)=>t+y.ov,0); if(cov>bestCov+0.05||(Math.abs(cov-bestCov)<=0.05&&x.d<bestD)){ bestCov=cov; bestD=x.d; } });
+      cand.filter(x=>Math.abs(x.d-bestD)<=0.02).forEach(x=>cl.push({c:(s.c+x.q.c)/2,a:Math.max(s.a,x.q.a),b:Math.min(s.b,x.q.b),t:x.d})); });
+    cl.sort((p,q)=>p.c-q.c||p.a-q.a);
+    const groups=[]; cl.forEach(x=>{ const g=groups.find(g=>Math.abs(g.c-x.c)<0.03); if(g){g.items.push(x);} else groups.push({c:x.c,items:[x]}); });
+    const out=[];
+    groups.forEach(g=>{ const it=g.items.sort((p,q)=>p.a-q.a); const lw=it.reduce((s,x)=>s+(x.b-x.a),0)||1, c=it.reduce((s,x)=>s+x.c*(x.b-x.a),0)/lw, t=it.reduce((s,x)=>Math.max(s,x.t),0);
+      let cur={c,a:it[0].a,b:it[0].b,t,g:[]};
+      for(let k=1;k<it.length;k++){ const x=it[k]; const gap=x.a-cur.b;
+        if(gap<=3.2){ if(gap>=0.5) cur.g.push([cur.b,x.a]); cur.b=Math.max(cur.b,x.b); } else { out.push(cur); cur={c,a:x.a,b:x.b,t,g:[]}; } }
+      out.push(cur); });
+    return out.filter(w=>!out.some(p=>p!==w&&(p.b-p.a)>(w.b-w.a)&&Math.abs(p.c-w.c)<=Math.max(p.t||0.15,0.12)&&p.a<=w.a+0.05&&p.b>=w.b-0.05)); };
+  let W=[];
+  dirs.filter(d=>d.len>=0.6).forEach(d=>{
+    const r=d.a*Math.PI/180, cs=Math.cos(r), sn=Math.sin(r);
+    const loc=lines.filter(s=>{ const df=Math.abs(d.a-s.a); return Math.min(df,180-df)<0.6; }).map(s=>{
+      const u1=s.x1*cs+s.y1*sn, v1=-s.x1*sn+s.y1*cs, u2=s.x2*cs+s.y2*sn, v2=-s.x2*sn+s.y2*cs; return {c:(v1+v2)/2,a:Math.min(u1,u2),b:Math.max(u1,u2)}; });
+    axes(loc).forEach(w=>{ W.push({x1:w.a*cs-w.c*sn,y1:w.a*sn+w.c*cs,x2:w.b*cs-w.c*sn,y2:w.b*sn+w.c*cs,t:w.t,ux:cs,uy:sn});
+      w.g.forEach(([a,b])=>gapSegs.push({x1:a*cs-w.c*sn,y1:a*sn+w.c*cs,x2:b*cs-w.c*sn,y2:b*sn+w.c*cs})); });
+  });
+  const inter=(p,q)=>{ const d=p.ux*q.uy-p.uy*q.ux; if(Math.abs(d)<0.17) return null; const t=((q.x1-p.x1)*q.uy-(q.y1-p.y1)*q.ux)/d; return [p.x1+p.ux*t,p.y1+p.uy*t]; };
+  const along=(q,x,y)=>(x-q.x1)*q.ux+(y-q.y1)*q.uy, Lq=q=>Math.hypot(q.x2-q.x1,q.y2-q.y1);
+  W.forEach(w=>{ [["x1","y1","x2","y2"],["x2","y2","x1","y1"]].forEach(([kx,ky,ox,oy])=>{ let best=null;
+    const L0=Math.hypot(w[kx]-w[ox],w[ky]-w[oy])||1, dx=(w[kx]-w[ox])/L0, dy=(w[ky]-w[oy])/L0;
+    W.forEach(q=>{ if(q===w) return; const X=inter(w,q); if(!X) return; const reach=(q.t||0.15)+0.12, s=along(q,X[0],X[1]); if(s<-reach||s>Lq(q)+reach) return;
+      const out=(X[0]-w[kx])*dx+(X[1]-w[ky])*dy;
+      if(out<-((w.t||0.15)+0.15)||out>1.0) return;
+      const d=Math.abs(out); if(!best||d<best.d) best={d,X}; });
+    if(best){ w[kx]=best.X[0]; w[ky]=best.X[1]; } }); });
+  const all=W.filter(w=>Math.hypot(w.x2-w.x1,w.y2-w.y1)>0.3);
+  return {walls:all.map(({x1,y1,x2,y2})=>({x1,y1,x2,y2})),thick:all.map(w=>w.t),gapSegs};
+}
+async function pdfSegments(page,lib){
+  const OPS=lib.OPS, ol=await page.getOperatorList();
+  const mul=(m,q)=>[m[0]*q[0]+m[2]*q[1],m[1]*q[0]+m[3]*q[1],m[0]*q[2]+m[2]*q[3],m[1]*q[2]+m[3]*q[3],m[0]*q[4]+m[2]*q[5]+m[4],m[1]*q[4]+m[3]*q[5]+m[5]];
+  const ap=(m,x,y)=>[m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]];
+  const FILLS=[OPS.fill,OPS.eoFill,OPS.fillStroke,OPS.eoFillStroke,OPS.closeFillStroke,OPS.closeEOFillStroke];
+  let ctm=[1,0,0,1,0,0], fc=0; const stack=[], segs=[], dark=[];
+  for(let i=0;i<ol.fnArray.length;i++){ const fn=ol.fnArray[i], ar=ol.argsArray[i];
+    if(fn===OPS.save) stack.push([ctm,fc]);
+    else if(fn===OPS.restore){ const st=stack.pop()||[[1,0,0,1,0,0],0]; ctm=st[0]; fc=st[1]; }
+    else if(fn===OPS.transform) ctm=mul(ctm,ar);
+    else if(fn===OPS.setFillRGBColor) fc=(ar[0]+ar[1]+ar[2])/3;
+    else if(fn===OPS.setFillGray) fc=(Array.isArray(ar)?ar[0]:ar)*255;
+    else if(fn===OPS.paintFormXObjectBegin){ stack.push([ctm,fc]); if(Array.isArray(ar[0])&&ar[0].length===6) ctm=mul(ctm,ar[0]); }
+    else if(fn===OPS.paintFormXObjectEnd){ const st=stack.pop()||[[1,0,0,1,0,0],0]; ctm=st[0]; fc=st[1]; }
+    else if(fn===OPS.constructPath){ const ops=ar[0], co=ar[1]; let k=0, cur=null, start=null;
+      const isDark=FILLS.includes(ol.fnArray[i+1])&&fc<130; const out=[];
+      const add=(a,b)=>{ const p=ap(ctm,a[0],a[1]), q=ap(ctm,b[0],b[1]); if(Math.hypot(q[0]-p[0],q[1]-p[1])>0.05) out.push({x1:p[0],y1:p[1],x2:q[0],y2:q[1]}); };
+      for(const op of ops){
+        if(op===OPS.moveTo){ if(isDark&&cur&&start&&(cur[0]!==start[0]||cur[1]!==start[1])) add(cur,start); cur=[co[k],co[k+1]]; start=cur; k+=2; }
+        else if(op===OPS.lineTo){ const p=[co[k],co[k+1]]; if(cur) add(cur,p); cur=p; k+=2; }
+        else if(op===OPS.curveTo){ cur=[co[k+4],co[k+5]]; k+=6; }
+        else if(op===OPS.curveTo2||op===OPS.curveTo3){ cur=[co[k+2],co[k+3]]; k+=4; }
+        else if(op===OPS.closePath){ if(cur&&start) add(cur,start); cur=start; }
+        else if(op===OPS.rectangle){ const [x,y,w,h]=co.slice(k,k+4); const P=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
+          for(let j=0;j<4;j++) add(P[j],P[(j+1)%4]); cur=[x,y]; start=cur; k+=4; } }
+      if(isDark&&cur&&start&&(cur[0]!==start[0]||cur[1]!==start[1])) add(cur,start);
+      out.forEach(s=>{ if(Math.hypot(s.x2-s.x1,s.y2-s.y1)>0.3) segs.push(s); });
+      if(isDark) dark.push(...out); } }
+  if(dark.length>=12){
+    const key=(x,y)=>Math.round(x*20)+","+Math.round(y*20), cnt=new Map();
+    const ek=s=>{ const a=key(s.x1,s.y1), b=key(s.x2,s.y2); return a<b?a+"|"+b:b+"|"+a; };
+    dark.forEach(s=>{ const k=ek(s); cnt.set(k,(cnt.get(k)||0)+1); });
+    const edge=dark.filter(s=>cnt.get(ek(s))===1);
+    const len=edge.reduce((t,s)=>t+Math.hypot(s.x2-s.x1,s.y2-s.y1),0);
+    if(len>200) return {segs:edge,hatch:true,all:segs};
+  }
+  return {segs,hatch:false,all:segs};
+}
+function biggestGroup(W,T){
+  const nW=W.length, par=W.map((_,i)=>i), fd=i=>par[i]===i?i:(par[i]=fd(par[i]));
+  const onSeg=(px,py,w,tol)=>{ const dx=w.x2-w.x1,dy=w.y2-w.y1,L2=dx*dx+dy*dy; if(!L2) return false; const t=Math.max(0,Math.min(1,((px-w.x1)*dx+(py-w.y1)*dy)/L2)); return Math.hypot(px-(w.x1+t*dx),py-(w.y1+t*dy))<tol; };
+  for(let i=0;i<nW;i++) for(let j=i+1;j<nW;j++){ const a=W[i],b=W[j], tol=0.4;
+    if(onSeg(a.x1,a.y1,b,tol)||onSeg(a.x2,a.y2,b,tol)||onSeg(b.x1,b.y1,a,tol)||onSeg(b.x2,b.y2,a,tol)) par[fd(i)]=fd(j); }
+  const len={}; W.forEach((w,i)=>{ const r=fd(i); len[r]=(len[r]||0)+Math.hypot(w.x2-w.x1,w.y2-w.y1); });
+  const best=+Object.keys(len).sort((p,q)=>len[q]-len[p])[0];
+  const keep=W.map((_,i)=>fd(i)===best);
+  return {walls:W.filter((_,i)=>keep[i]), thick:T.filter((_,i)=>keep[i])};
+}
+const PT_M=0.0254/72;
+function wallsFromPdf(segsPt,den){
+  const segs=segsPt.map(s=>({x1:s.x1*PT_M*den,y1:s.y1*PT_M*den,x2:s.x2*PT_M*den,y2:s.y2*PT_M*den}));
+  const r=wallsFromSegs(segs); if(!r.walls.length) return {walls:[],gapSegs:[],thick:[],den};
+  const g=biggestGroup(r.walls,r.thick);
+  return {walls:g.walls,gapSegs:r.gapSegs,thick:g.thick,den};
+}
+function pdfAutoScale(segsPt){
+  const med=a=>{ const s=[...a].sort((p,q)=>p-q); return s.length?s[s.length>>1]:0; };
+  let best=null;
+  [20,25,50,75,100,125,200].forEach(den=>{ const r=wallsFromPdf(segsPt,den); if(r.walls.length<3) return;
+    const xs=r.walls.flatMap(w=>[w.x1,w.x2]), ys=r.walls.flatMap(w=>[w.y1,w.y2]); const span=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+    if(span<2.5||span>80) return;
+    const err=Math.abs(med(r.thick)-0.15), score=err-0.002*r.walls.length;
+    if(!best||score<best.score) best={...r,score}; });
+  if(best){ const m=med(best.thick); const fk=m>0?0.15/m:1;
+    if(Math.abs(fk-1)>0.04){ const den=best.den*fk; const r=wallsFromPdf(segsPt,den); if(r.walls.length>=3) return {...r,den:Math.round(den)}; } }
+  return best;
+}
+// mesma normalização do app de fundação, aplicada também aos vãos
+function normWalls(walls,gaps,flip,step){
+  if(!walls.length) return {walls:[],gaps:[]};
+  const xs=walls.flatMap(w=>[w.x1,w.x2]), ys=walls.flatMap(w=>[w.y1,w.y2]); const x0=Math.min(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  const r=v=>Math.round(v/step)*step, tx=x=>x-x0, ty=y=>flip?y1-y:y-y0;
+  let W=walls.map(w=>({x1:r(tx(w.x1)),x2:r(tx(w.x2)),y1:r(ty(w.y1)),y2:r(ty(w.y2))}));
+  W.forEach(w=>{ [["x1","y1"],["x2","y2"]].forEach(([kx,ky])=>{ const px=w[kx],py=w[ky];
+    W.forEach(o=>{ if(o===w) return; const dx=o.x2-o.x1,dy=o.y2-o.y1,L2=dx*dx+dy*dy; if(!L2) return;
+      const t=Math.max(0,Math.min(1,((px-o.x1)*dx+(py-o.y1)*dy)/L2)), qx=o.x1+t*dx, qy=o.y1+t*dy, d=Math.hypot(px-qx,py-qy);
+      if(d>0.001&&d<0.15){ w[kx]=+(qx.toFixed(3)); w[ky]=+(qy.toFixed(3)); } }); }); });
+  W=W.map(w=>({x1:+w.x1.toFixed(2),y1:+w.y1.toFixed(2),x2:+w.x2.toFixed(2),y2:+w.y2.toFixed(2)}));
+  return {walls:W,gaps:(gaps||[]).map(g=>({x1:tx(g.x1),y1:ty(g.y1),x2:tx(g.x2),y2:ty(g.y2)}))};
+}
+// liga cada vão (ou abertura informada pelo centro) à parede mais próxima
+function abrirEmParede(W,cx,cy,l,t,extra={}){
+  let best=null;
+  W.forEach((w,i)=>{ const dx=w.x2-w.x1, dy=w.y2-w.y1, Lw=Math.hypot(dx,dy); if(Lw<0.1) return; const ux=dx/Lw, uy=dy/Lw;
+    const s=(cx-w.x1)*ux+(cy-w.y1)*uy, dd=Math.abs(-(cx-w.x1)*uy+(cy-w.y1)*ux); if(s<0||s>Lw||dd>0.35) return; if(!best||dd<best.dd) best={i,s,dd,Lw}; });
+  if(!best) return null;
+  const df=ABDEF[t]||ABDEF.Porta, d=r05(Math.max(0,Math.min(best.Lw-l,best.s-l/2)));
+  return {n:"",t,w:best.i,d,l:r05(l),a:df.a,p:df.p,...extra};
+}
+function abDosVaos(W,gaps){ return gaps.map(g=>{ const l=Math.hypot(g.x2-g.x1,g.y2-g.y1); return abrirEmParede(W,(g.x1+g.x2)/2,(g.y1+g.y2)/2,l,l>1.5?"Vão":"Porta"); }).filter(Boolean); }
+function showImport(res,src){
+  IMP=res; const W=res.walls;
+  if(!W.length){ impMsg("Não encontrei paredes nesta planta. Confira o layer/unidade ou tente outra imagem."); $("impRes").hidden=true; return; }
+  const xs=W.flatMap(w=>[w.x1,w.x2]), ys=W.flatMap(w=>[w.y1,w.y2]), mx=Math.max(...xs), my=Math.max(...ys), sc=380/Math.max(mx,my,1);
+  let o=`<svg viewBox="-30 -30 ${mx*sc+60} ${my*sc+60}" xmlns="http://www.w3.org/2000/svg">`;
+  W.forEach(w=>o+=`<line x1="${w.x1*sc}" y1="${w.y1*sc}" x2="${w.x2*sc}" y2="${w.y2*sc}" style="stroke:var(--accent)" stroke-width="5" stroke-linecap="square"/>`);
+  (res.ab||[]).forEach(a=>{ const w=W[a.w]; if(!w) return; const Lw=Math.hypot(w.x2-w.x1,w.y2-w.y1), ux=(w.x2-w.x1)/Lw, uy=(w.y2-w.y1)/Lw;
+    o+=`<line x1="${(w.x1+ux*a.d)*sc}" y1="${(w.y1+uy*a.d)*sc}" x2="${(w.x1+ux*(a.d+a.l))*sc}" y2="${(w.y1+uy*(a.d+a.l))*sc}" style="stroke:${a.t==="Janela"?"var(--ok)":"var(--steel)"}" stroke-width="7"/>`; });
+  (res.rooms||[]).forEach(r=>o+=`<text x="${r.x*sc}" y="${r.y*sc}" text-anchor="middle" style="font-size:10px;fill:var(--muted)">${esc(r.n)}</text>`);
+  o+=`<text x="${mx*sc/2}" y="-12" text-anchor="middle" style="font-size:10px;fill:var(--muted)">${f(mx)} m</text><text x="-12" y="${my*sc/2}" text-anchor="middle" transform="rotate(-90 -12 ${my*sc/2})" style="font-size:10px;fill:var(--muted)">${f(my)} m</text></svg>`;
+  $("impPrev").innerHTML=o;
+  const nP=(res.ab||[]).filter(a=>a.t!=="Janela").length, nJ=(res.ab||[]).filter(a=>a.t==="Janela").length;
+  $("impSum").textContent=`${src}: ${W.length} paredes, projeção ${f(mx)} × ${f(my)} m${nP?`, ${nP} portas/vãos (em vermelho)`:""}${nJ?`, ${nJ} janelas (em verde)`:""}${res.rooms&&res.rooms.length?`, ${res.rooms.length} ambientes`:""}.${res.obs?" Observação: "+res.obs:""} Confira as medidas antes de usar.${src!=="Leitura do Claude"?" Janelas não são reconhecidas no PDF/DXF: coloque tocando na parede, na aba Planta.":""}`;
+  $("impRes").hidden=false; impMsg("");
+}
+$("impFile").onchange=e=>{ const fl=e.target.files[0]; $("impName").textContent=fl?fl.name:""; handleFile(fl); };
+async function handleFile(file){ $("impRes").hidden=true; $("impDxf").hidden=true; $("impImg").hidden=true; impMsg(""); impFileObj=null; impDxf=null;
+  if(!file) return;
+  const name=file.name.toLowerCase();
+  if(name.endsWith(".dxf")){ try{ handleDxfText(await file.text()); }catch(err){ impMsg("Não consegui ler este DXF."); } return; }
+  const cv=$("impCanvas"), ctx=cv.getContext("2d");
+  impPdfDoc=null; $("impPdf").hidden=true;
+  try{
+    if(name.endsWith(".pdf")){
+      impMsg("Abrindo o PDF...");
+      if(!window.pdfjsLib){ await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"); await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"); }
+      const lib=window.pdfjsLib||window["pdfjs-dist/build/pdf"]; lib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      impPdfLib=lib;
+      impPdfDoc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+      $("impPage").innerHTML=Array.from({length:impPdfDoc.numPages},(_,i)=>`<option value="${i+1}">${i+1} de ${impPdfDoc.numPages}</option>`).join("");
+      $("impPdf").hidden=false; $("impAiGo").classList.remove("pri");
+      await showPdfPage(1);
+    } else {
+      const img=await createImageBitmap(file); const sc=Math.min(1,2400/Math.max(img.width,img.height));
+      cv.width=img.width*sc; cv.height=img.height*sc; ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height); ctx.drawImage(img,0,0,cv.width,cv.height);
+      impFileObj=await new Promise(r=>cv.toBlob(r,"image/png"));
+      $("impAiGo").classList.add("pri");
+      $("impImg").hidden=false; impMsg("Planta carregada. Toque em Reconhecer com o Claude (leva de 30 s a 2 min).");
+    }
+  }catch(err){ impMsg("Não consegui abrir este arquivo. Tente exportar a planta como imagem (PNG/JPG)."); }
+}
+async function showPdfPage(nPg){
+  const cv=$("impCanvas"), ctx=cv.getContext("2d");
+  const page=await impPdfDoc.getPage(nPg), vp0=page.getViewport({scale:1}), sc=2400/Math.max(vp0.width,vp0.height), vp=page.getViewport({scale:sc});
+  cv.width=vp.width; cv.height=vp.height; ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+  impFileObj=await new Promise(r=>cv.toBlob(r,"image/png"));
+  const PR=await pdfSegments(page,impPdfLib); impPdfSegs=PR.segs; impPdfAll=PR.hatch?PR.all:null;
+  $("impImg").hidden=false;
+  impMsg(impPdfSegs.length>=8?`PDF vetorial: ${impPdfSegs.length} linhas encontradas. Confira a escala e toque em Reconhecer paredes do PDF.`
+    :"Este PDF não tem linhas de desenho (parece escaneado ou imagem). Use Reconhecer com o Claude dentro do Claude, ou exporte o PDF/DXF direto do CAD.");
+}
+$("impPage").onchange=async()=>{ $("impRes").hidden=true; try{ await showPdfPage(+$("impPage").value); }catch(e){ impMsg("Não consegui abrir esta página."); } };
+$("impPdfGo").onclick=()=>{
+  if(!impPdfSegs||impPdfSegs.length<8){ impMsg("Este PDF não tem linhas de desenho para ler."); return; }
+  const den=+$("impScale").value, run=sg=>den?wallsFromPdf(sg,den):pdfAutoScale(sg);
+  let r=run(impPdfSegs); if((!r||r.walls.length<3)&&impPdfAll) r=run(impPdfAll);
+  if(!r||!r.walls.length){ impMsg(den?`Não encontrei paredes na escala 1:${den}. Tente outra escala.`:"Não encontrei paredes. Escolha a escala da planta manualmente."); $("impRes").hidden=true; return; }
+  let fk=1; const known=num($("impKnown").value);
+  if(known>0){ const xs=r.walls.flatMap(w=>[w.x1,w.x2]), ys=r.walls.flatMap(w=>[w.y1,w.y2]); const span=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+    const th=[...(r.thick||[])].sort((p,q)=>p-q), mt=th.length?th[th.length>>1]:0; if(span>0) fk=known/(span+mt); }
+  const sc=w=>({x1:w.x1*fk,y1:w.y1*fk,x2:w.x2*fk,y2:w.y2*fk});
+  const N=normWalls(r.walls.map(sc),r.gapSegs.map(sc),true,0.05);
+  const th=[...(r.thick||[])].sort((p,q)=>p-q), esp=th.length?Math.round(th[th.length>>1]*fk*100)/100:null;
+  const escTxt=known>0?`ajustada pela medida de ${f(known)} m`:`${den?"":"estimada "}1:${r.den}`;
+  showImport({walls:N.walls,ab:abDosVaos(N.walls,N.gaps),rooms:[],esp,obs:`escala ${escTxt}. Compare com as cotas da planta; se não bater, informe a maior medida da planta e toque de novo.`},"PDF vetorial");
+};
+function handleDxfText(txt){
+  impDxf=parseDXF(txt);
+  const cnt={}; impDxf.segs.forEach(s=>cnt[s.l]=(cnt[s.l]||0)+1);
+  const layers=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
+  const pref=layers.find(l=>/parede|alven|wall|baldrame/i.test(l))||layers[0];
+  $("impLayer").innerHTML=`<option value="*">Todos os layers</option>`+layers.map(l=>`<option value="${esc(l)}"${l===pref?" selected":""}>${esc(l)} (${cnt[l]} linhas)</option>`).join("");
+  const u={4:"0.001",5:"0.01",6:"1"}[impDxf.units];
+  if(u) $("impUnit").value=u; else { const xs=impDxf.segs.flatMap(s=>[s.x1,s.x2]); const span=Math.max(...xs)-Math.min(...xs); $("impUnit").value=span>2000?"0.001":span>200?"0.01":"1"; }
+  $("impDxf").hidden=false; $("impImg").hidden=true; impMsg(`${impDxf.segs.length} linhas encontradas.`);
+}
+$("impPaste").addEventListener("paste",e=>{
+  const it=[...(e.clipboardData&&e.clipboardData.items||[])].find(i=>i.type&&i.type.startsWith("image/"));
+  if(it){ e.preventDefault(); const fl=it.getAsFile(); $("impPaste").value="[imagem colada]"; handleFile(new File([fl],"colada.png",{type:fl.type})); }
+});
+$("impPasteGo").onclick=()=>{
+  const t=$("impPaste").value.trim(); if(!t||t==="[imagem colada]"){ impMsg(t?"Imagem já carregada acima.":"Cole algo primeiro."); return; }
+  const dec=s=>JSON.parse(decodeURIComponent(escape(atob(s.replace(/\s+/g,"")))));
+  if(/^ARQ1:/.test(t)){ try{ const o=dec(t.slice(5)); Object.keys(defaults()).forEach(k=>{ if(o[k]!==undefined) S[k]=o[k]; }); S.tel=Object.assign(clone(TEL0),o.tel||{});
+      loadForm(); render(); impMsg("Projeto carregado. Confira na aba Planta."); $("impPaste").value=""; } catch(e){ impMsg("Código de projeto inválido. Copie de novo, inteiro."); } return; }
+  if(/^FDNC1:/.test(t)){ try{ const o=dec(t.slice(6));
+      if(Array.isArray(o.walls)) S.walls=o.walls; if(Array.isArray(o.rooms)) S.rooms=o.rooms; ["obra","cliente","local"].forEach(k=>{ if(typeof o[k]==="string") S[k]=o[k]; });
+      S.ab=[]; S.cA=null; S.cB=null; loadForm(); render(); impMsg("Paredes e ambientes vieram do app de Fundação. Coloque portas e janelas tocando nas paredes, na aba Planta."); $("impPaste").value=""; }
+    catch(e){ impMsg("Código de projeto inválido. Copie de novo, inteiro."); } return; }
+  if(/SECTION/.test(t)&&/ENTITIES/.test(t)){ try{ handleDxfText(t); }catch(e){ impMsg("Não consegui ler o DXF colado."); } return; }
+  impMsg("Não reconheci o que foi colado. Cole uma imagem, o texto de um DXF ou um código de projeto.");
+};
+$("projCopy").onclick=async()=>{
+  const o={}; Object.keys(defaults()).forEach(k=>o[k]=S[k]);
+  const code="ARQ1:"+btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+  try{ await navigator.clipboard.writeText(code); impMsg("Código copiado. Guarde no bloco de notas ou mande no chat."); }
+  catch(e){ $("impPaste").value=code; $("impPaste").select(); impMsg("Selecione o código na caixa acima e copie."); }
+};
+$("impDxfGo").onclick=()=>{
+  if(!impDxf) return; const lay=$("impLayer").value, u=+$("impUnit").value;
+  const segs=impDxf.segs.filter(s=>lay==="*"||s.l===lay).map(s=>({x1:s.x1*u,y1:s.y1*u,x2:s.x2*u,y2:s.y2*u}));
+  const r=wallsFromSegs(segs), N=normWalls(r.walls,r.gapSegs,true,0.01);
+  const th=[...(r.thick||[])].sort((p,q)=>p-q), esp=th.length?Math.round(th[th.length>>1]*100)/100:null;
+  showImport({walls:N.walls,ab:abDosVaos(N.walls,N.gaps),rooms:[],esp},"DXF");
+};
+$("impAiGo").onclick=async()=>{
+  if(!impFileObj) return;
+  if(!window.claude){ impMsg("A leitura de PDF/foto pelo Claude só funciona com o app aberto dentro do Claude. Aqui use DXF, PDF do CAD ou digite as medidas."); return; }
+  let sample=null; try{ sample=await window.claude.use("sample"); }catch(e){}
+  if(!sample){ impMsg("A leitura com o Claude não está disponível nesta tela."); return; }
+  const lim=await sample.limits().catch(()=>null); if(!lim||!lim.images){ impMsg("Esta tela não permite enviar imagens ao Claude. Use DXF ou digite as medidas."); return; }
+  impCtl=new AbortController(); $("impStop").hidden=false; $("impAiGo").disabled=true; impMsg("Lendo a planta... isso leva de 30 s a 2 min.");
+  const prompt=`A imagem é uma planta baixa de uma casa (Brasil). Preciso da geometria para desenhar o projeto arquitetônico.
+Regras:
+- Use as COTAS escritas na planta para as medidas (em metros). Se não houver cotas, estime pela proporção e avise em "obs".
+- Coordenadas dos EIXOS das paredes. Origem (0,0) no eixo do canto superior esquerdo da casa, x para a direita, y para BAIXO. Arredonde a 0,05 m.
+- Inclua todas as paredes externas e internas. Cada parede reta é um segmento contínuo, passando por cima de portas e janelas.
+- Paredes que se encontram devem se tocar exatamente: a ponta de uma parede interna fica sobre o eixo da parede em que ela encosta.
+- "espessura" = espessura das paredes em metros (ex.: 0.15).
+- Aberturas: t = "Porta", "Janela" ou "Vão"; x, y = CENTRO da abertura sobre o eixo da parede; l = largura do vão; a = altura; p = peitoril (só janela). Se não estiver escrito, use porta 2.10 de altura e janela 1.00 de altura com peitoril 1.10.
+- Ambientes com nome e coordenada aproximada do centro.
+Responda SOMENTE com JSON neste formato:
+{"espessura":0.15,"paredes":[{"x1":0,"y1":0,"x2":7,"y2":0}],"aberturas":[{"t":"Janela","x":1.5,"y":0,"l":1.2,"a":1.0,"p":1.1}],"ambientes":[{"n":"Sala","x":2,"y":3}],"obs":"dúvidas em uma frase"}
+Se a imagem não for uma planta baixa, responda {"erro":"motivo"}.`;
+  try{
+    const r=await sample.json(prompt,{images:impFileObj,modelTier:"complex",signal:impCtl.signal,cache:false});
+    if(!r||r.erro||!Array.isArray(r.paredes)){ impMsg(r&&r.erro?("O Claude não reconheceu uma planta: "+r.erro):"Resposta sem paredes. Tente uma imagem mais nítida."); return; }
+    const walls=r.paredes.map(w=>({x1:num(w.x1),y1:num(w.y1),x2:num(w.x2),y2:num(w.y2)})).filter(w=>Math.hypot(w.x2-w.x1,w.y2-w.y1)>0.2);
+    const N=normWalls(walls,[],false,0.05);
+    // as aberturas vêm no mesmo sistema de coordenadas das paredes antes da normalização
+    const x0=Math.min(...walls.flatMap(w=>[w.x1,w.x2])), y0=Math.min(...walls.flatMap(w=>[w.y1,w.y2]));
+    const ab=(r.aberturas||[]).map(a=>{ const t=/jan/i.test(a.t)?"Janela":/v[aã]o/i.test(a.t)?"Vão":"Porta", l=num(a.l)||ABDEF[t].l;
+      const o=abrirEmParede(N.walls,num(a.x)-x0,num(a.y)-y0,l,t); if(o){ if(num(a.a)>0) o.a=num(a.a); if(t==="Janela"&&a.p!=null) o.p=num(a.p); } return o; }).filter(Boolean);
+    const rooms=(r.ambientes||[]).map(a=>({n:String(a.n||"").slice(0,24),x:+(num(a.x)-x0).toFixed(2),y:+(num(a.y)-y0).toFixed(2)}));
+    showImport({walls:N.walls,ab,rooms,esp:num(r.espessura)>0.05?num(r.espessura):null,obs:r.obs?String(r.obs).slice(0,200):""},"Leitura do Claude");
+  }catch(e){
+    const m={cancelled:"Leitura interrompida.",not_granted:"Leitura com o Claude não autorizada.",rate_limited:"Muitas leituras seguidas. Tente de novo em alguns minutos.",invalid_json:"A resposta veio incompleta. Toque em Reconhecer de novo.",image_rejected:"Imagem não aceita. Tente outro arquivo.",refused:"O Claude não conseguiu ler esta imagem."};
+    impMsg(m[e&&e.code]||"Não foi possível ler agora. Tente de novo.");
+  } finally { $("impStop").hidden=true; $("impAiGo").disabled=false; }
+};
+$("impStop").onclick=()=>impCtl&&impCtl.abort();
+$("impDrop").onclick=()=>{ IMP=null; $("impRes").hidden=true; impMsg(""); };
+$("impApply").onclick=()=>{ if(!IMP) return;
+  S.walls=IMP.walls; S.rooms=IMP.rooms||[]; S.ab=IMP.ab||[]; if(IMP.esp&&IMP.esp>=0.08&&IMP.esp<=0.40) S.esp=IMP.esp; S.cA=null; S.cB=null;
+  loadForm(); render(); $("impRes").hidden=true; impMsg("Planta aplicada. Veja a aba Planta: dê nome aos ambientes e coloque as janelas tocando nas paredes."); };
+
+loadForm(); render();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
+</body>
+</html>
