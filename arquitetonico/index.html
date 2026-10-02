@@ -153,7 +153,10 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
         <label>Pé-direito (m)<input type="number" step="0.05" id="pd"></label>
         <label>Laje / forro (m)<input type="number" step="0.01" id="laje"></label>
         <label>Piso acima do terreno (m)<input type="number" step="0.05" id="piso"></label>
+        <label>Viga / cinta no topo das paredes<select id="viga.on"><option value="sim">Sim</option><option value="não">Não</option></select></label>
+        <label>Altura da viga / cinta (m)<input type="number" step="0.05" id="viga.h"></label>
       </div>
+      <p class="cap" style="margin:10px 0 0">O nível do piso de cada ambiente (ex.: banheiro −0,02, garagem −0,10) muda tocando no ambiente na aba Planta, ou na tabela de ambientes em Dados. A viga fica logo abaixo da laje, com a largura da parede, e sai com hachura de concreto.</p>
     </div>
   </section>
 
@@ -239,7 +242,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
         <button class="btn" id="addW">+ Parede</button>
         <button class="btn" id="preset42">Carregar casa 42 m² (exemplo)</button>
       </div>
-      <h3>Ambientes (nome e um ponto dentro dele)</h3>
+      <h3>Ambientes (nome, um ponto dentro dele e nível do piso)</h3>
       <div class="tbl"><table class="wt" id="rtab"></table></div>
       <div class="row"><button class="btn" id="addR">+ Ambiente</button></div>
     </div>
@@ -268,13 +271,14 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 const rk=v=>Math.round(v*10000)/10000;
 const uniq=a=>[...new Set(a.map(rk))].sort((p,q)=>p-q);
 const r05=v=>Math.round(v*20)/20;
+const fNv=z=>Math.abs(z)<0.0005?"±0,00":(z>0?"+":"-")+f(Math.abs(z));
 
 /* ---------------- Exemplo: casa 42 m² (mesma do app de fundação) ---------------- */
 const WALLS42=[
   {x1:0,y1:0,x2:7,y2:0},{x1:7,y1:0,x2:7,y2:6},{x1:7,y1:6,x2:0,y2:6},{x1:0,y1:6,x2:0,y2:0},
   {x1:3,y1:0,x2:3,y2:6},{x1:0,y1:3,x2:3,y2:3},{x1:3,y1:4.2,x2:7,y2:4.2},{x1:4.8,y1:4.2,x2:4.8,y2:6}
 ];
-const ROOMS42=[{n:"Quarto 1",x:1.5,y:1.5},{n:"Quarto 2",x:1.5,y:4.5},{n:"Sala / Cozinha",x:5,y:2.1},{n:"Banho",x:3.9,y:5.1},{n:"Lavanderia",x:5.9,y:5.1}];
+const ROOMS42=[{n:"Quarto 1",x:1.5,y:1.5},{n:"Quarto 2",x:1.5,y:4.5},{n:"Sala / Cozinha",x:5,y:2.1},{n:"Banho",x:3.9,y:5.1,nv:-0.02},{n:"Lavanderia",x:5.9,y:5.1,nv:-0.02}];
 const AB42=[
   {n:"Entrada",t:"Porta",w:1,d:2.9,l:0.80,a:2.10,p:0},
   {n:"Quarto 1",t:"Porta",w:4,d:2.0,l:0.70,a:2.10,p:0},
@@ -295,11 +299,11 @@ function defaults(){
   return {
     obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
-    pd:2.80, laje:0.10, piso:0.15, tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
 }
 let S;
-try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); }catch(e){ S=defaults(); }
+try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); }catch(e){ S=defaults(); }
 function save(){ try{ localStorage.setItem("arq-casa-v1",JSON.stringify(S)); }catch(e){} }
 
 /* ======================================================================
@@ -363,6 +367,7 @@ function geom(){
     r.ret=Math.abs((r.x1-r.x0)*(r.y1-r.y0)-r.area)<1e-4;
     r.labIdx=S.rooms.findIndex(q=>G.compAt(num(q.x),num(q.y))===r);
     r.n=r.labIdx>=0?String(S.rooms[r.labIdx].n||"").trim():"";
+    r.nv=r.labIdx>=0?num(S.rooms[r.labIdx].nv):0;
   });
   rooms.sort((p,q)=>Math.abs(p.cy-q.cy)>0.3?p.cy-q.cy:p.cx-q.cx);
   let sem=0; rooms.forEach(r=>{ if(!r.n) r.n="Ambiente "+(++sem); });
@@ -469,14 +474,27 @@ function cotaH(D,xa,xb,y,yRef,txt,alt){ const k=D.k; if(xb-xa<0.005) return; con
   L(D,xa,y,xb,y,.18,"COTAS");
   [xa,xb].forEach(x=>{ L(D,x,yRef+sg*1*k,x,y+sg*1.5*k,.13,"COTAS"); L(D,x-0.9*k,y+0.9*k,x+0.9*k,y-0.9*k,.35,"COTAS"); });
   const curto=(xb-xa)/k<(String(txt).length*1.7+1.5);
-  TX(D,(xa+xb)/2,y-(curto&&alt?3.6:1.5)*k,txt,1.8,{l:"COTAS"}); }
+  TX(D,(xa+xb)/2,y-(curto&&alt?4.5:1.5)*k,txt,1.8,{l:"COTAS"}); }
 function cotaV(D,ya,yb,x,xRef,txt,alt){ const k=D.k; if(yb-ya<0.005) return; const sg=Math.sign(x-xRef)||-1;
   L(D,x,ya,x,yb,.18,"COTAS");
   [ya,yb].forEach(y=>{ L(D,xRef+sg*1*k,y,x+sg*1.5*k,y,.13,"COTAS"); L(D,x-0.9*k,y+0.9*k,x+0.9*k,y-0.9*k,.35,"COTAS"); });
   const curto=(yb-ya)/k<(String(txt).length*1.7+1.5);
-  TX(D,x-(curto&&alt?3.6:1.5)*k,(ya+yb)/2,txt,1.8,{l:"COTAS",rot:-90}); }
+  TX(D,x-(curto&&alt?4.5:1.5)*k,(ya+yb)/2,txt,1.8,{l:"COTAS",rot:-90}); }
 function cadeiaH(D,pts,y,yRef){ let alt=false; for(let i=0;i+1<pts.length;i++){ const d=pts[i+1]-pts[i]; if(d<0.005) continue; const curto=d/D.k<8.5; cotaH(D,pts[i],pts[i+1],y,yRef,f(d),curto&&(alt=!alt)); } }
 function cadeiaV(D,pts,x,xRef){ let alt=false; for(let i=0;i+1<pts.length;i++){ const d=pts[i+1]-pts[i]; if(d<0.005) continue; const curto=d/D.k<8.5; cotaV(D,pts[i],pts[i+1],x,xRef,f(d),curto&&(alt=!alt)); } }
+/* hachura de concreto (pontos e triângulos), como no CAD */
+function hachConcreto(D,x0,y0,x1,y1){
+  const k=D.k, a=Math.min(x0,x1), b=Math.max(x0,x1), c=Math.min(y0,y1), d=Math.max(y0,y1); if(b-a<1e-6||d-c<1e-6) return;
+  RF(D,a,c,b,d,"CONCRETOF");
+  const st=1.4*k; let n=0;
+  for(let y=c+st/2;y<d;y+=st) for(let x=a+st/2;x<b;x+=st){ n++;
+    const px=x+((n*37)%11/11-0.5)*st*0.5, py=y+((n*53)%7/7-0.5)*st*0.5;
+    if(n%3===0){ const s=0.42*k; if(px-s<a||px+s>b||py-s<c||py+s>d) continue;
+      const t=[[px,py-s],[px+s*0.87,py+s*0.5],[px-s*0.87,py+s*0.5]]; PL(D,[...t,t[0]],.1,"CONCRETO"); }
+    else { const s=0.12*k; if(px-s<a||px+s>b||py-s<c||py+s>d) continue; L(D,px-s,py,px+s,py+s*0.4,.18,"CONCRETO"); } }
+  PL(D,[[a,c],[b,c],[b,d],[a,d],[a,c]],.4,"PAREDE");
+}
+function nivelInt(D,x,y,txt){ const k=D.k; L(D,x-3*k,y,x+3*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.1*k,y-1.9*k],[x+1.1*k,y-1.9*k]],"COTAS"); TX(D,x,y-3.4*k,txt,1.7,{l:"COTAS"}); }
 function nivel(D,x,y,txt,abaixo){ const k=D.k, sg=abaixo?-1:1; L(D,x-2*k,y,x+12*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.2*k,y-sg*2*k],[x+1.2*k,y-sg*2*k]],"COTAS"); TX(D,x+2*k,y-sg*2.6*k,txt,1.8,{a:"s",l:"COTAS"}); }
 
 /* ---------------- Planta baixa ---------------- */
@@ -508,7 +526,8 @@ function desenhoPlanta(G,k,ajuda){
   G.rooms.forEach(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; const x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy;
     TX(D,x,y-2.4*k,r.n.toUpperCase(),2.3,{b:true});
     TX(D,x,y+0.6*k,`A = ${f(r.area)} m²`,1.8);
-    if(r.ret) TX(D,x,y+3.2*k,`${f(r.x1-r.x0)} x ${f(r.y1-r.y0)}`,1.6,{l:"COTAS"}); });
+    if(r.ret) TX(D,x,y+3.2*k,`${f(r.x1-r.x0)} x ${f(r.y1-r.y0)}`,1.6,{l:"COTAS"});
+    TX(D,x,y+(r.ret?5.8:3.2)*k,`NV ${fNv(r.nv)}`,1.6,{l:"COTAS"}); });
   // cotas: faces das paredes (em cima e à esquerda) e totais
   const fx=uniq([bb.x0,bb.x1,...G.orto.filter(w=>w.vt).flatMap(w=>[w.x1-h,w.x1+h])]), fy=uniq([bb.y0,bb.y1,...G.orto.filter(w=>w.hz).flatMap(w=>[w.y1-h,w.y1+h])]);
   cadeiaH(D,fx,bb.y0-9*k,bb.y0); cotaH(D,bb.x0,bb.x1,bb.y0-16*k,bb.y0-9*k,f(bb.x1-bb.x0));
@@ -536,20 +555,26 @@ function desenhoCorte(G,k,q){
   const uMin=Math.min(...us)-h, uMax=Math.max(...us)+h;
   // terreno, contrapiso e laje
   L(D,Math.min(u0,uMin)-1.2,Y(-ps),Math.max(u1,uMax)+1.2,Y(-ps),.35,"TERRENO");
-  runs.forEach(([a,b])=>{ RF(D,a,Y(0),b,Y(-0.10),"HACHURA"); L(D,a,Y(0),b,Y(0),.35,"PAREDE"); L(D,a,Y(-0.10),b,Y(-0.10),.18,"PAREDE");
-    if(lj>0){ RF(D,a,Y(pd+lj),b,Y(pd),"HACHURA"); L(D,a,Y(pd),b,Y(pd),.35,"PAREDE"); L(D,a,Y(pd+lj),b,Y(pd+lj),.35,"PAREDE"); } else L(D,a,Y(pd),b,Y(pd),.35,"PAREDE"); });
+  const salas=G.roomRuns(q,c), vOn=S.viga&&S.viga.on!=="não", hv=vOn?Math.min(Math.max(0,num(S.viga.h)),pd-0.5):0, zv=pd-hv;
+  salas.forEach(({r,u0:a,u1:b})=>{ RF(D,a,Y(r.nv),b,Y(r.nv-0.10),"HACHURA"); L(D,a,Y(r.nv),b,Y(r.nv),.35,"PAREDE"); L(D,a,Y(r.nv-0.10),b,Y(r.nv-0.10),.18,"PAREDE"); });
+  runs.forEach(([a,b])=>{ if(lj>0) hachConcreto(D,a,Y(pd+lj),b,Y(pd)); else L(D,a,Y(pd),b,Y(pd),.35,"PAREDE"); });
+  const nvAt=u=>{ const C=A?G.compAt(u,c):G.compAt(c,u); return C&&!C.ext&&C.nv!==undefined?C.nv:0; };
+  const menos=(segs,z0,z1)=>segs.flatMap(([a,b])=>b<=z0||a>=z1?[[a,b]]:[[a,Math.min(b,z0)],[Math.max(a,z1),b]].filter(([p,q2])=>q2-p>1e-6));
   // paredes cortadas (com portas e janelas)
   us.forEach(u=>{
     const eL=ext(u-h-0.03), eR=ext(u+h+0.03), externa=eL||eR;
     let topo=pd; if(externa) topo=TI.plat?TI.topoPlat:Math.max(pd+lj,zr(eL?u-h:u+h));
-    const base=externa?-ps:0;
+    const base=externa?-ps:Math.min(0,nvAt(u-h-0.03),nvAt(u+h+0.03))-0.10;
     const g=G.abs.find(g=>g.r&&(A?g.w.vt:g.w.hz)&&Math.abs((A?g.w.x1:g.w.y1)-u)<1e-6&&c>=(A?g.r.y0:g.r.x0)&&c<=(A?g.r.y1:g.r.x1));
     const peds=[];
     if(!g) peds.push([base,topo]);
-    else if(g.tipo==="Janela"){ const p0=num(g.a.p), p1=Math.min(topo,p0+(num(g.a.a)||1)); peds.push([base,p0],[p1,topo]);
+    else if(g.tipo==="Janela"){ const p0=num(g.a.p), p1=Math.min(vOn?zv:topo,p0+(num(g.a.a)||1)); peds.push([base,p0],[p1,topo]);
       L(D,u-h,Y(p0),u+h,Y(p0),.25,"ESQUADRIA"); L(D,u-h,Y(p1),u+h,Y(p1),.25,"ESQUADRIA"); L(D,u,Y(p0),u,Y(p1),.18,"ESQUADRIA"); L(D,u-h,Y(p0),u-h,Y(p1),.13,"ESQUADRIA"); L(D,u+h,Y(p0),u+h,Y(p1),.13,"ESQUADRIA"); }
-    else { const p1=Math.min(topo,num(g.a.a)||2.1); peds.push([base,0],[p1,topo]); L(D,u-h,Y(p1),u+h,Y(p1),.18,"ESQUADRIA"); }
-    peds.forEach(([z0,z1])=>{ if(z1-z0<1e-6) return; RF(D,u-h,Y(z1),u+h,Y(z0),"HACHURA"); PL(D,[[u-h,Y(z0)],[u-h,Y(z1)],[u+h,Y(z1)],[u+h,Y(z0)],[u-h,Y(z0)]],.5,"PAREDE"); });
+    else { const p1=Math.min(vOn?zv:topo,num(g.a.a)||2.1); peds.push([base,Math.min(0,nvAt(u-h-0.03),nvAt(u+h+0.03))],[p1,topo]); L(D,u-h,Y(p1),u+h,Y(p1),.18,"ESQUADRIA"); }
+    // alvenaria: tira a faixa da viga e da laje (são de concreto)
+    let alv=peds; if(vOn&&hv>0) alv=menos(alv,zv,pd); if(lj>0) alv=menos(alv,pd,pd+lj);
+    alv.forEach(([z0,z1])=>{ if(z1-z0<1e-6) return; RF(D,u-h,Y(z1),u+h,Y(z0),"HACHURA"); PL(D,[[u-h,Y(z0)],[u-h,Y(z1)],[u+h,Y(z1)],[u+h,Y(z0)],[u-h,Y(z0)]],.5,"PAREDE"); });
+    if(vOn&&hv>0) hachConcreto(D,u-h,Y(pd),u+h,Y(zv));
   });
   // telhado cortado e vista do que fica atrás
   const N=240, prof=[], sil=[];
@@ -561,14 +586,16 @@ function desenhoCorte(G,k,q){
   PL(D,sp,.5,"TELHADO"); PL(D,sp.map(([u,y])=>[u,y-et]),.25,"TELHADO");
   L(D,sp[0][0],sp[0][1],sp[0][0],sp[0][1]-et,.25,"TELHADO"); L(D,sp[sp.length-1][0],sp[sp.length-1][1],sp[sp.length-1][0],sp[sp.length-1][1]-et,.25,"TELHADO");
   // nomes dos ambientes
-  G.roomRuns(q,c).forEach(({r,u0:a,u1:b})=>{ if(b-a<0.4) return; TX(D,(a+b)/2,Y(0)-3*k,r.n.toUpperCase(),1.9,{b:true}); });
+  // nome do ambiente e, logo abaixo, o nível do piso dele
+  salas.forEach(({r,u0:a,u1:b})=>{ if(b-a<0.4) return; TX(D,(a+b)/2,Y(r.nv)-7.2*k,r.n.toUpperCase(),1.9,{b:true}); nivelInt(D,(a+b)/2,Y(r.nv),fNv(r.nv)); });
   // cotas verticais, níveis e cota horizontal
   const zTop=TI.plat?TI.topoPlat:Math.max(...sil.map(p=>-p[1]));
-  const xc=Math.min(u0,uMin)-7*k, pts=uniq([-ps,0,pd,pd+lj,zTop]).map(z=>Y(z)).sort((p,q)=>p-q);
+  const xc=Math.min(u0,uMin)-7*k, pts=uniq([-ps,0,pd,pd+lj,zTop,...(vOn&&hv>0?[zv]:[])]).map(z=>Y(z)).sort((p,q)=>p-q);
   cadeiaV(D,pts,xc,Math.min(u0,uMin)); cotaV(D,Y(zTop),Y(0),xc-7*k,xc,f(zTop));
   const xn=Math.max(u1,uMax)+3*k;
   nivel(D,xn,Y(0),"±0,00"); nivel(D,xn,Y(pd),"+"+f(pd)); nivel(D,xn,Y(zTop),"+"+f(zTop)); if(ps>0) nivel(D,xn,Y(-ps),"-"+f(ps),true);
-  const rr=G.roomRuns(q,c).sort((p,q2)=>(q2.u1-q2.u0)-(p.u1-p.u0))[0]; if(rr) TX(D,(rr.u0+rr.u1)/2,Y(pd/2),`PÉ-DIREITO ${f(pd)}`,1.6,{l:"COTAS"});
+  const rr=[...salas].sort((p,q2)=>(q2.u1-q2.u0)-(p.u1-p.u0))[0]; if(rr) TX(D,(rr.u0+rr.u1)/2,Y(pd/2),`PÉ-DIREITO ${f(pd-rr.r.nv)}`,1.6,{l:"COTAS"});
+  if(vOn&&hv>0){ const u=us[0]; TX(D,u+h+1.2*k,Y(zv+hv/2),`VIGA ${f(G.t*100,0)}x${f(hv*100,0)}`,1.5,{a:"s",l:"COTAS"}); }
   const fc=uniq(us.flatMap(u=>[u-h,u+h]));
   cadeiaH(D,fc,Y(-ps)+7*k,Y(-ps)); cotaH(D,fc[0],fc[fc.length-1],Y(-ps)+14*k,Y(-ps)+7*k,f(fc[fc.length-1]-fc[0]));
   return D;
@@ -608,7 +635,7 @@ function extensao(D){
   return {x0,y0,x1,y1};
 }
 const n2=v=>(Math.round(v*100)/100).toString();
-const COR={PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)"};
+const COR={CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)"};
 function primsSVG(D,map,k){
   let s="";
   D.p.forEach(p=>{ const cor=COR[p.l]||"var(--ink)";
@@ -667,6 +694,7 @@ function render(){
   G.abs.filter(g=>g.fora).forEach(g=>w.push(["bad",`${g.cod||g.tipo} na parede ${g.w.i+1} passa do fim da parede (${f(g.d+g.l)} m de ${f(g.w.L)} m).`]));
   S.ab.forEach((a,i)=>{ if(!G.walls.some(x=>x.i===Math.round(num(a.w)))) w.push(["warn",`A abertura ${i+1} (${esc(a.t)}) está numa parede que não existe mais.`]); });
   if(!G.vazio&&!G.retangular) w.push(["warn","A casa não é um retângulo: o telhado é calculado sobre o retângulo que envolve a casa (formato em L ou U ainda não tem telhado automático). Confira a cobertura."]);
+  if(S.viga.on!=="não") G.abs.filter(g=>g.tipo!=="Vão"&&num(g.a.a)+(g.tipo==="Janela"?num(g.a.p):0)>num(S.pd)-num(S.viga.h)+1e-6).forEach(g=>w.push(["warn",`${g.cod} (parede ${g.w.i+1}) termina a ${f(num(g.a.a)+(g.tipo==="Janela"?num(g.a.p):0))} m, acima do fundo da viga (${f(num(S.pd)-num(S.viga.h))} m).`]));
   if(!G.vazio&&!G.rooms.length) w.push(["warn","Nenhum ambiente fechado encontrado. Confira se as paredes se encontram nas pontas."]);
   if(!w.length) w.push(["ok","Paredes, ambientes e esquadrias sem conflitos."]);
   $("warnings").innerHTML=w.map(([c,t])=>`<div class="alert ${c}">${t}</div>`).join("");
@@ -741,9 +769,10 @@ function painelAbertura(i){
 }
 function painelAmbiente(C,x,y){
   const P=$("selPanel"); P.hidden=false; const r=GG.rooms.find(q=>q===C); const atual=r&&r.labIdx>=0?S.rooms[r.labIdx].n:"";
-  P.innerHTML=`<h4>Ambiente${r?` · ${f(r.area)} m²`:""}</h4><div class="form"><label>Nome<input type="text" id="ambNome" value="${esc(atual)}" placeholder="ex.: Quarto 1"></label></div>
-    <div class="row"><button class="btn pri" id="ambOk">Salvar nome</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
-  $("ambOk").onclick=()=>{ const n=$("ambNome").value.trim(); if(r&&r.labIdx>=0){ S.rooms[r.labIdx].n=n; } else S.rooms.push({n,x:+x.toFixed(2),y:+y.toFixed(2)}); renderRooms(); render(); P.hidden=true; };
+  const nvA=r?r.nv:0;
+  P.innerHTML=`<h4>Ambiente${r?` · ${f(r.area)} m²`:""}</h4><div class="form"><label>Nome<input type="text" id="ambNome" value="${esc(atual)}" placeholder="ex.: Quarto 1"></label><label>Nível do piso (m)<input type="number" step="0.01" id="ambNv" value="${nvA}"></label></div>
+    <div class="row"><button class="btn pri" id="ambOk">Salvar</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
+  $("ambOk").onclick=()=>{ const n=$("ambNome").value.trim(), nv=num($("ambNv").value); if(r&&r.labIdx>=0){ S.rooms[r.labIdx].n=n; S.rooms[r.labIdx].nv=nv; } else S.rooms.push({n,x:+x.toFixed(2),y:+y.toFixed(2),nv}); renderRooms(); render(); P.hidden=true; };
   P.querySelector("[data-close]").onclick=()=>P.hidden=true;
   setTimeout(()=>$("ambNome").focus(),30);
 }
@@ -754,8 +783,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["obra","cliente","local","emp","rtNome","crea","data","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
@@ -775,8 +804,8 @@ $("wtab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)
   S.ab=S.ab.filter(a=>Math.round(num(a.w))!==i).map(a=>Math.round(num(a.w))>i?{...a,w:Math.round(num(a.w))-1}:a); renderWalls(); renderAb(); render();});
 $("addW").onclick=()=>{S.walls.push({x1:0,y1:0,x2:1,y2:0}); renderWalls(); render(); const ins=$("wtab").querySelectorAll(`input[data-i="${S.walls.length-1}"]`); if(ins[0]) ins[0].focus();};
 function renderRooms(){
-  $("rtab").innerHTML=`<tr><th>Nome</th><th>x</th><th>y</th><th></th></tr>`+S.rooms.map((r,i)=>
-    `<tr><td><input type="text" data-i="${i}" data-c="n" value="${esc(r.n)}" aria-label="Nome do ambiente"></td><td><input type="number" step="0.1" data-i="${i}" data-c="x" value="${r.x}" aria-label="x"></td><td><input type="number" step="0.1" data-i="${i}" data-c="y" value="${r.y}" aria-label="y"></td><td><button class="btn x" data-del="${i}" aria-label="Remover ambiente">×</button></td></tr>`).join("");
+  $("rtab").innerHTML=`<tr><th>Nome</th><th>x</th><th>y</th><th>Nível</th><th></th></tr>`+S.rooms.map((r,i)=>
+    `<tr><td><input type="text" data-i="${i}" data-c="n" value="${esc(r.n)}" aria-label="Nome do ambiente"></td><td><input type="number" step="0.1" data-i="${i}" data-c="x" value="${r.x}" aria-label="x"></td><td><input type="number" step="0.1" data-i="${i}" data-c="y" value="${r.y}" aria-label="y"></td><td><input type="number" step="0.01" data-i="${i}" data-c="nv" value="${r.nv??0}" aria-label="Nível do piso"></td><td><button class="btn x" data-del="${i}" aria-label="Remover ambiente">×</button></td></tr>`).join("");
 }
 $("rtab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null)return; S.rooms[i][c]=c==="n"?e.target.value:num(e.target.value); later();});
 $("rtab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; S.rooms.splice(+d,1); renderRooms(); render();});
@@ -862,12 +891,12 @@ function textosLado(P,lado){
     return [{t:"QUADRO DE ÁREAS",cols:[["AMBIENTE",0],["ÁREA (m²)",1]],rows:[...G.rooms.map(r=>[r.n,f(r.area)]),["ÁREA ÚTIL",f(util),1],["ÁREA CONSTRUÍDA",f(G.areaC),1]]},
       {t:"QUADRO DE ESQUADRIAS",cols:[["CÓD.",0],["TIPO",0],["L x H",1],["PEIT.",1],["QTD",1]],rows:Q.map(q=>[q.cod,q.tipo,`${f(q.l)} x ${f(q.a)}`,q.tipo==="Janela"?f(q.p):"-",String(q.q)])}];
   }
-  if(lado==="alturas") return [{t:"NOTAS",linhas:[`Pé-direito: ${f(pd)} m.`,`Laje/forro: ${f(num(S.laje))} m. Piso a ${f(num(S.piso))} m do terreno.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}, i = ${f(num(S.tel.inc),0)}%.`,`Paredes com ${f(G.t)} m de espessura.`,`Cotas e níveis em metros. Conferir as medidas na obra.`]}];
+  if(lado==="alturas") return [{t:"NOTAS",linhas:[`Pé-direito: ${f(pd)} m.`,...(S.viga.on!=="não"?[`Viga/cinta de concreto ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm no topo das paredes, sob a laje.`]:[]),`Níveis de piso: ${G.rooms.map(r=>`${r.n} ${fNv(r.nv)}`).join("; ")}.`,`Laje/forro: ${f(num(S.laje))} m. Piso a ${f(num(S.piso))} m do terreno.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}, i = ${f(num(S.tel.inc),0)}%.`,`Paredes com ${f(G.t)} m de espessura.`,`Cotas e níveis em metros. Conferir as medidas na obra.`]}];
   return [{t:"COBERTURA",linhas:[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}.`,`Inclinação ${f(num(S.tel.inc),0)}%.`+(TI.plat?" Platibanda com calha.":` Beiral ${f(TI.b)} m.`),`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`,(TI.Lcum?`Cumeeira: ${f(TI.Lcum)} m.`:"")+(TI.Lesp?` Espigões: ${f(TI.Lesp)} m.`:""),`Altura máxima: ${f(TI.plat?TI.topoPlat:TI.zmax)} m acima do piso.`].filter(Boolean)}];
 }
 
 /* ---------------- DXF ---------------- */
-const LAYERS={PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],GERAL:[7,"CONTINUOUS"]};
+const LAYERS={CONCRETO:[8,"CONTINUOUS"],PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],GERAL:[7,"CONTINUOUS"]};
 function dxfEnc(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?"); }
 function buildDXF(){
   const P=pranchas(S.fmt||"A3"), o=[], p=(c,v)=>o.push(String(c),String(v)), n=v=>(+v).toFixed(4);
@@ -886,7 +915,7 @@ function buildDXF(){
     const {D,e,k,s}=it.d, dx=cur-e.x0, X=x=>x+dx, Yy=y=>-(y-e.y0);
     D.p.forEach(q=>{ const l=lay(q.l);
       if(q.t==="l"){ p(0,"LINE");p(8,l); if(q.d) p(6,"DASHED"); p(10,n(X(q.x1)));p(20,n(Yy(q.y1)));p(30,0);p(11,n(X(q.x2)));p(21,n(Yy(q.y2)));p(31,0); }
-      else if(q.t==="r"){ p(0,"SOLID");p(8,l);p(10,n(X(q.x0)));p(20,n(Yy(q.y0)));p(30,0);p(11,n(X(q.x1)));p(21,n(Yy(q.y0)));p(31,0);p(12,n(X(q.x0)));p(22,n(Yy(q.y1)));p(32,0);p(13,n(X(q.x1)));p(23,n(Yy(q.y1)));p(33,0); }
+      else if(q.t==="r"){ if(q.l==="CONCRETOF") return; p(0,"SOLID");p(8,l);p(10,n(X(q.x0)));p(20,n(Yy(q.y0)));p(30,0);p(11,n(X(q.x1)));p(21,n(Yy(q.y0)));p(31,0);p(12,n(X(q.x0)));p(22,n(Yy(q.y1)));p(32,0);p(13,n(X(q.x1)));p(23,n(Yy(q.y1)));p(33,0); }
       else if(q.t==="g"){ const pts=q.pts; if(pts.length===3||pts.length===4){ const v=pts.length===3?[pts[0],pts[1],pts[2],pts[2]]:[pts[0],pts[1],pts[3],pts[2]];
           p(0,"SOLID");p(8,l); v.forEach(([x,y],j)=>{ p(10+j,n(X(x))); p(20+j,n(Yy(y))); p(30+j,0); }); } }
       else if(q.t==="a"){ const a1=Math.atan2(-(q.y1-q.cy),q.x1-q.cx)*180/Math.PI, a2=Math.atan2(-(q.y2-q.cy),q.x2-q.cx)*180/Math.PI; let s0=a1, s1=a2; if(((a2-a1)%360+360)%360>180){ s0=a2; s1=a1; }
@@ -917,7 +946,7 @@ document.querySelectorAll("[data-dxfcopy]").forEach(b=>b.onclick=async()=>{
 });
 
 /* ---------------- PDF (escrito à mão, sem bibliotecas) ---------------- */
-const PDFCOR={PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3]};
+const PDFCOR={CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3]};
 function pdfTxt(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?").replace(/[\\()]/g,m=>"\\"+m); }
 function buildPDF(fmt){
   const P=pranchas(fmt), {W,H,mo,ml,cw,ch,TT,side}=P; const n=v=>(+v).toFixed(3); let c=[]; const pages=[];
