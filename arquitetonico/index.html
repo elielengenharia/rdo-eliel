@@ -595,7 +595,11 @@ function desenhoCorte(G,k,q){
   const xn=Math.max(u1,uMax)+3*k;
   nivel(D,xn,Y(0),"±0,00"); nivel(D,xn,Y(pd),"+"+f(pd)); nivel(D,xn,Y(zTop),"+"+f(zTop)); if(ps>0) nivel(D,xn,Y(-ps),"-"+f(ps),true);
   const rr=[...salas].sort((p,q2)=>(q2.u1-q2.u0)-(p.u1-p.u0))[0]; if(rr) TX(D,(rr.u0+rr.u1)/2,Y(pd/2),`PÉ-DIREITO ${f(pd-rr.r.nv)}`,1.6,{l:"COTAS"});
-  if(vOn&&hv>0){ const u=us[0]; TX(D,u+h+1.2*k,Y(zv+hv/2),`VIGA ${f(G.t*100,0)}x${f(hv*100,0)}`,1.5,{a:"s",l:"COTAS"}); }
+  // viga vista: a cinta da parede do fundo aparece como faixa (sem hachura) em cada ambiente
+  if(vOn&&hv>0){
+    salas.forEach(({u0:a,u1:b})=>L(D,a,Y(zv),b,Y(zv),.25,"PAREDE"));
+    if(rr) TX(D,(rr.u0+rr.u1)/2,Y(zv+hv/2),`VIGA ${f(G.t*100,0)}x${f(hv*100,0)} (VISTA)`,1.5,{l:"COTAS"});
+  }
   const fc=uniq(us.flatMap(u=>[u-h,u+h]));
   cadeiaH(D,fc,Y(-ps)+7*k,Y(-ps)); cotaH(D,fc[0],fc[fc.length-1],Y(-ps)+14*k,Y(-ps)+7*k,f(fc[fc.length-1]-fc[0]));
   return D;
