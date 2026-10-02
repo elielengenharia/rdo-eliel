@@ -102,7 +102,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <header class="top">
     <div>
       <h1>Projeto Arquitetônico</h1>
-      <div class="sub">Planta baixa com áreas e cotas · Corte AA e BB · Planta de cobertura · Quadro de esquadrias</div>
+      <div class="sub">Planta baixa com áreas e cotas · Corte AA e BB · Planta de cobertura · Quadro de esquadrias · <b id="versao"></b></div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
@@ -262,6 +262,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
+const VERSAO="versão 1.4 · viga e laje em concreto";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1341,6 +1342,7 @@ $("impApply").onclick=()=>{ if(!IMP) return;
   S.walls=IMP.walls; S.rooms=IMP.rooms||[]; S.ab=IMP.ab||[]; if(IMP.esp&&IMP.esp>=0.08&&IMP.esp<=0.40) S.esp=IMP.esp; S.cA=null; S.cB=null;
   loadForm(); render(); $("impRes").hidden=true; impMsg("Planta aplicada. Veja a aba Planta: dê nome aos ambientes e coloque as janelas tocando nas paredes."); };
 
+$("versao").textContent=VERSAO;
 loadForm(); render();
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
