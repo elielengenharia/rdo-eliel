@@ -102,7 +102,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <header class="top">
     <div>
       <h1>Projeto Arquitetônico</h1>
-      <div class="sub">Planta baixa com áreas e cotas · Layout com móveis · Pontos elétricos · Cortes AA e BB · Cobertura · Fachadas · Situação · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
+      <div class="sub">Planta baixa com áreas e cotas · Layout com móveis · Pontos elétricos · Hidrossanitário · Cortes AA e BB · Cobertura · Fachadas · Situação · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
@@ -111,6 +111,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
     <button role="tab" data-tab="planta" aria-selected="true">Planta</button>
     <button role="tab" data-tab="lay" aria-selected="false">Layout</button>
     <button role="tab" data-tab="ele" aria-selected="false">Elétrica</button>
+    <button role="tab" data-tab="hid" aria-selected="false">Hidrossanitário</button>
     <button role="tab" data-tab="cortes" aria-selected="false">Cortes</button>
     <button role="tab" data-tab="cob" aria-selected="false">Cobertura</button>
     <button role="tab" data-tab="fach" aria-selected="false">Fachadas</button>
@@ -220,6 +221,17 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <div class="chips" id="eleChips"></div><div id="eleAvisos"></div>
     </div>
     <div class="sheet"><h2>Quadro de cargas</h2><div class="tbl"><table id="tabCargas"></table></div><ol class="notes" id="eleNotas" style="margin-top:12px"></ol></div>
+  </section>
+
+  <!-- HIDROSSANITÁRIO -->
+  <section id="tab-hid" hidden>
+    <div class="sheet">
+      <h2>Planta hidrossanitária</h2>
+      <p class="cap">Água fria e esgoto traçados sozinhos a partir das louças do Banheiro e dos móveis do Layout (pia, tanque, máquina). Água: reservatório sobre o banheiro, coluna (AF1, AF2…) em cada área molhada e ramal pela parede até cada ponto. Esgoto: aparelhos para a caixa sifonada, vaso direto em Ø100, pia para a caixa de gordura, saída para caixas de inspeção do lado de fora e coletor até a rede ou fossa na frente do lote.</p>
+      <div class="draw" id="hid"></div>
+      <div class="chips" id="hidChips"></div><div id="hidAvisos"></div>
+    </div>
+    <div class="sheet"><h2>Quadro de pontos hidráulicos</h2><div class="tbl"><table id="tabHid"></table></div><ol class="notes" id="hidNotas" style="margin-top:12px"></ol></div>
   </section>
 
   <!-- BANHEIRO -->
@@ -342,7 +354,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 2.3 · pontos elétricos";
+const VERSAO="versão 2.4 · hidrossanitário";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1322,6 +1334,137 @@ function desenhoEletrica(G,k,LM,EL,legenda=true){
 }
 const notasEletrica=EL=>[`Tensão ${EL.VF} V${EL.VF===127?" (chuveiro e ar-condicionado em 220 V)":""}. Potência instalada: ${f(EL.tot/1000)} kVA.`,`Quantidade e potência das tomadas e da iluminação pelo mínimo da NBR 5410.`,`Circuitos com DR 30 mA: banheiro, cozinha, lavanderia, garagem e áreas externas.`,`Fios: iluminação 1,5 mm², tomadas 2,5 mm², chuveiro conforme o quadro. Conferir queda de tensão e agrupamento no projeto elétrico.`,`Interruptores a 1,10 m, ao lado da fechadura da porta; QD a 1,50 m do piso.`];
 
+/* ---------------- Planta hidrossanitária (água fria e esgoto) ---------------- */
+// posição ao longo do contorno do ambiente (para correr o cano rente à parede)
+function contT(P,p){ let best=null, acc=0; P.forEach((A,i)=>{ const B=P[(i+1)%P.length], dx=B[0]-A[0], dy=B[1]-A[1], L2=dx*dx+dy*dy, Le=Math.sqrt(L2);
+    const t=L2?Math.max(0,Math.min(1,((p[0]-A[0])*dx+(p[1]-A[1])*dy)/L2)):0, d=Math.hypot(p[0]-A[0]-dx*t,p[1]-A[1]-dy*t); if(!best||d<best.d) best={d,t:acc+t*Le}; acc+=Le; }); return best.t; }
+function contP(P,t){ const per=perim(P); t=((t%per)+per)%per; let acc=0; for(let i=0;i<P.length;i++){ const A=P[i], B=P[(i+1)%P.length], Le=Math.hypot(B[0]-A[0],B[1]-A[1]); if(t<=acc+Le+1e-9){ const s=Le?(t-acc)/Le:0; return [A[0]+(B[0]-A[0])*s,A[1]+(B[1]-A[1])*s]; } acc+=Le; } return P[0]; }
+// trecho do contorno entre t0 e t1 (sentido crescente), afastado da parede para dentro
+function contTrecho(r,t0,t1,af){ const P=r.poly, per=perim(P); if(t1<t0) t1+=per; const ts=[t0]; let acc=0;
+  P.forEach((A,i)=>{ const Le=Math.hypot(P[(i+1)%P.length][0]-A[0],P[(i+1)%P.length][1]-A[1]); acc+=Le; [acc,acc+per].forEach(v=>{ if(v>t0+1e-6&&v<t1-1e-6) ts.push(v); }); });
+  ts.sort((a,b)=>a-b); ts.push(t1);
+  return ts.map(t=>{ const p=contP(P,t), q=contP(P,t+0.01), o=contP(P,t-0.01), dx=q[0]-o[0], dy=q[1]-o[1], l=Math.hypot(dx,dy)||1; let n=[-dy/l,dx/l]; if(!pip(P,p[0]+n[0]*0.03,p[1]+n[1]*0.03)) n=[-n[0],-n[1]];
+    // no canto, desloca nas duas direções
+    const m=[-n[1],n[0]], a=contP(P,t+0.03), b=contP(P,t-0.03), ok=x=>pip(P,x[0],x[1]);
+    let pp=[p[0]+n[0]*af,p[1]+n[1]*af]; if(!ok([pp[0]+m[0]*0.001,pp[1]+m[1]*0.001])||!ok(pp)){ const c=[(a[0]+b[0])/2-p[0],(a[1]+b[1])/2-p[1]], cl=Math.hypot(...c)||1; pp=[p[0]+c[0]/cl*af*1.41,p[1]+c[1]/cl*af*1.41]; }
+    return pp; }); }
+function redeHidro(G,LM){
+  LM=LM||layoutMoveis(G);
+  const ap=[], salas=[], aviso=[], bb=G.bb, d=0.80;
+  const loc=(it,s0,t0)=>[it.c[0]+it.a[0]*s0+it.n[0]*t0,it.c[1]+it.a[1]*s0+it.n[1]*t0];
+  LM.forEach(R=>{ const r=R.r, A=[]; let cs=null, saida=null;
+    const novo=(nome,af,dAf,h,es,dEs,vai)=>{ const o={r,nome,af,dAf,h,es,dEs,vai}; A.push(o); ap.push(o); return o; };
+    if(R.banho){ const Lb=R.banho, V=Lb.vaso, Lv=Lb.lav;
+      const vaso=novo("Bacia com caixa acoplada",{p:loc(V,-0.15,0),N:V.n},20,"0,20",loc(V,0,0.30),100,"saida");
+      novo("Lavatório",{p:loc(Lv,0,0),N:Lv.n},20,"0,60",loc(Lv,0,0.12),40,"cs");
+      if(Lb.chuv){ const ch=Lb.chuv; novo("Chuveiro",{p:ch.c,N:ch.n},25,"2,10",null,0,"cs"); }
+      const b=Lb.box; cs=b?[(b.x0+b.x1)/2,(b.y0+b.y1)/2]:[(vaso.es[0]+r.cx)/2,(vaso.es[1]+r.cy)/2];
+      saida={p:vaso.es,d:100,vaso:true,tv:{p:loc(V,0.38,0),N:V.n}}; }
+    R.pos.forEach(c=>{ const T=c.T, pc=c.pc, w=(s,t)=>trf(T,s,t);
+      if(pc.nome==="cozinha"){ const cb=(pc.cuba[0]+pc.cuba[2])/2; const o=novo("Pia da cozinha",{p:w(cb,0),N:T.N},20,"0,60",w(cb,0.25),50,"cg"); saida=saida||{p:o.es,d:50,cg:true}; }
+      else if(pc.nome==="tanque e máquina de lavar"){ novo("Tanque",{p:w(0.30,0),N:T.N},25,"0,90",w(0.30,0.25),40,"cs"); novo("Máquina de lavar",{p:w(0.95,0),N:T.N},25,"0,90",w(0.95,0.12),50,"cs"); cs=w(0.62,0.85); }
+      else if(pc.nome==="tanque"){ novo("Tanque",{p:w(0.30,0),N:T.N},25,"0,90",w(0.30,0.25),40,"cs"); cs=cs||w(0.30,0.80); }
+      else if(pc.nome==="máquina de lavar"){ novo("Máquina de lavar",{p:w(0.30,0),N:T.N},25,"0,90",w(0.30,0.12),50,"cs"); cs=cs||w(0.30,0.80); } });
+    if(!A.length) return;
+    if(cs&&!saida) saida={p:cs,d:50};
+    salas.push({r,A,cs,saida}); });
+  // anel externo (onde ficam as caixas de inspeção), a 0,80 m da casa
+  const X0=bb.x0-d, Y0=bb.y0-d, X1=bb.x1+d, Y1=bb.y1+d, Wr=X1-X0, Hr=Y1-Y0, PER=2*(Wr+Hr);
+  const anelP=t=>{ t=((t%PER)+PER)%PER; if(t<=Wr) return [X0+t,Y0]; t-=Wr; if(t<=Hr) return [X1,Y0+t]; t-=Hr; if(t<=Wr) return [X1-t,Y1]; t-=Wr; return [X0,Y1-t]; };
+  const anelT=p=>{ const [x,y]=p; const c=[[Math.abs(y-Y0),x-X0],[Math.abs(x-X1),Wr+y-Y0],[Math.abs(y-Y1),Wr+Hr+X1-x],[Math.abs(x-X0),2*Wr+Hr+Y1-y]]; return c.reduce((m,v)=>v[0]<m[0]?v:m)[1]; };
+  const lados={cima:[0,Wr],dir:[Wr,Wr+Hr],baixo:[Wr+Hr,2*Wr+Hr],esq:[2*Wr+Hr,PER]};
+  const caixas=[], ramal=[];
+  salas.forEach(sa=>{ const p=sa.saida.p, ds=[[p[1]-Y0,[p[0],Y0]],[X1-p[0],[X1,p[1]]],[Y1-p[1],[p[0],Y1]],[p[0]-X0,[X0,p[1]]]], q=ds.reduce((m,v)=>v[0]<m[0]?v:m)[1];
+    ramal.push({a:p,b:q,d:sa.saida.d,r:sa.r});
+    caixas.push({p:q,t:anelT(q),tipo:sa.saida.cg?"CG":"CI",r:sa.r}); });
+  // caixa final no lado da frente, na posição mais perto das outras
+  const fr=lados[S.frente]||lados.baixo, dist=(a,b)=>{ const x=Math.abs(a-b)%PER; return Math.min(x,PER-x); };
+  let tf=null, best=1e9;
+  caixas.forEach(c=>{ const tt=Math.min(Math.max(c.t,fr[0]),fr[1]); const v=caixas.reduce((s,o)=>s+dist(o.t,tt),0); if(v<best){ best=v; tf=tt; } });
+  if(tf===null) tf=(fr[0]+fr[1])/2;
+  // coletor pelo anel, sempre pelo caminho mais curto até a caixa final
+  const trechos=[]; caixas.forEach(c=>{ let a=c.t, b=tf; let dd=((b-a)%PER+PER)%PER; if(dd>PER/2){ [a,b]=[b,a]; dd=PER-dd; } if(dd>0.05) trechos.push([a,a+dd]); });
+  const cantos=[0,Wr,Wr+Hr,2*Wr+Hr]; const usados=new Set();
+  trechos.forEach(([a,b])=>cantos.forEach(cn=>[cn,cn+PER].forEach(v=>{ if(v>a+0.05&&v<b-0.05) usados.add(cn); })));
+  const ci=[...caixas];
+  usados.forEach(cn=>{ if(!ci.some(c=>dist(c.t,cn)<0.6)) ci.push({p:anelP(cn),t:cn,tipo:"CI"}); });
+  if(!ci.some(c=>dist(c.t,tf)<0.6)) ci.push({p:anelP(tf),t:tf,tipo:"CI",fim:true}); else ci.find(c=>dist(c.t,tf)<0.6).fim=true;
+  // caixas muito juntas viram uma só
+  const cx2=[]; ci.forEach(c=>{ const o=cx2.find(q=>dist(q.t,c.t)<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; o.fim=o.fim||c.fim; } else cx2.push({...c}); });
+  const fim=cx2.find(c=>c.fim), out=fim?(()=>{ const p=fim.p, s=S.frente||"baixo", v={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[s]||[0,1]; return [p[0]+v[0]*1.6,p[1]+v[1]*1.6]; })():null;
+  // água fria: reservatório sobre o maior banheiro (ou a maior área molhada)
+  const qts=G.rooms.filter(r=>/su[ií]te|quarto|dormit/i.test(r.n)).length, com=S.uso==="comercial";
+  const pessoas=com?Math.max(2,Math.ceil(LM.filter(R=>R.tipo==="escrit").reduce((s,R)=>s+R.r.area,0)/7.5)):Math.max(2,2*qts), cons=com?50:150, Vn=pessoas*cons;
+  const VOL=[310,500,750,1000,1500,2000,3000,5000].find(v=>v>=Vn)||5000, DIA={310:1.0,500:1.2,750:1.35,1000:1.5,1500:1.7,2000:1.9,3000:2.2,5000:2.6}[VOL];
+  const rb=salas.filter(s=>s.r&&ehBanho(s.r.n)).sort((a,b)=>b.r.area-a.r.area)[0]||salas.slice().sort((a,b)=>b.r.area-a.r.area)[0];
+  const res=rb?{p:[rb.r.cx,rb.r.cy],dia:DIA,vol:VOL}:null;
+  // descidas (colunas) e ramais pela parede
+  const desc=[], ramaisAF=[];
+  salas.forEach((sa,i)=>{ const P=sa.r.poly, per=perim(P), ts=sa.A.map(a=>contT(P,a.af.p)).sort((a,b)=>a-b);
+    let gi=0, gmax=-1; ts.forEach((t,j)=>{ const nx=j+1<ts.length?ts[j+1]:ts[0]+per, g=nx-t; if(g>gmax){ gmax=g; gi=j; } });
+    const t0=(gi+1<ts.length?ts[gi+1]:ts[0])-Math.min(0.35,gmax/2), t1=t0+(per-gmax)+Math.min(0.35,gmax/2);
+    const nome=`AF${i+1}`, pd=contTrecho(sa.r,t0,t0+0.001,0.07)[0];
+    desc.push({p:pd,nome,r:sa.r}); ramaisAF.push({pts:contTrecho(sa.r,t0,t1,0.07),r:sa.r});
+    sa.A.forEach(a=>{ const t=contT(P,a.af.p); a.afPipe=contTrecho(sa.r,t,t+0.001,0.07)[0]; }); });
+  if(!salas.length) aviso.push("Nenhuma área molhada com louças: dê nome de Banheiro, Cozinha ou Lavanderia aos ambientes (e confira a aba Layout).");
+  // hidrômetro na frente do lote, fora do anel do esgoto
+  const hd=fim?(()=>{ const t=fim.t+((fr[1]-fim.t)>2?1.8:-1.8), p=anelP(t), v={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente||"baixo"]||[0,1]; return [p[0]+v[0]*1.0,p[1]+v[1]*1.0]; })():null;
+  return {ap,salas,ramal,trechos,anelP,caixas:cx2,fim,out,res,desc,ramaisAF,hd,pessoas,cons,Vn,aviso,com}; }
+function simbHidro(D,q){ const k=D.k, [x,y]=q.p;
+  if(q.t==="af"){ CI(D,x,y,0.9*k,.25,"AGUA"); PG(D,[[x-0.6*k,y],[x,y-0.6*k],[x+0.6*k,y],[x,y+0.6*k]],"AGUA"); return; }
+  if(q.t==="es"){ CI(D,x,y,1.0*k,.3,"ESGOTO"); return; }
+  if(q.t==="cs"){ const e=1.6*k; PL(D,[[x-e,y-e],[x+e,y-e],[x+e,y+e],[x-e,y+e],[x-e,y-e]],.3,"ESGOTO"); CI(D,x,y,1.0*k,.25,"ESGOTO"); return; }
+  if(q.t==="ci"||q.t==="cg"){ const e=2.4*k; PL(D,[[x-e,y-e],[x+e,y-e],[x+e,y+e],[x-e,y+e],[x-e,y-e]],.4,"ESGOTO"); if(q.t==="cg"){ L(D,x-e,y-e,x+e,y+e,.18,"ESGOTO"); L(D,x-e,y+e,x+e,y-e,.18,"ESGOTO"); } else L(D,x-e,y-e,x+e,y+e,.18,"ESGOTO"); return; }
+  if(q.t==="tv"){ CI(D,x,y,1.3*k,.3,"ESGOTO"); CI(D,x,y,0.5*k,.25,"ESGOTO"); return; }
+  if(q.t==="desc"){ CI(D,x,y,1.5*k,.35,"AGUA"); PG(D,[[x-1*k,y],[x,y-1*k],[x+1*k,y],[x,y+1*k]],"AGUA"); return; }
+  if(q.t==="hd"){ const e=2*k; PL(D,[[x-e,y-1.2*k],[x+e,y-1.2*k],[x+e,y+1.2*k],[x-e,y+1.2*k],[x-e,y-1.2*k]],.35,"AGUA"); TX(D,x,y,"HD",1.3,{b:true,l:"AGUA"}); return; } }
+function setaFluxo(D,a,b,l){ const k=D.k, dx=b[0]-a[0], dy=b[1]-a[1], L0=Math.hypot(dx,dy); if(L0<4*k) return; const ux=dx/L0, uy=dy/L0, m=[(a[0]+b[0])/2,(a[1]+b[1])/2], s=1.3*k;
+  PG(D,[[m[0]+ux*s,m[1]+uy*s],[m[0]-ux*s-uy*s*0.6,m[1]-uy*s+ux*s*0.6],[m[0]-ux*s+uy*s*0.6,m[1]-uy*s-ux*s*0.6]],l); }
+function rotuloLinha(D,a,b,txt,l,lado=1){ const k=D.k, dx=b[0]-a[0], dy=b[1]-a[1], L0=Math.hypot(dx,dy); if(L0<10*k) return; const m=[(a[0]+b[0])/2,(a[1]+b[1])/2], n=[-dy/L0*lado,dx/L0*lado];
+  let rot=Math.atan2(dy,dx)*180/Math.PI; if(rot>=90) rot-=180; if(rot<-90) rot+=180; TX(D,m[0]+n[0]*2.2*k,m[1]+n[1]*2.2*k,txt,1.4,{rot,l}); }
+function desenhoHidro(G,k,LM,HD,legenda=true){
+  const D=Dw(k), bb=G.bb;
+  if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
+  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
+  LM=LM||layoutMoveis(G); HD=HD||redeHidro(G,LM);
+  LM.forEach(R=>{ R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des,"MOBILIAC")); if(R.banho){ const n0=D.p.length; desenhaLoucas(D,R.r,R.banho,k,false); for(let i=n0;i<D.p.length;i++) D.p[i].l="MOBILIAC"; } });
+  LM.forEach(R=>{ const r=R.r; TX(D,r.cx,r.cy,r.n.toUpperCase(),1.8,{b:true,l:"COTAS"}); });
+  // esgoto
+  HD.salas.forEach(sa=>{ const sd=sa.saida.p;
+    sa.A.forEach(a=>{ if(!a.es) return; simbHidro(D,{t:"es",p:a.es});
+      const alvo=a.vai==="cs"&&sa.cs?sa.cs:a.vai==="saida"||a.vai==="cg"?null:sd; if(alvo&&Math.hypot(alvo[0]-a.es[0],alvo[1]-a.es[1])>0.05){ L(D,...a.es,...alvo,.35,"ESGOTO"); setaFluxo(D,a.es,alvo,"ESGOTO"); }
+      TX(D,a.es[0],a.es[1]+2.6*k,`Ø${a.dEs}`,1.3,{l:"ESGOTO"}); });
+    if(sa.cs){ simbHidro(D,{t:"cs",p:sa.cs}); TX(D,sa.cs[0]+2.2*k,sa.cs[1]-2.2*k,"CS",1.5,{a:"s",b:true,l:"ESGOTO"});
+      if(Math.hypot(sa.cs[0]-sd[0],sa.cs[1]-sd[1])>0.05){ L(D,...sa.cs,...sd,.4,"ESGOTO"); setaFluxo(D,sa.cs,sd,"ESGOTO"); rotuloLinha(D,sa.cs,sd,"Ø50 i=2%","ESGOTO"); } }
+    if(sa.saida.tv){ const tv=sa.saida.tv; simbHidro(D,{t:"tv",p:[tv.p[0]+tv.N[0]*0.08,tv.p[1]+tv.N[1]*0.08]}); TX(D,tv.p[0]+tv.N[0]*(0.08+4*k),tv.p[1]+tv.N[1]*(0.08+4*k),"TV",1.3,{b:true,l:"ESGOTO"}); } });
+  HD.ramal.forEach(rm=>{ L(D,...rm.a,...rm.b,.5,"ESGOTO"); setaFluxo(D,rm.a,rm.b,"ESGOTO"); rotuloLinha(D,rm.a,rm.b,`Ø${rm.d} i=${rm.d>=100?1:2}%`,"ESGOTO"); });
+  { const Wr=bb.x1-bb.x0+1.6, Hr=bb.y1-bb.y0+1.6, cn=[0,Wr,Wr+Hr,2*Wr+Hr], PER=2*(Wr+Hr);
+    HD.trechos.forEach(([a,b])=>{ const ts=[a]; [0,PER].forEach(v=>cn.forEach(c=>{ const x=c+v; if(x>a+1e-6&&x<b-1e-6) ts.push(x); })); ts.sort((p,q)=>p-q); ts.push(b);
+      for(let i=0;i+1<ts.length;i++){ const p=HD.anelP(ts[i]), q=HD.anelP(ts[i+1]); L(D,...p,...q,.5,"ESGOTO"); if(Math.hypot(q[0]-p[0],q[1]-p[1])>0.8) setaFluxo(D,p,q,"ESGOTO"); } }); }
+  // rótulo do coletor no trecho mais longo
+  { let lg=null; HD.trechos.forEach(([a,b])=>{ if(!lg||b-a>lg[1]-lg[0]) lg=[a,b]; }); if(lg){ const p=HD.anelP(lg[0]+(lg[1]-lg[0])*0.3), q=HD.anelP(lg[0]+(lg[1]-lg[0])*0.3+0.3); rotuloLinha(D,p,q,"Ø100 i=1%","ESGOTO",-1); } }
+  HD.caixas.forEach(c=>{ simbHidro(D,{t:c.tipo==="CG"?"cg":"ci",p:c.p}); TX(D,c.p[0]+3*k,c.p[1]-3*k,c.tipo==="CG"?"CG":"CI",1.5,{a:"s",b:true,l:"ESGOTO"}); });
+  if(HD.fim&&HD.out){ L(D,...HD.fim.p,...HD.out,.5,"ESGOTO"); setaFluxo(D,HD.fim.p,HD.out,"ESGOTO"); TX(D,HD.out[0],HD.out[1]+2.5*k*(HD.out[1]>=HD.fim.p[1]?1:-1),"PARA A REDE PÚBLICA / FOSSA",1.5,{b:true,l:"ESGOTO"}); }
+  // água fria
+  HD.ramaisAF.forEach(rm=>PL(D,rm.pts,.3,"AGUA"));
+  HD.salas.forEach(sa=>sa.A.forEach(a=>{ const p=a.afPipe; L(D,...p,...a.af.p,.3,"AGUA"); simbHidro(D,{t:"af",p}); const n=a.af.N; TX(D,p[0]+n[0]*2.8*k,p[1]+n[1]*2.8*k,`Ø${a.dAf}`,1.3,{l:"AGUA"}); }));
+  HD.desc.forEach(dd=>{ simbHidro(D,{t:"desc",p:dd.p}); TX(D,dd.p[0]+2.4*k,dd.p[1]-2.4*k,`${dd.nome} Ø25`,1.5,{a:"s",b:true,l:"AGUA"}); });
+  if(HD.res){ const R0=HD.res, rr=R0.dia/2; const pts=[]; for(let i=0;i<=40;i++){ const an=i/40*2*Math.PI; pts.push([R0.p[0]+rr*Math.cos(an),R0.p[1]+rr*Math.sin(an)]); }
+    for(let i=0;i<40;i+=2) L(D,...pts[i],...pts[i+1],.3,"AGUA");
+    TX(D,R0.p[0],R0.p[1]-rr-2.2*k,`RES. ${R0.vol} L`,1.5,{b:true,l:"AGUA"});
+    HD.desc.forEach(dd=>{ L(D,...R0.p,...dd.p,.25,"AGUA",true); });
+    if(HD.hd){ simbHidro(D,{t:"hd",p:HD.hd}); L(D,...HD.hd,...R0.p,.25,"AGUA",true); rotuloLinha(D,HD.hd,R0.p,"AL Ø25","AGUA"); } }
+  cotaH(D,bb.x0,bb.x1,bb.y0-14*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-14*k,bb.x0,f(bb.y1-bb.y0));
+  if(legenda){ const x0=bb.x1+0.8+18*k; let y=bb.y0; TX(D,x0,y,"LEGENDA",2,{a:"s",b:true}); y+=6*k;
+    const item=(q,txt)=>{ if(q.lin){ L(D,x0,y,x0+4.5*k,y,q.w,q.l,!!q.d); } else simbHidro(D,{...q,p:[x0+2*k,y]}); TX(D,x0+7*k,y-0.6*k,txt,1.5,{a:"s"}); y+=6*k; };
+    item({lin:1,w:.3,l:"AGUA"},"Água fria (ramal na parede)"); item({lin:1,w:.25,l:"AGUA",d:1},"Barrilete / alimentação (na laje)");
+    item({t:"desc"},"Coluna de água fria (descida)"); item({t:"af"},"Ponto de água fria");
+    item({lin:1,w:.5,l:"ESGOTO"},"Esgoto (sob o piso)"); item({t:"es"},"Saída de esgoto do aparelho");
+    item({t:"cs"},"Caixa sifonada 150x150"); item({t:"ci"},"Caixa de inspeção 60x60"); item({t:"cg"},"Caixa de gordura"); item({t:"tv"},"Tubo de ventilação Ø50"); item({t:"hd"},"Hidrômetro (AL = alimentação do reservatório)"); }
+  return D;
+}
+const notasHidro=HD=>[`Reservatório: ${HD.pessoas} pessoas x ${HD.cons} L/dia = ${HD.Vn} L; adotado ${HD.res?HD.res.vol:"-"} L (1 dia de consumo).`,`Água fria em PVC soldável: alimentação e colunas Ø25, barrilete Ø32, sub-ramais conforme o quadro.`,`Esgoto em PVC: vaso Ø100 i=1%; ramais Ø40/Ø50 i=2%; coletor Ø100 i=1% até a rede pública ou fossa.`,`Caixa de inspeção a cada mudança de direção e no máximo a cada 25 m; pia da cozinha passa pela caixa de gordura.`,`Ventilação Ø50 junto ao vaso, subindo até 0,30 m acima do telhado.`,`Traçado sugerido pelo app: conferir no projeto hidrossanitário e na obra.`];
+
 /* ---------------- Planta de situação ---------------- */
 // terreno retangular alinhado com a casa: f = para a rua, r = para a direita de quem olha da rua
 function terreno(G){
@@ -1416,7 +1559,7 @@ function extensao(D){
   return {x0,y0,x1,y1};
 }
 const n2=v=>(Math.round(v*100)/100).toString();
-const COR={LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)",MOBILIAC:"var(--line)",ELETRICA:"var(--accent)"};
+const COR={LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)",MOBILIAC:"var(--line)",ELETRICA:"var(--accent)",AGUA:"var(--accent)",ESGOTO:"var(--soil)"};
 function primsSVG(D,map,k){
   let s="";
   D.p.forEach(p=>{ const cor=COR[p.l]||"var(--ink)";
@@ -1507,6 +1650,11 @@ function render(){
         <ol class="notes" style="margin-top:12px">${notasBanho().map(t=>`<li>${esc(t)}</li>`).join("")}</ol></div>`).join(""); }
   { const LM=layoutMoveis(G); $("lay").innerHTML=svgDe(desenhoLayout(G,k,LM));
     const EL=pontosEletricos(G,LM); $("ele").innerHTML=svgDe(desenhoEletrica(G,k,LM,EL));
+    const HD=redeHidro(G,LM); $("hid").innerHTML=svgDe(desenhoHidro(G,k,LM,HD));
+    $("hidChips").innerHTML=G.vazio||!HD.salas.length?"":[`${HD.ap.length} pontos de água`,`${HD.salas.length} áreas molhadas`,`${HD.caixas.filter(c=>c.tipo==="CI").length} caixas de inspeção`,`Reservatório ${HD.res?HD.res.vol:"-"} L`].map(t=>`<span class="chip">${t}</span>`).join("");
+    $("hidAvisos").innerHTML=HD.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join("");
+    $("tabHid").innerHTML=`<tr><th>Ambiente</th><th>Aparelho</th><th class="n">Água fria</th><th class="n">Altura</th><th class="n">Esgoto</th></tr>`+(HD.ap.length?HD.ap.map(a=>`<tr><td>${esc(a.r.n)}</td><td>${esc(a.nome)}</td><td class="n">Ø${a.dAf}</td><td class="n">${a.h} m</td><td class="n">${a.dEs?`Ø${a.dEs}`:"pelo ralo"}</td></tr>`).join(""):`<tr><td colspan="5" style="color:var(--muted)">Sem pontos.</td></tr>`);
+    $("hidNotas").innerHTML=notasHidro(HD).map(t=>`<li>${esc(t)}</li>`).join("");
     const nT=t=>EL.pts.filter(q=>q.t===t).length;
     $("eleChips").innerHTML=G.vazio?"":[`${nT("luz")} pontos de luz`,`${nT("int")} interruptores`,`${nT("tug")} tomadas (TUG)`,`${nT("tue")} TUE`,`${EL.C.length} circuitos`,`Potência instalada ${f(EL.tot/1000)} kVA`].map(t=>`<span class="chip">${t}</span>`).join("");
     $("eleAvisos").innerHTML=EL.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join("");
@@ -1645,7 +1793,7 @@ $("layAmb").addEventListener("change",e=>{ const i=e.target.dataset.lay; if(i==n
 $("layAmb").addEventListener("click",e=>{ const b=e.target.closest("[data-var]"); if(!b||!GG) return; const lb=labDe(GG.rooms[+b.dataset.var]); lb.mv=Math.round(num(lb.mv))+1; render(); });
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
-  ["planta","lay","ele","cortes","cob","fach","sit","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
+  ["planta","lay","ele","hid","cortes","cob","fach","sit","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
 });
 
 /* ======================================================================
@@ -1689,6 +1837,7 @@ function pranchas(fmt){
   const pl=encaixar(k=>desenhoPlanta(G,k,false),aw,ah-TT);
   const LM=layoutMoveis(G), temMob=LM.some(R=>R.pos.length||R.banho||R.carro), la=temMob?encaixar(k=>desenhoLayout(G,k,LM),aw,ah-TT):null;
   const EL=pontosEletricos(G,LM), el=G.rooms.length?encaixar(k=>desenhoEletrica(G,k,LM,EL),aw,ah-TT):null;
+  const HD=redeHidro(G,LM), hi=HD.salas.length?encaixar(k=>desenhoHidro(G,k,LM,HD),aw,ah-TT):null;
   const [ca,cb]=encaixar2(k=>desenhoCorte(G,k,"A"),k=>desenhoCorte(G,k,"B"),aw,(ah-2*TT-6)/2);
   const co=encaixar(k=>desenhoCobertura(G,k),aw,ah-TT);
   const FA=fachadas(), bw2=(aw-8)/2, bh2=(ah-6)/2;
@@ -1703,6 +1852,7 @@ function pranchas(fmt){
     {n:"01/05",conteudo:"PLANTA BAIXA, QUADRO DE ÁREAS E DE ESQUADRIAS",escala:`1:${pl.s}`,itens:[{d:pl,titulo:"PLANTA BAIXA",box:[area.x0,area.y0,aw,ah]}],lado:"quadros"},
     ...(la?[{n:"",conteudo:"PLANTA DE LAYOUT",escala:`1:${la.s}`,itens:[{d:la,titulo:"PLANTA DE LAYOUT",box:[area.x0,area.y0,aw,ah]}],lado:"layout",LM}]:[]),
     ...(el?[{n:"",conteudo:"PLANTA DE PONTOS ELÉTRICOS",escala:`1:${el.s}`,itens:[{d:el,titulo:"PLANTA DE PONTOS ELÉTRICOS",box:[area.x0,area.y0,aw,ah]}],lado:"eletrica",EL}]:[]),
+    ...(hi?[{n:"",conteudo:"PLANTA HIDROSSANITÁRIA",escala:`1:${hi.s}`,itens:[{d:hi,titulo:"PLANTA HIDROSSANITÁRIA",box:[area.x0,area.y0,aw,ah]}],lado:"hidro",HD}]:[]),
     {n:"02/05",conteudo:"CORTES AA E BB",escala:`1:${ca.s}`,itens:[{d:ca,titulo:"CORTE AA",box:[area.x0,area.y0,aw,ah/2-3]},{d:cb,titulo:"CORTE BB",box:[area.x0,area.y0+ah/2+3,aw,ah/2-3]}],lado:"alturas"},
     {n:"03/05",conteudo:"PLANTA DE COBERTURA",escala:`1:${co.s}`,itens:[{d:co,titulo:"PLANTA DE COBERTURA",box:[area.x0,area.y0,aw,ah]}],lado:"telhado"},
     {n:"04/05",conteudo:"FACHADAS",escala:`1:${fa[0].s}`,itens:fa.map((d,i)=>({d,titulo:FA[i][1],box:[area.x0+(i%2)*(bw2+8),area.y0+Math.floor(i/2)*(bh2+6),bw2,bh2]})),lado:"fachadas"},
@@ -1716,6 +1866,7 @@ function pranchas(fmt){
 }
 function textosLado(P,lado,fl){
   const {G,Q,TI}=P, pd=num(S.pd);
+  if(lado==="hidro"){ const H=fl.HD; return [{t:"QUADRO DE PONTOS",pc:[0.24,0.38,0.12,0.12,0.14],cols:[["AMBIENTE",0],["APARELHO",0],["AF",1],["ALT.",1],["ESG.",1]],rows:H.ap.map(a=>[a.r.n,a.nome,`Ø${a.dAf}`,a.h,a.dEs?`Ø${a.dEs}`:"ralo"])},{t:"NOTAS",linhas:notasHidro(H)}]; }
   if(lado==="eletrica"){ const E=fl.EL; return [{t:"QUADRO DE CARGAS",pc:[0.08,0.46,0.12,0.10,0.11,0.13],cols:[["C",0],["DESCRIÇÃO",0],["VA",1],["V",1],["DISJ.",1],["FIO",1]],rows:[...E.C.map(c=>[`C${c.n}`,c.desc.length>46?c.desc.slice(0,43)+"...":c.desc,String(c.va),String(c.v),`${c.disj} A`,`${f(c.fio,1)}`+(c.dr?" DR":"")]),["","TOTAL INSTALADO",String(E.tot),"","","",1]]},{t:"NOTAS",linhas:notasEletrica(E)}]; }
   if(lado==="layout") return [{t:"MOBILIÁRIO",linhas:fl.LM.filter(R=>resumoMob(R).length).map(R=>`${R.r.n}: ${resumoMob(R).join(", ")}.`)},{t:"NOTAS",linhas:notasLayout(fl.LM)}];
   if(lado==="quadros"){
@@ -1734,7 +1885,7 @@ function textosLado(P,lado,fl){
 }
 
 /* ---------------- DXF ---------------- */
-const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],MOBILIA:[30,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],GERAL:[7,"CONTINUOUS"]};
+const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],MOBILIA:[30,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[5,"CONTINUOUS"],ESGOTO:[32,"CONTINUOUS"],GERAL:[7,"CONTINUOUS"]};
 function dxfEnc(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?"); }
 function buildDXF(){
   const P=pranchas(S.fmt||"A3"), o=[], p=(c,v)=>o.push(String(c),String(v)), n=v=>(+v).toFixed(4);
@@ -1784,7 +1935,7 @@ document.querySelectorAll("[data-dxfcopy]").forEach(b=>b.onclick=async()=>{
 });
 
 /* ---------------- PDF (escrito à mão, sem bibliotecas) ---------------- */
-const PDFCOR={LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25]};
+const PDFCOR={LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25],AGUA:[0,.3],ESGOTO:[.25,.5]};
 function pdfTxt(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?").replace(/[\\()]/g,m=>"\\"+m); }
 function buildPDF(fmt){
   const P=pranchas(fmt), {W,H,mo,ml,cw,ch,TT,side}=P; const n=v=>(+v).toFixed(3); let c=[]; const pages=[];
