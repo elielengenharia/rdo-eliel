@@ -203,6 +203,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
     <div class="sheet">
       <h2>Planta de layout</h2>
       <p class="cap">Os móveis entram sozinhos pelo nome do ambiente (quarto, sala, cozinha, banheiro, lavanderia, escritório, garagem): longe do giro das portas, sem móvel alto na frente de janela e com espaço para circular. Mude o tipo do ambiente na tabela abaixo ou toque em <b>Outra posição</b> para trocar o móvel principal de parede.</p>
+      <div class="form"><label>Uso do imóvel<select id="uso"><option value="residencial">Residencial (casa)</option><option value="comercial">Comercial (salas, loja, escritório)</option></select></label></div>
       <div class="draw" id="lay"></div>
     </div>
     <div class="sheet"><h2>Móveis por ambiente</h2><div class="tbl"><table id="layAmb"></table></div></div>
@@ -328,7 +329,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 2.1 · planta de layout";
+const VERSAO="versão 2.2 · layout residencial e comercial";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -367,7 +368,7 @@ function defaults(){
   return {
     obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
-    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
 }
 let S;
@@ -976,6 +977,7 @@ function tipoMob(r){ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; if(lab&&lab.m
   if(/cozinha|copa/.test(n)) return /sala|estar|jantar/.test(n)?"salacoz":"cozinha";
   if(/lavand|servi[cç]o/.test(n)) return "lavand";
   if(/escrit|comercial|consult|office|loja|recep/.test(n)) return "escrit";
+  if(S.uso==="comercial"&&/sala|ambiente|sl\b/.test(n)&&!/cozinha|copa|jantar/.test(n)) return "escrit";   // imóvel comercial: "Sala 1", "Sala 2" são salas comerciais
   if(/garag/.test(n)) return "garagem";
   if(/jantar/.test(n)) return "jantar";
   if(/sala|estar|living/.test(n)) return "sala";
@@ -1026,6 +1028,8 @@ function pMesaExec(){ const w=1.40;
     d.R(0,0.75,w,1.45,.25); d.C(0.70,0.42,0.24,.18); d.L(0.50,0.18,0.90,0.18,.25); cadeira(d,0.40,1.62,1); cadeira(d,1.00,1.62,1); }}; }
 function pMesa(){ const w=1.20;
   return {nome:"mesa de trabalho",extra:"com cadeira",w,pri:0,sol:[[0,0,w,0.60],[0.35,0.55,0.85,1.05]],liv:[[0,1.05,w,1.40]],des:d=>{ d.R(0,0,w,0.60,.25); d.C(0.60,0.80,0.24,.18); d.L(0.40,1.02,0.80,1.02,.25); }}; }
+function pEspera(){ return {nome:"espera",extra:"2 poltronas e mesinha",w:1.60,pri:0,sol:[[0,0,1.60,0.65]],liv:[[0,0.65,1.60,1.15]],des:d=>{
+  [[0,0.60],[1.00,1.60]].forEach(([a,b])=>{ d.R(a,0.05,b,0.65,.25); d.L(a+0.08,0.17,b-0.08,0.17,.18); d.L(a+0.08,0.17,a+0.08,0.65,.13); d.L(b-0.08,0.17,b-0.08,0.65,.13); }); d.R(0.65,0.10,0.95,0.40,.18); }}; }
 function pArmario(){ return {nome:"armário",extra:"",w:0.80,pri:0,sol:[[0,0,0.80,0.45,1]],liv:[[0,0.45,0.80,1.0]],des:d=>{ d.R(0,0,0.80,0.45,.25); d.L(0.40,0.40,0.40,0.45,.13); d.L(0,0.40,0.80,0.40,.13); }}; }
 function listaMob(tipo,r){ const A=r.area, C=(k,alts,opc)=>({k,alts:alts.filter(Boolean),opc:!!opc});
   const sofa=()=>C("sofa",[2.1,1.8,1.5].flatMap(w=>[0,1.3,1.6].flatMap(o=>[pSofa(w,o,true),pSofa(w,o,false)]))), rack=()=>C("rack",[1.8,1.4,1.0].map(pRack));
@@ -1037,7 +1041,7 @@ function listaMob(tipo,r){ const A=r.area, C=(k,alts,opc)=>({k,alts:alts.filter(
     case "cozinha": return [C("cozinha",pCozinhas()),...(A>=8?[C("jantar",[pJantar(4),pJantarParede()],true)]:[])];
     case "jantar": return [C("jantar",[A>=12?pJantar(6):null,pJantar(4),pJantarParede()])];
     case "lavand": return [C("lavand",[pLavand(),pTanque()]),{...C("maquina",[pMaquina()]),se:ctx=>ctx.pos.lavand&&ctx.pos.lavand.pc.w<1}];
-    case "escrit": return [C("mesa",[A>=9?pMesaExec():null,pMesa()]),C("armario",[pArmario()],true)];
+    case "escrit": return [C("mesa",[A>=9?pMesaExec():null,pMesa()]),C("armario",[pArmario()],true),...(A>=12?[C("espera",[pEspera()],true)]:[])];
   }
   return []; }
 // geometria auxiliar: sobreposição de polígonos convexos (eixos separadores) e retângulo dentro do ambiente
@@ -1074,6 +1078,7 @@ function notaMob(k,c,ctx){ const pc=c.pc, T=c.T, Le=c.Le, cen=c.cen, Z=ctx.Z;
   else if(k==="lavand"||k==="maquina") s+=pc.w+(canto?0.5:0)+(k==="maquina"&&ctx.pos.lavand?-0.3*Math.hypot(ctx.pos.lavand.cen[0]-cen[0],ctx.pos.lavand.cen[1]-cen[1]):0);
   else if(k==="mesa"){ s+=0.3*Math.min(dP,4); if(pc.porta&&Z.porta.length){ const q=centro(Z.porta[0]); if((q[0]-cen[0])*T.N[0]+(q[1]-cen[1])*T.N[1]>0) s+=1; } }
   else if(k==="armario") s+=(canto?0.5:0)+0.1*dP;
+  else if(k==="espera") s+=0.4*Math.min(dP,3)*-1+(canto?0.3:0);   // espera perto da entrada
   return s; }
 function candidatos(it,ctx){ const r=ctx.r, P=r.poly, out=[];
   P.forEach((A,i)=>{ const B=P[(i+1)%P.length], Le=Math.hypot(B[0]-A[0],B[1]-A[1]); if(Le<0.5) return; const u=[(B[0]-A[0])/Le,(B[1]-A[1])/Le];
@@ -1164,7 +1169,7 @@ function desenhoLayout(G,k,LM){
 }
 function resumoMob(R){ const it=R.pos.map(c=>c.pc.nome+(c.pc.extra?` (${c.pc.extra})`:""));
   if(R.banho) it.push(R.banho.box?"box, vaso e lavatório":"vaso e lavatório"); if(R.carro) it.push("1 vaga de carro (1,80 x 4,30)"); return it; }
-const notasLayout=()=>[`Mobiliário ilustrativo em medidas usuais: cama de casal 1,38 x 1,88; solteiro 0,88 x 1,88; guarda-roupa 0,55 de profundidade; sofá 0,85; bancada da cozinha 0,60.`,`Os móveis foram colocados longe do giro das portas e com faixa livre para circular (0,55 a 0,90 m).`,`Conferir as medidas reais dos móveis e eletrodomésticos antes de marcar os pontos de elétrica e hidráulica.`];
+const notasLayout=LM=>[`Mobiliário ilustrativo em medidas usuais: cama de casal 1,38 x 1,88; solteiro 0,88 x 1,88; guarda-roupa 0,55 de profundidade; sofá 0,85; bancada da cozinha 0,60.`,...((LM||[]).some(R=>R.tipo==="escrit")?[`Salas comerciais: mesa de trabalho 1,40 x 0,70 com cadeira e 2 cadeiras de visita, armário 0,80 x 0,45 e espera com 2 poltronas.`]:[]),`Os móveis foram colocados longe do giro das portas e com faixa livre para circular (0,55 a 0,90 m).`,`Conferir as medidas reais dos móveis e eletrodomésticos antes de marcar os pontos de elétrica e hidráulica.`];
 
 /* ---------------- Planta de situação ---------------- */
 // terreno retangular alinhado com a casa: f = para a rua, r = para a direita de quem olha da rua
@@ -1425,8 +1430,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
@@ -1550,7 +1555,7 @@ function pranchas(fmt){
 }
 function textosLado(P,lado,fl){
   const {G,Q,TI}=P, pd=num(S.pd);
-  if(lado==="layout") return [{t:"MOBILIÁRIO",linhas:fl.LM.filter(R=>resumoMob(R).length).map(R=>`${R.r.n}: ${resumoMob(R).join(", ")}.`)},{t:"NOTAS",linhas:notasLayout()}];
+  if(lado==="layout") return [{t:"MOBILIÁRIO",linhas:fl.LM.filter(R=>resumoMob(R).length).map(R=>`${R.r.n}: ${resumoMob(R).join(", ")}.`)},{t:"NOTAS",linhas:notasLayout(fl.LM)}];
   if(lado==="quadros"){
     const util=G.rooms.reduce((s,r)=>s+r.area,0);
     return [{t:"QUADRO DE ÁREAS",cols:[["AMBIENTE",0],["ÁREA (m²)",1]],rows:[...G.rooms.map(r=>[r.n,f(r.area)]),["ÁREA ÚTIL",f(util),1],["ÁREA CONSTRUÍDA",f(G.areaC),1]]},
