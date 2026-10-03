@@ -102,7 +102,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <header class="top">
     <div>
       <h1>Projeto Arquitetônico</h1>
-      <div class="sub">Planta baixa com áreas e cotas · Cortes AA e BB · Cobertura · Fachadas · Quadro de esquadrias · <b id="versao"></b></div>
+      <div class="sub">Planta baixa com áreas e cotas · Cortes AA e BB · Cobertura · Fachadas · Situação · Quadro de esquadrias · <b id="versao"></b></div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
@@ -112,6 +112,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
     <button role="tab" data-tab="cortes" aria-selected="false">Cortes</button>
     <button role="tab" data-tab="cob" aria-selected="false">Cobertura</button>
     <button role="tab" data-tab="fach" aria-selected="false">Fachadas</button>
+    <button role="tab" data-tab="sit" aria-selected="false">Situação</button>
     <button role="tab" data-tab="dados" aria-selected="false">Dados</button>
   </nav>
 
@@ -126,7 +127,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <div id="warnings"></div>
       <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><span class="toast" id="pdfMsg" role="status"></span></div>
       <div class="row"><button class="btn pri" data-dxf>Baixar DXF para o AutoCAD</button><button class="btn" data-dxfcopy>Copiar DXF</button><span class="toast" data-dxfmsg role="status"></span></div>
-      <p class="cap" style="margin-top:8px">O PDF sai com 4 pranchas e carimbo: 01 planta baixa com quadros, 02 cortes AA e BB, 03 cobertura, 04 fachadas. O DXF tem os mesmos desenhos em escala real (metros), cada elemento no seu layer. Dentro do Claude o DXF vem compactado (.zip).</p>
+      <p class="cap" style="margin-top:8px">O PDF sai com 5 pranchas e carimbo: 01 planta baixa com quadros, 02 cortes AA e BB, 03 cobertura, 04 fachadas, 05 situação. O DXF tem os mesmos desenhos em escala real (metros), cada elemento no seu layer. Dentro do Claude o DXF vem compactado (.zip).</p>
     </div>
     <div class="grid2">
       <div class="sheet"><h2>Quadro de áreas</h2><div class="tbl"><table id="tabAreas"></table></div></div>
@@ -191,6 +192,36 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <div class="form"><label>Frente da casa<select id="frente"><option value="baixo">Embaixo na planta</option><option value="cima">Em cima na planta</option><option value="esq">À esquerda na planta</option><option value="dir">À direita na planta</option></select></label></div>
     </div>
     <div id="fachadas"></div>
+  </section>
+
+  <!-- SITUAÇÃO -->
+  <section id="tab-sit" hidden>
+    <div class="sheet">
+      <h2>Terreno</h2>
+      <p class="cap">A frente do terreno é o lado da rua, o mesmo escolhido como frente da casa na aba Fachadas. Recuo lateral esquerdo = olhando da rua para o terreno.</p>
+      <div class="form">
+        <label>Testada (frente, m)<input type="number" step="0.05" id="terr.testada"></label>
+        <label>Profundidade (m)<input type="number" step="0.05" id="terr.prof"></label>
+        <label>Recuo frontal (m)<input type="number" step="0.05" id="terr.recFrente"></label>
+        <label>Recuo lateral esquerdo (m)<input type="number" step="0.05" id="terr.recEsq"></label>
+        <label>Largura do passeio (m)<input type="number" step="0.1" id="terr.calcada"></label>
+        <label>Norte (graus, 0 = para cima na planta)<input type="number" step="5" id="terr.norte"></label>
+      </div>
+      <div class="form wide" style="margin-top:10px">
+        <label>Rua<input type="text" id="terr.rua"></label>
+        <label>Lote<input type="text" id="terr.lote"></label>
+        <label>Quadra<input type="text" id="terr.quadra"></label>
+        <label>Vizinho à esquerda<input type="text" id="terr.confEsq"></label>
+        <label>Vizinho à direita<input type="text" id="terr.confDir"></label>
+        <label>Vizinho aos fundos<input type="text" id="terr.confFundo"></label>
+      </div>
+    </div>
+    <div class="sheet">
+      <h2>Planta de situação</h2>
+      <div class="draw" id="sit"></div>
+      <div class="chips" id="sitChips"></div>
+      <div id="sitAvisos"></div>
+    </div>
   </section>
 
   <!-- DADOS -->
@@ -273,7 +304,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 1.7 · fachadas";
+const VERSAO="versão 1.8 · planta de situação";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -304,6 +335,7 @@ const AB42=[
   {n:"Cozinha",t:"Janela",w:1,d:1.2,l:1.20,a:1.00,p:1.10},
   {n:"Banho",t:"Janela",w:2,d:2.8,l:0.60,a:0.60,p:1.50}
 ];
+const TERR0={testada:12,prof:25,recFrente:4,recEsq:2.5,calcada:2,rua:"Rua projetada",lote:"",quadra:"",confEsq:"Lote vizinho",confDir:"Lote vizinho",confFundo:"Lote vizinho",norte:0};
 const TEL0={tipo:2,dir:"h",telha:"Cerâmica",inc:30,beiral:0.60,plat:"não"};
 const INC_TELHA={"Cerâmica":30,"Concreto":30,"Fibrocimento":15,"Metálica":10};
 const ABDEF={Porta:{l:0.80,a:2.10,p:0},Janela:{l:1.20,a:1.00,p:1.10},"Vão":{l:1.00,a:2.10,p:0}};
@@ -311,11 +343,11 @@ function defaults(){
   return {
     obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
-    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
 }
 let S;
-try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); }catch(e){ S=defaults(); }
+try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); }catch(e){ S=defaults(); }
 function save(){ try{ localStorage.setItem("arq-casa-v1",JSON.stringify(S)); }catch(e){} }
 
 /* ---------- polígonos: utilidades ---------- */
@@ -587,7 +619,7 @@ function cotaAlinhada(D,p,q,sg,nX,nY,txt){ const k=D.k, dx=q[0]-p[0], dy=q[1]-p[
   const ux=dx/Ln, uy=dy/Ln, nx=nX*sg, ny=nY*sg, o=7*k, a=[p[0]+nx*o,p[1]+ny*o], b=[q[0]+nx*o,q[1]+ny*o];
   L(D,...a,...b,.18,"COTAS");
   [[p,a],[q,b]].forEach(([s0,e])=>{ L(D,s0[0]+nx*k,s0[1]+ny*k,e[0]+nx*1.5*k,e[1]+ny*1.5*k,.13,"COTAS"); const tx=(ux+nx)*0.65*k, ty=(uy+ny)*0.65*k; L(D,e[0]-tx,e[1]-ty,e[0]+tx,e[1]+ty,.35,"COTAS"); });
-  let ang=Math.atan2(dy,dx)*180/Math.PI; if(ang>90) ang-=180; if(ang<=-90) ang+=180;
+  let ang=Math.atan2(dy,dx)*180/Math.PI; if(ang>=90) ang-=180; if(ang<-90) ang+=180;
   TX(D,(a[0]+b[0])/2+nx*1.6*k,(a[1]+b[1])/2+ny*1.6*k,txt,1.8,{l:"COTAS",rot:ang}); }
 function nivelInt(D,x,y,txt){ const k=D.k; L(D,x-3*k,y,x+3*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.1*k,y-1.9*k],[x+1.1*k,y-1.9*k]],"COTAS"); TX(D,x,y-3.4*k,txt,1.7,{l:"COTAS"}); }
 function nivel(D,x,y,txt,abaixo){ const k=D.k, sg=abaixo?-1:1; L(D,x-2*k,y,x+12*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.2*k,y-sg*2*k],[x+1.2*k,y-sg*2*k]],"COTAS"); TX(D,x+2*k,y-sg*2.6*k,txt,1.8,{a:"s",l:"COTAS"}); }
@@ -766,6 +798,62 @@ function desenhoFachada(G,k,lado){
   return D;
 }
 
+/* ---------------- Planta de situação ---------------- */
+// terreno retangular alinhado com a casa: f = para a rua, r = para a direita de quem olha da rua
+function terreno(G){
+  const T=S.terr, fr=VISTA[S.frente]?S.frente:"baixo", V=VISTA[fr].V, Rt=[V[1],-V[0]], bb=G.bb;
+  const cs=[[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x1,bb.y1],[bb.x0,bb.y1]], dV=p=>p[0]*V[0]+p[1]*V[1], dR=p=>p[0]*Rt[0]+p[1]*Rt[1];
+  const fMax=Math.max(...cs.map(dV)), fMin=Math.min(...cs.map(dV)), rMin=Math.min(...cs.map(dR)), rMax=Math.max(...cs.map(dR));
+  const testada=Math.max(0.5,num(T.testada)), prof=Math.max(0.5,num(T.prof)), F1=fMax+num(T.recFrente), F0=F1-prof, R0=rMin-num(T.recEsq), R1=R0+testada;
+  const P=(f,r)=>[f*V[0]+r*Rt[0],f*V[1]+r*Rt[1]];
+  const area=testada*prof, TI=infoTelhado(G);
+  return {V,Rt,P,F0,F1,R0,R1,fMax,fMin,rMin,rMax,testada,prof,area,lote:[P(F1,R0),P(F1,R1),P(F0,R1),P(F0,R0)],
+    rec:{frente:num(T.recFrente),esq:num(T.recEsq),dir:R1-rMax,fundo:fMin-F0},
+    to:G.areaC/area, ca:G.areaC/area, livre:area-G.areaC, cobProj:TI.areaProj};
+}
+function cotaLivre(D,p,q,txt){ const k=D.k, dx=q[0]-p[0], dy=q[1]-p[1], l=Math.hypot(dx,dy); if(l<0.01) return;
+  const ux=dx/l, uy=dy/l, nx=-uy, ny=ux; L(D,...p,...q,.18,"COTAS");
+  [p,q].forEach(e=>{ const tx=(ux+nx)*0.65*k, ty=(uy+ny)*0.65*k; L(D,e[0]-tx,e[1]-ty,e[0]+tx,e[1]+ty,.35,"COTAS"); });
+  let ang=Math.atan2(dy,dx)*180/Math.PI; if(ang>=90) ang-=180; if(ang<-90) ang+=180; const a=ang*Math.PI/180;
+  TX(D,(p[0]+q[0])/2+Math.sin(a)*1.6*k,(p[1]+q[1])/2-Math.cos(a)*1.6*k,txt,1.8,{l:"COTAS",rot:ang}); }
+function desenhoSituacao(G,k){
+  const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
+  const T=terreno(G), {P,F0,F1,R0,R1,V,Rt}=T, cal=Math.max(0,num(S.terr.calcada)), rua=8, TI=infoTelhado(G);
+  const angR=Math.atan2(Rt[1],Rt[0])*180/Math.PI, rotR=ang=>{ let a=ang; if(a>=89.99) a-=180; if(a<-90.01) a+=180; return a; };
+  const ext=(a,b)=>L(D,...a,...b,.13,"COTAS");
+  // rua: alinhamento do lote, meio-fio e o outro lado da rua
+  [[F1,.35],[F1+cal,.35],[F1+cal+rua,.25]].forEach(([f,w])=>L(D,...P(f,R0-4),...P(f,R1+4),w,"LOTE"));
+  if(cal>0.3) TX(D,...P(F1+cal/2,(R0+R1)/2),"PASSEIO",1.6,{l:"COTAS",rot:rotR(angR)});
+  TX(D,...P(F1+cal+rua/2,(R0+R1)/2),String(S.terr.rua||"RUA").toUpperCase(),3,{b:true,rot:rotR(angR)});
+  // lote
+  PL(D,[...T.lote,T.lote[0]],.6,"LOTE");
+  TX(D,...P(F0+1.2,(R0+R1)/2),[S.terr.lote?`LOTE ${S.terr.lote}`:"",S.terr.quadra?`QUADRA ${S.terr.quadra}`:""].filter(Boolean).join(" · ")||"TERRENO",2.2,{b:true,rot:rotR(angR)});
+  // vizinhos
+  const angV=Math.atan2(V[1],V[0])*180/Math.PI;
+  TX(D,...P((F0+F1)/2,R0-3*k),String(S.terr.confEsq||"").toUpperCase(),1.8,{l:"COTAS",rot:rotR(angV)});
+  TX(D,...P((F0+F1)/2,R1+3*k),String(S.terr.confDir||"").toUpperCase(),1.8,{l:"COTAS",rot:rotR(angV)});
+  TX(D,...P(F0-3*k,(R0+R1)/2),String(S.terr.confFundo||"").toUpperCase(),1.8,{l:"COTAS",rot:rotR(angR)});
+  // casa: projeção da construção (hachurada) e do telhado (tracejado)
+  const casa=(G.casas||[]); casa.forEach(Pc=>PG(D,Pc,"HACHURA")); G.contExt.forEach(s0=>L(D,...s0,.5,"PAREDE"));
+  if(TI.poly) PL(D,[...TI.poly,TI.poly[0]],.2,"PROJECAO",true); else if(!TI.plat){ const Rr=TI.R; PL(D,[[Rr.x0,Rr.y0],[Rr.x1,Rr.y0],[Rr.x1,Rr.y1],[Rr.x0,Rr.y1],[Rr.x0,Rr.y0]],.2,"PROJECAO",true); }
+  const fm=(T.fMin+T.fMax)/2, rm=(T.rMin+T.rMax)/2;
+  { const c0=P(fm,rm), ar=rotR(angR)*Math.PI/180, dn=[-Math.sin(ar),Math.cos(ar)];   // "para baixo" na direção do texto
+    TX(D,c0[0]-dn[0]*1.4*k,c0[1]-dn[1]*1.4*k,"CONSTRUÇÃO",2,{b:true,rot:rotR(angR)}); TX(D,c0[0]+dn[0]*1.8*k,c0[1]+dn[1]*1.8*k,`${f(G.areaC)} m²`,1.8,{rot:rotR(angR)}); }
+  // recuos
+  cotaLivre(D,P(T.fMax,rm),P(F1,rm),f(T.rec.frente));
+  cotaLivre(D,P(T.fMin,rm),P(F0,rm),f(T.rec.fundo));
+  cotaLivre(D,P(fm,R0),P(fm,T.rMin),f(T.rec.esq));
+  cotaLivre(D,P(fm,T.rMax),P(fm,R1),f(T.rec.dir));
+  // testada (nos fundos, por fora) e profundidade (à direita, por fora)
+  const o1=9*k; ext(P(F0-k,R0),P(F0-o1-1.5*k,R0)); ext(P(F0-k,R1),P(F0-o1-1.5*k,R1)); cotaLivre(D,P(F0-o1,R0),P(F0-o1,R1),f(T.testada));
+  ext(P(F0,R1+k),P(F0,R1+o1+1.5*k)); ext(P(F1,R1+k),P(F1,R1+o1+1.5*k)); cotaLivre(D,P(F0,R1+o1),P(F1,R1+o1),f(T.prof));
+  // norte
+  const c=P(F0-o1-8*k,R1+o1+8*k), th=num(S.terr.norte)*Math.PI/180, d=[Math.sin(th),-Math.cos(th)], pp=[-d[1],d[0]], r=5*k;
+  CI(D,c[0],c[1],r,.25,"GERAL"); PG(D,[[c[0]+d[0]*r,c[1]+d[1]*r],[c[0]+pp[0]*1.8*k-d[0]*r*0.6,c[1]+pp[1]*1.8*k-d[1]*r*0.6],[c[0]-pp[0]*1.8*k-d[0]*r*0.6,c[1]-pp[1]*1.8*k-d[1]*r*0.6]],"TELHADO");
+  TX(D,c[0]+d[0]*(r+2.6*k),c[1]+d[1]*(r+2.6*k),"N",2.4,{b:true});
+  return D;
+}
+
 /* ---------------- Planta de cobertura ---------------- */
 function desenhoCobertura(G,k){
   const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
@@ -774,7 +862,7 @@ function desenhoCobertura(G,k){
   if(TI.plat&&TI.poly){ G.contExt.forEach(s=>L(D,...s,.5,"PAREDE")); PL(D,[...TI.poly,TI.poly[0]],.35,"PAREDE");
     TI.calhas.forEach(s=>L(D,...s,.18,"TELHADO",true));
     const cl=[...TI.calhas].sort((p,q)=>Math.hypot(q[2]-q[0],q[3]-q[1])-Math.hypot(p[2]-p[0],p[3]-p[1]))[0];
-    if(cl){ let ang=Math.atan2(cl[3]-cl[1],cl[2]-cl[0])*180/Math.PI; if(ang>90) ang-=180; if(ang<=-90) ang+=180; TX(D,(cl[0]+cl[2])/2,(cl[1]+cl[3])/2-2*k,"CALHA",1.6,{l:"TELHADO",rot:ang}); } }
+    if(cl){ let ang=Math.atan2(cl[3]-cl[1],cl[2]-cl[0])*180/Math.PI; if(ang>=90) ang-=180; if(ang<-90) ang+=180; TX(D,(cl[0]+cl[2])/2,(cl[1]+cl[3])/2-2*k,"CALHA",1.6,{l:"TELHADO",rot:ang}); } }
   else if(TI.plat){ PL(D,[[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x1,bb.y1],[bb.x0,bb.y1],[bb.x0,bb.y0]],.5,"PAREDE"); PL(D,[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1],[R.x0,R.y0]],.35,"PAREDE");
     TI.bordas.forEach(e=>{ const o=0.25; const s={cima:[R.x0,R.y0+o,R.x1,R.y0+o],baixo:[R.x0,R.y1-o,R.x1,R.y1-o],esq:[R.x0+o,R.y0,R.x0+o,R.y1],dir:[R.x1-o,R.y0,R.x1-o,R.y1]}[e]; L(D,...s,.18,"TELHADO",true); });
     TX(D,(R.x0+R.x1)/2,R.y1-0.25-2*k,"CALHA",1.6,{l:"TELHADO"}); }
@@ -804,7 +892,7 @@ function extensao(D){
   return {x0,y0,x1,y1};
 }
 const n2=v=>(Math.round(v*100)/100).toString();
-const COR={FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)"};
+const COR={LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)"};
 function primsSVG(D,map,k){
   let s="";
   D.p.forEach(p=>{ const cor=COR[p.l]||"var(--ink)";
@@ -883,6 +971,9 @@ function render(){
   $("cob").innerHTML=svgDe(desenhoCobertura(G,k));
   $("capCob").textContent=`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}, inclinação ${f(num(S.tel.inc),0)}%${TI.plat?", escondido por platibanda":`, beiral de ${f(TI.b)} m`}. Altura máxima ${f(TI.plat?TI.topoPlat:TI.zmax)} m acima do piso.`;
   $("cobChips").innerHTML=G.vazio?"":[`Área do telhado ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²)`,TI.Lcum?`Cumeeira ${f(TI.Lcum)} m`:"",TI.Lesp?`Espigões ${f(TI.Lesp)} m`:"",`Cumeeira a ${f(TI.zmax)} m`].filter(Boolean).map(t=>`<span class="chip">${t}</span>`).join("");
+  if(!G.vazio){ const Tr=terreno(G); $("sit").innerHTML=svgDe(desenhoSituacao(G,Math.max(0.05,(Math.max(Tr.testada,Tr.prof)+12)/120)));
+    $("sitChips").innerHTML=[`Terreno ${f(Tr.testada)} × ${f(Tr.prof)} = ${f(Tr.area)} m²`,`Construída ${f(G.areaC)} m²`,`Taxa de ocupação ${f(Tr.to*100,1)}%`,`Coef. aproveitamento ${f(Tr.ca)}`,`Área livre ${f(Tr.livre)} m²`].map(t=>`<span class="chip">${t}</span>`).join("");
+    $("sitAvisos").innerHTML=(Tr.rec.dir<0||Tr.rec.fundo<0||Tr.rec.frente<0||Tr.rec.esq<0)?`<div class="alert bad">A construção não cabe no terreno com esses recuos (lateral direito ${f(Tr.rec.dir)} m, fundos ${f(Tr.rec.fundo)} m). Confira testada, profundidade e recuos.</div>`:""; }
   $("fachadas").innerHTML=G.vazio?"":fachadas().map(([l,t])=>`<div class="sheet"><h2>${t}</h2><div class="draw">${svgDe(desenhoFachada(G,k,l))}</div></div>`).join("");
   window.__R={G,Q,TI};
   save();
@@ -952,8 +1043,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
@@ -1003,7 +1094,7 @@ $("novoSim").onclick=()=>{
 };
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
-  ["planta","cortes","cob","fach","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
+  ["planta","cortes","cob","fach","sit","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
 });
 
 /* ======================================================================
@@ -1048,12 +1139,14 @@ function pranchas(fmt){
   const [ca,cb]=encaixar2(k=>desenhoCorte(G,k,"A"),k=>desenhoCorte(G,k,"B"),aw,(ah-2*TT-6)/2);
   const co=encaixar(k=>desenhoCobertura(G,k),aw,ah-TT);
   const FA=fachadas(), bw2=(aw-8)/2, bh2=(ah-6)/2;
+  const si=encaixar(k=>desenhoSituacao(G,k),aw,ah-TT);
   let fa=null; for(const s0 of ESCALAS){ const k=s0/1000, ds=FA.map(([l])=>{ const D=desenhoFachada(G,k,l), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k}; }); fa=ds; if(ds.every(d=>d.w<=bw2&&d.h<=bh2-TT)) break; }
   return {W,H,mo,ml,cw,ch,TT,area,side,G,Q,TI,folhas:[
-    {n:"01/04",conteudo:"PLANTA BAIXA, QUADRO DE ÁREAS E DE ESQUADRIAS",escala:`1:${pl.s}`,itens:[{d:pl,titulo:"PLANTA BAIXA",box:[area.x0,area.y0,aw,ah]}],lado:"quadros"},
-    {n:"02/04",conteudo:"CORTES AA E BB",escala:`1:${ca.s}`,itens:[{d:ca,titulo:"CORTE AA",box:[area.x0,area.y0,aw,ah/2-3]},{d:cb,titulo:"CORTE BB",box:[area.x0,area.y0+ah/2+3,aw,ah/2-3]}],lado:"alturas"},
-    {n:"03/04",conteudo:"PLANTA DE COBERTURA",escala:`1:${co.s}`,itens:[{d:co,titulo:"PLANTA DE COBERTURA",box:[area.x0,area.y0,aw,ah]}],lado:"telhado"},
-    {n:"04/04",conteudo:"FACHADAS",escala:`1:${fa[0].s}`,itens:fa.map((d,i)=>({d,titulo:FA[i][1],box:[area.x0+(i%2)*(bw2+8),area.y0+Math.floor(i/2)*(bh2+6),bw2,bh2]})),lado:"fachadas"}
+    {n:"01/05",conteudo:"PLANTA BAIXA, QUADRO DE ÁREAS E DE ESQUADRIAS",escala:`1:${pl.s}`,itens:[{d:pl,titulo:"PLANTA BAIXA",box:[area.x0,area.y0,aw,ah]}],lado:"quadros"},
+    {n:"02/05",conteudo:"CORTES AA E BB",escala:`1:${ca.s}`,itens:[{d:ca,titulo:"CORTE AA",box:[area.x0,area.y0,aw,ah/2-3]},{d:cb,titulo:"CORTE BB",box:[area.x0,area.y0+ah/2+3,aw,ah/2-3]}],lado:"alturas"},
+    {n:"03/05",conteudo:"PLANTA DE COBERTURA",escala:`1:${co.s}`,itens:[{d:co,titulo:"PLANTA DE COBERTURA",box:[area.x0,area.y0,aw,ah]}],lado:"telhado"},
+    {n:"04/05",conteudo:"FACHADAS",escala:`1:${fa[0].s}`,itens:fa.map((d,i)=>({d,titulo:FA[i][1],box:[area.x0+(i%2)*(bw2+8),area.y0+Math.floor(i/2)*(bh2+6),bw2,bh2]})),lado:"fachadas"},
+    {n:"05/05",conteudo:"PLANTA DE SITUAÇÃO",escala:`1:${si.s}`,itens:[{d:si,titulo:"PLANTA DE SITUAÇÃO",box:[area.x0,area.y0,aw,ah]}],lado:"situacao"}
   ]};
 }
 function textosLado(P,lado){
@@ -1063,13 +1156,16 @@ function textosLado(P,lado){
     return [{t:"QUADRO DE ÁREAS",cols:[["AMBIENTE",0],["ÁREA (m²)",1]],rows:[...G.rooms.map(r=>[r.n,f(r.area)]),["ÁREA ÚTIL",f(util),1],["ÁREA CONSTRUÍDA",f(G.areaC),1]]},
       {t:"QUADRO DE ESQUADRIAS",cols:[["CÓD.",0],["TIPO",0],["L x H",1],["PEIT.",1],["QTD",1]],rows:Q.map(q=>[q.cod,q.tipo,`${f(q.l)} x ${f(q.a)}`,q.tipo==="Janela"?f(q.p):"-",String(q.q)])}];
   }
+  if(lado==="situacao"){ const Tr=terreno(G); return [
+    {t:"QUADRO DO TERRENO",cols:[["ITEM",0],["VALOR",1]],rows:[["Área do terreno",`${f(Tr.area)} m²`],["Área construída",`${f(G.areaC)} m²`],["Taxa de ocupação",`${f(Tr.to*100,1)} %`],["Coef. de aproveitamento",f(Tr.ca)],["Área livre",`${f(Tr.livre)} m²`]]},
+    {t:"RECUOS",cols:[["RECUO",0],["m",1]],rows:[["Frontal",f(Tr.rec.frente)],["Lateral esquerdo",f(Tr.rec.esq)],["Lateral direito",f(Tr.rec.dir)],["Fundos",f(Tr.rec.fundo)]]}]; }
   if(lado==="fachadas") return [{t:"NOTAS",linhas:[`Frente da casa: ${{baixo:"lado de baixo",cima:"lado de cima",esq:"lado esquerdo",dir:"lado direito"}[S.frente]||"lado de baixo"} da planta baixa.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}`+(TI.plat?", escondido por platibanda.":`, beiral ${f(TI.b)} m.`),`Esquadrias conforme quadro da prancha 01 (códigos P, J e V).`,`Níveis em metros a partir do piso acabado (±0,00).`]}];
   if(lado==="alturas") return [{t:"NOTAS",linhas:[`Pé-direito: ${f(pd)} m.`,...(S.viga.on!=="não"?[`Viga/cinta de concreto ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm no topo das paredes, sob a laje. Concreto cortado em cinza escuro.`]:[]),`Níveis de piso: ${G.rooms.map(r=>`${r.n} ${fNv(r.nv)}`).join("; ")}.`,`Laje/forro: ${f(num(S.laje))} m. Piso a ${f(num(S.piso))} m do terreno.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}, i = ${f(num(S.tel.inc),0)}%.`,`Paredes com ${f(G.t)} m de espessura.`,`Cotas e níveis em metros. Conferir as medidas na obra.`]}];
   return [{t:"COBERTURA",linhas:[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}.`,`Inclinação ${f(num(S.tel.inc),0)}%.`+(TI.plat?" Platibanda com calha.":` Beiral ${f(TI.b)} m.`),`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`,(TI.Lcum?`Cumeeira: ${f(TI.Lcum)} m.`:"")+(TI.Lesp?` Espigões: ${f(TI.Lesp)} m.`:""),`Altura máxima: ${f(TI.plat?TI.topoPlat:TI.zmax)} m acima do piso.`].filter(Boolean)}];
 }
 
 /* ---------------- DXF ---------------- */
-const LAYERS={FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],GERAL:[7,"CONTINUOUS"]};
+const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],GERAL:[7,"CONTINUOUS"]};
 function dxfEnc(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?"); }
 function buildDXF(){
   const P=pranchas(S.fmt||"A3"), o=[], p=(c,v)=>o.push(String(c),String(v)), n=v=>(+v).toFixed(4);
@@ -1119,7 +1215,7 @@ document.querySelectorAll("[data-dxfcopy]").forEach(b=>b.onclick=async()=>{
 });
 
 /* ---------------- PDF (escrito à mão, sem bibliotecas) ---------------- */
-const PDFCOR={FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3]};
+const PDFCOR={LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3]};
 function pdfTxt(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?").replace(/[\\()]/g,m=>"\\"+m); }
 function buildPDF(fmt){
   const P=pranchas(fmt), {W,H,mo,ml,cw,ch,TT,side}=P; const n=v=>(+v).toFixed(3); let c=[]; const pages=[];
