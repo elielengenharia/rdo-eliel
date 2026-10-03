@@ -235,7 +235,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
     </div>
     <div class="sheet">
       <h2>Paredes (eixos, em metros)</h2>
-      <p class="cap">Cada linha é um trecho reto de parede, do ponto (x1, y1) ao (x2, y2), pelo eixo. A origem (0, 0) é o canto superior esquerdo; y cresce para baixo. Paredes na horizontal e na vertical fecham os ambientes e entram nas áreas.</p>
+      <p class="cap">Cada linha é um trecho reto de parede, do ponto (x1, y1) ao (x2, y2), pelo eixo. A origem (0, 0) é o canto superior esquerdo; y cresce para baixo. Paredes em qualquer ângulo (chanfro, trapézio) fecham os ambientes e entram nas áreas.</p>
       <div class="form" style="margin-bottom:10px"><label>Espessura das paredes (m)<input type="number" step="0.01" id="esp"></label></div>
       <div class="tbl"><table class="wt" id="wtab"></table></div>
       <div class="row">
@@ -262,7 +262,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 1.4 · viga e laje em concreto";
+const VERSAO="versão 1.5 · parede chanfrada";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -307,11 +307,64 @@ let S;
 try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); }catch(e){ S=defaults(); }
 function save(){ try{ localStorage.setItem("arq-casa-v1",JSON.stringify(S)); }catch(e){} }
 
+/* ---------- polígonos: utilidades ---------- */
+const pip=(P,x,y)=>{ let d=false; for(let i=0,j=P.length-1;i<P.length;j=i++){ const [xi,yi]=P[i],[xj,yj]=P[j]; if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi) d=!d; } return d; };
+const areaS=P=>{ let a=0; for(let i=0;i<P.length;i++){ const [x1,y1]=P[i],[x2,y2]=P[(i+1)%P.length]; a+=x1*y2-x2*y1; } return a/2; };
+const perim=P=>P.reduce((s,p,i)=>s+Math.hypot(P[(i+1)%P.length][0]-p[0],P[(i+1)%P.length][1]-p[1]),0);
+const distSeg=(p,w)=>{ const dx=w.x2-w.x1, dy=w.y2-w.y1, L2=dx*dx+dy*dy; const t=L2?Math.max(0,Math.min(1,((p[0]-w.x1)*dx+(p[1]-w.y1)*dy)/L2)):0; return Math.hypot(p[0]-(w.x1+t*dx),p[1]-(w.y1+t*dy)); };
+const interLin=(P,d,Q,e)=>{ const den=d[0]*e[1]-d[1]*e[0]; if(Math.abs(den)<1e-9) return null; const t=((Q[0]-P[0])*e[1]-(Q[1]-P[1])*e[0])/den; return [P[0]+d[0]*t,P[1]+d[1]*t]; };
+// trechos de um polígono cortados por uma linha horizontal (q="A", y=c) ou vertical (q="B", x=c)
+function naLinha(P,q,c){ const us=[];
+  for(let i=0;i<P.length;i++){ const [x1,y1]=P[i],[x2,y2]=P[(i+1)%P.length];
+    if(q==="A"){ if((y1<=c&&y2>c)||(y2<=c&&y1>c)) us.push(x1+(c-y1)/(y2-y1)*(x2-x1)); }
+    else { if((x1<=c&&x2>c)||(x2<=c&&x1>c)) us.push(y1+(c-x1)/(x2-x1)*(y2-y1)); } }
+  us.sort((a,b)=>a-b); const out=[]; for(let i=0;i+1<us.length;i+=2) if(us[i+1]-us[i]>1e-6) out.push([us[i],us[i+1]]); return out; }
+const juntar=iv=>{ const s=[...iv].sort((a,b)=>a[0]-b[0]), o=[]; s.forEach(v=>{ const l=o[o.length-1]; if(l&&v[0]<=l[1]+1e-6) l[1]=Math.max(l[1],v[1]); else o.push([...v]); }); return o; };
+// contorno da união de polígonos: cada aresta é partida nos cruzamentos e fica só o trecho com parede de um lado só
+function contornoUniao(polys){
+  const E=[]; polys.forEach((P,pi)=>P.forEach((p,i)=>E.push({a:p,b:P[(i+1)%P.length],pi})));
+  const dentro=(x,y)=>polys.some(P=>pip(P,x,y)), segs=[], vistos=new Set();
+  const key=p=>Math.round(p[0]*1e4)+","+Math.round(p[1]*1e4);
+  E.forEach(e=>{ const dx=e.b[0]-e.a[0], dy=e.b[1]-e.a[1], L2=dx*dx+dy*dy; if(L2<1e-12) return; const ts=[0,1];
+    E.forEach(g=>{ if(g.pi===e.pi) return; const ex=g.b[0]-g.a[0], ey=g.b[1]-g.a[1], den=dx*ey-dy*ex;
+      if(Math.abs(den)>1e-12){ const t=((g.a[0]-e.a[0])*ey-(g.a[1]-e.a[1])*ex)/den, u=((g.a[0]-e.a[0])*dy-(g.a[1]-e.a[1])*dx)/den; if(t>1e-9&&t<1-1e-9&&u>=-1e-9&&u<=1+1e-9) ts.push(t); }
+      [g.a,g.b].forEach(p=>{ const t=((p[0]-e.a[0])*dx+(p[1]-e.a[1])*dy)/L2; if(t<=1e-9||t>=1-1e-9) return; const qx=e.a[0]+dx*t-p[0], qy=e.a[1]+dy*t-p[1]; if(qx*qx+qy*qy<1e-8) ts.push(t); }); });
+    ts.sort((p,q)=>p-q); const Ln=Math.sqrt(L2), nx=-dy/Ln, ny=dx/Ln, eps=0.002;
+    for(let i=0;i+1<ts.length;i++){ if(ts[i+1]-ts[i]<1e-9) continue; const tm=(ts[i]+ts[i+1])/2, mx=e.a[0]+dx*tm, my=e.a[1]+dy*tm;
+      const inL=dentro(mx+nx*eps,my+ny*eps), inR=dentro(mx-nx*eps,my-ny*eps); if(inL===inR) continue;
+      const p0=[e.a[0]+dx*ts[i],e.a[1]+dy*ts[i]], p1=[e.a[0]+dx*ts[i+1],e.a[1]+dy*ts[i+1]], s=inL?[p0,p1]:[p1,p0];
+      const k=key(s[0])+"|"+key(s[1]); if(!vistos.has(k)){ vistos.add(k); segs.push(s); } } });
+  return segs;
+}
+// junta os trechos do contorno em polígonos fechados
+function lacos(segs){
+  const key=p=>Math.round(p[0]*1e4)+","+Math.round(p[1]*1e4), ini=new Map();
+  segs.forEach((s,i)=>{ const k=key(s[0]); if(!ini.has(k)) ini.set(k,[]); ini.get(k).push(i); });
+  const usado=segs.map(()=>false), out=[];
+  for(let i=0;i<segs.length;i++){ if(usado[i]) continue; const pts=[]; let j=i, n=0;
+    while(j!=null&&!usado[j]&&n++<20000){ usado[j]=true; pts.push(segs[j][0]); const prox=(ini.get(key(segs[j][1]))||[]).filter(m=>!usado[m]); j=prox.length?prox[0]:null; }
+    const P=pts.filter((p,k)=>{ const a=pts[(k-1+pts.length)%pts.length], b=pts[(k+1)%pts.length]; return Math.abs((p[0]-a[0])*(b[1]-p[1])-(p[1]-a[1])*(b[0]-p[0]))>1e-7; });
+    if(P.length>=3) out.push(P); }
+  return out;
+}
+// ponto bom para o texto dentro de um polígono (o mais longe das bordas)
+function pontoTexto(P){
+  const c=[0,0], A=areaS(P); let cx=0, cy=0; for(let i=0;i<P.length;i++){ const [x1,y1]=P[i],[x2,y2]=P[(i+1)%P.length], f0=x1*y2-x2*y1; cx+=(x1+x2)*f0; cy+=(y1+y2)*f0; }
+  if(Math.abs(A)>1e-9){ c[0]=cx/(6*A); c[1]=cy/(6*A); }
+  const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  const dB=(x,y)=>Math.min(...P.map((p,i)=>{ const q=P[(i+1)%P.length]; return distSeg([x,y],{x1:p[0],y1:p[1],x2:q[0],y2:q[1]}); }));
+  let best=pip(P,c[0],c[1])?{x:c[0],y:c[1],d:dB(c[0],c[1])*1.15}:null;
+  for(let a=1;a<24;a++) for(let b=1;b<24;b++){ const x=x0+(x1-x0)*a/24, y=y0+(y1-y0)*b/24; if(!pip(P,x,y)) continue; const d=dB(x,y); if(!best||d>best.d) best={x,y,d}; }
+  return best?[best.x,best.y]:c;
+}
+
 /* ======================================================================
    GEOMETRIA
-   Paredes ortogonais viram retângulos (eixo ± meia espessura). A planta é
-   dividida numa grade pelas bordas desses retângulos: cada célula é parede,
-   vão ou espaço livre. Espaços livres fechados = ambientes (área exata).
+   Cada parede é um polígono (eixo ± meia espessura). Nos encontros em L as
+   pontas são cortadas na bissetriz (canto certo em qualquer ângulo); em T a
+   parede vai até o eixo da outra. O contorno da união dos polígonos dá as
+   faces das paredes; os contornos internos fechados são os ambientes, com
+   a área exata (retângulo, trapézio, chanfro, L...).
    ====================================================================== */
 function geom(){
   const t=Math.max(0.05,num(S.esp)), h=t/2;
@@ -319,83 +372,78 @@ function geom(){
   S.walls.forEach((w0,i)=>{
     const w={x1:num(w0.x1),y1:num(w0.y1),x2:num(w0.x2),y2:num(w0.y2),i};
     const dx=w.x2-w.x1, dy=w.y2-w.y1; w.L=Math.hypot(dx,dy); if(w.L<0.01) return;
-    w.ux=dx/w.L; w.uy=dy/w.L; w.hz=Math.abs(dy)<1e-6; w.vt=Math.abs(dx)<1e-6;
-    const xa=Math.min(w.x1,w.x2), xb=Math.max(w.x1,w.x2), ya=Math.min(w.y1,w.y2), yb=Math.max(w.y1,w.y2);
-    w.r=w.hz?{x0:xa-h,x1:xb+h,y0:w.y1-h,y1:w.y1+h}:w.vt?{x0:w.x1-h,x1:w.x1+h,y0:ya-h,y1:yb+h}:null;
+    w.ux=dx/w.L; w.uy=dy/w.L; w.hz=Math.abs(dy)<1e-6; w.vt=Math.abs(dx)<1e-6; w.nX=-w.uy; w.nY=w.ux;
     walls.push(w);
   });
-  const orto=walls.filter(w=>w.r), incl=walls.filter(w=>!w.r);
+  const orto=walls.filter(w=>w.hz||w.vt), incl=walls.filter(w=>!w.hz&&!w.vt);
+  // pontas das paredes
+  walls.forEach(w=>{
+    const cap=(E,out)=>{
+      const din=[-out[0],-out[1]];
+      const def=ext=>[[E[0]+out[0]*ext+w.nX*h,E[1]+out[1]*ext+w.nY*h],[E[0]+out[0]*ext-w.nX*h,E[1]+out[1]*ext-w.nY*h]];
+      const perto=walls.filter(q=>q!==w&&distSeg(E,q)<0.02);
+      if(!perto.length||perto.some(q=>Math.abs(w.ux*q.uy-w.uy*q.ux)<0.02)) return def(h);
+      const corta=(P0,d)=>{ const pts=[1,-1].map(sg=>interLin([E[0]+w.nX*h*sg,E[1]+w.nY*h*sg],[w.ux,w.uy],P0,d)); return pts.every(p=>p&&Math.hypot(p[0]-E[0],p[1]-E[1])<=4*h+1e-9)?pts:null; };
+      const ponta=q=>Math.hypot(q.x1-E[0],q.y1-E[1])<0.02?1:Math.hypot(q.x2-E[0],q.y2-E[1])<0.02?-1:0;
+      if(perto.length===1){ const q=perto[0], pq=ponta(q);
+        if(pq){ const b=[din[0]+q.ux*pq,din[1]+q.uy*pq], m=Math.hypot(...b); if(m>1e-6){ const r=corta(E,[b[0]/m,b[1]/m]); if(r) return r; } return def(h); }
+        return corta([q.x1,q.y1],[q.ux,q.uy])||def(h); }
+      const meio=perto.find(q=>!ponta(q)); if(meio){ const r=corta([meio.x1,meio.y1],[meio.ux,meio.uy]); if(r) return r; }
+      return def(h);
+    };
+    w.cA=cap([w.x1,w.y1],[-w.ux,-w.uy]); w.cB=cap([w.x2,w.y2],[w.ux,w.uy]);
+    w.poly=[w.cA[0],w.cB[0],w.cB[1],w.cA[1]];
+  });
   const abs=[];
   S.ab.forEach((a,k)=>{
     const w=walls.find(x=>x.i===Math.round(num(a.w))); if(!w) return;
     const l=Math.max(0.1,num(a.l)), d=Math.max(0,num(a.d));
     const p0=[w.x1+w.ux*d,w.y1+w.uy*d], p1=[w.x1+w.ux*(d+l),w.y1+w.uy*(d+l)];
-    const g={a,k,w,d,l,p0,p1,tipo:["Porta","Janela","Vão"].includes(a.t)?a.t:"Porta",fora:d+l>w.L+0.001};
-    if(w.r) g.r=w.hz?{x0:Math.min(p0[0],p1[0]),x1:Math.max(p0[0],p1[0]),y0:w.y1-h,y1:w.y1+h}:{x0:w.x1-h,x1:w.x1+h,y0:Math.min(p0[1],p1[1]),y1:Math.max(p0[1],p1[1])};
-    abs.push(g);
+    abs.push({a,k,w,d,l,p0,p1,nX:w.nX,nY:w.nY,tipo:["Porta","Janela","Vão"].includes(a.t)?a.t:"Porta",fora:d+l>w.L+0.001});
   });
-  const G={t,h,walls,orto,incl,abs,rooms:[],areaC:0,blocos:[],contPar:[],contExt:[]};
-  if(!walls.length){ G.vazio=true; G.bb={x0:0,y0:0,x1:1,y1:1}; G.compAt=()=>({ext:true}); return G; }
-  let bx0=1e9,by0=1e9,bx1=-1e9,by1=-1e9;
-  const addb=(x0,y0,x1,y1)=>{bx0=Math.min(bx0,x0);by0=Math.min(by0,y0);bx1=Math.max(bx1,x1);by1=Math.max(by1,y1);};
-  walls.forEach(w=>{ if(w.r) addb(w.r.x0,w.r.y0,w.r.x1,w.r.y1); else { addb(w.x1-h,w.y1-h,w.x1+h,w.y1+h); addb(w.x2-h,w.y2-h,w.x2+h,w.y2+h); } });
-  const bb=G.bb={x0:bx0,y0:by0,x1:bx1,y1:by1};
-  const xs=uniq([bb.x0-1,bb.x1+1,...orto.flatMap(w=>[w.r.x0,w.r.x1]),...abs.filter(g=>g.r).flatMap(g=>[g.r.x0,g.r.x1])]);
-  const ys=uniq([bb.y0-1,bb.y1+1,...orto.flatMap(w=>[w.r.y0,w.r.y1]),...abs.filter(g=>g.r).flatMap(g=>[g.r.y0,g.r.y1])]);
-  const nx=xs.length-1, ny=ys.length-1;
-  const inR=(r,x,y)=>x>r.x0&&x<r.x1&&y>r.y0&&y<r.y1;
-  const sol=[], par=[];
-  for(let j=0;j<ny;j++){ const cy=(ys[j]+ys[j+1])/2, rs=[], rp=[];
-    for(let i=0;i<nx;i++){ const cx=(xs[i]+xs[i+1])/2, s=orto.some(w=>inR(w.r,cx,cy)); rs.push(s); rp.push(s&&!abs.some(g=>g.r&&inR(g.r,cx,cy))); }
-    sol.push(rs); par.push(rp); }
-  // espaços livres ligados (paredes cheias, sem descontar vãos)
-  const comp=sol.map(r=>r.map(()=>-1)), comps=[];
-  for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){ if(sol[j][i]||comp[j][i]>=0) continue;
-    const c={id:comps.length,cells:[],ext:false,area:0,sx:0,sy:0,x0:1e9,y0:1e9,x1:-1e9,y1:-1e9}; comps.push(c);
-    const st=[[j,i]]; comp[j][i]=c.id;
-    while(st.length){ const [b,a]=st.pop(); c.cells.push([b,a]);
-      const w=xs[a+1]-xs[a], hh=ys[b+1]-ys[b], ar=w*hh; c.area+=ar; c.sx+=ar*(xs[a]+xs[a+1])/2; c.sy+=ar*(ys[b]+ys[b+1])/2;
-      c.x0=Math.min(c.x0,xs[a]); c.x1=Math.max(c.x1,xs[a+1]); c.y0=Math.min(c.y0,ys[b]); c.y1=Math.max(c.y1,ys[b+1]);
-      if(a===0||b===0||a===nx-1||b===ny-1) c.ext=true;
-      [[b-1,a],[b+1,a],[b,a-1],[b,a+1]].forEach(([q,p])=>{ if(q>=0&&q<ny&&p>=0&&p<nx&&!sol[q][p]&&comp[q][p]<0){ comp[q][p]=c.id; st.push([q,p]); } }); } }
-  const idx=(arr,v)=>{ let lo=0,hi=arr.length-2; while(lo<hi){ const m=(lo+hi+1)>>1; if(arr[m]<=v) lo=m; else hi=m-1; } return lo; };
-  G.compAt=(x,y)=>{ if(x<=xs[0]||x>=xs[nx]||y<=ys[0]||y>=ys[ny]) return {ext:true}; const i=idx(xs,x), j=idx(ys,y); return sol[j][i]?null:comps[comp[j][i]]; };
-  // ambientes
-  const rooms=comps.filter(c=>!c.ext&&c.area>=0.3);
+  const G={t,h,walls,orto,incl,abs,rooms:[],areaC:0,pecas:[],contPar:[],contExt:[]};
+  if(!walls.length){ G.vazio=true; G.bb={x0:0,y0:0,x1:1,y1:1}; G.compAt=()=>({ext:true}); G.row=()=>[]; G.roomRuns=()=>[]; return G; }
+  // pedaços de parede entre os vãos (o que aparece hachurado na planta)
+  walls.forEach(w=>{
+    const P=(s,sg)=>[w.x1+w.ux*s+w.nX*h*sg,w.y1+w.uy*s+w.nY*h*sg];
+    const vs=juntar(abs.filter(g=>g.w===w).map(g=>[Math.max(0,g.d),Math.min(w.L,g.d+g.l)]).filter(v=>v[1]-v[0]>1e-6));
+    let sL=w.cA[0], sR=w.cA[1], pos=0;
+    vs.forEach(([a,b])=>{ if(a>pos+1e-6) G.pecas.push([sL,P(a,1),P(a,-1),sR]); sL=P(b,1); sR=P(b,-1); pos=b; });
+    if(w.L>pos+1e-6) G.pecas.push([sL,w.cB[0],w.cB[1],sR]);
+  });
+  const todos=walls.flatMap(w=>w.poly);
+  const bb=G.bb={x0:Math.min(...todos.map(p=>p[0])),y0:Math.min(...todos.map(p=>p[1])),x1:Math.max(...todos.map(p=>p[0])),y1:Math.max(...todos.map(p=>p[1]))};
+  G.contPar=contornoUniao(G.pecas).map(s=>[s[0][0],s[0][1],s[1][0],s[1][1]]);
+  // contornos das paredes cheias: o externo é a casa, os internos são os ambientes
+  const segsC=contornoUniao(walls.map(w=>w.poly)), L=lacos(segsC);
+  const maior=L.reduce((m,P)=>Math.abs(areaS(P))>Math.abs(areaS(m))?P:m,L[0]||[]), sinal=Math.sign(areaS(maior)||1);
+  const casas=L.filter(P=>Math.sign(areaS(P))===sinal), furos=L.filter(P=>Math.sign(areaS(P))!==sinal);
+  G.contExt=casas.flatMap(P=>P.map((p,i)=>[p[0],p[1],P[(i+1)%P.length][0],P[(i+1)%P.length][1]]));
+  G.areaC=casas.reduce((s,P)=>s+Math.abs(areaS(P)),0);
+  const rooms=furos.map(P=>{ const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]);
+    return {poly:P,area:Math.abs(areaS(P)),per:perim(P),x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys),ext:false}; }).filter(r=>r.area>=0.3);
+  const naParede=(x,y)=>walls.some(w=>pip(w.poly,x,y));
+  G.compAt=(x,y)=>{ const r=rooms.find(r=>pip(r.poly,x,y)); if(r) return r; if(naParede(x,y)) return null; return casas.some(P=>pip(P,x,y))?null:{ext:true}; };
   rooms.forEach(r=>{
-    r.cx=r.sx/r.area; r.cy=r.sy/r.area;
-    if(G.compAt(r.cx,r.cy)!==r){ let best=null; r.cells.forEach(([b,a])=>{ const ar=(xs[a+1]-xs[a])*(ys[b+1]-ys[b]); if(!best||ar>best.ar) best={ar,x:(xs[a]+xs[a+1])/2,y:(ys[b]+ys[b+1])/2}; }); r.cx=best.x; r.cy=best.y; }
-    r.ret=Math.abs((r.x1-r.x0)*(r.y1-r.y0)-r.area)<1e-4;
-    r.labIdx=S.rooms.findIndex(q=>G.compAt(num(q.x),num(q.y))===r);
+    [r.cx,r.cy]=pontoTexto(r.poly);
+    r.ret=r.poly.length===4&&r.poly.every((p,i)=>{ const q=r.poly[(i+1)%4]; return Math.abs(p[0]-q[0])<1e-6||Math.abs(p[1]-q[1])<1e-6; });
+    r.labIdx=S.rooms.findIndex(q=>pip(r.poly,num(q.x),num(q.y)));
     r.n=r.labIdx>=0?String(S.rooms[r.labIdx].n||"").trim():"";
     r.nv=r.labIdx>=0?num(S.rooms[r.labIdx].nv):0;
   });
   rooms.sort((p,q)=>Math.abs(p.cy-q.cy)>0.3?p.cy-q.cy:p.cx-q.cx);
   let sem=0; rooms.forEach(r=>{ if(!r.n) r.n="Ambiente "+(++sem); });
   G.rooms=rooms;
-  // área construída, contornos e blocos de parede
-  const casa=sol.map((row,j)=>row.map((s,i)=>s||!comps[comp[j][i]].ext));
-  for(let j=0;j<ny;j++) for(let i=0;i<nx;i++) if(casa[j][i]) G.areaC+=(xs[i+1]-xs[i])*(ys[j+1]-ys[j]);
-  const bordas=M=>{ const out=[];
-    for(let j=0;j<=ny;j++){ let ini=-1; for(let i=0;i<=nx;i++){ const dif=i<nx&&((j>0&&M[j-1][i])!==(j<ny&&M[j][i])); if(dif&&ini<0) ini=i; if(!dif&&ini>=0){ out.push([xs[ini],ys[j],xs[i],ys[j]]); ini=-1; } } }
-    for(let i=0;i<=nx;i++){ let ini=-1; for(let j=0;j<=ny;j++){ const dif=j<ny&&((i>0&&M[j][i-1])!==(i<nx&&M[j][i])); if(dif&&ini<0) ini=j; if(!dif&&ini>=0){ out.push([xs[i],ys[ini],xs[i],ys[j]]); ini=-1; } } }
-    return out; };
-  G.contPar=bordas(par); G.contExt=bordas(casa);
-  for(let j=0;j<ny;j++){ let i=0; while(i<nx){ if(par[j][i]){ let k=i; while(k+1<nx&&par[j][k+1]) k++; G.blocos.push([xs[i],ys[j],xs[k+1],ys[j+1]]); i=k+1; } else i++; } }
-  G.retangular=Math.abs((bb.x1-bb.x0)*(bb.y1-bb.y0)-G.areaC)<0.01;
-  G.row=(q,c)=>{ // trechos de "dentro da casa" ao longo da linha de corte
-    const out=[]; if(q==="A"){ const j=idx(ys,c); let ini=null; for(let i=0;i<=nx;i++){ const v=i<nx&&casa[j][i]; if(v&&ini===null) ini=xs[i]; if(!v&&ini!==null){ out.push([ini,xs[i]]); ini=null; } } }
-    else { const i=idx(xs,c); let ini=null; for(let j=0;j<=ny;j++){ const v=j<ny&&casa[j][i]; if(v&&ini===null) ini=ys[j]; if(!v&&ini!==null){ out.push([ini,ys[j]]); ini=null; } } }
-    return out; };
-  G.roomRuns=(q,c)=>{ const out=[]; rooms.forEach(r=>{ const cs=r.cells.filter(([b,a])=>q==="A"?(ys[b]<c&&ys[b+1]>c):(xs[a]<c&&xs[a+1]>c));
-      if(!cs.length) return; const u0=Math.min(...cs.map(([b,a])=>q==="A"?xs[a]:ys[b])), u1=Math.max(...cs.map(([b,a])=>q==="A"?xs[a+1]:ys[b+1])); out.push({r,u0,u1}); }); return out; };
+  G.retangular=casas.length===1&&Math.abs((bb.x1-bb.x0)*(bb.y1-bb.y0)-G.areaC)<0.01;
+  G.row=(q,c)=>juntar(casas.flatMap(P=>naLinha(P,q,c)));
+  G.roomRuns=(q,c)=>rooms.flatMap(r=>naLinha(r.poly,q,c).map(([a,b])=>({r,u0:a,u1:b})));
   // lado de abertura das portas: abre para dentro da casa; entre ambientes, para o menor
   abs.forEach(g=>{
-    const mx=(g.p0[0]+g.p1[0])/2, my=(g.p0[1]+g.p1[1])/2, nX=-g.w.uy, nY=g.w.ux, off=h+0.12;
-    const A=G.compAt(mx+nX*off,my+nY*off), B=G.compAt(mx-nX*off,my-nY*off);
+    const mx=(g.p0[0]+g.p1[0])/2, my=(g.p0[1]+g.p1[1])/2, off=h+0.12;
+    const A=G.compAt(mx+g.nX*off,my+g.nY*off), B=G.compAt(mx-g.nX*off,my-g.nY*off);
     const ea=!A||A.ext, eb=!B||B.ext; let s=1;
     if(ea&&!eb) s=-1; else if(eb&&!ea) s=1; else if(!ea&&!eb) s=A.area<=B.area?1:-1;
-    if(g.a.inv) s=-s; g.lado=s; g.nX=nX; g.nY=nY; g.externa=ea||eb;
+    if(g.a.inv) s=-s; g.lado=s; g.externa=ea||eb;
   });
   return G;
 }
@@ -497,6 +545,12 @@ function hachConcreto(D,x0,y0,x1,y1){
     else { const s=0.18*k; if(px-s<a||px+s>b||py-s<c||py+s>d) continue; L(D,px-s,py,px+s,py+s*0.4,.25,"CONCRETO"); } }
   PL(D,[[a,c],[b,c],[b,d],[a,d],[a,c]],.4,"PAREDE");
 }
+function cotaAlinhada(D,p,q,sg,nX,nY,txt){ const k=D.k, dx=q[0]-p[0], dy=q[1]-p[1], Ln=Math.hypot(dx,dy); if(Ln<0.01) return;
+  const ux=dx/Ln, uy=dy/Ln, nx=nX*sg, ny=nY*sg, o=7*k, a=[p[0]+nx*o,p[1]+ny*o], b=[q[0]+nx*o,q[1]+ny*o];
+  L(D,...a,...b,.18,"COTAS");
+  [[p,a],[q,b]].forEach(([s0,e])=>{ L(D,s0[0]+nx*k,s0[1]+ny*k,e[0]+nx*1.5*k,e[1]+ny*1.5*k,.13,"COTAS"); const tx=(ux+nx)*0.65*k, ty=(uy+ny)*0.65*k; L(D,e[0]-tx,e[1]-ty,e[0]+tx,e[1]+ty,.35,"COTAS"); });
+  let ang=Math.atan2(dy,dx)*180/Math.PI; if(ang>90) ang-=180; if(ang<=-90) ang+=180;
+  TX(D,(a[0]+b[0])/2+nx*1.6*k,(a[1]+b[1])/2+ny*1.6*k,txt,1.8,{l:"COTAS",rot:ang}); }
 function nivelInt(D,x,y,txt){ const k=D.k; L(D,x-3*k,y,x+3*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.1*k,y-1.9*k],[x+1.1*k,y-1.9*k]],"COTAS"); TX(D,x,y-3.4*k,txt,1.7,{l:"COTAS"}); }
 function nivel(D,x,y,txt,abaixo){ const k=D.k, sg=abaixo?-1:1; L(D,x-2*k,y,x+12*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.2*k,y-sg*2*k],[x+1.2*k,y-sg*2*k]],"COTAS"); TX(D,x+2*k,y-sg*2.6*k,txt,1.8,{a:"s",l:"COTAS"}); }
 
@@ -511,10 +565,11 @@ function posCorte(G,q){
 function desenhoPlanta(G,k,ajuda){
   const D=Dw(k), h=G.h, bb=G.bb;
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
-  G.blocos.forEach(b=>RF(D,...b,"HACHURA"));
-  G.incl.forEach(w=>{ const nx=-w.uy*h, ny=w.ux*h, ex=w.ux*h, ey=w.uy*h;
-    const P=[[w.x1-ex+nx,w.y1-ey+ny],[w.x2+ex+nx,w.y2+ey+ny],[w.x2+ex-nx,w.y2+ey-ny],[w.x1-ex-nx,w.y1-ey-ny]]; PG(D,P,"HACHURA"); PL(D,[...P,P[0]],.5,"PAREDE"); });
+  G.pecas.forEach(P=>PG(D,P,"HACHURA"));
   G.contPar.forEach(s=>L(D,...s,.5,"PAREDE"));
+  // parede inclinada (chanfro): cota alinhada pela face de fora
+  G.incl.forEach(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, o=h+0.12, Cp=G.compAt(mx+w.nX*o,my+w.nY*o), sg=(!Cp||Cp.ext)?1:-1;
+    const a=sg>0?w.cA[0]:w.cA[1], b=sg>0?w.cB[0]:w.cB[1]; cotaAlinhada(D,a,b,sg,w.nX,w.nY,f(Math.hypot(b[0]-a[0],b[1]-a[1]))); });
   // esquadrias
   G.abs.forEach(g=>{
     const w=g.w, ln=(s,n)=>[w.x1+w.ux*s+g.nX*n, w.y1+w.uy*s+g.nY*n], s0=g.d, s1=g.d+g.l, sm=(s0+s1)/2;
@@ -532,7 +587,8 @@ function desenhoPlanta(G,k,ajuda){
     if(r.ret) TX(D,x,y+3.2*k,`${f(r.x1-r.x0)} x ${f(r.y1-r.y0)}`,1.6,{l:"COTAS"});
     TX(D,x,y+(r.ret?5.8:3.2)*k,`NV ${fNv(r.nv)}`,1.6,{l:"COTAS"}); });
   // cotas: faces das paredes (em cima e à esquerda) e totais
-  const fx=uniq([bb.x0,bb.x1,...G.orto.filter(w=>w.vt).flatMap(w=>[w.x1-h,w.x1+h])]), fy=uniq([bb.y0,bb.y1,...G.orto.filter(w=>w.hz).flatMap(w=>[w.y1-h,w.y1+h])]);
+  const fora=G.incl.flatMap(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, Cp=G.compAt(mx+w.nX*(h+0.12),my+w.nY*(h+0.12)); return (!Cp||Cp.ext)?[w.cA[0],w.cB[0]]:[w.cA[1],w.cB[1]]; });
+  const fx=uniq([bb.x0,bb.x1,...fora.map(p=>p[0]),...G.orto.filter(w=>w.vt).flatMap(w=>[w.x1-h,w.x1+h])]), fy=uniq([bb.y0,bb.y1,...fora.map(p=>p[1]),...G.orto.filter(w=>w.hz).flatMap(w=>[w.y1-h,w.y1+h])]);
   cadeiaH(D,fx,bb.y0-9*k,bb.y0); cotaH(D,bb.x0,bb.x1,bb.y0-16*k,bb.y0-9*k,f(bb.x1-bb.x0));
   cadeiaV(D,fy,bb.x0-9*k,bb.x0); cotaV(D,bb.y0,bb.y1,bb.x0-16*k,bb.x0-9*k,f(bb.y1-bb.y0));
   // linhas de corte
@@ -551,11 +607,11 @@ function desenhoCorte(G,k,q){
   const A=q==="A", c=posCorte(G,q), h=G.h, pd=num(S.pd), lj=Math.max(0,num(S.laje)), ps=Math.max(0,num(S.piso)), TI=infoTelhado(G);
   const Y=z=>-z, zr=u=>A?TI.z(u,c):TI.z(c,u);
   const ext=(u)=>{ const C=A?G.compAt(u,c):G.compAt(c,u); return C!==null&&(!C||C.ext); };
-  const cand=G.orto.filter(w=>A?(w.vt&&c>=w.r.y0&&c<=w.r.y1):(w.hz&&c>=w.r.x0&&c<=w.r.x1));
-  const us=uniq(cand.map(w=>A?w.x1:w.y1));
-  if(!us.length){ TX(D,0,0,"A linha de corte não cruza nenhuma parede. Mude a posição.",3); return D; }
+  const cs=[]; G.walls.filter(w=>A?Math.abs(w.uy)>1e-6:Math.abs(w.ux)>1e-6).flatMap(w=>naLinha(w.poly,q,c).map(([a,b])=>({a,b,ws:[w]}))).sort((p,q2)=>p.a-q2.a)
+    .forEach(x=>{ const l=cs[cs.length-1]; if(l&&x.a<=l.b+1e-6){ l.b=Math.max(l.b,x.b); l.ws.push(...x.ws); } else cs.push(x); });
+  if(!cs.length){ TX(D,0,0,"A linha de corte não cruza nenhuma parede. Mude a posição.",3); return D; }
   const runs=G.row(q,c), u0=A?TI.R.x0:TI.R.y0, u1=A?TI.R.x1:TI.R.y1;
-  const uMin=Math.min(...us)-h, uMax=Math.max(...us)+h;
+  const uMin=cs[0].a, uMax=cs[cs.length-1].b;
   // terreno, contrapiso e laje
   L(D,Math.min(u0,uMin)-1.2,Y(-ps),Math.max(u1,uMax)+1.2,Y(-ps),.35,"TERRENO");
   const salas=G.roomRuns(q,c), vOn=S.viga&&S.viga.on!=="não", hv=vOn?Math.min(Math.max(0,num(S.viga.h)),pd-0.5):0, zv=pd-hv;
@@ -564,20 +620,21 @@ function desenhoCorte(G,k,q){
   const nvAt=u=>{ const C=A?G.compAt(u,c):G.compAt(c,u); return C&&!C.ext&&C.nv!==undefined?C.nv:0; };
   const menos=(segs,z0,z1)=>segs.flatMap(([a,b])=>b<=z0||a>=z1?[[a,b]]:[[a,Math.min(b,z0)],[Math.max(a,z1),b]].filter(([p,q2])=>q2-p>1e-6));
   // paredes cortadas (com portas e janelas)
-  us.forEach(u=>{
-    const eL=ext(u-h-0.03), eR=ext(u+h+0.03), externa=eL||eR;
-    let topo=pd; if(externa) topo=TI.plat?TI.topoPlat:Math.max(pd+lj,zr(eL?u-h:u+h));
-    const base=externa?-ps:Math.min(0,nvAt(u-h-0.03),nvAt(u+h+0.03))-0.10;
-    const g=G.abs.find(g=>g.r&&(A?g.w.vt:g.w.hz)&&Math.abs((A?g.w.x1:g.w.y1)-u)<1e-6&&c>=(A?g.r.y0:g.r.x0)&&c<=(A?g.r.y1:g.r.x1));
+  cs.forEach(({a:ua,b:ub,ws})=>{
+    const um=(ua+ub)/2, eL=ext(ua-0.03), eR=ext(ub+0.03), externa=eL||eR;
+    const bb=G.bb, naBorda=A?(Math.abs(ua-bb.x0)<0.02||Math.abs(ub-bb.x1)<0.02):(Math.abs(ua-bb.y0)<0.02||Math.abs(ub-bb.y1)<0.02);
+    let topo=pd; if(externa) topo=TI.plat?TI.topoPlat:naBorda?Math.max(pd+lj,zr(eL?ua:ub)):pd+lj;
+    const nvL=nvAt(ua-0.03), nvR=nvAt(ub+0.03), base=externa?-ps:Math.min(0,nvL,nvR)-0.10;
+    const g=G.abs.find(g=>{ if(!ws.includes(g.w)) return false; const sc=A?(c-g.w.y1)/g.w.uy:(c-g.w.x1)/g.w.ux; return sc>=g.d-1e-6&&sc<=g.d+g.l+1e-6; });
     const peds=[];
     if(!g) peds.push([base,topo]);
     else if(g.tipo==="Janela"){ const p0=num(g.a.p), p1=Math.min(vOn?zv:topo,p0+(num(g.a.a)||1)); peds.push([base,p0],[p1,topo]);
-      L(D,u-h,Y(p0),u+h,Y(p0),.25,"ESQUADRIA"); L(D,u-h,Y(p1),u+h,Y(p1),.25,"ESQUADRIA"); L(D,u,Y(p0),u,Y(p1),.18,"ESQUADRIA"); L(D,u-h,Y(p0),u-h,Y(p1),.13,"ESQUADRIA"); L(D,u+h,Y(p0),u+h,Y(p1),.13,"ESQUADRIA"); }
-    else { const p1=Math.min(vOn?zv:topo,num(g.a.a)||2.1); peds.push([base,Math.min(0,nvAt(u-h-0.03),nvAt(u+h+0.03))],[p1,topo]); L(D,u-h,Y(p1),u+h,Y(p1),.18,"ESQUADRIA"); }
+      L(D,ua,Y(p0),ub,Y(p0),.25,"ESQUADRIA"); L(D,ua,Y(p1),ub,Y(p1),.25,"ESQUADRIA"); L(D,um,Y(p0),um,Y(p1),.18,"ESQUADRIA"); L(D,ua,Y(p0),ua,Y(p1),.13,"ESQUADRIA"); L(D,ub,Y(p0),ub,Y(p1),.13,"ESQUADRIA"); }
+    else { const p1=Math.min(vOn?zv:topo,num(g.a.a)||2.1); peds.push([base,Math.min(0,nvL,nvR)],[p1,topo]); L(D,ua,Y(p1),ub,Y(p1),.18,"ESQUADRIA"); }
     // alvenaria: tira a faixa da viga e da laje (são de concreto)
     let alv=peds; if(vOn&&hv>0) alv=menos(alv,zv,pd); if(lj>0) alv=menos(alv,pd,pd+lj);
-    alv.forEach(([z0,z1])=>{ if(z1-z0<1e-6) return; RF(D,u-h,Y(z1),u+h,Y(z0),"HACHURA"); PL(D,[[u-h,Y(z0)],[u-h,Y(z1)],[u+h,Y(z1)],[u+h,Y(z0)],[u-h,Y(z0)]],.5,"PAREDE"); });
-    if(vOn&&hv>0) hachConcreto(D,u-h,Y(pd),u+h,Y(zv));
+    alv.forEach(([z0,z1])=>{ if(z1-z0<1e-6) return; RF(D,ua,Y(z1),ub,Y(z0),"HACHURA"); PL(D,[[ua,Y(z0)],[ua,Y(z1)],[ub,Y(z1)],[ub,Y(z0)],[ua,Y(z0)]],.5,"PAREDE"); });
+    if(vOn&&hv>0) hachConcreto(D,ua,Y(pd),ub,Y(zv));
   });
   // telhado cortado e vista do que fica atrás
   const N=240, prof=[], sil=[];
@@ -603,7 +660,7 @@ function desenhoCorte(G,k,q){
     salas.forEach(({u0:a,u1:b})=>L(D,a,Y(zv),b,Y(zv),.25,"PAREDE"));
     if(rr) TX(D,(rr.u0+rr.u1)/2,Y(zv)+2.4*k,`VIGA ${f(G.t*100,0)}x${f(hv*100,0)} (VISTA)`,1.5,{l:"COTAS"});
   }
-  const fc=uniq(us.flatMap(u=>[u-h,u+h]));
+  const fc=uniq(cs.flatMap(x=>[x.a,x.b]));
   cadeiaH(D,fc,Y(-ps)+7*k,Y(-ps)); cotaH(D,fc[0],fc[fc.length-1],Y(-ps)+14*k,Y(-ps)+7*k,f(fc[fc.length-1]-fc[0]));
   return D;
 }
@@ -697,7 +754,6 @@ function render(){
   // avisos
   const w=[];
   if(G.vazio) w.push(["warn","Cadastre as paredes ou importe a planta na aba Dados."]);
-  if(G.incl.length) w.push(["warn",`${G.incl.length} parede(s) inclinada(s): aparecem na planta, mas os ambientes fechados por elas não entram no quadro de áreas e elas não recebem portas e janelas.`]);
   G.abs.filter(g=>g.fora).forEach(g=>w.push(["bad",`${g.cod||g.tipo} na parede ${g.w.i+1} passa do fim da parede (${f(g.d+g.l)} m de ${f(g.w.L)} m).`]));
   S.ab.forEach((a,i)=>{ if(!G.walls.some(x=>x.i===Math.round(num(a.w)))) w.push(["warn",`A abertura ${i+1} (${esc(a.t)}) está numa parede que não existe mais.`]); });
   if(!G.vazio&&!G.retangular) w.push(["warn","A casa não é um retângulo: o telhado é calculado sobre o retângulo que envolve a casa (formato em L ou U ainda não tem telhado automático). Confira a cobertura."]);
@@ -707,7 +763,7 @@ function render(){
   $("warnings").innerHTML=w.map(([c,t])=>`<div class="alert ${c}">${t}</div>`).join("");
   // quadros
   $("tabAreas").innerHTML=`<tr><th>Ambiente</th><th class="n">Área (m²)</th><th class="n">Perímetro (m)</th></tr>`+
-    G.rooms.map(r=>{ const per=r.ret?2*((r.x1-r.x0)+(r.y1-r.y0)):null; return `<tr><td>${esc(r.n)}</td><td class="n">${f(r.area)}</td><td class="n">${per?f(per):"—"}</td></tr>`; }).join("")+
+    G.rooms.map(r=>{ const per=r.per; return `<tr><td>${esc(r.n)}</td><td class="n">${f(r.area)}</td><td class="n">${per?f(per):"—"}</td></tr>`; }).join("")+
     `<tr class="tot"><td>Área útil</td><td class="n">${f(util)}</td><td></td></tr><tr class="tot"><td>Área construída</td><td class="n">${f(G.areaC)}</td><td></td></tr>`;
   $("tabEsq").innerHTML=`<tr><th>Cód.</th><th>Tipo</th><th class="n">L × H (m)</th><th class="n">Peitoril</th><th class="n">Qtd</th></tr>`+
     (Q.length?Q.map(q=>`<tr><td><b>${q.cod}</b></td><td>${q.tipo}${q.locais.length?`<div style="color:var(--muted);font-size:12px">${esc(q.locais.join(", "))}</div>`:""}</td><td class="n">${f(q.l)} × ${f(q.a)}</td><td class="n">${q.tipo==="Janela"?f(q.p):"—"}</td><td class="n">${q.q}</td></tr>`).join(""):`<tr><td colspan="5" style="color:var(--muted)">Nenhuma porta ou janela. Toque numa parede na planta para colocar.</td></tr>`);
