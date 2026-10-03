@@ -102,13 +102,14 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <header class="top">
     <div>
       <h1>Projeto Arquitetônico</h1>
-      <div class="sub">Planta baixa com áreas e cotas · Cortes AA e BB · Cobertura · Fachadas · Situação · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
+      <div class="sub">Planta baixa com áreas e cotas · Layout com móveis · Cortes AA e BB · Cobertura · Fachadas · Situação · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
 
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="planta" aria-selected="true">Planta</button>
+    <button role="tab" data-tab="lay" aria-selected="false">Layout</button>
     <button role="tab" data-tab="cortes" aria-selected="false">Cortes</button>
     <button role="tab" data-tab="cob" aria-selected="false">Cobertura</button>
     <button role="tab" data-tab="fach" aria-selected="false">Fachadas</button>
@@ -195,6 +196,17 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <div class="form"><label>Frente da casa<select id="frente"><option value="baixo">Embaixo na planta</option><option value="cima">Em cima na planta</option><option value="esq">À esquerda na planta</option><option value="dir">À direita na planta</option></select></label></div>
     </div>
     <div id="fachadas"></div>
+  </section>
+
+  <!-- LAYOUT -->
+  <section id="tab-lay" hidden>
+    <div class="sheet">
+      <h2>Planta de layout</h2>
+      <p class="cap">Os móveis entram sozinhos pelo nome do ambiente (quarto, sala, cozinha, banheiro, lavanderia, escritório, garagem): longe do giro das portas, sem móvel alto na frente de janela e com espaço para circular. Mude o tipo do ambiente na tabela abaixo ou toque em <b>Outra posição</b> para trocar o móvel principal de parede.</p>
+      <div class="form"><label>Uso do imóvel<select id="uso"><option value="residencial">Residencial (casa)</option><option value="comercial">Comercial (salas, loja, escritório)</option></select></label></div>
+      <div class="draw" id="lay"></div>
+    </div>
+    <div class="sheet"><h2>Móveis por ambiente</h2><div class="tbl"><table id="layAmb"></table></div></div>
   </section>
 
   <!-- BANHEIRO -->
@@ -317,7 +329,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 2.0 · detalhe do banheiro";
+const VERSAO="versão 2.2 · layout residencial e comercial";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -356,7 +368,7 @@ function defaults(){
   return {
     obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
-    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
 }
 let S;
@@ -897,25 +909,7 @@ function desenhoBanheiro(G,r,k){
   G.contPar.forEach(sg=>{ const q=segIn(sg); if(q) L(D,...q,.5,"PAREDE"); });
   desenhaAberturas(D,G,G.abs.filter(g=>{ const mx=(g.p0[0]+g.p1[0])/2, my=(g.p0[1]+g.p1[1])/2; return mx>win.x0&&mx<win.x1&&my>win.y0&&my<win.y1; }));
   const Lb=layoutBanheiro(G,r);
-  if(Lb){
-    const loc=(it,s0,t0)=>[it.c[0]+it.a[0]*s0+it.n[0]*t0,it.c[1]+it.a[1]*s0+it.n[1]*t0];
-    const ret=(it,s0,s1,t0,t1,w)=>PL(D,[loc(it,s0,t0),loc(it,s1,t0),loc(it,s1,t1),loc(it,s0,t1),loc(it,s0,t0)],w,"ESQUADRIA");
-    const elipse=(it,sc,tc,ra,rb,w)=>{ const pts=[]; for(let i=0;i<=24;i++){ const an=i/24*2*Math.PI; pts.push(loc(it,sc+ra*Math.cos(an),tc+rb*Math.sin(an))); } PL(D,pts,w,"ESQUADRIA"); };
-    // box: vidro nos lados abertos, ralo e chuveiro
-    if(Lb.box){ const b=Lb.box, e=0.02;
-      [[b.x0,b.y0,b.x1,b.y0],[b.x1,b.y0,b.x1,b.y1],[b.x1,b.y1,b.x0,b.y1],[b.x0,b.y1,b.x0,b.y0]].forEach(([xa,ya,xb,yb])=>{ const naParede=(Math.abs(ya-yb)<1e-6&&(Math.abs(ya-r.y0)<1e-6||Math.abs(ya-r.y1)<1e-6))||(Math.abs(xa-xb)<1e-6&&(Math.abs(xa-r.x0)<1e-6||Math.abs(xa-r.x1)<1e-6));
-        if(naParede) return; const nx=Math.abs(ya-yb)<1e-6?0:e, ny=Math.abs(ya-yb)<1e-6?e:0; L(D,xa-nx,ya-ny,xb-nx,yb-ny,.25,"ESQUADRIA"); L(D,xa+nx,ya+ny,xb+nx,yb+ny,.25,"ESQUADRIA"); });
-      const cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, rr=0.06; PL(D,[[cx-rr,cy-rr],[cx+rr,cy-rr],[cx+rr,cy+rr],[cx-rr,cy+rr],[cx-rr,cy-rr]],.25,"ESQUADRIA"); L(D,cx-rr,cy-rr,cx+rr,cy+rr,.13,"ESQUADRIA"); L(D,cx-rr,cy+rr,cx+rr,cy-rr,.13,"ESQUADRIA");
-      TX(D,cx,cy+rr+2.2*k,"RALO",1.4,{l:"COTAS"}); TX(D,cx,cy-rr-4.5*k,"BOX",2,{b:true});
-      const ch=Lb.chuv; CI(D,ch.c[0]+ch.n[0]*0.12,ch.c[1]+ch.n[1]*0.12,0.07,.25,"ESQUADRIA");
-      // caimento para o ralo
-      seta(D,b.x0+(b.x1-b.x0)*0.18,cy,cx-rr-0.03,cy,"COTAS"); TX(D,b.x0+(b.x1-b.x0)*0.2,cy-2*k,"i=1%",1.4,{a:"s",l:"COTAS"}); }
-    // vaso
-    const V=Lb.vaso; ret(V,-V.larg/2,V.larg/2,0,0.18,.35); elipse(V,0,0.18+0.24,0.18,0.24,.35); elipse(V,0,0.18+0.25,0.12,0.17,.18);
-    // lavatório (bancada com cuba)
-    const Lv=Lb.lav; ret(Lv,-Lv.larg/2,Lv.larg/2,0,Lv.prof,.35); elipse(Lv,0,Lv.prof*0.55,Math.min(0.18,Lv.larg/2-0.05),0.13,.25); CI(D,...loc(Lv,0,0.06),0.02,.25,"ESQUADRIA");
-    TX(D,...loc(V,0,0.75+2*k),"VASO",1.5,{l:"COTAS"}); TX(D,...loc(Lv,0,Lv.prof+2.5*k),"LAVATÓRIO",1.5,{l:"COTAS",rot:Lv.a[0]===0?-90:0});
-  }
+  if(Lb) desenhaLoucas(D,r,Lb,k,true);
   // cotas internas
   cotaH(D,r.x0,r.x1,r.y0-t-6*k,r.y0-t,f(r.x1-r.x0)); cotaV(D,r.y0,r.y1,r.x0-t-6*k,r.x0-t,f(r.y1-r.y0));
   if(Lb&&Lb.box){ const b=Lb.box; cotaH(D,b.x0,b.x1,r.y1+t+6*k,r.y1+t,f(b.x1-b.x0)); cotaV(D,b.y0,b.y1,r.x1+t+6*k,r.x1+t,f(b.y1-b.y0)); }
@@ -972,6 +966,210 @@ function vistaBanheiro(G,r,k,lado){
   return D;
 }
 const notasBanho=()=>[`Revestimento cerâmico nas paredes ${num(S.banho.rev)>0?`até ${f(num(S.banho.rev))} m`:"até o teto"}; piso cerâmico antiderrapante.`,`Box em vidro temperado 8 mm, altura 1,90 m.`,`Pontos de água: chuveiro 2,10 m, registro 1,10 m, lavatório 0,60 m, vaso 0,20 m (do piso acabado).`,`Caimento do piso do box de 1% para o ralo; piso do banheiro 2 cm abaixo dos ambientes vizinhos.`,`Bancada do lavatório a 0,80 m; espelho de 1,10 a 1,90 m.`,`Posição das louças sugerida pelo app: confirmar com o projeto hidrossanitário.`];
+
+/* ---------------- Planta de layout (móveis) ---------------- */
+// cada móvel é desenhado num sistema local: "s" ao longo da parede, "t" da parede para dentro do ambiente
+const TIPOS_MOB=[["auto","Automático (pelo nome)"],["casal","Quarto de casal"],["solteiro","Quarto de solteiro"],["sala","Sala de estar"],["jantar","Sala de jantar"],["salacoz","Sala e cozinha"],["cozinha","Cozinha"],["banho","Banheiro"],["lavand","Lavanderia"],["escrit","Escritório / sala comercial"],["garagem","Garagem"],["nada","Sem móveis"]];
+function tipoMob(r){ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; if(lab&&lab.mt&&lab.mt!=="auto") return lab.mt;
+  const n=String(r.n||"").toLowerCase(), W=r.x1-r.x0, H=r.y1-r.y0;
+  if(ehBanho(n)) return "banho";
+  if(/su[ií]te|quarto|dormit/.test(n)) return Math.min(W,H)>=2.5&&r.area>=7?"casal":"solteiro";
+  if(/cozinha|copa/.test(n)) return /sala|estar|jantar/.test(n)?"salacoz":"cozinha";
+  if(/lavand|servi[cç]o/.test(n)) return "lavand";
+  if(/escrit|comercial|consult|office|loja|recep/.test(n)) return "escrit";
+  if(S.uso==="comercial"&&/sala|ambiente|sl\b/.test(n)&&!/cozinha|copa|jantar/.test(n)) return "escrit";   // imóvel comercial: "Sala 1", "Sala 2" são salas comerciais
+  if(/garag/.test(n)) return "garagem";
+  if(/jantar/.test(n)) return "jantar";
+  if(/sala|estar|living/.test(n)) return "sala";
+  return "nada"; }
+// peças: w = largura ao longo da parede; sol = partes cheias [s0,t0,s1,t1,alto]; liv = espaço livre para usar o móvel
+function pCama(lc,nc){ const cm=0.45, g=0.03, bs=nc===2?cm+g:0, be=bs+lc, w=be+(nc>=1?g+cm:0), L=1.88;
+  const sol=[[bs,0,be,L]], liv=[[0,L,w,L+0.55]];
+  if(nc===2) sol.push([0,0,cm,0.40]); if(nc>=1) sol.push([be+g,0,w,0.40]);
+  if(nc===2) liv.push([0,0.42,bs,L]); if(nc>=1) liv.push([be,0.42,w,L]); else if(lc>1) liv.push([be,0,be+0.5,L]);
+  return {casal:lc>1,nome:lc>1?"cama de casal":"cama de solteiro",extra:nc?`${nc} criado${nc>1?"s":""}-mudo${nc>1?"s":""}`:"",w,pri:nc*0.4,assim:nc===1||lc<1,sol,liv,des:d=>{
+    d.R(bs,0,be,L,.25); d.L(bs,0.05,be,0.05,.25);
+    const np=lc>1?2:1, lp=(lc-0.12-(np-1)*0.06)/np; for(let i=0;i<np;i++){ const a=bs+0.06+i*(lp+0.06); d.R(a,0.10,a+lp,0.42,.18); }
+    d.L(bs,0.62,be,0.62,.18); d.L(bs+lc*0.45,0.62,be,1.02,.18);
+    const cmd=(a)=>{ d.R(a,0,a+cm,0.40,.18); d.C(a+cm/2,0.20,0.09,.13); };
+    if(nc===2) cmd(0); if(nc>=1) cmd(be+g); }}; }
+function pGuarda(w){ return {nome:"guarda-roupa",extra:f(w)+" m",w,pri:0,sol:[[0,0,w,0.55,1]],liv:[[0,0.55,w,1.15]],des:d=>{
+  d.R(0,0,w,0.55,.25); d.L(0,0.50,w,0.50,.13); d.L(0.05,0.275,w-0.05,0.275,.13,true);
+  const n=Math.max(2,Math.round(w/0.5)); for(let i=1;i<n;i++) d.L(w*i/n,0.50,w*i/n,0.55,.13); }}; }
+function pSofa(w,o=0,mesa=true){ const lm=w>=1.8?0.90:0.70, a=w/2-lm/2;
+  return {nome:"sofá",extra:f(w)+" m",w,pri:(mesa?0.5:0)-(o?0.8:0),solto:o,sol:[[0,o,w,o+0.85],...(mesa?[[a,o+1.25,a+lm,o+1.70]]:[])],liv:[[0,o+0.85,w,o+(mesa?1.25:1.35)]],des:d=>{
+    d.R(0,o,w,o+0.85,.25); d.L(0.20,o+0.20,w-0.20,o+0.20,.18); d.L(0.20,o+0.20,0.20,o+0.85,.18); d.L(w-0.20,o+0.20,w-0.20,o+0.85,.18);
+    const n=w>=1.9?3:2; for(let i=1;i<n;i++){ const x=0.20+(w-0.40)*i/n; d.L(x,o+0.20,x,o+0.85,.13); }
+    if(mesa) d.R(a,o+1.25,a+lm,o+1.70,.18); }}; }
+function pRack(w){ return {nome:"rack com TV",extra:f(w)+" m",w,pri:0,sol:[[0,0,w,0.45]],liv:[[0,0.45,w,0.95]],des:d=>{
+  d.R(0,0,w,0.45,.25); const tv=Math.min(1.2,w-0.2); d.R(w/2-tv/2,0.05,w/2+tv/2,0.11,.25); }}; }
+function cadeira(d,s,t,costas){ d.R(s-0.22,t-0.22,s+0.22,t+0.22,.18); const c=costas>0?t+0.17:t-0.17; d.L(s-0.20,c,s+0.20,c,.25); }
+function pJantar(n){ const lt=n>=6?1.60:1.20, pt=n>=6?0.90:0.80, w=lt, t0=0.25, tm0=t0+0.30, tm1=tm0+pt, d1=tm1+0.30+0.15;
+  const xs=n>=6?[0.30,0.80,1.30]:[0.30,0.90];
+  return {nome:`mesa de jantar ${n} lugares`,extra:"",w,pri:n>=6?1:0.5,sol:[[0,t0,w,d1]],liv:[[0,d1,w,d1+0.30]],des:d=>{
+    d.R(0,tm0,lt,tm1,.25); xs.forEach(x=>{ cadeira(d,x,tm0-0.08,-1); cadeira(d,x,tm1+0.08,1); }); }}; }
+function pJantarParede(){ const w=2.0;
+  return {nome:"mesa de jantar 4 lugares",extra:"encostada",w,pri:0,sol:[[0,0,w,1.10]],liv:[[0,1.10,w,1.40]],des:d=>{
+    d.R(0.40,0,1.60,0.80,.25); cadeira(d,0.75,0.88,1); cadeira(d,1.25,0.88,1); d.R(0.03,0.18,0.47,0.62,.18); d.L(0.06,0.20,0.06,0.60,.25); d.R(1.53,0.18,1.97,0.62,.18); d.L(1.94,0.20,1.94,0.60,.25);
+  }}; }
+function pCozinha(lp,ext){ const gel=0.70, g=0.05, w=gel+g+lp+0.55+ext, cb=gel+g+lp/2;
+  return {nome:"cozinha",extra:`geladeira, pia ${f(lp)} m e fogão`,w,pri:0,assim:true,cuba:[cb-0.25,0,cb+0.25,0.5],sol:[[0,0,gel,0.70,1],[gel+g,0,w,0.60]],liv:[[0,0.70,w,1.60]],des:d=>{
+    d.R(0,0,gel,0.70,.25); d.L(0,0.64,gel,0.64,.13); d.T(gel/2,0.33,"GEL");
+    d.R(gel+g,0,w,0.60,.25); d.R(cb-0.25,0.08,cb+0.25,0.48,.18); d.R(cb-0.21,0.12,cb+0.21,0.44,.13); d.C(cb,0.05,0.025,.18);
+    const f0=gel+g+lp; d.R(f0,0.02,f0+0.55,0.58,.18); [[0.15,0.16],[0.40,0.16],[0.15,0.42],[0.40,0.42]].forEach(([a,b])=>d.C(f0+a,b,0.08,.13)); }}; }
+const pCozinhas=()=>[[1.8,0.6],[1.8,0.3],[1.5,0.3],[1.5,0],[1.2,0]].map(([a,b])=>pCozinha(a,b));
+function pLavand(){ return {nome:"tanque e máquina de lavar",extra:"",w:1.25,pri:1,assim:true,sol:[[0,0,1.25,0.60]],liv:[[0,0.60,1.25,1.10]],des:d=>{
+  d.R(0,0,0.60,0.55,.25); d.R(0.06,0.10,0.54,0.50,.13); d.C(0.30,0.30,0.03,.13);
+  d.R(0.65,0,1.25,0.60,.25); d.C(0.95,0.31,0.22,.18); d.C(0.95,0.31,0.15,.13); }}; }
+function pMaquina(){ return {nome:"máquina de lavar",extra:"",w:0.60,pri:0,sol:[[0,0,0.60,0.60]],liv:[[0,0.60,0.60,1.10]],des:d=>{ d.R(0,0,0.60,0.60,.25); d.C(0.30,0.31,0.22,.18); d.C(0.30,0.31,0.15,.13); }}; }
+function pTanque(){ return {nome:"tanque",extra:"",w:0.60,pri:0,sol:[[0,0,0.60,0.55]],liv:[[0,0.55,0.60,1.15]],des:d=>{ d.R(0,0,0.60,0.55,.25); d.R(0.06,0.10,0.54,0.50,.13); d.C(0.30,0.30,0.03,.13); }}; }
+function pMesaExec(){ const w=1.40;
+  return {nome:"mesa de trabalho",extra:"com cadeira e 2 cadeiras de visita",w,pri:1,porta:1,sol:[[0.45,0.10,0.95,0.70],[0,0.75,w,1.45],[0.10,1.40,1.30,1.95]],liv:[[0,1.95,w,2.35]],des:d=>{
+    d.R(0,0.75,w,1.45,.25); d.C(0.70,0.42,0.24,.18); d.L(0.50,0.18,0.90,0.18,.25); cadeira(d,0.40,1.62,1); cadeira(d,1.00,1.62,1); }}; }
+function pMesa(){ const w=1.20;
+  return {nome:"mesa de trabalho",extra:"com cadeira",w,pri:0,sol:[[0,0,w,0.60],[0.35,0.55,0.85,1.05]],liv:[[0,1.05,w,1.40]],des:d=>{ d.R(0,0,w,0.60,.25); d.C(0.60,0.80,0.24,.18); d.L(0.40,1.02,0.80,1.02,.25); }}; }
+function pEspera(){ return {nome:"espera",extra:"2 poltronas e mesinha",w:1.60,pri:0,sol:[[0,0,1.60,0.65]],liv:[[0,0.65,1.60,1.15]],des:d=>{
+  [[0,0.60],[1.00,1.60]].forEach(([a,b])=>{ d.R(a,0.05,b,0.65,.25); d.L(a+0.08,0.17,b-0.08,0.17,.18); d.L(a+0.08,0.17,a+0.08,0.65,.13); d.L(b-0.08,0.17,b-0.08,0.65,.13); }); d.R(0.65,0.10,0.95,0.40,.18); }}; }
+function pArmario(){ return {nome:"armário",extra:"",w:0.80,pri:0,sol:[[0,0,0.80,0.45,1]],liv:[[0,0.45,0.80,1.0]],des:d=>{ d.R(0,0,0.80,0.45,.25); d.L(0.40,0.40,0.40,0.45,.13); d.L(0,0.40,0.80,0.40,.13); }}; }
+function listaMob(tipo,r){ const A=r.area, C=(k,alts,opc)=>({k,alts:alts.filter(Boolean),opc:!!opc});
+  const sofa=()=>C("sofa",[2.1,1.8,1.5].flatMap(w=>[0,1.3,1.6].flatMap(o=>[pSofa(w,o,true),pSofa(w,o,false)]))), rack=()=>C("rack",[1.8,1.4,1.0].map(pRack));
+  switch(tipo){
+    case "casal": return [C("cama",[pCama(1.38,2),pCama(1.38,1),pCama(1.38,0)]),C("guarda",[2.4,2.0,1.8,1.6,1.4,1.2,1.0].map(pGuarda))];
+    case "solteiro": return [C("cama",[pCama(0.88,1),pCama(0.88,0)]),C("guarda",[1.8,1.6,1.4,1.2,1.0,0.8].map(pGuarda))];
+    case "sala": return [sofa(),rack(),...(A>=14?[C("jantar",[pJantar(4),pJantarParede()],true)]:[])];
+    case "salacoz": return [C("cozinha",pCozinhas()),sofa(),rack(),C("jantar",[pJantar(4),pJantarParede()],true)];
+    case "cozinha": return [C("cozinha",pCozinhas()),...(A>=8?[C("jantar",[pJantar(4),pJantarParede()],true)]:[])];
+    case "jantar": return [C("jantar",[A>=12?pJantar(6):null,pJantar(4),pJantarParede()])];
+    case "lavand": return [C("lavand",[pLavand(),pTanque()]),{...C("maquina",[pMaquina()]),se:ctx=>ctx.pos.lavand&&ctx.pos.lavand.pc.w<1}];
+    case "escrit": return [C("mesa",[A>=9?pMesaExec():null,pMesa()]),C("armario",[pArmario()],true),...(A>=12?[C("espera",[pEspera()],true)]:[])];
+  }
+  return []; }
+// geometria auxiliar: sobreposição de polígonos convexos (eixos separadores) e retângulo dentro do ambiente
+function sobrepoe(P,Q){ for(const poly of [P,Q]) for(let i=0;i<poly.length;i++){ const a=poly[i], b=poly[(i+1)%poly.length], nx=a[1]-b[1], ny=b[0]-a[0], l=Math.hypot(nx,ny); if(l<1e-9) continue;
+    let p0=1e9,p1=-1e9,q0=1e9,q1=-1e9; P.forEach(p=>{ const v=(p[0]*nx+p[1]*ny)/l; if(v<p0)p0=v; if(v>p1)p1=v; }); Q.forEach(p=>{ const v=(p[0]*nx+p[1]*ny)/l; if(v<q0)q0=v; if(v>q1)q1=v; });
+    if(Math.min(p1,q1)-Math.max(p0,q0)<0.004) return false; } return true; }
+const centro=Q=>[Q.reduce((s,p)=>s+p[0],0)/Q.length,Q.reduce((s,p)=>s+p[1],0)/Q.length];
+function dentroAmb(r,Q){ const c=centro(Q);
+  if(!Q.every(p=>{ const dx=c[0]-p[0], dy=c[1]-p[1], l=Math.hypot(dx,dy)||1; return pip(r.poly,p[0]+dx/l*0.004,p[1]+dy/l*0.004); })) return false;
+  const Qs=Q.map(p=>{ const dx=c[0]-p[0], dy=c[1]-p[1], l=Math.hypot(dx,dy)||1; return [p[0]+dx/l*0.004,p[1]+dy/l*0.004]; });
+  return !r.poly.some(v=>pip(Qs,v[0],v[1])); }
+// portas (giro + passagem) e janelas (só os móveis altos não podem ficar na frente) que dão para o ambiente
+function zonasAmb(G,r){ const h=G.h, Z={porta:[],jan:[]};
+  G.abs.forEach(g=>{ const mx=(g.p0[0]+g.p1[0])/2, my=(g.p0[1]+g.p1[1])/2; let sg=0;
+    [1,-1].forEach(s=>{ if(pip(r.poly,mx+g.nX*(h+0.05)*s,my+g.nY*(h+0.05)*s)) sg=s; }); if(!sg) return;
+    const u=[g.w.ux,g.w.uy], N=[g.nX*sg,g.nY*sg], F=(s,t)=>[g.p0[0]+u[0]*s+N[0]*(h+t),g.p0[1]+u[1]*s+N[1]*(h+t)], ret=(s0,s1,t)=>[F(s0,0),F(s1,0),F(s1,t),F(s0,t)];
+    if(g.tipo==="Janela") Z.jan.push(ret(0,g.l,0.30));
+    else { const abre=g.tipo==="Porta"&&modPadrao(g.a)!=="correr"&&g.lado===sg; Z.porta.push(ret(-0.05,g.l+0.05,Math.max(0.80,abre?g.l+0.05:0))); } });
+  return Z; }
+const trf=(T,s,t)=>{ const ss=T.m>0?s:T.w-s; return [T.A[0]+T.u[0]*(T.s0+ss)+T.N[0]*t,T.A[1]+T.u[1]*(T.s0+ss)+T.N[1]*t]; };
+const retW=(T,[s0,t0,s1,t1])=>[trf(T,s0,t0),trf(T,s1,t0),trf(T,s1,t1),trf(T,s0,t1)];
+function notaMob(k,c,ctx){ const pc=c.pc, T=c.T, Le=c.Le, cen=c.cen, Z=ctx.Z;
+  const dP=Z.porta.length?Math.min(...Z.porta.map(z=>{ const q=centro(z); return Math.hypot(q[0]-cen[0],q[1]-cen[1]); })):3;
+  const jan=c.sol.some(q=>Z.jan.some(z=>sobrepoe(q,z))), off=Math.abs(T.s0+pc.w/2-Le/2), canto=Math.min(T.s0,Le-T.s0-pc.w)<0.02;
+  const fundo=Math.max(...ctx.r.poly.map(v=>(v[0]-T.A[0])*T.N[0]+(v[1]-T.A[1])*T.N[1]));
+  let s=(pc.pri||0)-(Math.abs(T.u[0])>1e-6&&Math.abs(T.u[1])>1e-6?1.5:0);   // parede inclinada (chanfro) só se não houver outra
+  if(k==="cama") s+=(pc.casal?-2*off/Le:(canto?1:0))-(jan?0.6:0)+0.3*Math.min(dP,4);
+  else if(k==="guarda") s+=pc.w+(canto?0.6:0)+0.1*dP;
+  else if(k==="sofa") s+=pc.w*0.6-off/Le+0.2*Math.min(dP,4)+(fundo>=2.6&&fundo<=5.5?1:0);
+  else if(k==="rack"){ const so=ctx.pos.sofa; s+=pc.w*0.3; if(so){ const dt=T.N[0]*so.T.N[0]+T.N[1]*so.T.N[1], dist=(so.cen[0]-cen[0])*T.N[0]+(so.cen[1]-cen[1])*T.N[1];
+      if(dt<-0.9) s+=3-1.5*Math.abs((so.cen[0]-cen[0])*T.u[0]+(so.cen[1]-cen[1])*T.u[1])-(dist<1.9?2:0); } }
+  else if(k==="cozinha"){ s+=pc.w*0.8+(canto?0.5:0); const cb=retW(T,pc.cuba); if(Z.jan.some(z=>sobrepoe(cb,z))) s+=1; }
+  else if(k==="jantar"){ const cz=ctx.pos.cozinha, ref=cz?cz.cen:[ctx.r.cx,ctx.r.cy]; s-=0.3*Math.hypot(ref[0]-cen[0],ref[1]-cen[1]); const so=ctx.pos.sofa; if(so) s+=0.15*Math.hypot(so.cen[0]-cen[0],so.cen[1]-cen[1]); }
+  else if(k==="lavand"||k==="maquina") s+=pc.w+(canto?0.5:0)+(k==="maquina"&&ctx.pos.lavand?-0.3*Math.hypot(ctx.pos.lavand.cen[0]-cen[0],ctx.pos.lavand.cen[1]-cen[1]):0);
+  else if(k==="mesa"){ s+=0.3*Math.min(dP,4); if(pc.porta&&Z.porta.length){ const q=centro(Z.porta[0]); if((q[0]-cen[0])*T.N[0]+(q[1]-cen[1])*T.N[1]>0) s+=1; } }
+  else if(k==="armario") s+=(canto?0.5:0)+0.1*dP;
+  else if(k==="espera") s+=0.4*Math.min(dP,3)*-1+(canto?0.3:0);   // espera perto da entrada
+  return s; }
+function candidatos(it,ctx){ const r=ctx.r, P=r.poly, out=[];
+  P.forEach((A,i)=>{ const B=P[(i+1)%P.length], Le=Math.hypot(B[0]-A[0],B[1]-A[1]); if(Le<0.5) return; const u=[(B[0]-A[0])/Le,(B[1]-A[1])/Le];
+    let N=[-u[1],u[0]]; const mx=(A[0]+B[0])/2, my=(A[1]+B[1])/2; if(!pip(P,mx+N[0]*0.02,my+N[1]*0.02)) N=[-N[0],-N[1]];
+    it.alts.forEach(pc=>{ if(pc.w>Le+1e-6) return; const ss=new Set(); for(let s=0;s<=Le-pc.w+1e-6;s+=0.10) ss.add(+s.toFixed(3)); ss.add(+(Le-pc.w).toFixed(3)); ss.add(+((Le-pc.w)/2).toFixed(3));
+      (pc.assim?[1,-1]:[1]).forEach(m=>ss.forEach(s0=>{ const T={A,u,N,s0,w:pc.w,m};
+        const sol=pc.sol.map(q=>retW(T,q)), liv=pc.liv.map(q=>retW(T,q));
+        if(!sol.every(q=>dentroAmb(r,q))||!liv.every(q=>dentroAmb(r,q))) return;
+        if(sol.some(q=>ctx.Z.porta.some(z=>sobrepoe(q,z))||ctx.sol.some(z=>sobrepoe(q,z))||ctx.liv.some(z=>sobrepoe(q,z)))) return;
+        if(pc.sol.some((q,j)=>q[4]&&ctx.Z.jan.some(z=>sobrepoe(sol[j],z)))) return;
+        if(liv.some(q=>ctx.sol.some(z=>sobrepoe(q,z)))) return;
+        const cen=centro(sol.flat()), c={pc,T,sol,liv,cen,Le,ed:i}; c.nota=notaMob(it.k,c,ctx); out.push(c); })); }); });
+  return out; }
+// arranjo de todos os ambientes (feito uma vez por desenho)
+function layoutMoveis(G){
+  return G.rooms.map(r=>{ const tipo=tipoMob(r), lab=r.labIdx>=0?S.rooms[r.labIdx]:null, v=lab?Math.round(num(lab.mv)):0, res={r,tipo,pos:[],faltou:[],sol:[],banho:null,carro:null};
+    if(tipo==="banho"){ const Lb=r.ret?layoutBanheiro(G,r):null; if(Lb){ res.banho=Lb; const loc=(it,s0,t0)=>[it.c[0]+it.a[0]*s0+it.n[0]*t0,it.c[1]+it.a[1]*s0+it.n[1]*t0], rq=(it,s0,s1,t0,t1)=>[loc(it,s0,t0),loc(it,s1,t0),loc(it,s1,t1),loc(it,s0,t1)];
+        res.sol.push(rq(Lb.vaso,-0.2,0.2,0,0.68),rq(Lb.lav,-Lb.lav.larg/2,Lb.lav.larg/2,0,Lb.lav.prof)); if(Lb.box){ const b=Lb.box; res.sol.push([[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]]); } }
+      else if(!r.ret) res.faltou.push("louças (banheiro não retangular)"); return res; }
+    if(tipo==="garagem"){ const W=r.x1-r.x0, H=r.y1-r.y0, lg=W>=H, Lc=4.30, Wc=1.80, cx=(r.x0+r.x1)/2, cy=(r.y0+r.y1)/2;
+      const T={A:lg?[cx-Lc/2,cy-Wc/2]:[cx+Wc/2,cy-Lc/2],u:lg?[1,0]:[0,1],N:lg?[0,1]:[-1,0],s0:0,w:Lc,m:1}, Q=retW(T,[0,0,Lc,Wc]);
+      if(dentroAmb(r,Q)){ res.carro=T; res.sol.push(Q); } else res.faltou.push("carro"); return res; }
+    // o móvel principal é testado em várias paredes; para cada uma, os outros entram onde der. Fica a combinação com mais móveis
+    const Z=zonasAmb(G,r), itens=listaMob(tipo,r), novo=()=>({r,G,Z,sol:[],liv:[],pos:{}});
+    const rodar=prim=>{ const ctx=novo(), pos=[], falt=[]; let tot=0;
+      itens.forEach((it,ii)=>{ if(it.se&&!it.se(ctx)) return; let c;
+        if(ii===0) c=prim; else { const cs=candidatos(it,ctx); c=cs.length?cs.reduce((m,q)=>q.nota>m.nota?q:m,cs[0]):null; }
+        if(!c){ if(!it.opc){ falt.push(it.alts[0].nome); tot-=10; } else tot-=1; return; }
+        tot+=c.nota; ctx.sol.push(...c.sol); ctx.liv.push(...c.liv); ctx.pos[it.k]=c; pos.push(c); });
+      return {pos,falt,tot}; };
+    if(itens.length){ const cs=candidatos(itens[0],novo());
+      if(!cs.length){ const o=rodar(null); res.pos=o.pos; res.faltou=o.falt; }
+      else { const grupos={}; cs.forEach(c=>{ (grupos[c.ed+"/"+c.T.m]=grupos[c.ed+"/"+c.T.m]||[]).push(c); });
+        const ls=Object.values(grupos).map(g=>{ g.sort((p,q)=>q.nota-p.nota); const esc=[]; for(const c of g){ if(esc.length>=(itens.length>1?3:1)) break; if(esc.every(e=>Math.abs(e.T.s0-c.T.s0)>=0.3||e.pc!==c.pc)) esc.push(c); }
+          return esc.map(rodar).reduce((m,o)=>o.tot>m.tot?o:m); }).sort((p,q)=>q.tot-p.tot);
+        const o=ls[((v%ls.length)+ls.length)%ls.length]; res.pos=o.pos; res.faltou=o.falt; res.nVar=ls.length; } }
+    res.pos.forEach(c=>res.sol.push(...c.sol));
+    return res; }); }
+function desenhaLoucas(D,r,Lb,k,txt){
+  const loc=(it,s0,t0)=>[it.c[0]+it.a[0]*s0+it.n[0]*t0,it.c[1]+it.a[1]*s0+it.n[1]*t0];
+  const ret=(it,s0,s1,t0,t1,w)=>PL(D,[loc(it,s0,t0),loc(it,s1,t0),loc(it,s1,t1),loc(it,s0,t1),loc(it,s0,t0)],w,"ESQUADRIA");
+  const elipse=(it,sc,tc,ra,rb,w)=>{ const pts=[]; for(let i=0;i<=24;i++){ const an=i/24*2*Math.PI; pts.push(loc(it,sc+ra*Math.cos(an),tc+rb*Math.sin(an))); } PL(D,pts,w,"ESQUADRIA"); };
+  // box: vidro nos lados abertos, ralo e chuveiro
+  if(Lb.box){ const b=Lb.box, e=0.02;
+    [[b.x0,b.y0,b.x1,b.y0],[b.x1,b.y0,b.x1,b.y1],[b.x1,b.y1,b.x0,b.y1],[b.x0,b.y1,b.x0,b.y0]].forEach(([xa,ya,xb,yb])=>{ const naParede=(Math.abs(ya-yb)<1e-6&&(Math.abs(ya-r.y0)<1e-6||Math.abs(ya-r.y1)<1e-6))||(Math.abs(xa-xb)<1e-6&&(Math.abs(xa-r.x0)<1e-6||Math.abs(xa-r.x1)<1e-6));
+      if(naParede) return; const nx=Math.abs(ya-yb)<1e-6?0:e, ny=Math.abs(ya-yb)<1e-6?e:0; L(D,xa-nx,ya-ny,xb-nx,yb-ny,.25,"ESQUADRIA"); L(D,xa+nx,ya+ny,xb+nx,yb+ny,.25,"ESQUADRIA"); });
+    const cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, rr=0.06; PL(D,[[cx-rr,cy-rr],[cx+rr,cy-rr],[cx+rr,cy+rr],[cx-rr,cy+rr],[cx-rr,cy-rr]],.25,"ESQUADRIA"); L(D,cx-rr,cy-rr,cx+rr,cy+rr,.13,"ESQUADRIA"); L(D,cx-rr,cy+rr,cx+rr,cy-rr,.13,"ESQUADRIA");
+    const ch=Lb.chuv; CI(D,ch.c[0]+ch.n[0]*0.12,ch.c[1]+ch.n[1]*0.12,0.07,.25,"ESQUADRIA");
+    if(txt){ TX(D,cx,cy+rr+2.2*k,"RALO",1.4,{l:"COTAS"}); TX(D,cx,cy-rr-4.5*k,"BOX",2,{b:true});
+      // caimento para o ralo
+      seta(D,b.x0+(b.x1-b.x0)*0.18,cy,cx-rr-0.03,cy,"COTAS"); TX(D,b.x0+(b.x1-b.x0)*0.2,cy-2*k,"i=1%",1.4,{a:"s",l:"COTAS"}); } }
+  // vaso
+  const V=Lb.vaso; ret(V,-V.larg/2,V.larg/2,0,0.18,.35); elipse(V,0,0.18+0.24,0.18,0.24,.35); elipse(V,0,0.18+0.25,0.12,0.17,.18);
+  // lavatório (bancada com cuba)
+  const Lv=Lb.lav; ret(Lv,-Lv.larg/2,Lv.larg/2,0,Lv.prof,.35); elipse(Lv,0,Lv.prof*0.55,Math.min(0.18,Lv.larg/2-0.05),0.13,.25); CI(D,...loc(Lv,0,0.06),0.02,.25,"ESQUADRIA");
+  if(txt){ TX(D,...loc(V,0,0.75+2*k),"VASO",1.5,{l:"COTAS"}); TX(D,...loc(Lv,0,Lv.prof+2.5*k),"LAVATÓRIO",1.5,{l:"COTAS",rot:Lv.a[0]===0?-90:0}); }
+}
+function desenhaPeca(D,T,des){ const w0=.18, dr={
+  R:(s0,t0,s1,t1,w=w0)=>{ const q=retW(T,[s0,t0,s1,t1]); PL(D,[...q,q[0]],w,"MOBILIA"); },
+  L:(s0,t0,s1,t1,w=w0,dd=false)=>L(D,...trf(T,s0,t0),...trf(T,s1,t1),w,"MOBILIA",dd),
+  C:(s,t,rr,w=w0)=>CI(D,...trf(T,s,t),rr,w,"MOBILIA"), T:(s,t,txt)=>TX(D,...trf(T,s,t),txt,1.3,{l:"MOBILIA"}) }; des(dr); }
+function desenhaCarro(D,T){ const Lc=T.w, Wc=1.80, c=0.28, dr=(pts,w=.25)=>PL(D,pts.map(([s,t])=>trf(T,s,t)),w,"MOBILIA");
+  dr([[c,0],[Lc-c,0],[Lc,c],[Lc,Wc-c],[Lc-c,Wc],[c,Wc],[0,Wc-c],[0,c],[c,0]]);
+  dr([[1.15,0.18],[1.55,0.30],[1.55,Wc-0.30],[1.15,Wc-0.18],[1.15,0.18]],.18); dr([[3.25,0.25],[3.50,0.18],[3.50,Wc-0.18],[3.25,Wc-0.25],[3.25,0.25]],.18);
+  dr([[1.55,0.30],[3.25,0.25]],.13); dr([[1.55,Wc-0.30],[3.25,Wc-0.25]],.13); dr([[1.20,-0.10],[1.35,-0.10],[1.35,0]],.18); dr([[1.20,Wc+0.10],[1.35,Wc+0.10],[1.35,Wc]],.18); }
+// rótulo do ambiente num lugar livre (sem cair em cima de móvel)
+function lugarRotulo(r,sol,x,y,wt,ht){ const livre=(px,py)=>{ const Q=[[px-wt/2,py-ht/2],[px+wt/2,py-ht/2],[px+wt/2,py+ht/2],[px-wt/2,py+ht/2]]; return Q.every(p=>pip(r.poly,p[0],p[1]))&&!sol.some(z=>sobrepoe(Q,z)); };
+  if(livre(x,y)) return [x,y];
+  const st=0.04, R=Math.max(r.x1-r.x0,r.y1-r.y0); let melhor=null;
+  for(let rr=st;rr<=R&&!melhor;rr+=st){ const n=Math.max(8,Math.round(2*Math.PI*rr/st)); for(let i=0;i<n;i++){ const a=i/n*2*Math.PI, px=x+rr*Math.cos(a), py=y+rr*Math.sin(a); if(livre(px,py)){ melhor=[px,py]; break; } } }
+  return melhor; }
+function desenhoLayout(G,k,LM){
+  const D=Dw(k), bb=G.bb;
+  if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
+  G.pecas.forEach(P=>PG(D,P,"HACHURA"));
+  G.contPar.forEach(s=>L(D,...s,.5,"PAREDE"));
+  desenhaAberturas(D,G,G.abs);
+  (LM||layoutMoveis(G)).forEach(R=>{ const r=R.r;
+    R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des)); if(R.banho) desenhaLoucas(D,r,R.banho,k,false); if(R.carro) desenhaCarro(D,R.carro);
+    const lab=r.labIdx>=0?S.rooms[r.labIdx]:null, x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy, nome=r.n.toUpperCase(), ar=`A = ${f(r.area)} m²`;
+    // ambiente pequeno: diminui a letra; se ainda não couber, fica só o nome (a área está no quadro)
+    const Zp=zonasAmb(G,r).porta, So=[...R.sol,...Zp]; let ok=null, hn=2.3, sa=false;
+    for(const [hh,obs,s1] of [[2.3,So],[1.8,So],[1.5,So],[1.8,So,1],[1.5,So,1],[1.8,R.sol],[1.5,R.sol],[1.5,R.sol,1],[1.3,R.sol,1]]){ const wt=Math.max(nome.length*hh*0.85,s1?0:ar.length*hh*0.78*0.83)*k+0.04, ht=hh*(s1?1.6:3)*k; ok=lugarRotulo(r,obs,x,y,wt,ht); hn=hh; sa=!!s1; if(ok) break; }
+    const [px,py]=ok||[x,y];
+    if(sa) TX(D,px,py,nome,hn,{b:true}); else { TX(D,px,py-hn*0.6*k,nome,hn,{b:true}); TX(D,px,py+hn*0.8*k,ar,hn*0.78); } });
+  cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
+  return D;
+}
+function resumoMob(R){ const it=R.pos.map(c=>c.pc.nome+(c.pc.extra?` (${c.pc.extra})`:""));
+  if(R.banho) it.push(R.banho.box?"box, vaso e lavatório":"vaso e lavatório"); if(R.carro) it.push("1 vaga de carro (1,80 x 4,30)"); return it; }
+const notasLayout=LM=>[`Mobiliário ilustrativo em medidas usuais: cama de casal 1,38 x 1,88; solteiro 0,88 x 1,88; guarda-roupa 0,55 de profundidade; sofá 0,85; bancada da cozinha 0,60.`,...((LM||[]).some(R=>R.tipo==="escrit")?[`Salas comerciais: mesa de trabalho 1,40 x 0,70 com cadeira e 2 cadeiras de visita, armário 0,80 x 0,45 e espera com 2 poltronas.`]:[]),`Os móveis foram colocados longe do giro das portas e com faixa livre para circular (0,55 a 0,90 m).`,`Conferir as medidas reais dos móveis e eletrodomésticos antes de marcar os pontos de elétrica e hidráulica.`];
 
 /* ---------------- Planta de situação ---------------- */
 // terreno retangular alinhado com a casa: f = para a rua, r = para a direita de quem olha da rua
@@ -1067,7 +1265,7 @@ function extensao(D){
   return {x0,y0,x1,y1};
 }
 const n2=v=>(Math.round(v*100)/100).toString();
-const COR={LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)"};
+const COR={LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)"};
 function primsSVG(D,map,k){
   let s="";
   D.p.forEach(p=>{ const cor=COR[p.l]||"var(--ink)";
@@ -1156,6 +1354,11 @@ function render(){
         `<div class="sheet"><h2>${esc(r.n)} · planta ampliada</h2><div class="draw" style="max-width:520px">${svgDe(desenhoBanheiro(G,r,kb))}</div>
         <div class="grid2" style="margin-top:12px">${["A","B","C","D"].map(l=>`<div><h3 style="margin-top:0">Vista ${l}</h3><div class="draw">${svgDe(vistaBanheiro(G,r,kb,l))}</div></div>`).join("")}</div>
         <ol class="notes" style="margin-top:12px">${notasBanho().map(t=>`<li>${esc(t)}</li>`).join("")}</ol></div>`).join(""); }
+  { const LM=layoutMoveis(G); $("lay").innerHTML=svgDe(desenhoLayout(G,k,LM));
+    $("layAmb").innerHTML=`<tr><th>Ambiente</th><th>Tipo</th><th>Móveis</th><th></th></tr>`+LM.map((R,i)=>{ const lab=R.r.labIdx>=0?S.rooms[R.r.labIdx]:null, mt=lab&&lab.mt||"auto";
+      return `<tr><td><b>${esc(R.r.n)}</b><div style="color:var(--muted);font-size:12px">${f(R.r.area)} m²</div></td><td><select data-lay="${i}" aria-label="Tipo de layout de ${esc(R.r.n)}">${TIPOS_MOB.map(([v,t])=>`<option value="${v}"${v===mt?" selected":""}>${v==="auto"?`Automático: ${(TIPOS_MOB.find(q=>q[0]===tipoMob({...R.r,labIdx:-1}))||["",""])[1].toLowerCase()}`:t}</option>`).join("")}</select></td>
+        <td style="font-size:13px">${esc(resumoMob(R).join("; "))||"—"}${R.faltou.length?`<div style="color:var(--bad,#C4302B);font-size:12px">Não coube: ${esc(R.faltou.join(", "))}</div>`:""}</td>
+        <td>${(R.nVar||0)>1?`<button class="btn" data-var="${i}">Outra posição</button>`:""}</td></tr>`; }).join(""); }
   $("fachadas").innerHTML=G.vazio?"":fachadas().map(([l,t])=>`<div class="sheet"><h2>${t}</h2><div class="draw">${svgDe(desenhoFachada(G,k,l))}</div></div>`).join("");
   window.__R={G,Q,TI};
   save();
@@ -1227,8 +1430,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
@@ -1278,9 +1481,12 @@ $("novoSim").onclick=()=>{
   S.rooms=[]; S.ab=[]; S.cA=null; S.cB=null;
   $("novoConf").hidden=true; loadForm(); render(); $("obra").focus();
 };
+function labDe(r){ if(r.labIdx<0){ S.rooms.push({n:"",x:+r.cx.toFixed(2),y:+r.cy.toFixed(2),nv:0}); r.labIdx=S.rooms.length-1; renderRooms(); } return S.rooms[r.labIdx]; }
+$("layAmb").addEventListener("change",e=>{ const i=e.target.dataset.lay; if(i==null||!GG) return; const lb=labDe(GG.rooms[+i]); lb.mt=e.target.value; lb.mv=0; render(); });
+$("layAmb").addEventListener("click",e=>{ const b=e.target.closest("[data-var]"); if(!b||!GG) return; const lb=labDe(GG.rooms[+b.dataset.var]); lb.mv=Math.round(num(lb.mv))+1; render(); });
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
-  ["planta","cortes","cob","fach","sit","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
+  ["planta","lay","cortes","cob","fach","sit","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
 });
 
 /* ======================================================================
@@ -1322,6 +1528,7 @@ function pranchas(fmt){
   const area={x0:ml+6,y0:mo+5,x1:W-mo-6,y1:H-mo-ch-5}, aw=area.x1-area.x0, ah=area.y1-area.y0;
   const side={x0:ml+6,y0:H-mo-ch+2,x1:W-mo-cw-6,y1:H-mo-3};
   const pl=encaixar(k=>desenhoPlanta(G,k,false),aw,ah-TT);
+  const LM=layoutMoveis(G), temMob=LM.some(R=>R.pos.length||R.banho||R.carro), la=temMob?encaixar(k=>desenhoLayout(G,k,LM),aw,ah-TT):null;
   const [ca,cb]=encaixar2(k=>desenhoCorte(G,k,"A"),k=>desenhoCorte(G,k,"B"),aw,(ah-2*TT-6)/2);
   const co=encaixar(k=>desenhoCobertura(G,k),aw,ah-TT);
   const FA=fachadas(), bw2=(aw-8)/2, bh2=(ah-6)/2;
@@ -1334,6 +1541,7 @@ function pranchas(fmt){
   let fa=null; for(const s0 of ESCALAS){ const k=s0/1000, ds=FA.map(([l])=>{ const D=desenhoFachada(G,k,l), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k}; }); fa=ds; if(ds.every(d=>d.w<=bw2&&d.h<=bh2-TT)) break; }
   const folhas=[
     {n:"01/05",conteudo:"PLANTA BAIXA, QUADRO DE ÁREAS E DE ESQUADRIAS",escala:`1:${pl.s}`,itens:[{d:pl,titulo:"PLANTA BAIXA",box:[area.x0,area.y0,aw,ah]}],lado:"quadros"},
+    ...(la?[{n:"",conteudo:"PLANTA DE LAYOUT",escala:`1:${la.s}`,itens:[{d:la,titulo:"PLANTA DE LAYOUT",box:[area.x0,area.y0,aw,ah]}],lado:"layout",LM}]:[]),
     {n:"02/05",conteudo:"CORTES AA E BB",escala:`1:${ca.s}`,itens:[{d:ca,titulo:"CORTE AA",box:[area.x0,area.y0,aw,ah/2-3]},{d:cb,titulo:"CORTE BB",box:[area.x0,area.y0+ah/2+3,aw,ah/2-3]}],lado:"alturas"},
     {n:"03/05",conteudo:"PLANTA DE COBERTURA",escala:`1:${co.s}`,itens:[{d:co,titulo:"PLANTA DE COBERTURA",box:[area.x0,area.y0,aw,ah]}],lado:"telhado"},
     {n:"04/05",conteudo:"FACHADAS",escala:`1:${fa[0].s}`,itens:fa.map((d,i)=>({d,titulo:FA[i][1],box:[area.x0+(i%2)*(bw2+8),area.y0+Math.floor(i/2)*(bh2+6),bw2,bh2]})),lado:"fachadas"},
@@ -1345,8 +1553,9 @@ function pranchas(fmt){
   folhas.forEach((fl,i)=>fl.n=`${String(i+1).padStart(2,"0")}/${String(folhas.length).padStart(2,"0")}`);
   return {W,H,mo,ml,cw,ch,TT,area,side,G,Q,TI,folhas};
 }
-function textosLado(P,lado){
+function textosLado(P,lado,fl){
   const {G,Q,TI}=P, pd=num(S.pd);
+  if(lado==="layout") return [{t:"MOBILIÁRIO",linhas:fl.LM.filter(R=>resumoMob(R).length).map(R=>`${R.r.n}: ${resumoMob(R).join(", ")}.`)},{t:"NOTAS",linhas:notasLayout(fl.LM)}];
   if(lado==="quadros"){
     const util=G.rooms.reduce((s,r)=>s+r.area,0);
     return [{t:"QUADRO DE ÁREAS",cols:[["AMBIENTE",0],["ÁREA (m²)",1]],rows:[...G.rooms.map(r=>[r.n,f(r.area)]),["ÁREA ÚTIL",f(util),1],["ÁREA CONSTRUÍDA",f(G.areaC),1]]},
@@ -1363,7 +1572,7 @@ function textosLado(P,lado){
 }
 
 /* ---------------- DXF ---------------- */
-const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],GERAL:[7,"CONTINUOUS"]};
+const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],MOBILIA:[30,"CONTINUOUS"],GERAL:[7,"CONTINUOUS"]};
 function dxfEnc(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?"); }
 function buildDXF(){
   const P=pranchas(S.fmt||"A3"), o=[], p=(c,v)=>o.push(String(c),String(v)), n=v=>(+v).toFixed(4);
@@ -1413,7 +1622,7 @@ document.querySelectorAll("[data-dxfcopy]").forEach(b=>b.onclick=async()=>{
 });
 
 /* ---------------- PDF (escrito à mão, sem bibliotecas) ---------------- */
-const PDFCOR={LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3]};
+const PDFCOR={LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15]};
 function pdfTxt(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?").replace(/[\\()]/g,m=>"\\"+m); }
 function buildPDF(fmt){
   const P=pranchas(fmt), {W,H,mo,ml,cw,ch,TT,side}=P; const n=v=>(+v).toFixed(3); let c=[]; const pages=[];
@@ -1463,7 +1672,7 @@ function buildPDF(fmt){
     dash(false);
   };
   const ladoBox=(fl)=>{
-    const blocos=textosLado(P,fl.lado), x0=side.x0, x1=side.x1, gap=6, pesos=blocos.map(b=>b.cols&&b.cols.length>2?1.5:1), tot=pesos.reduce((a,b)=>a+b,0);
+    const blocos=textosLado(P,fl.lado,fl), x0=side.x0, x1=side.x1, gap=6, pesos=blocos.map(b=>b.cols&&b.cols.length>2?1.5:1), tot=pesos.reduce((a,b)=>a+b,0);
     let xc=x0;
     blocos.forEach((b,bi)=>{ const wcol=(x1-x0-gap*(blocos.length-1))*pesos[bi]/tot, x=xc; xc+=wcol+gap; let y=side.y0+4; gray(0,true); text(x,y,2.4,b.t,true); y+=5;
       const sz=1.8, lh=3.4;
