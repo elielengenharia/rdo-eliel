@@ -282,8 +282,8 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <section id="tab-for" hidden>
     <div class="sheet">
       <h2>Planta de forro</h2>
-      <p class="cap">Vista do teto: tipo de forro e altura de cada ambiente, paginação das réguas de PVC ou madeira (no sentido do menor vão), roda-forro/tabica, luminárias da planta elétrica e alçapão 60x60 para o telhado e o reservatório. Escolha o forro padrão aqui e mude ambiente por ambiente na tabela abaixo.</p>
-      <div class="form"><label>Forro padrão<select id="forro.tipo"><option value="pvc">Forro de PVC (réguas 200 mm)</option><option value="gesso">Forro de gesso liso</option><option value="madeira">Forro de madeira (lambri)</option><option value="laje">Laje rebocada e pintada</option><option value="sem">Sem forro (telha aparente)</option></select></label><label>Altura do forro (m)<input type="number" step="0.05" id="forro.h" placeholder="igual ao pé-direito"></label></div>
+      <p class="cap">Vista do teto: tipo de forro e altura de cada ambiente, paginação das réguas de PVC ou madeira (no sentido do menor vão) e das placas de gesso acartonado 1,20 x 2,40 m, roda-forro/tabica, luminárias da planta elétrica e alçapão 60x60 para o telhado e o reservatório. Escolha o forro padrão aqui e mude ambiente por ambiente na tabela abaixo.</p>
+      <div class="form"><label>Forro padrão<select id="forro.tipo"><option value="pvc">Forro de PVC (réguas 200 mm)</option><option value="gesso">Forro de gesso liso</option><option value="drywall">Forro de gesso acartonado (drywall)</option><option value="madeira">Forro de madeira (lambri)</option><option value="laje">Laje rebocada e pintada</option><option value="sem">Sem forro (telha aparente)</option></select></label><label>Altura do forro (m)<input type="number" step="0.05" id="forro.h" placeholder="igual ao pé-direito"></label></div>
       <div class="draw" id="forroDes"></div>
       <div class="chips" id="forChips"></div>
     </div>
@@ -572,7 +572,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 4.6 · parede de tijolo 10 cm + reboco 2,5 cm";
+const VERSAO="versão 4.7 · forro de gesso acartonado (drywall)";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2140,9 +2140,9 @@ const notasHidro=HD=>[`Reservatório: ${HD.pessoas} pessoas x ${HD.cons} L/dia =
 /* ---------------- Planta de forro ---------------- */
 // contorno afastado d para dentro do ambiente (vale para qualquer sentido do polígono)
 function paraDentro(P,d){ const a=recuar(P,d), b=recuar(P,-d), A=x=>x&&x.length>2?Math.abs(areaS(x)):1e9; return A(a)<A(b)?a:b; }
-const FORROS=[["pvc","Forro de PVC (réguas 200 mm)"],["gesso","Forro de gesso liso"],["madeira","Forro de madeira (lambri)"],["laje","Laje rebocada e pintada"],["sem","Sem forro (telha aparente)"]];
+const FORROS=[["pvc","Forro de PVC (réguas 200 mm)"],["gesso","Forro de gesso liso"],["drywall","Forro de gesso acartonado (drywall)"],["madeira","Forro de madeira (lambri)"],["laje","Laje rebocada e pintada"],["sem","Sem forro (telha aparente)"]];
 const nomeForro=t=>(FORROS.find(q=>q[0]===t)||FORROS[0])[1];
-const curtoForro={pvc:"FORRO PVC",gesso:"FORRO DE GESSO",madeira:"FORRO DE MADEIRA",laje:"LAJE PINTADA",sem:"SEM FORRO"};
+const curtoForro={pvc:"FORRO PVC",gesso:"FORRO DE GESSO",drywall:"FORRO DRYWALL",madeira:"FORRO DE MADEIRA",laje:"LAJE PINTADA",sem:"SEM FORRO"};
 function forros(G){ return G.rooms.map(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null, ft=lab&&lab.ft&&lab.ft!=="padrao"?lab.ft:S.forro.tipo, hf0=lab&&lab.hf!=null&&lab.hf!==""?num(lab.hf):0;
   const h=hf0>0?hf0:num(S.forro.h)>0?num(S.forro.h):num(S.pd);
   return {r,ft,h,area:r.area,per:r.per}; }); }
@@ -2155,8 +2155,12 @@ function desenhoForro(G,k,LM,EL,FO){
     if(esp){ // réguas no sentido do menor vão (sem emenda); linhas paralelas ao lado menor
       if(W<=H){ for(let y=r.y0+esp;y<r.y1-1e-6;y+=esp) naLinha(P,"A",y).forEach(([a,b])=>L(D,a,y,b,y,.09,"FORRO")); }
       else { for(let x=r.x0+esp;x<r.x1-1e-6;x+=esp) naLinha(P,"B",x).forEach(([a,b])=>L(D,x,a,x,b,.09,"FORRO")); } }
-    if(F.ft==="gesso"||F.ft==="pvc"||F.ft==="madeira"){ // roda-forro / tabica junto da parede
-      const Q=paraDentro(P,F.ft==="gesso"?0.04:0.03); if(Q&&Q.length>2) PL(D,[...Q,Q[0]],.13,"FORRO"); }
+    if(F.ft==="drywall"){ // placas ST 1,20 x 2,40 com o lado comprido no sentido do maior vão e juntas de topo desencontradas
+      const ao=W>=H, Lp=2.40, Bp=1.20; let lin=0;
+      if(ao){ for(let y=r.y0;y<r.y1-1e-6;y+=Bp,lin++){ if(y>r.y0+1e-6) naLinha(P,"A",y).forEach(([a,b])=>L(D,a,y,b,y,.1,"FORRO")); for(let x=r.x0+(lin%2?Lp/2:Lp);x<r.x1-1e-6;x+=Lp){ const y1=Math.min(r.y1,y+Bp); if(pip(P,x,(y+y1)/2)) L(D,x,y,x,y1,.1,"FORRO"); } } }
+      else { for(let x=r.x0;x<r.x1-1e-6;x+=Bp,lin++){ if(x>r.x0+1e-6) naLinha(P,"B",x).forEach(([a,b])=>L(D,x,a,x,b,.1,"FORRO")); for(let y=r.y0+(lin%2?Lp/2:Lp);y<r.y1-1e-6;y+=Lp){ const x1=Math.min(r.x1,x+Bp); if(pip(P,(x+x1)/2,y)) L(D,x,y,x1,y,.1,"FORRO"); } } } }
+    if(F.ft==="gesso"||F.ft==="drywall"||F.ft==="pvc"||F.ft==="madeira"){ // roda-forro / tabica junto da parede
+      const Q=paraDentro(P,F.ft==="gesso"||F.ft==="drywall"?0.04:0.03); if(Q&&Q.length>2) PL(D,[...Q,Q[0]],.13,"FORRO"); }
     if(F.ft==="sem"){ const s=0.5; for(let c=r.x0-H;c<r.x1;c+=s){ const pts=[]; for(let t=0;t<=1;t+=0.02){ const x=c+t*(H), y=r.y0+t*H; pts.push([x,y]); }
       const ln=[]; pts.forEach(p=>{ if(pip(P,...p)) ln.push(p); }); if(ln.length>1) L(D,...ln[0],...ln[ln.length-1],.09,"FORRO",true); } } });
   G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE"));
@@ -2185,7 +2189,9 @@ function desenhoForro(G,k,LM,EL,FO){
   return D;
 }
 function quantForro(FO){ const m={}; FO.forEach(F=>{ if(!m[F.ft]) m[F.ft]={ft:F.ft,area:0,per:0,amb:[]}; m[F.ft].area+=F.area; m[F.ft].per+=F.per; m[F.ft].amb.push(F.r.n); }); return FORROS.map(q=>m[q[0]]).filter(Boolean); }
-const notasForro=FO=>[...quantForro(FO).map(q=>`${nomeForro(q.ft)}: ${f(q.area)} m²`+(["pvc","gesso","madeira"].includes(q.ft)?` (comprar ${f(q.area*1.1)} m² com 10% de perda); ${q.ft==="gesso"?"tabica":"roda-forro"} ${f(q.per)} m.`:".")),
+const drywallQ=q=>({placas:Math.ceil(q.area*1.1/2.88),perfil:Math.ceil(q.area/0.60*1.05),tir:Math.ceil(q.area/0.60),tabica:q.per,fita:Math.ceil(q.area*1.5)});
+const notasForro=FO=>[...quantForro(FO).map(q=>`${nomeForro(q.ft)}: ${f(q.area)} m²`+(q.ft==="drywall"?(d=>`: ${d.placas} placas ST 12,5 mm de 1,20 x 2,40 m (com 10% de perda), ${d.perfil} m de perfil F530, ${d.tir} tirantes/pendurais, ${f(d.tabica)} m de tabica e ${d.fita} m de fita para as juntas.`)(drywallQ(q)):["pvc","gesso","madeira"].includes(q.ft)?` (comprar ${f(q.area*1.1)} m² com 10% de perda); ${q.ft==="gesso"?"tabica":"roda-forro"} ${f(q.per)} m.`:".")),
+  ...(quantForro(FO).some(q=>q.ft==="drywall")?[`Forro de gesso acartonado: placas parafusadas em perfis F530 a cada 0,60 m, pendurados com tirantes (arame ou vergalhão) a cada 1,00 m na estrutura do telhado ou laje; tabica nas bordas e juntas tratadas com fita e massa. Nas áreas molhadas (${FO.filter(F=>F.ft==="drywall"&&/banh|wc|lavabo|lavand|servi|cozinha/i.test(F.r.n)).map(F=>F.r.n).join(", ")||"banheiro, lavanderia e cozinha"}) usar placa RU (verde, resistente à umidade).`]:[]),
   `Alturas (H) medidas do piso acabado até a face de baixo do forro.`,`Luminárias conforme a planta de pontos elétricos.`,`Alçapão 60x60 para acesso ao telhado e ao reservatório.`,`Forro de PVC com réguas no sentido do menor vão, presas em estrutura de metalon ou madeira a cada 0,60 m.`];
 
 /* ---------------- Memorial descritivo ---------------- */
@@ -2219,7 +2225,7 @@ function memorial(){
     `Contrapiso de concreto regularizado, com caimento de 1% para os ralos nas áreas molhadas.`,
     PI.some(F=>F.rod)?`Rodapé de 7 cm do mesmo piso nas áreas secas (${f(PI.reduce((s,F)=>s+F.rod,0))} m).`:"",
     SO||PE?`Soleiras de granito nas ${SO} portas e vãos e peitoris de granito com pingadeira nas ${PE} janelas.`:""]);
-  sec("11. FORRO",[...quantForro(FO).map(x=>`${nomeForro(x.ft)}: ${lista(x.amb)} - ${f(x.area)} m².`),`Alturas do forro conforme a planta de forro. Alçapão de 60 x 60 cm para acesso ao telhado e ao reservatório.`]);
+  sec("11. FORRO",[...quantForro(FO).map(x=>`${nomeForro(x.ft)}: ${lista(x.amb)} - ${f(x.area)} m².`),...(quantForro(FO).some(x=>x.ft==="drywall")?[`Forro de gesso acartonado (drywall) com placas ST de 12,5 mm parafusadas em perfis metálicos F530 a cada 60 cm, pendurados com tirantes a cada 1,00 m, tabica nas bordas, juntas tratadas com fita e massa, pronto para massa corrida e pintura; placa RU (verde, resistente à umidade) nas áreas molhadas.`]:[]),`Alturas do forro conforme a planta de forro. Alçapão de 60 x 60 cm para acesso ao telhado e ao reservatório.`]);
   { const nT=t=>EL.pts.filter(q=>q.t===t).length;
     sec("12. INSTALAÇÕES ELÉTRICAS",[`Instalação conforme NBR 5410, em ${EL.VF} V${EL.VF===127?` (chuveiro${S.ele.ar==="sim"?" e ar-condicionado":""} em 220 V)`:""}, com eletrodutos de PVC flexível embutidos e fios de cobre com isolamento antichama.`,
       `${nT("luz")} pontos de luz, ${nT("int")} interruptores, ${nT("tug")} tomadas de uso geral e ${nT("tue")} de uso específico, em ${EL.C.length} circuitos. Potência instalada: ${f(EL.tot/1000)} kVA.`,
@@ -2488,7 +2494,7 @@ const notasReforma=q=>[`Demolição: ${f(q.dem)} m² de alvenaria (${f(q.Ld)} m 
 const PRECO0={fach_porc:180,fach_cer:120,fach_pedra:160,fach_tijolinho:140,fach_ripado:260,fach_acm:420,demolicao:35,retirada:60,entulho:90,limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
   telha_Cerâmica:55,telha_Concreto:60,telha_Fibrocimento:40,telha_Metálica:75,cumeeira:35,calha:90,
   porta:850,janela:650,box:900,contrapiso:45,piso_porc60:120,piso_porc80:150,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
-  forro_pvc:75,forro_gesso:90,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,pt_agua:220,pt_esgoto:180,caixa:350,reservatorio:900,fossa:6500,
+  forro_pvc:75,forro_gesso:90,forro_drywall:110,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,pt_agua:220,pt_esgoto:180,caixa:350,reservatorio:900,fossa:6500,
   vaso:750,lavatorio:350,chuveiro:250,pia:650,tanque:450,pint_int:28,pint_ext:32,limpfinal:8};
 const preco=k=>{ const v=S.orc&&S.orc.p&&S.orc.p[k]; return v!=null&&v!==""&&isFinite(+v)?+v:(PRECO0[k]??0); };
 const money=v=>{ const s=Math.abs(v).toFixed(2).split("."); return (v<0?"-":"")+"R$ "+s[0].replace(/\B(?=(\d{3})+(?!\d))/g,".")+","+s[1]; };
@@ -2522,7 +2528,7 @@ function orcamento(){
   quantPiso(PI).forEach(x=>it(`${infoPiso(x.pt)[1]} (com 10% de perda)`,"m²",x.area*1.1,`piso_${x.pt}`));
   it("Rodapé","m",PI.reduce((s,F)=>s+F.rod,0),"rodape"); it("Soleira de granito","m",G.abs.filter(g=>g.tipo!=="Janela").reduce((s,g)=>s+g.l,0),"soleira"); it("Peitoril de granito","m",G.abs.filter(g=>g.tipo==="Janela").reduce((s,g)=>s+g.l,0),"peitoril");
   etapa("FORRO"); quantForro(FO).filter(x=>x.ft!=="sem").forEach(x=>it(x.ft==="laje"?"Pintura do teto (laje)":`${nomeForro(x.ft)}`,"m²",x.area*(x.ft==="laje"?1:1.1),`forro_${x.ft}`));
-  it("Roda-forro / tabica","m",quantForro(FO).filter(x=>["pvc","gesso","madeira"].includes(x.ft)).reduce((s,x)=>s+x.per,0),"rodaforro");
+  it("Roda-forro / tabica","m",quantForro(FO).filter(x=>["pvc","gesso","drywall","madeira"].includes(x.ft)).reduce((s,x)=>s+x.per,0),"rodaforro");
   etapa("INSTALAÇÕES ELÉTRICAS"); { const n=EL.pts.filter(q=>["luz","int","tug","tue"].includes(q.t)).length; it("Pontos elétricos (luz, interruptor, tomadas) com fiação","pt",n,"pt_ele"); }
   it("Quadro de distribuição com disjuntores e DR","un",EL.pts.some(q=>q.t==="qd")?1:(EL.C.length?1:0),"qd"); it("Entrada de energia (padrão da concessionária)","un",G.rooms.length?1:0,"padrao");
   if(HD.salas.length){ etapa("INSTALAÇÕES HIDROSSANITÁRIAS"); it("Pontos de água fria","pt",HD.ap.length,"pt_agua"); it("Pontos de esgoto","pt",HD.ap.filter(a=>a.es).length+HD.salas.filter(s=>s.cs).length,"pt_esgoto");
