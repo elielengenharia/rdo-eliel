@@ -372,25 +372,33 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
         <div class="tbl"><table id="ladosTab"></table></div>
         <div class="row"><button class="btn" id="ladoAdd" type="button">+ lado</button><label style="display:flex;align-items:center;gap:6px;font-size:13px">Área do mapa (m²)<input type="number" step="0.01" id="terr.areaMapa" style="width:110px"></label></div>
         <div id="ladosMsg"></div>
+        <p class="cap" style="margin-top:10px">Posição da construção no lote: escolha o lado com que as paredes ficam paralelas e a distância da construção a dois lados (0 = encostada na divisa).</p>
+        <div class="form wide">
+          <label>Construção paralela ao lado<select id="terr.alinha" data-lsel></select></label>
+          <label>Distância ao lado<select id="terr.encA" data-lsel></select></label>
+          <label>… de (m)<input type="number" step="0.05" id="terr.recA"></label>
+          <label>Distância ao lado<select id="terr.encB" data-lsel></select></label>
+          <label>… de (m)<input type="number" step="0.05" id="terr.recB"></label>
+        </div>
       </div>
       <div class="form" style="margin-top:10px">
-        <label>Testada (frente, m)<input type="number" step="0.05" id="terr.testada"></label>
-        <label>Profundidade (m)<input type="number" step="0.05" id="terr.prof"></label>
-        <label>Recuo frontal (m)<input type="number" step="0.05" id="terr.recFrente"></label>
-        <label>Recuo lateral esquerdo (m)<input type="number" step="0.05" id="terr.recEsq"></label>
+        <label data-soret>Testada (frente, m)<input type="number" step="0.05" id="terr.testada"></label>
+        <label data-soret>Profundidade (m)<input type="number" step="0.05" id="terr.prof"></label>
+        <label data-soret>Recuo frontal (m)<input type="number" step="0.05" id="terr.recFrente"></label>
+        <label data-soret>Recuo lateral esquerdo (m)<input type="number" step="0.05" id="terr.recEsq"></label>
         <label>Largura do passeio (m)<input type="number" step="0.1" id="terr.calcada"></label>
         <label>Norte (graus, 0 = para cima na planta)<input type="number" step="5" id="terr.norte"></label>
       </div>
       <div class="form wide" style="margin-top:10px">
         <label>Rua da frente<input type="text" id="terr.rua"></label>
-        <label>Terreno de esquina<select id="terr.esquina"><option value="não">Não</option><option value="esq">Sim, rua do lado esquerdo</option><option value="dir">Sim, rua do lado direito</option></select></label>
-        <label>Rua lateral (esquina)<input type="text" id="terr.rua2"></label>
-        <label>Frente acompanha a parede chanfrada<select id="terr.chanfro"><option value="não">Não (frente reta)</option><option value="sim">Sim (alinhamento paralelo ao chanfro)</option></select></label>
+        <label data-soret>Terreno de esquina<select id="terr.esquina"><option value="não">Não</option><option value="esq">Sim, rua do lado esquerdo</option><option value="dir">Sim, rua do lado direito</option></select></label>
+        <label data-soret>Rua lateral (esquina)<input type="text" id="terr.rua2"></label>
+        <label data-soret>Frente acompanha a parede chanfrada<select id="terr.chanfro"><option value="não">Não (frente reta)</option><option value="sim">Sim (alinhamento paralelo ao chanfro)</option></select></label>
         <label>Lote<input type="text" id="terr.lote"></label>
         <label>Quadra<input type="text" id="terr.quadra"></label>
-        <label>Vizinho à esquerda<input type="text" id="terr.confEsq"></label>
-        <label>Vizinho à direita<input type="text" id="terr.confDir"></label>
-        <label>Vizinho aos fundos<input type="text" id="terr.confFundo"></label>
+        <label data-soret>Vizinho à esquerda<input type="text" id="terr.confEsq"></label>
+        <label data-soret>Vizinho à direita<input type="text" id="terr.confDir"></label>
+        <label data-soret>Vizinho aos fundos<input type="text" id="terr.confFundo"></label>
       </div>
     </div>
     <div class="sheet">
@@ -543,7 +551,7 @@ const AB42=[
   {n:"Cozinha",t:"Janela",w:1,d:1.2,l:1.20,a:1.00,p:1.10},
   {n:"Banho",t:"Janela",w:2,d:2.8,l:0.60,a:0.60,p:1.50}
 ];
-const TERR0={testada:12,prof:25,recFrente:4,recEsq:2.5,calcada:2,rua:"Rua projetada",lote:"",quadra:"",confEsq:"Lote vizinho",confDir:"Lote vizinho",confFundo:"Lote vizinho",norte:0,esquina:"não",rua2:"",chanfro:"não",dEsq:0,ladoRef:"esq",ruaE:"",ruaD:"",ruaF:"",qFrente:0,qProf:0,forma:"ret",lados:[],areaMapa:0};
+const TERR0={testada:12,prof:25,recFrente:4,recEsq:2.5,calcada:2,rua:"Rua projetada",lote:"",quadra:"",confEsq:"Lote vizinho",confDir:"Lote vizinho",confFundo:"Lote vizinho",norte:0,esquina:"não",rua2:"",chanfro:"não",dEsq:0,ladoRef:"esq",ruaE:"",ruaD:"",ruaF:"",qFrente:0,qProf:0,forma:"ret",lados:[],areaMapa:0,alinha:1,encA:1,recA:4,encB:0,recB:2.5};
 const TEL0={tipo:2,dir:"h",telha:"Cerâmica",inc:30,beiral:0.60,plat:"não"};
 const INC_TELHA={"Cerâmica":30,"Concreto":30,"Fibrocimento":15,"Metálica":10};
 const ABDEF={Porta:{l:0.80,a:2.10,p:0},Janela:{l:1.20,a:1.00,p:1.10},"Vão":{l:1.00,a:2.10,p:0}};
@@ -2209,13 +2217,24 @@ function terreno(G){
   const TI=infoTelhado(G);
   // lote pelas medidas do mapa: x ao longo da frente (da esquerda para a direita), y para dentro do lote
   const PO=T.forma==="pol"&&Array.isArray(T.lados)&&T.lados.length>=3?poligonoLote(T.lados,num(T.areaMapa)):null;
-  if(PO){ const xs=PO.P.map(p=>p[0]), ys=PO.P.map(p=>p[1]), mX=Math.max(...xs), mY=Math.max(...ys), lote=PO.P.map(([x,y])=>P(F1-y,R0+x)), ar=PO.area;
-    const pts=[]; G.contExt.forEach(s0=>{ pts.push([s0[0],s0[1]],[s0[2],s0[3]]); });
-    const dSeg=(p,a,b)=>distSeg(p,{x1:a[0],y1:a[1],x2:b[0],y2:b[1]}), fora=pts.some(p=>!pontoDentro(p,lote));
-    const recL=lote.map((a,i)=>{ const b=lote[(i+1)%lote.length]; return (fora?-1:1)*Math.min(...pts.map(p=>dSeg(p,a,b))); });
-    const resto=recL.slice(1,-1);
-    return {V,Rt,P,F0:F1-mY,F1,R0,R1:R0+mX,fMax,fMin,rMin,rMax,testada:num(T.lados[0].m),prof:mY,area:ar,lote,pol:true,PO,recL,
-      desc:`irregular, ${lote.length} lados`,rec:{frente:num(T.recFrente),esq:num(T.recEsq),dir:Math.min(...resto),fundo:Math.min(...resto)},to:G.areaC/ar,ca:G.areaC/ar,livre:ar-G.areaC,cobProj:TI.areaProj}; }
+  if(PO){ const n=PO.P.length, ar=PO.area, sel=(v,d)=>{ const i=Math.round(num(v)); return i>=1&&i<=n?i-1:d; };
+    // gira o lote para o lado escolhido ficar paralelo às paredes da construção
+    const j=sel(T.alinha,0), sa=PO.P[j], sb=PO.P[(j+1)%n], phi=Math.atan2(sb[1]-sa[1],sb[0]-sa[0]), th=Math.round(phi/(Math.PI/2))*(Math.PI/2)-phi, ct=Math.cos(th), st=Math.sin(th);
+    const q=PO.P.map(([x,y])=>{ const xr=x*ct-y*st, yr=x*st+y*ct; return [xr,-yr]; });   // (r, f) sem a translação
+    const pts=[]; G.contExt.forEach(s0=>{ pts.push([s0[0],s0[1]],[s0[2],s0[3]]); }); const H=pts.map(p=>[dR(p),dV(p)]);
+    const cq=q.reduce((s0,p)=>[s0[0]+p[0]/n,s0[1]+p[1]/n],[0,0]);
+    const nor=q.map((a,i)=>{ const b=q[(i+1)%n], L0=Math.hypot(b[0]-a[0],b[1]-a[1])||1; let nn=[-(b[1]-a[1])/L0,(b[0]-a[0])/L0]; if(nn[0]*(cq[0]-a[0])+nn[1]*(cq[1]-a[1])<0) nn=[-nn[0],-nn[1]]; return nn; });   // para dentro
+    const mi=i=>Math.min(...H.map(h=>nor[i][0]*(h[0]-q[i][0])+nor[i][1]*(h[1]-q[i][1])));
+    // distâncias pedidas: construção a dA do lado A e a dB do lado B (sistema linear na translação t)
+    const A=sel(T.encA,0), B=sel(T.encB,n-1), dA=num(T.recA), dB=num(T.recB), nA=nor[A], nB=nor[B], det=nA[0]*nB[1]-nA[1]*nB[0];
+    let t; if(Math.abs(det)>0.05){ const a1=mi(A)-dA, b1=mi(B)-dB; t=[(a1*nB[1]-b1*nA[1])/det,(nA[0]*b1-nB[0]*a1)/det]; }
+    else { const a1=mi(A)-dA; t=[nA[0]*a1,nA[1]*a1]; }
+    const rf=q.map(p=>[p[0]+t[0],p[1]+t[1]]), lote=rf.map(([r,f0])=>P(f0,r));
+    const dSeg=(p,a,b)=>distSeg(p,{x1:a[0],y1:a[1],x2:b[0],y2:b[1]}), fora=pts.some(p=>!pontoDentro(p,lote)&&Math.min(...lote.map((a,i)=>dSeg(p,a,lote[(i+1)%n])))>0.02);   // encostar na divisa não é estar fora
+    const recL=lote.map((a,i)=>{ const b=lote[(i+1)%n]; return (fora?-1:1)*Math.min(...pts.map(p=>dSeg(p,a,b))); });
+    const rs=rf.map(p=>p[0]), fs=rf.map(p=>p[1]), resto=recL.slice(1,-1);
+    return {V,Rt,P,F0:Math.min(...fs),F1:rf[0][1],R0:rf[0][0],R1:Math.max(...rs),fMax,fMin,rMin,rMax,testada:num(T.lados[0].m),prof:Math.max(...fs)-Math.min(...fs),area:ar,lote,pol:true,PO,recL,encA:A,encB:B,
+      desc:`irregular, ${n} lados`,rec:{frente:recL[0],esq:recL[n-1],dir:Math.min(...resto),fundo:Math.min(...resto)},to:G.areaC/ar,ca:G.areaC/ar,livre:ar-G.areaC,cobProj:TI.areaProj}; }
   // frente inclinada: o alinhamento fica paralelo à parede chanfrada da frente, a "recuo frontal" dela
   let ch=null; if(T.chanfro==="sim"){ G.incl.forEach(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, C=G.compAt(mx+w.nX*(G.h+0.12),my+w.nY*(G.h+0.12)), sg=(!C||C.ext)?1:-1, on=[w.nX*sg,w.nY*sg];
     if(on[0]*V[0]+on[1]*V[1]>0.5&&(!ch||w.L>ch.w.L)) ch={w,on}; }); }
@@ -2459,7 +2478,10 @@ function implantacaoPol(G,k,D,T,TI){
   TX(D,c0[0]-dn[0]*1.4*k,c0[1]-dn[1]*1.4*k,"CONSTRUÇÃO",2,{b:true,rot:rotR(angR)}); TX(D,c0[0]+dn[0]*1.8*k,c0[1]+dn[1]*1.8*k,`${f(G.areaC)} m²`,1.8,{rot:rotR(angR)});
   const cl=T.lote.reduce((s,p)=>[s[0]+p[0]/T.lote.length,s[1]+p[1]/T.lote.length],[0,0]), lb=[S.terr.lote?`LOTE ${S.terr.lote}`:"",S.terr.quadra?`QUADRA ${S.terr.quadra}`:""].filter(Boolean).join(" · ")||"TERRENO";
   const fb=P(T.F0+1.2,(T.R0+T.R1)/2); TX(D,(fb[0]+cl[0])/2,(fb[1]+cl[1])/2,lb,2.2,{b:true,rot:rotR(angR)});
-  cotaLivre(D,P(T.fMax,rm),P(F1,rm),f(T.rec.frente)); cotaLivre(D,P(fm,R0),P(fm,T.rMin),f(T.rec.esq));
+  { const pts=[]; G.contExt.forEach(s0=>{ pts.push([s0[0],s0[1]],[s0[2],s0[3]]); }); const n=T.lote.length;
+    [T.encA,T.encB].forEach(i=>{ const a=T.lote[i], b=T.lote[(i+1)%n], dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1; let best=null;
+      pts.forEach(p=>{ const u=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2)), pr=[a[0]+dx*u,a[1]+dy*u], d=Math.hypot(p[0]-pr[0],p[1]-pr[1]); if(!best||d<best.d) best={d,p,pr}; });
+      if(best&&best.d>0.05) cotaLivre(D,best.p,best.pr,f(best.d)); }); }
   const xs=T.lote.map(p=>p[0]), ys=T.lote.map(p=>p[1]), c=[Math.max(...xs)+2*Math.max(0,num(S.terr.calcada))+8+10*k,Math.min(...ys)-6*k], th=num(S.terr.norte)*Math.PI/180, d=[Math.sin(th),-Math.cos(th)], pp=[-d[1],d[0]], r=5*k;
   CI(D,c[0],c[1],r,.25,"GERAL"); PG(D,[[c[0]+d[0]*r,c[1]+d[1]*r],[c[0]+pp[0]*1.8*k-d[0]*r*0.6,c[1]+pp[1]*1.8*k-d[1]*r*0.6],[c[0]-pp[0]*1.8*k-d[0]*r*0.6,c[1]-pp[1]*1.8*k-d[1]*r*0.6]],"TELHADO");
   TX(D,c[0]+d[0]*(r+2.6*k),c[1]+d[1]*(r+2.6*k),"N",2.4,{b:true});
@@ -2843,12 +2865,15 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const FIELDS=["terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
 const TEXTOS=["terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
-function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
+function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
   const tb=$("ladosTab"), foco=document.activeElement&&tb.contains(document.activeElement)?[document.activeElement.dataset.li,document.activeElement.dataset.lc]:null;
   if(!foco) tb.innerHTML=`<tr><th>Lado</th><th class="n">Medida (m)</th><th>Confronta com</th><th>Rua?</th><th></th></tr>`+t.lados.map((l,i)=>`<tr><td><b>${i?i+1:"1 · frente"}</b></td><td><input type="number" step="0.01" data-li="${i}" data-lc="m" value="${num(l.m)}" style="width:90px" aria-label="Medida do lado ${i+1}"></td><td><input type="text" data-li="${i}" data-lc="c" value="${esc(l.c||"")}" aria-label="Confrontante do lado ${i+1}"></td><td><select data-li="${i}" data-lc="rua" aria-label="Lado ${i+1} é rua"><option value="não"${l.rua!=="sim"?" selected":""}>Não</option><option value="sim"${l.rua==="sim"?" selected":""}>Sim</option></select></td><td>${t.lados.length>3?`<button class="btn" type="button" data-ldel="${i}" aria-label="Tirar lado ${i+1}">✕</button>`:""}</td></tr>`).join("");
+  const nL=t.lados.length; if(!(num(t.encB)>=1&&num(t.encB)<=nL)) t.encB=nL;
+  document.querySelectorAll("[data-lsel]").forEach(el=>{ const id=el.id.split(".")[1], v=Math.min(nL,Math.max(1,Math.round(num(t[id]))||1));
+    el.innerHTML=t.lados.map((l,i)=>`<option value="${i+1}">${i+1}${i?"":" · frente"}${l.c?` · ${esc(l.c)}`:ehRuaLado(l)?" · chanfro":""}</option>`).join(""); el.value=String(v); });
   const PO=poligonoLote(t.lados,num(t.areaMapa));
   $("ladosMsg").innerHTML=!PO?"":PO.ok?`<div class="alert ok">Lote fechado: área ${f(PO.area)} m². Ângulos: ${PO.ang.map((a,i)=>`${i+1}/${(i+1)%t.lados.length+1} ${f(a,1)}°`).join(" · ")}.</div>`
     :`<div class="alert bad">As medidas não fecham o lote${num(t.areaMapa)?` com ${f(num(t.areaMapa))} m²`:""} (sobra ${f(PO.fech)} m; área ${f(PO.area)} m²). Confira as medidas e a ordem dos lados.</div>`; }
