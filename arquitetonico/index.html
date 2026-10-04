@@ -2220,7 +2220,12 @@ function terreno(G){
   const PO=T.forma==="pol"&&Array.isArray(T.lados)&&T.lados.length>=3?poligonoLote(T.lados,num(T.areaMapa)):null;
   if(PO){ const n=PO.P.length, ar=PO.area, sel=(v,d)=>{ const i=Math.round(num(v)); return i>=1&&i<=n?i-1:d; };
     // gira o lote para o lado escolhido ficar paralelo às paredes da construção
-    const j=sel(T.alinha,0), sa=PO.P[j], sb=PO.P[(j+1)%n], phi=Math.atan2(sb[1]-sa[1],sb[0]-sa[0]), th=Math.round(phi/(Math.PI/2))*(Math.PI/2)-phi, ct=Math.cos(th), st=Math.sin(th);
+    const j=sel(T.alinha,0), sa=PO.P[j], sb=PO.P[(j+1)%n], phi=Math.atan2(sb[1]-sa[1],sb[0]-sa[0]);
+    // o lado fica paralelo à parede da construção de direção mais parecida (inclusive a parede chanfrada)
+    const wr=q0=>{ let v=q0%Math.PI; if(v>Math.PI/2) v-=Math.PI; if(v<=-Math.PI/2) v+=Math.PI; return v; };
+    let th=wr(Math.round(phi/(Math.PI/2))*(Math.PI/2)-phi);
+    G.contExt.forEach(s0=>{ const dr=dR([s0[2],s0[3]])-dR([s0[0],s0[1]]), df=dV([s0[2],s0[3]])-dV([s0[0],s0[1]]); if(Math.hypot(dr,df)<0.5) return; const c=wr(Math.atan2(-df,dr)-phi); if(Math.abs(c)<Math.abs(th)-1e-6) th=c; });
+    const ct=Math.cos(th), st=Math.sin(th);
     const q=PO.P.map(([x,y])=>{ const xr=x*ct-y*st, yr=x*st+y*ct; return [xr,-yr]; });   // (r, f) sem a translação
     const pts=[]; G.contExt.forEach(s0=>{ pts.push([s0[0],s0[1]],[s0[2],s0[3]]); }); const H=pts.map(p=>[dR(p),dV(p)]);
     const cq=q.reduce((s0,p)=>[s0[0]+p[0]/n,s0[1]+p[1]/n],[0,0]);
@@ -2707,7 +2712,7 @@ function render(){
     $("tabConf").innerHTML=`<tr><th>Confrontação</th><th>Com</th><th class="n">m</th></tr>`+cf.map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td class="n">${r[2]}</td></tr>`).join(""); }
   if(!G.vazio){ const Tr=terreno(G); $("sit").innerHTML=svgDe(desenhoSituacao(G,Math.max(0.05,(Math.max(Tr.testada,Tr.prof)+12)/120)));
     $("sitChips").innerHTML=[`Terreno ${Tr.desc} = ${f(Tr.area)} m²`,`Construída ${f(G.areaC)} m²`,`Taxa de ocupação ${f(Tr.to*100,1)}%`,`Coef. aproveitamento ${f(Tr.ca)}`,`Área livre ${f(Tr.livre)} m²`].map(t=>`<span class="chip">${t}</span>`).join("");
-    $("sitAvisos").innerHTML=(Tr.rec.dir<0||Tr.rec.fundo<0||Tr.rec.frente<0||Tr.rec.esq<0)?`<div class="alert bad">A construção não cabe no terreno com esses recuos (lateral direito ${f(Tr.rec.dir)} m, fundos ${f(Tr.rec.fundo)} m). Confira testada, profundidade e recuos.</div>`:""; }
+    $("sitAvisos").innerHTML=Tr.pol?(Tr.recL.some(v=>v<0)?`<div class="alert bad">Parte da construção fica fora do lote. Confira a posição (lado paralelo e as duas distâncias) e se as paredes acompanham os ângulos do lote (${Tr.PO.ang.map(v=>f(v,1)+"°").join(", ")}).</div>`:""):(Tr.rec.dir<0||Tr.rec.fundo<0||Tr.rec.frente<0||Tr.rec.esq<0)?`<div class="alert bad">A construção não cabe no terreno com esses recuos (lateral direito ${f(Tr.rec.dir)} m, fundos ${f(Tr.rec.fundo)} m). Confira testada, profundidade e recuos.</div>`:""; }
   { const bs=G.rooms.filter(r=>ehBanho(r.n)), kb=0.03;
     $("banhos").innerHTML=!bs.length?`<div class="sheet"><p class="cap" style="margin:0">Nenhum ambiente com nome de banheiro (Banho, Banheiro, WC, Lavabo). Dê o nome tocando no ambiente na aba Planta.</p></div>`:
       bs.map(r=>!r.ret?`<div class="sheet"><h2>${esc(r.n)}</h2><p class="cap">Este banheiro não é retangular: nesta versão o detalhe com louças é só para banheiro retangular.</p><div class="draw">${svgDe(desenhoBanheiro(G,r,kb))}</div></div>`:
