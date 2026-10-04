@@ -543,7 +543,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
     <div class="sheet">
       <h2>Paredes (eixos, em metros)</h2>
       <p class="cap">Cada linha é um trecho reto de parede, do ponto (x1, y1) ao (x2, y2), pelo eixo. A origem (0, 0) é o canto superior esquerdo; y cresce para baixo. Paredes em qualquer ângulo (chanfro, trapézio) fecham os ambientes e entram nas áreas.</p>
-      <div class="form" style="margin-bottom:10px"><label>Espessura das paredes (m)<input type="number" step="0.01" id="esp"></label></div>
+      <div class="form" style="margin-bottom:10px"><label>Espessura das paredes (m)<input type="number" step="0.01" id="esp"></label><label>Reboco de cada lado (cm)<input type="number" step="0.5" id="reb"></label></div>
       <div class="tbl"><table class="wt" id="wtab"></table></div>
       <div class="row">
         <button class="btn" id="addW">+ Parede</button>
@@ -572,7 +572,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 4.5 · estrutura simples igual ao Detalhador de Fundação";
+const VERSAO="versão 4.6 · parede de tijolo 10 cm + reboco 2,5 cm";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -611,7 +611,7 @@ function defaults(){
   return {
     obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
-    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, memo:{obs:""}, orc:{bdi:20,cub:"",p:{}}, revp:{int:"latex",ext:"textura"}, fpag:[{},{},{},{}], esc:{on:"não",h:"",larg:0.90,tipo:"reta"}, fossa:{on:"não",lim:1,ci:60,local:"lote"}, estr:{fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"}, estS:{vmax:3.0,prof:1.2,cinta:"sim"}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+    pd:2.80, laje:0.10, reb:2.5, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, memo:{obs:""}, orc:{bdi:20,cub:"",p:{}}, revp:{int:"latex",ext:"textura"}, fpag:[{},{},{},{}], esc:{on:"não",h:"",larg:0.90,tipo:"reta"}, fossa:{on:"não",lim:1,ci:60,local:"lote"}, estr:{fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"}, estS:{vmax:3.0,prof:1.2,cinta:"sim"}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
 }
 let S;
@@ -1905,7 +1905,7 @@ const BIT_F={"1/4":{mm:6.3,kg:0.245},"5/16":{mm:8.0,kg:0.395},"3/8":{mm:10.0,kg:
 function cfgFund(){ const d={vb:{b:15,h:20,bit:"5/16",ga:7,gb:14,est:"4.2",s:15},ci:{on:"sim",b:12,h:20},tr:{nome:"TG8L",h:8,kg:0.68,peca:"12",b:9,hv:14,hc:14,apoio:30},
     pl:{b:12,h:20,bit:"3/8",ga:7,gb:14,est:"4.2",s:15,alt:2.8},br:{d:25,prof:2.0,arr:1.0},vaoMax:3.0,peca:6.0,trasp:40,lastro:5,cap:50,fck:20};
   let o={}; try{ o=JSON.parse(localStorage.getItem("fund-casa-v1"))||{}; }catch(e){}
-  const c={...d,...["vaoMax","peca","trasp","lastro","cap","fck"].reduce((m,k)=>o[k]!=null?{...m,[k]:num(o[k])||d[k]}:m,{})}; ["vb","ci","tr","pl","br"].forEach(k=>c[k]={...d[k],...(o[k]||{})});
+  const c={...d,...["vaoMax","peca","trasp","lastro","cap","fck"].reduce((m,k)=>o[k]!=null?{...m,[k]:num(o[k])||d[k]}:m,{})}; ["vb","ci","tr","pl","br"].forEach(k=>c[k]={...d[k],...(o[k]||{})}); c.ci.b=12; /* no arquitetônico a parede tem ~15 cm com reboco: cinta 12x20, mesmo que o Detalhador use 10 */ if(!o.brv12&&num(c.br.prof)===2) c.br.prof=1.2;
   const E2=S.estS||{}; if(num(E2.vmax)>0) c.vaoMax=num(E2.vmax); if(num(E2.prof)>0) c.br.prof=num(E2.prof); if(E2.cinta) c.ci.on=E2.cinta; c.pl.alt=num(S.pd)||c.pl.alt; return c; }
 function estrutural(G,simples){ if(G.vazio) return null; const E=S.estr||{}, CF=simples?cfgFund():null, t=G.t, b=simples?num(CF.pl.b)/100:Math.min(0.20,Math.max(0.14,Math.round(t*100)/100)), hp=simples?num(CF.pl.h)/100:0.30;
   const vmax=simples?Math.min(4,Math.max(1.5,num(CF.vaoMax)||3.0)):Math.min(6,Math.max(2.5,num(E.vmax)||4.5)), W=G.walls, near=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1]);
@@ -2206,7 +2206,7 @@ function memorial(){
   sec("5. FUNDAÇÃO E ESTRUTURA",[`Fundação conforme projeto estrutural, com impermeabilização das vigas baldrame (cinta) com emulsão asfáltica antes de subir a alvenaria.`,
     S.viga.on!=="não"?`Vigas e cintas de concreto armado no topo das paredes, seção ${f(G.t*100,0)} x ${f(num(S.viga.h)*100,0)} cm, e vergas e contravergas em todas as portas e janelas, passando 30 cm de cada lado.`:`Vergas e contravergas de concreto armado em todas as portas e janelas, passando 30 cm de cada lado.`,
     num(S.laje)>0?`Laje com ${f(num(S.laje)*100,0)} cm de espessura, conforme projeto estrutural.`:""]);
-  sec("6. ALVENARIA",[`Paredes em bloco cerâmico, assentado com argamassa de cimento, cal e areia, com espessura final de ${f(G.t*100,0)} cm já rebocada, em prumo e esquadro.`]);
+  { const rb=Math.max(0,num(S.reb)), tj=Math.max(5,G.t*100-2*rb); sec("6. ALVENARIA",[`Paredes em tijolo cerâmico assentado em pé, com ${f(tj,0)} cm de espessura, com argamassa de cimento, cal e areia, em prumo e esquadro; reboco de ${f(rb,1)} cm em cada face, ficando a parede acabada com ${f(G.t*100,0)} cm.`]); }
   sec("7. COBERTURA",[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}, inclinação de ${f(num(S.tel.inc),0)}%, sobre estrutura de madeira tratada (ou metálica) dimensionada para o vão.`,
     TI.plat?`Telhado escondido por platibanda, com calha e rufo em chapa galvanizada e condutores até o terreno.`:`Beiral de ${f(TI.b)} m em todo o contorno.`,`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`]);
   sec("8. ESQUADRIAS",[...Q.map(q=>`${q.cod}: ${q.desc}${q.tipo==="Porta"?` (folha ${nomeFolha(q.fol).toLowerCase()}; ${ferragens(q)[0].toLowerCase()})`:""}${q.tipo!=="Vão"?`, ${q.nf} ${q.nf===1?"folha":"folhas"}`:""}, ${q.mat.toLowerCase()}, ${f(q.l)} x ${f(q.a)} m${q.tipo==="Janela"?`, peitoril ${f(q.p)} m`:""} - ${q.q} ${q.q===1?"unidade":"unidades"}.`),
@@ -2511,7 +2511,7 @@ function orcamento(){
   etapa("FUNDAÇÃO E ESTRUTURA"); it("Fundação e viga baldrame (por metro de parede)","m",Lnova,"fundacao");
   if(S.viga.on!=="não") it(`Viga/cinta superior ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm`,"m",Lnova,"cinta");
   if(num(S.laje)>0) it("Laje pré-moldada com capeamento","m²",G.areaC,"laje");
-  etapa("ALVENARIA E REVESTIMENTOS"); it(`Alvenaria de bloco cerâmico (e = ${f(G.t*100,0)} cm)`,"m²",REF?QR.con:alv,"alvenaria"); it("Chapisco, emboço e reboco (2 faces)","m²",2*(REF?QR.con:alv),"reboco"); it(`Revestimento cerâmico de parede${cerTxt?` (${cerTxt.toLowerCase()})`:""} com 10% de perda`,"m²",cer*1.1,"ceramica");
+  etapa("ALVENARIA E REVESTIMENTOS"); { const rb=Math.max(0,num(S.reb)), tj=Math.max(5,G.t*100-2*rb), aA=REF?QR.con:alv; it(`Alvenaria de tijolo cerâmico em pé (e = ${f(tj,0)} cm)`,"m²",aA,"alvenaria"); it(`Chapisco e reboco e = ${f(rb,1)} cm, 2 faces (${f(2*aA*rb/100,2)} m³ de argamassa)`,"m²",2*aA,"reboco"); } it(`Revestimento cerâmico de parede${cerTxt?` (${cerTxt.toLowerCase()})`:""} com 10% de perda`,"m²",cer*1.1,"ceramica");
   etapa("COBERTURA"); it("Estrutura de madeira do telhado","m²",TI.areaInc,"madeiramento"); it(`Telha ${String(S.tel.telha).toLowerCase()}`,"m²",TI.areaInc,`telha_${S.tel.telha}`); it("Cumeeira","m",TI.Lcum,"cumeeira");
   if(TI.plat) it("Calha e rufo galvanizados","m",perExt,"calha");
   etapa("ESQUADRIAS");
@@ -3340,7 +3340,7 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const FIELDS=["reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
 const TEXTOS=["estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
