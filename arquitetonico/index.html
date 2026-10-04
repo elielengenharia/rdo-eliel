@@ -401,12 +401,19 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <section id="tab-dados" hidden>
     <div class="sheet">
       <h2>Importar planta baixa</h2>
-      <p class="cap">PDF exportado do CAD (vetorial) ou DXF: o app lê as paredes e os vãos de porta direto do arquivo, sem internet. PDF escaneado ou foto: o Claude lê paredes, cotas, portas e janelas (só com o app aberto dentro do Claude). Em todos os casos você confere antes de usar.</p>
-      <div class="row" style="margin-top:0"><label class="btn pri" for="impFile" style="display:inline-block">Anexar planta</label><input type="file" id="impFile" accept=".pdf,.dxf,image/*" style="position:absolute;width:1px;height:1px;opacity:0"><span class="cap" id="impName" style="margin:0"></span></div>
+      <p class="cap"><b>Maquete do SketchUp</b> (exportada em .dae, .obj ou .stl): o app corta a maquete e lê paredes, portas, janelas com peitoril, pé-direito e altura do piso. PDF exportado do CAD (vetorial) ou DXF: o app lê as paredes e os vãos de porta direto do arquivo, sem internet. PDF escaneado ou foto: o Claude lê paredes, cotas, portas e janelas (só com o app aberto dentro do Claude). Em todos os casos você confere antes de usar.</p>
+      <div class="row" style="margin-top:0"><label class="btn pri" for="impFile" style="display:inline-block">Anexar planta</label><input type="file" id="impFile" accept=".pdf,.dxf,.dae,.obj,.stl,.skp,image/*" style="position:absolute;width:1px;height:1px;opacity:0"><span class="cap" id="impName" style="margin:0"></span></div>
       <h3>Se o botão não abrir no celular</h3>
       <p class="cap">Cole aqui: uma imagem da planta (copie a imagem e cole), o texto de um DXF, ou um código de projeto (deste app ou do Detalhador de Fundação).</p>
       <textarea id="impPaste" rows="3" placeholder="Toque e cole aqui"></textarea>
       <div class="row"><button class="btn" id="impPasteGo">Usar o que colei</button><button class="btn" id="projCopy">Copiar código deste projeto</button></div>
+      <div id="imp3d" hidden>
+        <p class="cap" style="margin-top:10px"><b>Maquete 3D do SketchUp.</b> O app corta a maquete na horizontal (como a planta baixa) e lê as paredes, as portas e as janelas com peitoril e altura, o pé-direito e a altura do piso. No SketchUp: Arquivo → Exportar → Modelo 3D → <b>COLLADA (.dae)</b> (ou .obj / .stl).</p>
+        <div class="form"><label>Unidade do arquivo<select id="imp3dUnit"><option value="1">metro</option><option value="0.01">centímetro</option><option value="0.001">milímetro</option><option value="0.0254">polegada</option></select></label>
+          <label>Eixo vertical<select id="imp3dUp"><option value="z">Z para cima (SketchUp)</option><option value="y">Y para cima</option></select></label>
+          <label>Altura do corte (m acima do piso)<input type="number" step="0.05" id="imp3dCorte" value="1.80"></label></div>
+        <div class="row"><button class="btn pri" id="imp3dGo">Ler paredes da maquete</button></div>
+      </div>
       <div id="impDxf" hidden>
         <div class="form" style="margin-top:10px">
           <label>Layer das paredes<select id="impLayer"></select></label>
@@ -480,7 +487,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 3.7 · PDF com data e hora";
+const VERSAO="versão 3.8 · importa maquete do SketchUp";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -3180,6 +3187,80 @@ function abrirEmParede(W,cx,cy,l,t,extra={}){
   return {n:"",t,w:best.i,d,l:r05(l),a:df.a,p:df.p,...extra};
 }
 function abDosVaos(W,gaps){ return gaps.map(g=>{ const l=Math.hypot(g.x2-g.x1,g.y2-g.y1); return abrirEmParede(W,(g.x1+g.x2)/2,(g.y1+g.y2)/2,l,l>1.5?"Vão":"Porta"); }).filter(Boolean); }
+/* ---------------- Importar maquete 3D (SketchUp: .dae, .obj ou .stl) ---------------- */
+// devolve triângulos [[x,y,z]x3] nas unidades do arquivo; .dae já vem em metros (unit meter) e com o eixo vertical informado
+let imp3d=null;
+function mat4mul(a,b){ const o=new Array(16).fill(0); for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=0;k<4;k++) o[i*4+j]+=a[i*4+k]*b[k*4+j]; return o; }
+const I4=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1], ap4=(m,p)=>[m[0]*p[0]+m[1]*p[1]+m[2]*p[2]+m[3],m[4]*p[0]+m[5]*p[1]+m[6]*p[2]+m[7],m[8]*p[0]+m[9]*p[1]+m[10]*p[2]+m[11]];
+function lerDAE(txt){ const doc=new DOMParser().parseFromString(txt,"application/xml"), q=(el,s)=>Array.from(el.getElementsByTagName(s));
+  const un=q(doc,"unit")[0], esc0=un?parseFloat(un.getAttribute("meter"))||1:1, up=(q(doc,"up_axis")[0]||{}).textContent||"Z_UP";
+  const geos={}; q(doc,"geometry").forEach(g=>{ const id=g.getAttribute("id"), mesh=q(g,"mesh")[0]; if(!mesh) return; const src={}; q(mesh,"source").forEach(s=>{ const fa=q(s,"float_array")[0]; if(fa) src[s.getAttribute("id")]=fa.textContent.trim().split(/\s+/).map(Number); });
+    const vtx={}; q(mesh,"vertices").forEach(v=>{ const inp=q(v,"input").find(i=>i.getAttribute("semantic")==="POSITION"); if(inp) vtx[v.getAttribute("id")]=src[inp.getAttribute("source").slice(1)]; });
+    const tris=[]; [...q(mesh,"triangles"),...q(mesh,"polylist"),...q(mesh,"polygons")].forEach(tg=>{ const ins=q(tg,"input"), vi=ins.find(i=>i.getAttribute("semantic")==="VERTEX"); if(!vi) return;
+      const pos=vtx[vi.getAttribute("source").slice(1)]||src[vi.getAttribute("source").slice(1)]; if(!pos) return; const off=+vi.getAttribute("offset")||0, st=Math.max(...ins.map(i=>+i.getAttribute("offset")||0))+1;
+      const P=i=>[pos[i*3],pos[i*3+1],pos[i*3+2]], vc=q(tg,"vcount")[0], ps=q(tg,"p").map(p=>p.textContent.trim().split(/\s+/).map(Number));
+      ps.forEach(arr=>{ const idx=[]; for(let i=off;i<arr.length;i+=st) idx.push(arr[i]);
+        if(tg.tagName==="triangles"){ for(let i=0;i+2<idx.length;i+=3) tris.push([P(idx[i]),P(idx[i+1]),P(idx[i+2])]); }
+        else { const cnt=vc?vc.textContent.trim().split(/\s+/).map(Number):[idx.length]; let k=0; cnt.forEach(n=>{ for(let j=1;j+1<n;j++) tris.push([P(idx[k]),P(idx[k+j]),P(idx[k+j+1])]); k+=n; }); } }); });
+    geos[id]=tris; });
+  const nodes={}; q(doc,"node").forEach(n=>{ const id=n.getAttribute("id"); if(id) nodes[id]=n; });
+  const out=[];
+  const mt=n=>{ let m=I4; Array.from(n.children).forEach(c=>{ const v=c.textContent.trim().split(/\s+/).map(Number);
+    if(c.tagName==="matrix"&&v.length===16) m=mat4mul(m,v);
+    else if(c.tagName==="translate") m=mat4mul(m,[1,0,0,v[0],0,1,0,v[1],0,0,1,v[2],0,0,0,1]);
+    else if(c.tagName==="scale") m=mat4mul(m,[v[0],0,0,0,0,v[1],0,0,0,0,v[2],0,0,0,0,1]);
+    else if(c.tagName==="rotate"){ const [x,y,z,a]=v, r=a*Math.PI/180, cs=Math.cos(r), sn=Math.sin(r), t=1-cs; m=mat4mul(m,[t*x*x+cs,t*x*y-sn*z,t*x*z+sn*y,0,t*x*y+sn*z,t*y*y+cs,t*y*z-sn*x,0,t*x*z-sn*y,t*y*z+sn*x,t*z*z+cs,0,0,0,0,1]); } }); return m; };
+  const visita=(n,M,d)=>{ if(d>30) return; const m=mat4mul(M,mt(n));
+    Array.from(n.children).forEach(c=>{ if(c.tagName==="instance_geometry"){ (geos[c.getAttribute("url").slice(1)]||[]).forEach(t=>out.push(t.map(p=>ap4(m,p)))); }
+      else if(c.tagName==="instance_node"){ const r=nodes[c.getAttribute("url").slice(1)]; if(r) visita(r,m,d+1); }
+      else if(c.tagName==="node") visita(c,m,d+1); }); };
+  const vs=q(doc,"visual_scene")[0]; if(vs) Array.from(vs.children).filter(c=>c.tagName==="node").forEach(n=>visita(n,I4,0)); else Object.values(geos).forEach(t=>out.push(...t));
+  return {tris:out,unit:esc0,up:up.trim().toUpperCase().startsWith("Y")?"y":"z"}; }
+function lerOBJ(txt){ const v=[], tris=[]; txt.split(/\r?\n/).forEach(l=>{ const p=l.trim().split(/\s+/); if(p[0]==="v") v.push([+p[1],+p[2],+p[3]]);
+    else if(p[0]==="f"){ const id=p.slice(1).map(s=>{ const i=parseInt(s.split("/")[0],10); return i<0?v.length+i:i-1; }); for(let j=1;j+1<id.length;j++) if(v[id[0]]&&v[id[j]]&&v[id[j+1]]) tris.push([v[id[0]],v[id[j]],v[id[j+1]]]); } });
+  return {tris,unit:null,up:null}; }
+function lerSTL(buf){ const dv=new DataView(buf), n=buf.byteLength>=84?dv.getUint32(80,true):0;
+  if(84+n*50===buf.byteLength){ const tris=[]; for(let i=0;i<n;i++){ const o=84+i*50+12, P=j=>[dv.getFloat32(o+j*12,true),dv.getFloat32(o+j*12+4,true),dv.getFloat32(o+j*12+8,true)]; tris.push([P(0),P(1),P(2)]); } return {tris,unit:null,up:null}; }
+  const txt=new TextDecoder().decode(buf), vs=[...txt.matchAll(/vertex\s+([-\d.eE+]+)\s+([-\d.eE+]+)\s+([-\d.eE+]+)/g)].map(m=>[+m[1],+m[2],+m[3]]), tris=[]; for(let i=0;i+2<vs.length;i+=3) tris.push([vs[i],vs[i+1],vs[i+2]]); return {tris,unit:null,up:null}; }
+// leva para metros, com z para cima e y da planta para baixo (como no app)
+function normaliza3d(M,unit,up){ const u=unit||1; return M.tris.map(t=>t.map(([x,y,z])=>up==="y"?[x*u,z*u,y*u]:[x*u,-y*u,z*u])); }
+function palpite3d(M){ const ext=[0,1,2].map(i=>{ const a=M.tris.flatMap(t=>t.map(p=>p[i])); return Math.max(...a)-Math.min(...a); });
+  const up=M.up||(ext[1]<ext[2]&&ext[1]<ext[0]?"y":"z"), H=up==="y"?ext[1]:ext[2];
+  const unit=M.unit||(H>800?0.001:H>40&&H<=150?0.0254:H>150?0.01:1);   // mm, polegada, cm ou metro (casa de 2,5 a 12 m de altura)
+  return {unit,up}; }
+// corte horizontal da maquete na altura z: segmentos da planta
+function corte3d(T,z){ const out=[]; T.forEach(t=>{ const pts=[]; for(let i=0;i<3;i++){ const a=t[i], b=t[(i+1)%3]; if((a[2]-z)*(b[2]-z)<0){ const s=(z-a[2])/(b[2]-a[2]); pts.push([a[0]+(b[0]-a[0])*s,a[1]+(b[1]-a[1])*s]); } }
+  if(pts.length===2&&Math.hypot(pts[1][0]-pts[0][0],pts[1][1]-pts[0][1])>0.01) out.push({x1:pts[0][0],y1:pts[0][1],x2:pts[1][0],y2:pts[1][1]}); }); return out; }
+// níveis: terreno (mais baixo), piso (maior área horizontal até 1,2 m acima) e forro/laje (face de baixo grande acima do piso)
+function niveis3d(T,hc=1.8){ const zs=T.flatMap(t=>t.map(p=>p[2])), z0=Math.min(...zs), z1=Math.max(...zs);
+  // paredes = faces que atravessam a altura do corte; base e topo mais comuns delas dão o piso e o teto
+  const moda=arr=>{ const h={}; arr.forEach(v=>{ const k=Math.round(v*100)/100; h[k]=(h[k]||0)+1; }); return +Object.entries(h).sort((p,q)=>q[1]-p[1])[0][0]; };
+  const tenta=zc=>T.filter(t=>{ const a=t.map(p=>p[2]); return Math.min(...a)<zc&&Math.max(...a)>zc; });
+  let par=[]; for(const zc of [z0+hc+0.15,z0+hc,z0+hc+0.4,(z0+z1)/2]){ par=tenta(zc); if(par.length>=8) break; }
+  const piso=par.length?moda(par.map(t=>Math.min(...t.map(p=>p[2])))):z0, teto=par.length?moda(par.map(t=>Math.max(...t.map(p=>p[2])))):piso+2.8;
+  // terreno: maior área horizontal abaixo do piso (ou o ponto mais baixo)
+  const hist={}; T.forEach(t=>{ const [a,b,c]=t, ux=b[0]-a[0], uy=b[1]-a[1], uz=b[2]-a[2], vx=c[0]-a[0], vy=c[1]-a[1], vz=c[2]-a[2], nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx, ar=Math.hypot(nx,ny,nz)/2;
+    if(ar<1e-6||Math.abs(nz)/(2*ar)<0.98) return; const z=Math.round((a[2]+b[2]+c[2])/3*100)/100; if(z<piso-0.005) hist[z]=(hist[z]||0)+ar; });
+  const ter=Object.entries(hist).sort((p,q)=>q[1]-p[1])[0], zt=ter?+ter[0]:z0;
+  return {z0,z1,piso,teto,pd:Math.round((teto-piso)*100)/100,hPiso:Math.max(0,Math.round((piso-zt)*100)/100)}; }
+function lerMaquete(){ if(!imp3d) return; const u=+$("imp3dUnit").value, up=$("imp3dUp").value, T=normaliza3d(imp3d,u,up), hc=num($("imp3dCorte").value)||1.8, N=niveis3d(T,hc);
+  const segs=corte3d(T,N.piso+hc);
+  if(segs.length<4){ impMsg("O corte da maquete não encontrou paredes. Confira a unidade e o eixo vertical."); return; }
+  const r=wallsFromSegs(segs), Nw=normWalls(r.walls,r.gapSegs,false,0.01), th=[...(r.thick||[])].sort((p,q)=>p-q), esp=th.length?Math.round(th[th.length>>1]*100)/100:null;
+  // a planta do app começa em (0,0): mesma translação para os cortes de peitoril/altura
+  const xs=r.walls.flatMap(w=>[w.x1,w.x2]), ys=r.walls.flatMap(w=>[w.y1,w.y2]);
+  const ab=abDosVaos(Nw.walls,Nw.gaps);
+  // janela ou porta: corta a maquete em várias alturas e vê se o buraco está fechado embaixo (peitoril) e em cima (verga)
+  const ox=Math.min(...xs)-(Math.min(...Nw.walls.flatMap(w=>[w.x1,w.x2]))), oy=Math.min(...ys)-(Math.min(...Nw.walls.flatMap(w=>[w.y1,w.y2])));
+  const cortes={}, zk=k=>Math.round((0.025+k*0.05)*1000)/1000; for(let k=0;zk(k)<N.pd;k++) cortes[zk(k)]=corte3d(T,N.piso+zk(k));   // cortes no meio de cada 5 cm (não caem em cima de uma face)
+  ab.forEach(a=>{ const w=Nw.walls[a.w]; if(!w) return; const L=Math.hypot(w.x2-w.x1,w.y2-w.y1), ux=(w.x2-w.x1)/L, uy=(w.y2-w.y1)/L, m=[w.x1+ux*(a.d+a.l/2)+ox,w.y1+uy*(a.d+a.l/2)+oy];
+    const fechado=z=>(cortes[z]||[]).some(s=>{ const sl=Math.hypot(s.x2-s.x1,s.y2-s.y1); if(sl<0.05) return false; const par=Math.abs(((s.x2-s.x1)*ux+(s.y2-s.y1)*uy)/sl)>0.9; return par&&distSeg(m,s)<0.30; });
+    let pe=0; for(let k=0;zk(k)<hc;k++) if(fechado(zk(k))) pe=Math.round((zk(k)+0.025)*100)/100;
+    let topo=N.pd; for(let k=0;zk(k)<N.pd;k++){ if(zk(k)<=hc) continue; if(fechado(zk(k))){ topo=Math.round((zk(k)-0.025)*100)/100; break; } }
+    if(pe>=0.3){ a.t="Janela"; a.p=Math.round(pe*100)/100; a.a=Math.max(0.3,Math.round((topo-pe)*100)/100); delete a.mod; }
+    else { a.t=a.l>=2.4?"Porta":a.l>1.5?"Vão":"Porta"; a.a=Math.round(Math.min(topo,2.4)*100)/100; if(a.l>=2.4) a.mod="correr4"; } });
+  impMsg(`Maquete: piso a ${f(N.hPiso)} m do terreno, pé-direito ${f(N.pd)} m, corte das paredes a ${f(hc)} m do piso.`);
+  showImport({walls:Nw.walls,ab,rooms:[],esp,pd:N.pd>=2.2&&N.pd<=6?N.pd:null,piso:N.hPiso>=0&&N.hPiso<=1.5?N.hPiso:null},"Maquete 3D"); }
 function showImport(res,src){
   IMP=res; const W=res.walls;
   if(!W.length){ impMsg("Não encontrei paredes nesta planta. Confira o layer/unidade ou tente outra imagem."); $("impRes").hidden=true; return; }
@@ -3192,13 +3273,19 @@ function showImport(res,src){
   o+=`<text x="${mx*sc/2}" y="-12" text-anchor="middle" style="font-size:10px;fill:var(--muted)">${f(mx)} m</text><text x="-12" y="${my*sc/2}" text-anchor="middle" transform="rotate(-90 -12 ${my*sc/2})" style="font-size:10px;fill:var(--muted)">${f(my)} m</text></svg>`;
   $("impPrev").innerHTML=o;
   const nP=(res.ab||[]).filter(a=>a.t!=="Janela").length, nJ=(res.ab||[]).filter(a=>a.t==="Janela").length;
-  $("impSum").textContent=`${src}: ${W.length} paredes, projeção ${f(mx)} × ${f(my)} m${nP?`, ${nP} portas/vãos (em vermelho)`:""}${nJ?`, ${nJ} janelas (em verde)`:""}${res.rooms&&res.rooms.length?`, ${res.rooms.length} ambientes`:""}.${res.obs?" Observação: "+res.obs:""} Confira as medidas antes de usar.${src!=="Leitura do Claude"?" Janelas não são reconhecidas no PDF/DXF: coloque tocando na parede, na aba Planta.":""}`;
+  $("impSum").textContent=`${src}: ${W.length} paredes, projeção ${f(mx)} × ${f(my)} m${nP?`, ${nP} portas/vãos (em vermelho)`:""}${nJ?`, ${nJ} janelas (em verde)`:""}${res.rooms&&res.rooms.length?`, ${res.rooms.length} ambientes`:""}.${res.obs?" Observação: "+res.obs:""} Confira as medidas antes de usar.${src!=="Leitura do Claude"&&src!=="Maquete 3D"?" Janelas não são reconhecidas no PDF/DXF: coloque tocando na parede, na aba Planta.":""}`;
   $("impRes").hidden=false; impMsg("");
 }
 $("impFile").onchange=e=>{ const fl=e.target.files[0]; $("impName").textContent=fl?fl.name:""; handleFile(fl); };
-async function handleFile(file){ $("impRes").hidden=true; $("impDxf").hidden=true; $("impImg").hidden=true; impMsg(""); impFileObj=null; impDxf=null;
+async function handleFile(file){ $("impRes").hidden=true; $("impDxf").hidden=true; $("impImg").hidden=true; $("imp3d").hidden=true; impMsg(""); impFileObj=null; impDxf=null; imp3d=null;
   if(!file) return;
   const name=file.name.toLowerCase();
+  if(/\.(dae|obj|stl)$/.test(name)){ try{ impMsg("Lendo a maquete...");
+      imp3d=name.endsWith(".dae")?lerDAE(await file.text()):name.endsWith(".obj")?lerOBJ(await file.text()):lerSTL(await file.arrayBuffer());
+      if(!imp3d.tris.length){ impMsg("Não encontrei faces nesta maquete."); return; }
+      const g=palpite3d(imp3d); $("imp3dUnit").value=String(g.unit); $("imp3dUp").value=g.up; $("imp3d").hidden=false;
+      impMsg(`${imp3d.tris.length} faces lidas.`); lerMaquete(); }catch(err){ impMsg("Não consegui ler esta maquete. Exporte do SketchUp em COLLADA (.dae)."); } return; }
+  if(name.endsWith(".skp")){ impMsg("O arquivo .skp do SketchUp é fechado e não abre no navegador. No SketchUp, exporte em COLLADA (.dae): Arquivo → Exportar → Modelo 3D → .dae, e anexe aqui."); return; }
   if(name.endsWith(".dxf")){ try{ handleDxfText(await file.text()); }catch(err){ impMsg("Não consegui ler este DXF."); } return; }
   const cv=$("impCanvas"), ctx=cv.getContext("2d");
   impPdfDoc=null; $("impPdf").hidden=true;
@@ -3323,8 +3410,10 @@ Se a imagem não for uma planta baixa, responda {"erro":"motivo"}.`;
 };
 $("impStop").onclick=()=>impCtl&&impCtl.abort();
 $("impDrop").onclick=()=>{ IMP=null; $("impRes").hidden=true; impMsg(""); };
+$("imp3dGo").onclick=()=>lerMaquete();
 $("impApply").onclick=()=>{ if(!IMP) return;
   S.walls=IMP.walls; S.rooms=IMP.rooms||[]; S.ab=IMP.ab||[]; if(IMP.esp&&IMP.esp>=0.08&&IMP.esp<=0.40) S.esp=IMP.esp; S.cA=null; S.cB=null;
+  if(IMP.pd) S.pd=IMP.pd; if(IMP.piso!=null) S.piso=IMP.piso;
   loadForm(); render(); $("impRes").hidden=true; impMsg("Planta aplicada. Veja a aba Planta: dê nome aos ambientes e coloque as janelas tocando nas paredes."); };
 
 $("versao").textContent=VERSAO;
