@@ -13,6 +13,7 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   demanda, entrada, DR, DPS, quadro com reserva, diagrama unifilar e material elétrico.
 - 5.2: imóvel comercial com 2+ salas: um quadro e medidor por sala (banheiro vai para a sala de onde se entra).
 - 5.3: símbolos elétricos menores (65 %).
+- 5.14: modelo das salas com pé-direito 5,00 m, telhado em uma água caindo da Av. Paraná para o fundo, calha do fundo 35x20 (campos novos de largura/altura mínima da calha na aba Cobertura).
 - 5.13: formato A0 (1189 x 841), até 9 desenhos por folha; fachadas, paginação, fundação e vistas do banheiro também agrupam. Salas: A0 6 folhas, A1 9.
 - 5.12: pranchas agrupadas: no A1 até 6 desenhos por folha e no A2 até 4, por disciplina (arquitetura, estrutura, instalações, acabamentos, detalhes), plantas na mesma escala, tabelas juntas na faixa de baixo; opção "Desenhos por folha" ao lado do formato. Salas: A1 24→9-10 folhas, A2 24→13.
 - 5.11: cotas da planta sem os cantos do chanfro na cadeia de cima/esquerda (sala 1 = 6,00), sem cota inclinada curta junto das cadeias; texto dos ambientes num tamanho só (nome 2,0 · área 1,6 · NV 1,4) em todas as plantas; ambiente pequeno mostra só as linhas que cabem.
