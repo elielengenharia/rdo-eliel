@@ -373,12 +373,12 @@ function defaults(){
     ab:[{n:"P1 entrada",t:"Porta",l:0.80,a:2.10,q:1},{n:"P2 quartos/banho",t:"Porta",l:0.70,a:2.10,q:3},{n:"P3 lavanderia",t:"Porta",l:0.80,a:2.10,q:1},
         {n:"J1 quartos",t:"Janela",l:1.20,a:1.00,q:2},{n:"J2 sala",t:"Janela",l:1.50,a:1.20,q:1},{n:"J3 cozinha",t:"Janela",l:1.20,a:1.00,q:1},{n:"J4 banho",t:"Janela",l:0.60,a:0.60,q:1}],
     pl:{b:12,h:20,bit:"3/8",ga:7,gb:14,est:"4.2",s:15,alt:2.8},
-    br:{d:25,prof:2.0,arr:1.0},
+    br:{d:25,prof:1.2,arr:1.0},
     vaoMax:3.0, peca:6.0, trasp:40, lastro:5, q:10, cap:50, fck:20, off:[]
   };
 }
 let S;
-try{ const d=defaults(), o=JSON.parse(localStorage.getItem("fund-casa-v1"))||{}; S=Object.assign(d,o); ["vb","pl","br","ci","tr"].forEach(k=>S[k]=Object.assign(d[k]||defaults()[k],o[k]||{})); if(!o.ci) S.ci=defaults().ci; if(!o.ab) S.ab=defaults().ab; if(S.tr.b==12&&S.tr.hv==20&&S.tr.hc==20){ S.tr.b=9; S.tr.hv=14; S.tr.hc=14; } if(S.tr.nome==="TG12M"&&num(S.tr.h)===12){ S.tr.nome="TG8L"; S.tr.h=8; S.tr.kg=0.68; } }catch(e){ S = defaults(); }
+try{ const d=defaults(), o=JSON.parse(localStorage.getItem("fund-casa-v1"))||{}; S=Object.assign(d,o); ["vb","pl","br","ci","tr"].forEach(k=>S[k]=Object.assign(d[k]||defaults()[k],o[k]||{})); if(!o.brv12){ if(num(S.br.prof)===2) S.br.prof=1.2; S.brv12=1; } if(!o.ci) S.ci=defaults().ci; if(!o.ab) S.ab=defaults().ab; if(S.tr.b==12&&S.tr.hv==20&&S.tr.hc==20){ S.tr.b=9; S.tr.hv=14; S.tr.hc=14; } if(S.tr.nome==="TG12M"&&num(S.tr.h)===12){ S.tr.nome="TG8L"; S.tr.h=8; S.tr.kg=0.68; } }catch(e){ S = defaults(); }
 function save(){ try{ localStorage.setItem("fund-casa-v1", JSON.stringify(S)); }catch(e){} }
 
 const f = (n,d=2)=> (isFinite(n)? n.toFixed(d).replace(".",",") : "—");
