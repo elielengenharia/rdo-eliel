@@ -626,7 +626,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.8 · projetos no aparelho, modelo das salas e telhado sem goteira";
+const VERSAO="versão 5.9 · revisão das pranchas das salas comerciais";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -672,10 +672,11 @@ let S;
 // modelo: duas salas comerciais e banheiro na Av. Paraná (lote 277, esquina com a Rua Guarani), fachada chanfrada com duas portas de correr
 function modeloSalas(){ const o=defaults();
   o.obra="Salas comerciais - Av. Paraná"; o.local="Lote 277 - Av. Paraná x Rua Guarani"; o.uso="comercial"; o.frente="baixo";
+  o.laje=0;   // sem laje: telhado de fibrocimento sobre a cinta, escondido pela platibanda, e forro de PVC (estrutura simples com coluninhas)
   const W=[[0.075,0.075,15.275,0.075],[15.275,0.075,15.275,8.43],[15.275,8.43,3.28,5.80],[3.28,5.80,2.215,4.70],[2.215,4.70,2.215,1.575],[2.215,1.575,0.30,1.575],[0.30,1.575,0.075,0.075],[2.215,0.075,2.215,1.575],[8.365,0.075,8.365,6.916]];
   o.walls=W.map(([x1,y1,x2,y2])=>({x1,y1,x2,y2}));
   o.rooms=[{n:"Banheiro",x:1.2,y:0.8,nv:0},{n:"Sala comercial 1",x:5.2,y:3,nv:0},{n:"Sala comercial 2",x:11.8,y:4,nv:0}];
-  o.ab=[{n:"Sala comercial 2",t:"Porta",w:2,d:1.40,l:4.00,a:2.10,p:0,mod:"correr4"},{n:"Sala comercial 1",t:"Porta",w:2,d:7.60,l:4.00,a:2.10,p:0,mod:"correr4"},{n:"Banheiro",t:"Porta",w:7,d:0.70,l:0.70,a:2.10,p:0}];
+  o.ab=[{n:"Sala comercial 2",t:"Porta",w:2,d:1.40,l:4.00,a:2.10,p:0,mod:"correr4",mat:"Alumínio e vidro temperado"},{n:"Sala comercial 1",t:"Porta",w:2,d:7.60,l:4.00,a:2.10,p:0,mod:"correr4",mat:"Alumínio e vidro temperado"},{n:"Banheiro",t:"Porta",w:7,d:0.70,l:0.70,a:2.10,p:0}];
   o.cA=null; o.cB=null;
   o.terr=Object.assign(clone(TERR0),{forma:"pol",areaMapa:259.17,lote:"277",alinha:1,encA:1,recA:0,encB:2,recB:0,calcada:2,rua:"Avenida Paraná",rua2:"Rua Guarani",
     lados:[{m:11.14,c:"Avenida Paraná",rua:"sim"},{m:21.31,c:"Lote 243",rua:"não"},{m:14.15,c:"Lote 290",rua:"não"},{m:14.69,c:"Rua Guarani",rua:"sim"},{m:4.04,c:"",rua:"sim"}]});
@@ -1175,11 +1176,11 @@ function desenhoEsquadria(q,k){
   return D;
 }
 /* ---------------- Detalhe das portas ---------------- */
-const FOLHAS=[["lisa","Lisa (semi-oca)"],["macica","Maciça lisa"],["almofadada","Almofadada"],["frisada","Frisada (frisos horizontais)"],["veneziana","Veneziana"],["vidro","Com visor de vidro"]];
+const FOLHAS=[["lisa","Lisa (semi-oca)"],["macica","Maciça lisa"],["almofadada","Almofadada"],["frisada","Frisada (frisos horizontais)"],["veneziana","Veneziana"],["vidro","Com visor de vidro"],["vtemp","Vidro temperado 10 mm"]];
 const nomeFolha=t=>(FOLHAS.find(q=>q[0]===t)||FOLHAS[0])[1];
-const folhaPadrao=g=>g.externa?"macica":"lisa";
+const folhaPadrao=g=>/vidro/i.test(String(g.a&&g.a.mat||""))?"vtemp":g.externa?"macica":"lisa";
 function ferragens(q){ const fech=q.mod==="correr4"?"Kit para porta de correr 4 folhas (trilho duplo, roldanas, fechadura central com cilindro)":q.mod==="correr"?"Kit para porta de correr (trilho, roldanas e puxador concha)":q.ext?"Fechadura externa com cilindro e maçaneta tipo alavanca":q.ban?"Fechadura tipo banheiro (tranqueta) e maçaneta tipo alavanca":"Fechadura interna e maçaneta tipo alavanca";
-  return [fech,ehCorrer(q.mod)?"":`${q.nf*3} dobradiças 3½" x 3" (3 por folha)`,`Batente e guarnição em madeira; acabamento ${String(q.mat).toLowerCase()==="madeira"?"em verniz ou esmalte sintético":"conforme o fabricante"}`].filter(Boolean); }
+  return [fech,ehCorrer(q.mod)?"":`${q.nf*3} dobradiças 3½" x 3" (3 por folha)`,/madeira/i.test(String(q.mat))?`Batente e guarnição em madeira; acabamento em verniz ou esmalte sintético`:`Contramarco e marco em ${String(q.mat).toLowerCase()}, vedação com silicone; acabamento conforme o fabricante`].filter(Boolean); }
 function desenhoPortaDet(q,k,G){
   const D=Dw(k), Y=z=>-z, Lq=q.l, Hq=q.a, gu=0.05, bt=0.035, t=G?G.t:0.15, n=Math.max(1,q.nf), w=Lq/n, cor=ehCorrer(q.mod), c4=q.mod==="correr4";
   const box=(xa,za,xb,zb,lw,l="ESQUADRIA")=>PL(D,[[xa,Y(za)],[xb,Y(za)],[xb,Y(zb)],[xa,Y(zb)],[xa,Y(za)]],lw,l);
@@ -3060,7 +3061,7 @@ function desenhoBasePiso(k,BP){ const D=Dw(k); let yo=0; const Y=z=>-z+yo;
     TX(D,x0+w/2,Y(-eb)+4*k,txArm(P),1.2,{l:"COTAS"}); TX(D,xj,Y(zTop)-3*k,`JUNTA SERRADA 1/3 e, a cada ${f(P.jt)} m`,1.2,{l:"COTAS"});
     cotaV(D,Y(e),Y(0),x0-4*k,x0,f(e*100,0)); cotaV(D,Y(0),Y(-eb),x0-4*k,x0,f(eb*100,0));
     TX(D,x0+w/2,Y(zTop)-8*k,P.nome,1.6,{b:true}); };
-  corte(0,BP.int,true); yo=0.45+22*k; corte(0,BP.vei,false); return D; }
+  corte(0,BP.int,true); if(BP.vei.A>0){ yo=0.45+22*k; corte(0,BP.vei,false); } return D; }   // sem garagem/calçada: só o piso interno
 const linhasBase=BP=>[["grp",BP.int.nome],...linBase(BP.int),[`Regularização para porcelanato (${f(BP.regE*100,0)} cm)`,"m²",f(BP.reg,2)],["grp",BP.vei.nome],...(BP.vei.A>0?linBase(BP.vei):[["Sem garagem/calçada (dê o nome Garagem ou Calçada a um ambiente, ou informe a área externa)","-","-"]])];
 const linBase=P=>P.A<=0?[]:[[`Área`,"m²",f(P.A,2)],[`Concreto fck ${P.fck} MPa e = ${f(P.e*100,0)} cm (+5%)`,"m³",f(P.V,2)],...(P.arm==="tela"?[[`Tela soldada ${P.tela} (+15% de traspasse)`,"m²",f(P.mTela,1)]]:[]),
   ...(P.arm==="macro"||P.arm==="aco"?[[`${P.arm==="aco"?"Fibra de aço":"Macrofibra sintética"} ${f(P.dose,0)} kg/m³`,"kg",f(P.kgF,1)]]:[]),[`Brita graduada ${f(P.eb*100,0)} cm`,"m³",f(P.brita,2)],[`Lona plástica 150 µm (+10%)`,"m²",f(P.lona,1)],[`Juntas serradas a cada ${f(P.jt)} m (com selante PU)`,"m",f(P.mJ,1)]];
@@ -4146,7 +4147,7 @@ function textosLado(P,lado,fl){
     :{t:"RECUOS",cols:[["RECUO",0],["m",1]],rows:[["Frontal",f(Tr.rec.frente)],["Lateral esquerdo",f(Tr.rec.esq)],["Lateral direito",f(Tr.rec.dir)],["Fundos",f(Tr.rec.fundo)]]},
     ...(fl.QD?[tabConf(fl.QD)]:[])]; }
   if(lado==="fachadas") return [{t:"NOTAS",linhas:[`Frente da casa: ${{baixo:"lado de baixo",cima:"lado de cima",esq:"lado esquerdo",dir:"lado direito"}[S.frente]||"lado de baixo"} da planta baixa.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}`+(TI.plat?", escondido por platibanda.":`, beiral ${f(TI.b)} m.`),`Esquadrias conforme quadro da prancha 01 (códigos P, J e V).`,`Níveis em metros a partir do piso acabado (±0,00).`]}];
-  if(lado==="alturas") return [{t:"NOTAS",linhas:[`Pé-direito: ${f(pd)} m.`,...(S.viga.on!=="não"?[`Viga/cinta de concreto ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm no topo das paredes, sob a laje. Concreto cortado em cinza escuro.`]:[]),`Níveis de piso: ${G.rooms.map(r=>`${r.n} ${fNv(r.nv)}`).join("; ")}.`,`Laje/forro: ${f(num(S.laje))} m. Piso a ${f(num(S.piso))} m do terreno.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}, i = ${f(num(S.tel.inc),0)}%.`,`Paredes com ${f(G.t)} m de espessura.`,`Cotas e níveis em metros. Conferir as medidas na obra.`]}];
+  if(lado==="alturas") return [{t:"NOTAS",linhas:[`Pé-direito: ${f(pd)} m.`,...(S.viga.on!=="não"?[`Viga/cinta de concreto ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm no topo das paredes${num(S.laje)>0?", sob a laje":""}. Concreto cortado em cinza escuro.`]:[]),`Níveis de piso: ${G.rooms.map(r=>`${r.n} ${fNv(r.nv)}`).join("; ")}.`,num(S.laje)>0?`Laje: ${f(num(S.laje))} m. Piso a ${f(num(S.piso))} m do terreno.`:`Sem laje: forro sob o telhado, apoiado na cinta. Piso a ${f(num(S.piso))} m do terreno.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}, i = ${f(num(S.tel.inc),0)}%.`,`Paredes com ${f(G.t)} m de espessura.`,`Cotas e níveis em metros. Conferir as medidas na obra.`]}];
   const CLp=calhasPlat(G,TI); if(CLp) return [{t:"CALHAS (NBR 10844)",cols:[["CALHA",0],["COMPR.",1],["ÁREA",1],["VAZÃO",1],["SEÇÃO",1],["CONDUTORES",1]],pc:[0.13,0.14,0.15,0.18,0.16,0.24],
       rows:CLp.lista.map(c=>[c.nome,`${f(c.L)} m`,`${f(c.A,1)} m²`,`${f(c.Q,0)} L/min`,`${f(c.b*100,0)}x${f(c.h*100,0)}`,`${c.nC} x Ø${c.dia}`])},{t:"NOTAS DA CALHA",linhas:notasCalha(CLp).slice(0,4)}];
   return [{t:"COBERTURA",linhas:[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}.`,`Inclinação ${f(num(S.tel.inc),0)}%.`+(TI.plat?" Platibanda com calha.":` Beiral ${f(TI.b)} m.`),`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`,(TI.Lcum?`Cumeeira: ${f(TI.Lcum)} m.`:"")+(TI.Lesp?` Espigões: ${f(TI.Lesp)} m.`:""),`Altura máxima: ${f(TI.plat?TI.topoPlat:TI.zmax)} m acima do piso.`].filter(Boolean)}];
