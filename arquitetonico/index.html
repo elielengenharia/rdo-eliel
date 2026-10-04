@@ -531,7 +531,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 4.2 · fossa séptica, caixas na calçada e banheiro com parede inclinada";
+const VERSAO="versão 4.3 · fossa com uma caixa por banheiro e cano direto";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1660,9 +1660,14 @@ function redeHidro(G,LM){
   const VF={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente]||[0,1];
   let iF=0, bF=-1e9; ED.forEach((e,i)=>{ const v=(e.n[0]*VF[0]+e.n[1]*VF[1])>0.6?Math.hypot(e.b[0]-e.a[0],e.b[1]-e.a[1]):-1+(e.n[0]*VF[0]+e.n[1]*VF[1]); if(v>bF){ bF=v; iF=i; } });
   const frente=[cum[iF],cum[iF+1]], dFr=ED[iF].dd;
-  const caixas=[], ramal=[];
+  const caixas=[], ramal=[], comFossa=(S.fossa||{}).on==="sim";
+  // com fossa: a caixa fica logo do lado de fora da parede mais perto da saída (lote ou calçada), sem dar a volta na obra
+  const caixaFora=(p,alvo)=>{ let best=null; const cs0=G.casas||[];
+    ED.forEach(e=>{ const dx=e.b[0]-e.a[0], dy=e.b[1]-e.a[1], L2=dx*dx+dy*dy||1, u=Math.max(0.05,Math.min(0.95,((p[0]-e.a[0])*dx+(p[1]-e.a[1])*dy)/L2)), pr=[e.a[0]+dx*u,e.a[1]+dy*u];
+      for(let o=0.45;o<=3.01;o+=0.15){ const q=[pr[0]+e.n[0]*o,pr[1]+e.n[1]*o]; if(cs0.some(P0=>pontoDentro(q,P0))||!okP(q)) continue; const d0=Math.hypot(q[0]-p[0],q[1]-p[1])+(alvo?Math.hypot(q[0]-alvo[0],q[1]-alvo[1]):0); if(!best||d0<best.d) best={d:d0,q}; break; } });
+    return best&&best.q; };
   // a saída de cada área molhada vai para o anel do lado de fora (lote ou calçada), se não for muito mais longe que o de dentro
-  salas.forEach(sa=>{ const p=sa.saida.p, tIn=anelT(p), qIn=anelP(tIn), bo=anelT(p,true), q=bo&&bo.d<=Math.hypot(qIn[0]-p[0],qIn[1]-p[1])+4?anelP(bo.t):qIn;
+  salas.forEach(sa=>{ const p=sa.saida.p, tIn=anelT(p), qIn=anelP(tIn), bo=anelT(p,true), q=(comFossa&&caixaFora(p))||(bo&&bo.d<=Math.hypot(qIn[0]-p[0],qIn[1]-p[1])+4?anelP(bo.t):qIn);
     ramal.push({a:p,b:q,d:sa.saida.d,r:sa.r});
     caixas.push({p:q,t:anelT(q),tipo:sa.saida.cg?"CG":"CI",r:sa.r}); });
   const qts=G.rooms.filter(r=>/su[ií]te|quarto|dormit/i.test(r.n)).length, com=S.uso==="comercial";
@@ -1687,6 +1692,13 @@ function redeHidro(G,LM){
   if(!ci.some(c=>dist(c.t,tf)<0.6)) ci.push({p:anelP(tf),t:tf,tipo:"CI",fim:true}); else ci.find(c=>dist(c.t,tf)<0.6).fim=true;
   // caixas muito juntas viram uma só
   const cx2=[]; ci.forEach(c=>{ const o=cx2.find(q=>dist(q.t,c.t)<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; o.fim=o.fim||c.fim; } else cx2.push({...c}); });
+  // com fossa: só as caixas das saídas; a mais perto do tanque é a final e as outras ligam direto nela
+  let ligs=[]; if(fossa&&fossa.pos){ trechos.length=0; const ent=fossa.pos.ent, cs1=[];
+    // a caixa de cada saída vai para a parede de fora que fica no caminho do tanque (menor cano no total)
+    salas.forEach((sa,i)=>{ const q=caixaFora(sa.saida.p,ent); if(q){ caixas[i].p=q; ramal[i].b=q; } });
+    caixas.forEach(c=>{ const o=cs1.find(q=>Math.hypot(q.p[0]-c.p[0],q.p[1]-c.p[1])<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; } else cs1.push({...c,fim:false}); });
+    const f0=cs1.reduce((m,c)=>!m||Math.hypot(c.p[0]-ent[0],c.p[1]-ent[1])<Math.hypot(m.p[0]-ent[0],m.p[1]-ent[1])?c:m,null); if(f0) f0.fim=true;
+    cs1.forEach(c=>{ if(c!==f0) ligs.push([c.p,f0.p]); }); cx2.length=0; cx2.push(...cs1); }
   const dentroObra=c=>(G.casas||[]).some(P0=>pontoDentro(c.p,P0));
   if(cx2.some(dentroObra)) aviso.push("Construção encostada na divisa do vizinho: a caixa desse trecho fica dentro da edificação (caixa com tampa no piso), para não passar para o lote vizinho.");
   if(TL&&cx2.some(c=>!dentroObra(c)&&noPasseio(c.p,PS,0))) aviso.push("Construção no alinhamento: caixa de inspeção na calçada, junto da parede (confirmar com a prefeitura).");
@@ -1708,7 +1720,7 @@ function redeHidro(G,LM){
   const noLote=p=>!TL||(pontoDentro(p,TL)&&Math.min(...TL.map((a,i)=>distSeg(p,{x1:a[0],y1:a[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.25);
   const oHdF=p=>dFr>0&&noLote([p[0]+ED[iF].n[0]*1.0,p[1]+ED[iF].n[1]*1.0])?1.0:-dFr;   // sem recuo na frente: hidrômetro no nicho da fachada   // na divisa: hidrômetro no nicho da fachada
   const hd=fim?(()=>{ const fF=frente, t0=fossa?Math.min(Math.max(fim.t,fF[0]+1),fF[1]-1):fim.t, t=t0+((fF[1]-t0)>2?1.8:-1.8), p=anelP(t), v=ED[iF].n, oHd=oHdF(p); return [p[0]+v[0]*oHd,p[1]+v[1]*oHd]; })():null;
-  return {ap,salas,ramal,trechos,anelP,anelCn:cum.slice(0,nC),PER,fossa,caixas:cx2,fim,out,res,desc,ramaisAF,hd,pessoas,cons,Vn,aviso,com}; }
+  return {ap,salas,ramal,trechos,ligs,anelP,anelCn:cum.slice(0,nC),PER,fossa,caixas:cx2,fim,out,res,desc,ramaisAF,hd,pessoas,cons,Vn,aviso,com}; }
 
 /* ---------------- Conjunto fossa séptica (NBR 7229), filtro anaeróbio e sumidouro (NBR 13969) ---------------- */
 const up5=v=>Math.ceil(v*20-1e-9)/20;
@@ -1773,6 +1785,7 @@ function fossaNoPasseio(G,FS,alvo,i){ const PS=passeios(G), q=PS.find(p=>p.i===i
   return {pos:best,cabe:!!best&&!best.fora&&!best.bate,passeio:true,rua:q.nome,estreito:larg>q.cal}; }
 // trajeto em L do coletor até a entrada do tanque, sem atravessar a casa
 function trajetoFossa(G,a,b){ const c1=[b[0],a[1]], c2=[a[0],b[1]], dentro=p=>(G.casas||[]).some(P=>pontoDentro(p,P)), meio=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];
+  if(![0.2,0.4,0.6,0.8].some(t=>dentro([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]))) return [a,b];   // cano reto, se não passa por dentro da obra
   const bad=c=>[meio(a,c),meio(c,b),c].filter(dentro).length; return bad(c1)<=bad(c2)?[a,c1,b]:[a,c2,b]; }
 function desenhaPasseios(D,G){ passeios(G).forEach(q=>{ const ex=q.cal; L(D,q.a[0]+q.n[0]*q.cal-q.u[0]*ex,q.a[1]+q.n[1]*q.cal-q.u[1]*ex,q.b[0]+q.n[0]*q.cal+q.u[0]*ex,q.b[1]+q.n[1]*q.cal+q.u[1]*ex,.18,"LOTE");
   if(q.L>3){ const m=[(q.a[0]+q.b[0])/2+q.n[0]*q.cal/2,(q.a[1]+q.b[1])/2+q.n[1]*q.cal/2]; let an=Math.atan2(q.u[1],q.u[0])*180/Math.PI; if(an>90) an-=180; if(an<-90) an+=180; TX(D,m[0]+q.u[0]*q.L*0.3,m[1]+q.u[1]*q.L*0.3,`PASSEIO · ${q.nome.toUpperCase()}`,1.3,{l:"COTAS",rot:an}); } }); }
@@ -1869,6 +1882,7 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
     if(sa.cs){ simbHidro(D,{t:"cs",p:sa.cs}); TX(D,sa.cs[0]+2.2*k,sa.cs[1]-2.2*k,"CS",1.5,{a:"s",b:true,l:"ESGOTO"});
       if(Math.hypot(sa.cs[0]-sd[0],sa.cs[1]-sd[1])>0.05){ L(D,...sa.cs,...sd,.4,"ESGOTO"); setaFluxo(D,sa.cs,sd,"ESGOTO"); rotuloLinha(D,sa.cs,sd,"Ø50 i=2%","ESGOTO"); } }
     if(sa.saida.tv){ const tv=sa.saida.tv; simbHidro(D,{t:"tv",p:[tv.p[0]+tv.N[0]*0.08,tv.p[1]+tv.N[1]*0.08]}); TX(D,tv.p[0]+tv.N[0]*(0.08+4*k),tv.p[1]+tv.N[1]*(0.08+4*k),"TV",1.3,{b:true,l:"ESGOTO"}); } });
+  (HD.ligs||[]).forEach(([a,b])=>{ L(D,...a,...b,.5,"ESGOTO"); setaFluxo(D,a,b,"ESGOTO"); rotuloLinha(D,a,b,"Ø100 i=1%","ESGOTO"); });
   HD.ramal.forEach(rm=>{ L(D,...rm.a,...rm.b,.5,"ESGOTO"); setaFluxo(D,rm.a,rm.b,"ESGOTO"); rotuloLinha(D,rm.a,rm.b,`Ø${rm.d} i=${rm.d>=100?1:2}%`,"ESGOTO"); });
   { const cn=HD.anelCn, PER=HD.PER;
     HD.trechos.forEach(([a,b])=>{ const ts=[a]; [0,PER].forEach(v=>cn.forEach(c=>{ const x=c+v; if(x>a+1e-6&&x<b-1e-6) ts.push(x); })); ts.sort((p,q)=>p-q); ts.push(b);
