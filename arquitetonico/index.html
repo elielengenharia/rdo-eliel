@@ -480,7 +480,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 3.6 · nome dos ambientes sem X e Y";
+const VERSAO="versão 3.7 · PDF com data e hora";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1772,7 +1772,7 @@ function buildMemorialPDF(M){
     s.ps.forEach(p=>wrap(p,3.1,W-2*mx).forEach((l,i,arr)=>{ precisa(5); text(mx,y,3.1,l); y+=4.6; if(i===arr.length-1) y+=1.4; })); y+=3; });
   precisa(40); y+=6; text(mx,y,3.1,`${S.local||""}${S.local?", ":""}${S.data||today}.`); y+=22;
   c.push(`0.25 w ${n(mx)} ${n(H-y)} m ${n(mx+80)} ${n(H-y)} l S`); y+=5; text(mx,y,3.2,S.rtNome||"",true); y+=4.8; text(mx,y,3,S.crea||"");
-  pages.forEach((pc,i)=>{ c=pc; text(W/2-6,H-10,2.6,`${i+1}/${pages.length}`); });
+  pages.forEach((pc,i)=>{ c=pc; text(W/2-6,H-10,2.6,`${i+1}/${pages.length}`); text(mx,H-10,2,`Gerado em ${agora().txt} · ${VERSAO}`); });
   const objs=["<< /Type /Catalog /Pages 2 0 R >>",`<< /Type /Pages /Kids [${pages.map((_,i)=>`${5+2*i} 0 R`).join(" ")}] /Count ${pages.length} >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>","<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"];
   pages.forEach((pc,i)=>{ const content=pc.join("\n");
@@ -2081,7 +2081,7 @@ function buildOrcPDF(O){
   if(O.totCub){ y+=2; text(mx,y,2.7,`Comparação pelo CUB: ${money(O.cub)}/m² x ${f(O.areaC)} m² = ${money(O.totCub)}.`); y+=5; }
   y+=3; ["Orçamento estimado a partir dos quantitativos do projeto, com preços de referência (material e mão de obra) que devem ser conferidos","com a tabela SINAPI do mês e com fornecedores locais. Não inclui projetos complementares, taxas, terreno nem muro."].forEach(t=>{ precisa(5); text(mx,y,2.5,t); y+=4; });
   precisa(30); y+=16; ln(mx,y,mx+75,y,.25); y+=4.5; text(mx,y,3,S.rtNome||"",true); y+=4.2; text(mx,y,2.7,S.crea||"");
-  pages.forEach((pc,i)=>{ c=pc; text(W/2,H-9,2.5,`${i+1}/${pages.length}`,false,1); });
+  pages.forEach((pc,i)=>{ c=pc; text(W/2,H-9,2.5,`${i+1}/${pages.length}`,false,1); text(mx,H-9,2,`Gerado em ${agora().txt} · ${VERSAO}`); });
   const objs=["<< /Type /Catalog /Pages 2 0 R >>",`<< /Type /Pages /Kids [${pages.map((_,i)=>`${5+2*i} 0 R`).join(" ")}] /Count ${pages.length} >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>","<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"];
   pages.forEach((pc,i)=>{ const content=pc.join("\n");
@@ -2726,12 +2726,12 @@ function labDe(r){ if(r.labIdx<0){ S.rooms.push({n:"",x:+r.cx.toFixed(2),y:+r.cy
 function renderMemorial(){ const M=memorial(); $("memTexto").innerHTML=`<h2 style="margin-bottom:2px">MEMORIAL DESCRITIVO</h2><p class="cap" style="margin-top:0"><b>${esc(S.obra||"")}</b></p>`+
   M.map(sc=>`<h3>${esc(sc.t)}</h3>${sc.ps.map(t=>`<p style="margin:6px 0;line-height:1.5">${esc(t)}</p>`).join("")}`).join("")+
   `<p style="margin-top:22px">${esc(S.local||"")}${S.local?", ":""}${esc(S.data||today)}.</p><p style="margin-top:28px;border-top:1px solid var(--line);display:inline-block;padding-top:6px;min-width:240px"><b>${esc(S.rtNome||"")}</b><br>${esc(S.crea||"")}</p>`; return M; }
-$("memPdf").onclick=async()=>{ const msg=$("memMsg"); try{ const st=await saveFile(`${slug()}-memorial.pdf`,buildMemorialPDF(memorial()),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar o PDF agora."; } };
+$("memPdf").onclick=async()=>{ const msg=$("memMsg"); try{ const st=await saveFile(`${slug()}-memorial-${agora().arq}.pdf`,buildMemorialPDF(memorial()),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar o PDF agora."; } };
 $("memCopy").onclick=async()=>{ const t=textoMemorial(memorial()); try{ await navigator.clipboard.writeText(t); $("memMsg").textContent="Texto copiado."; }catch(e){ showText($("memCopy"),t); $("memMsg").textContent="Selecione e copie o texto abaixo."; } };
 $("orcTab").addEventListener("change",e=>{ const k=e.target.dataset.pk; if(!k) return; S.orc.p[k]=e.target.value===""?null:num(e.target.value); save(); renderOrc(); });
 $("orcReset").onclick=()=>{ S.orc.p={}; save(); renderOrc(); $("orcMsg").textContent="Preços de referência restaurados."; };
-$("orcPdf").onclick=async()=>{ const msg=$("orcMsg"); try{ const st=await saveFile(`${slug()}-orcamento.pdf`,buildOrcPDF(orcamento()),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar o PDF agora."; } };
-$("orcCsv").onclick=async()=>{ const msg=$("orcMsg"); try{ const st=await saveFile(`${slug()}-orcamento.csv`,to1252(csvOrc(orcamento()).replace(/^\uFEFF/,"")),"text/csv"); msg.textContent=st==="saved"?"Planilha salva.":"Planilha enviada."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar a planilha agora."; } };
+$("orcPdf").onclick=async()=>{ const msg=$("orcMsg"); try{ const st=await saveFile(`${slug()}-orcamento-${agora().arq}.pdf`,buildOrcPDF(orcamento()),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar o PDF agora."; } };
+$("orcCsv").onclick=async()=>{ const msg=$("orcMsg"); try{ const st=await saveFile(`${slug()}-orcamento-${agora().arq}.csv`,to1252(csvOrc(orcamento()).replace(/^\uFEFF/,"")),"text/csv"); msg.textContent=st==="saved"?"Planilha salva.":"Planilha enviada."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar a planilha agora."; } };
 $("tabRefW").addEventListener("change",e=>{ const i=e.target.dataset.rw; if(i==null) return; S.walls[+i].st=e.target.value; renderWalls(); render(); });
 $("tabRefA").addEventListener("change",e=>{ const i=e.target.dataset.ra; if(i==null) return; S.ab[+i].st=e.target.value; render(); });
 // toque na planta de reforma: troca a situação da parede (existente → demolir → construir) ou da esquadria
@@ -2787,6 +2787,7 @@ function zipOne(name,data){
   E.setUint32(0,0x06054b50,true);E.setUint16(8,1,true);E.setUint16(10,1,true);E.setUint32(12,cd.length,true);E.setUint32(16,lh.length+sz,true);
   const out=new Uint8Array(lh.length+sz+cd.length+22); out.set(lh,0); out.set(data,lh.length); out.set(cd,lh.length+sz); out.set(end,lh.length+sz+cd.length); return out;
 }
+const agora=()=>{ const d=new Date(), z=n=>String(n).padStart(2,"0"); return {arq:`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`, txt:`${z(d.getDate())}/${z(d.getMonth()+1)}/${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`}; };
 const slug=()=>(S.obra||"arquitetonico").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40)||"arquitetonico";
 
 /* ======================================================================
@@ -2923,8 +2924,9 @@ function buildDXF(){
 const setDxfMsg=t=>document.querySelectorAll("[data-dxfmsg]").forEach(m=>m.textContent=t);
 document.querySelectorAll("[data-dxf]").forEach(b=>b.onclick=async()=>{
   try{ const bytes=to1252(buildDXF()); let st;
-    if(window.claude) st=await saveFile(slug()+"-DXF.zip",zipOne(slug()+".dxf",bytes),"application/zip");
-    else st=await saveFile(slug()+".dxf",bytes,"application/dxf");
+    const nm=`${slug()}-${agora().arq}`;
+    if(window.claude) st=await saveFile(nm+"-DXF.zip",zipOne(nm+".dxf",bytes),"application/zip");
+    else st=await saveFile(nm+".dxf",bytes,"application/dxf");
     setDxfMsg(st==="saved"?"Arquivo salvo.":"Arquivo enviado."); }
   catch(e){ setDxfMsg(e&&e.code==="declined"?"Download cancelado.":"Não foi possível baixar aqui. Use Copiar DXF."); }
 });
@@ -2964,6 +2966,7 @@ function buildPDF(fmt){
     text(cx+3,yl[3]+2.2,lab,"RESPONSÁVEL TÉCNICO"); text(cx+3,yl[3]+6.6,2.4,S.rtNome||"",true); text(cx+3,yl[3]+11,ts,S.crea||"");
     lw(.2); line(cx+105*q,yl[3]+9.5,cx+cw-5,yl[3]+9.5); text(cx+105*q+(cw-5-105*q)/2,yl[3]+12,lab,"assinatura",false,1);
     const bx=[0,45,90,135].map(v=>v*q); bx.slice(1).forEach(x=>line(cx+x,yl[4],cx+x,cy+ch));
+    text(ml+2,H-mo-1.6,1.5,`Gerado em ${agora().txt} · ${VERSAO}`);
     [["ESCALA",fl.escala],["DATA",S.data||""],["FORMATO",fmt],["PRANCHA",fl.n]].forEach(([a,b],i)=>{ text(cx+bx[i]+3,yl[4]+2.2,lab,a); text(cx+bx[i]+3,yl[4]+6,ts,b,true); });
   };
   const desenho=(it)=>{
@@ -3011,7 +3014,7 @@ function buildPDF(fmt){
 }
 $("pdfBtn").onclick=async()=>{
   const msg=$("pdfMsg"), fmt=$("fmt").value;
-  try{ const st=await saveFile(`${slug()}-${fmt}.pdf`,buildPDF(fmt),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }
+  try{ const st=await saveFile(`${slug()}-${fmt}-${agora().arq}.pdf`,buildPDF(fmt),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }
   catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar o PDF agora."; }
 };
 
