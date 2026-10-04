@@ -651,7 +651,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.16 · perspectivas renderizadas (SketchUp)";
+const VERSAO="versão 5.17 · portas vistas de lado na fachada sem texto encavalado";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1177,7 +1177,8 @@ function desenhaFolhas(D,tipo,mod,nf,x0,x1,z0,z1){
   const k=D.k, Y=z=>-z, box=(xa,za,xb,zb,lw)=>PL(D,[[xa,Y(za)],[xb,Y(za)],[xb,Y(zb)],[xa,Y(zb)],[xa,Y(za)]],lw,"ESQUADRIA");   // (x, z) de um canto e do outro
   const tri=(a,c,b,d,lado)=>{ const P={esq:[[a,c],[b,(c+d)/2],[a,d]],dir:[[b,c],[a,(c+d)/2],[b,d]],cima:[[a,d],[(a+b)/2,c],[b,d]]}[lado]; PL(D,P.map(([x,z])=>[x,Y(z)]),.18,"ESQUADRIA",true); };
   const seta=(xa,xb,z)=>{ L(D,xa,Y(z),xb,Y(z),.25,"ESQUADRIA"); const s0=1.3*k, dr=Math.sign(xb-xa)||1; PG(D,[[xb,Y(z)],[xb-dr*s0*1.7,Y(z)-s0*0.6],[xb-dr*s0*1.7,Y(z)+s0*0.6]],"ESQUADRIA"); };
-  const n=Math.max(1,nf||1), w=(x1-x0)/n, zm=(z0+z1)/2;
+  const n=Math.max(1,nf||1), w=(x1-x0)/n, zm=(z0+z1)/2, wp=Math.abs(w)/k;   // largura de cada folha no papel (mm)
+  if(wp<2.2){ for(let i=0;i<n;i++) box(x0+i*w,z0,x0+(i+1)*w,z1,.2); return; }   // vista muito de lado (parede inclinada): só o contorno das folhas
   if(tipo==="Janela"){
     if(mod==="correr"){ for(let i=0;i<n;i++) box(x0+i*w,z0,x0+(i+1)*w,z1,.25);
       (n>=4?[1,2]:[0,1]).forEach(i=>{ const c=x0+(i+0.5)*w, d=w*0.28, vai=i<n/2?1:-1; seta(c-vai*d,c+vai*d,zm); }); }
@@ -1187,7 +1188,7 @@ function desenhaFolhas(D,tipo,mod,nf,x0,x1,z0,z1){
     else { box(x0,z0,x1,z1,.25); L(D,x0,Y(z0),x1,Y(z1),.1,"ESQUADRIA"); L(D,x0,Y(z1),x1,Y(z0),.1,"ESQUADRIA"); }
   } else if(tipo==="Porta"){
     if(mod==="correr4"){ for(let i=0;i<n;i++) box(x0+i*w,z0,x0+(i+1)*w,z1,.25);
-      [0,n-1].forEach(i=>TX(D,x0+(i+0.5)*w,Y(z0+1.0),"FIXA",1.5,{l:"ESQUADRIA"}));
+      if(wp>=5) [0,n-1].forEach(i=>TX(D,x0+(i+0.5)*w,Y(z0+1.0),"FIXA",1.5,{l:"ESQUADRIA"}));
       [[1,-1],[2,1]].forEach(([i,vai])=>{ const c=x0+(i+0.5)*w, d=w*0.3; seta(c-vai*d,c+vai*d,z0+1.0); }); }
     else if(mod==="correr"){ for(let i=0;i<n;i++) box(x0+i*w,z0,x0+(i+1)*w,z1,.25);
       for(let i=0;i<n;i++){ const c=x0+(i+0.5)*w, d=w*0.25, vai=n===1?-1:i===0?-1:1; seta(c-vai*d,c+vai*d,z0+1.0); } }
