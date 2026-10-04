@@ -364,7 +364,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <section id="tab-ban" hidden>
     <div class="sheet">
       <h2>Detalhe do banheiro</h2>
-      <p class="cap">Para cada ambiente chamado Banho, Banheiro, WC ou Lavabo: planta ampliada com as louças e as vistas das 4 paredes. As louças são colocadas sozinhas: box no canto oposto à porta, vaso ao lado do box (mesma parede hidráulica) e lavatório na parede ao lado. Nesta versão só para banheiro retangular.</p>
+      <p class="cap">Para cada ambiente chamado Banho, Banheiro, WC ou Lavabo: planta ampliada com as louças e as vistas das 4 paredes. As louças são colocadas sozinhas: box no canto oposto à porta, vaso ao lado do box (mesma parede hidráulica) e lavatório na parede ao lado. Funciona em banheiro retangular ou com uma parede inclinada (usa o maior retângulo que cabe nele).</p>
       <div class="form"><label>Revestimento cerâmico nas paredes<select id="banho.rev"><option value="0">Até o teto</option><option value="1.5">Até 1,50 m</option><option value="1.8">Até 1,80 m</option><option value="2.1">Até 2,10 m</option></select></label></div>
     </div>
     <div id="banhos"></div>
@@ -530,7 +530,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 4.2 · fossa séptica e esgoto pelo contorno da obra";
+const VERSAO="versão 4.2 · fossa séptica, esgoto pelo contorno e banheiro com parede inclinada";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1141,15 +1141,28 @@ function desenhoFachada(G,k,lado,pag=null){
 /* ---------------- Detalhe do banheiro ---------------- */
 const ehBanho=n=>/banh|\bwc\b|lavabo|sanit|toalete/i.test(String(n||""));
 // louças em coordenadas da planta. Cada parede do ambiente: origem no canto, "a" ao longo da parede, "n" para dentro do ambiente
+// banheiro quase retangular (uma parede inclinada, como na divisa de rua): usa o maior retângulo que cabe nele
+function retUtil(r){ if(r.ret) return r; if(r._util!==undefined) return r._util; const P=r.poly, n=P.length; r._util=null; if(n<4||n>8) return null;
+  const xs=new Set(P.map(p=>p[0])), ys=new Set(P.map(p=>p[1]));
+  P.forEach((a,i)=>{ const b=P[(i+1)%n]; if(Math.abs(a[0]-b[0])<1e-6||Math.abs(a[1]-b[1])<1e-6) return;
+    [...ys].forEach(y=>{ const t=(y-a[1])/(b[1]-a[1]); if(t>0&&t<1) xs.add(a[0]+(b[0]-a[0])*t); }); [...xs].forEach(x=>{ const t=(x-a[0])/(b[0]-a[0]); if(t>0&&t<1) ys.add(a[1]+(b[1]-a[1])*t); }); });
+  const X=[...xs].sort((p,q)=>p-q), Y=[...ys].sort((p,q)=>p-q), dentro=p=>pontoDentro(p,P)||P.some((a,i)=>distSeg(p,{x1:a[0],y1:a[1],x2:P[(i+1)%n][0],y2:P[(i+1)%n][1]})<1e-4);
+  let best=null;
+  for(let i=0;i<X.length;i++) for(let j=i+1;j<X.length;j++) for(let a=0;a<Y.length;a++) for(let b=a+1;b<Y.length;b++){
+    const x0=X[i], x1=X[j], y0=Y[a], y1=Y[b], ar=(x1-x0)*(y1-y0); if(best&&ar<=best.ar) continue;
+    const ok=[0,0.25,0.5,0.75,1].every(t=>dentro([x0+(x1-x0)*t,y0])&&dentro([x0+(x1-x0)*t,y1])&&dentro([x0,y0+(y1-y0)*t])&&dentro([x1,y0+(y1-y0)*t]))&&!P.some(p=>p[0]>x0+1e-6&&p[0]<x1-1e-6&&p[1]>y0+1e-6&&p[1]<y1-1e-6);
+    if(ok) best={x0,x1,y0,y1,ar}; }
+  if(!best||best.ar<0.7*r.area||Math.min(best.x1-best.x0,best.y1-best.y0)<0.8) return null;
+  const {x0,x1,y0,y1}=best; r._util={...r,x0,x1,y0,y1,poly:[[x0,y0],[x1,y0],[x1,y1],[x0,y1]],areaUtil:best.ar,cx:(x0+x1)/2,cy:(y0+y1)/2,ret:true,util:true,real:r}; return r._util; }
 function layoutBanheiro(G,r){
-  if(!r.ret) return null;
+  if(!r.ret){ r=retUtil(r); if(!r) return null; }
   const h=G.h, x0=r.x0,x1=r.x1,y0=r.y0,y1=r.y1, W=x1-x0, H=y1-y0;
   const porta=G.abs.find(g=>g.tipo!=="Janela"&&(()=>{ const mx=(g.p0[0]+g.p1[0])/2, my=(g.p0[1]+g.p1[1])/2, dentroX=mx>x0-0.01&&mx<x1+0.01, dentroY=my>y0-0.01&&my<y1+0.01;
     return (dentroX&&(Math.abs(my-(y0-h))<0.03||Math.abs(my-(y1+h))<0.03))||(dentroY&&(Math.abs(mx-(x0-h))<0.03||Math.abs(mx-(x1+h))<0.03)); })());
   const pc=porta?[(porta.p0[0]+porta.p1[0])/2,(porta.p0[1]+porta.p1[1])/2]:[x0,y0];
   const cs=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]], cd=cs.reduce((m,c)=>Math.hypot(c[0]-pc[0],c[1]-pc[1])<Math.hypot(m[0]-pc[0],m[1]-pc[1])?c:m,cs[0]);
   const sx=Math.abs(cd[0]-x0)<1e-6?-1:1, sy=Math.abs(cd[1]-y0)<1e-6?-1:1, cb=[sx>0?x0:x1,sy>0?y0:y1];   // canto do box (oposto à porta); sx, sy: do canto para dentro
-  const lavabo=r.area<2.2||Math.min(W,H)<1.1;
+  const lavabo=r.area<2.2||Math.min(W,H)<1.1||(S.uso==="comercial"&&r.area<4);   // sala comercial: banheiro pequeno sem chuveiro
   let box=null;
   if(!lavabo){ const bs=Math.min(0.90,Math.max(0.70,Math.min(W,H)-0.65));
     if(Math.min(W,H)<=1.25){ if(W<=H) box={x0,x1,y0:sy>0?y0:y1-0.9,y1:sy>0?y0+0.9:y1}; else box={x0:sx>0?x0:x1-0.9,x1:sx>0?x0+0.9:x1,y0,y1}; }
@@ -1172,6 +1185,7 @@ function layoutBanheiro(G,r){
   return {box,vaso,lav,porta,cb,sx,sy,lavabo,chuv:box?(cheioX?{c:[(box.x0+box.x1)/2,cb[1]],n:[0,sy]}:cheioY?{c:[cb[0],(box.y0+box.y1)/2],n:[sx,0]}:{c:[(box.x0+box.x1)/2,cb[1]],n:[0,sy]}):null};
 }
 function desenhoBanheiro(G,r,k){
+  if(!r.ret&&retUtil(r)) r=retUtil(r);   // parede inclinada: detalhe pelo retângulo útil
   const D=Dw(k), h=G.h, t=G.t, m=t+0.35, win={x0:r.x0-m,y0:r.y0-m,x1:r.x1+m,y1:r.y1+m};
   // paredes recortadas na janela em volta do ambiente
   const corta=P=>{ let out=P; [[0,win.x0,1],[0,win.x1,-1],[1,win.y0,1],[1,win.y1,-1]].forEach(([c,v,sg])=>{ const inn=q=>(q[c]-v)*sg>=0, res=[];
@@ -1196,6 +1210,7 @@ function desenhoBanheiro(G,r,k){
 }
 // vista interna de uma parede do banheiro: lado = "A" (parede de cima), "B" (direita), "C" (baixo), "D" (esquerda)
 function vistaBanheiro(G,r,k,lado){
+  if(!r.ret&&retUtil(r)) r=retUtil(r);   // parede inclinada: detalhe pelo retângulo útil
   const D=Dw(k), Y=z=>-z, h=G.h, pd=num(S.pd), rev=num(S.banho&&S.banho.rev)>0?Math.min(pd,num(S.banho.rev)):pd, Lb=layoutBanheiro(G,r);
   const F={A:[0,-1],B:[1,0],C:[0,1],D:[-1,0]}[lado], Rt=[-F[1],F[0]], U=(x,y)=>x*Rt[0]+y*Rt[1];
   const face={A:[[r.x0,r.y0],[r.x1,r.y0]],B:[[r.x1,r.y0],[r.x1,r.y1]],C:[[r.x0,r.y1],[r.x1,r.y1]],D:[[r.x0,r.y0],[r.x0,r.y1]]}[lado];
@@ -1237,7 +1252,8 @@ function vistaBanheiro(G,r,k,lado){
   if(rev<pd-1e-6) TX(D,(ua+ub)/2,Y(rev)-1.8*k,`REVESTIMENTO CERÂMICO ATÉ ${f(rev)}`,1.4,{l:"COTAS"}); else TX(D,(ua+ub)/2,Y(pd)+2.4*k,"REVESTIMENTO CERÂMICO ATÉ O TETO",1.4,{l:"COTAS"});
   return D;
 }
-const notasBanho=()=>[`Revestimento cerâmico nas paredes ${num(S.banho.rev)>0?`até ${f(num(S.banho.rev))} m`:"até o teto"}; piso cerâmico antiderrapante.`,`Box em vidro temperado 8 mm, altura 1,90 m.`,`Pontos de água: chuveiro 2,10 m, registro 1,10 m, lavatório 0,60 m, vaso 0,20 m (do piso acabado).`,`Caimento do piso do box de 1% para o ralo; piso do banheiro 2 cm abaixo dos ambientes vizinhos.`,`Bancada do lavatório a 0,80 m; espelho de 1,10 a 1,90 m.`,`Posição das louças sugerida pelo app: confirmar com o projeto hidrossanitário.`];
+const notasBanho=()=>{ const comBox=(GG||geom()).rooms.some(r=>ehBanho(r.n)&&(()=>{ const L0=layoutBanheiro(GG||geom(),r); return L0&&L0.box; })());
+  return [`Revestimento cerâmico nas paredes ${num(S.banho.rev)>0?`até ${f(num(S.banho.rev))} m`:"até o teto"}; piso cerâmico antiderrapante.`,...(comBox?[`Box em vidro temperado 8 mm, altura 1,90 m.`,`Pontos de água: chuveiro 2,10 m, registro 1,10 m, lavatório 0,60 m, vaso 0,20 m (do piso acabado).`,`Caimento do piso do box de 1% para o ralo; piso do banheiro 2 cm abaixo dos ambientes vizinhos.`]:[`Pontos de água: lavatório 0,60 m e vaso 0,20 m (do piso acabado); ralo sifonado no piso.`,`Piso do banheiro 1 cm abaixo dos ambientes vizinhos, com caimento para o ralo.`]),`Bancada do lavatório a 0,80 m; espelho de 1,10 a 1,90 m.`,`Posição das louças sugerida pelo app: confirmar com o projeto hidrossanitário.`]; };
 
 /* ---------------- Planta de layout (móveis) ---------------- */
 // cada móvel é desenhado num sistema local: "s" ao longo da parede, "t" da parede para dentro do ambiente
@@ -1367,9 +1383,9 @@ function candidatos(it,ctx){ const r=ctx.r, P=r.poly, out=[];
 // arranjo de todos os ambientes (feito uma vez por desenho)
 function layoutMoveis(G){
   return G.rooms.map(r=>{ const tipo=tipoMob(r), lab=r.labIdx>=0?S.rooms[r.labIdx]:null, v=lab?Math.round(num(lab.mv)):0, res={r,tipo,pos:[],faltou:[],sol:[],banho:null,carro:null};
-    if(tipo==="banho"){ const Lb=r.ret?layoutBanheiro(G,r):null; if(Lb){ res.banho=Lb; const loc=(it,s0,t0)=>[it.c[0]+it.a[0]*s0+it.n[0]*t0,it.c[1]+it.a[1]*s0+it.n[1]*t0], rq=(it,s0,s1,t0,t1)=>[loc(it,s0,t0),loc(it,s1,t0),loc(it,s1,t1),loc(it,s0,t1)];
+    if(tipo==="banho"){ const Lb=layoutBanheiro(G,r); if(Lb){ res.banho=Lb; const loc=(it,s0,t0)=>[it.c[0]+it.a[0]*s0+it.n[0]*t0,it.c[1]+it.a[1]*s0+it.n[1]*t0], rq=(it,s0,s1,t0,t1)=>[loc(it,s0,t0),loc(it,s1,t0),loc(it,s1,t1),loc(it,s0,t1)];
         res.sol.push(rq(Lb.vaso,-0.2,0.2,0,0.68),rq(Lb.lav,-Lb.lav.larg/2,Lb.lav.larg/2,0,Lb.lav.prof)); if(Lb.box){ const b=Lb.box; res.sol.push([[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]]); } }
-      else if(!r.ret) res.faltou.push("louças (banheiro não retangular)"); return res; }
+      else if(!r.ret) res.faltou.push("louças (banheiro muito fora do retângulo)"); return res; }
     if(tipo==="garagem"){ const W=r.x1-r.x0, H=r.y1-r.y0, lg=W>=H, Lc=4.30, Wc=1.80, cx=(r.x0+r.x1)/2, cy=(r.y0+r.y1)/2;
       const T={A:lg?[cx-Lc/2,cy-Wc/2]:[cx+Wc/2,cy-Lc/2],u:lg?[1,0]:[0,1],N:lg?[0,1]:[-1,0],s0:0,w:Lc,m:1}, Q=retW(T,[0,0,Lc,Wc]);
       if(dentroAmb(r,Q)){ res.carro=T; res.sol.push(Q); } else res.faltou.push("carro"); return res; }
@@ -1654,7 +1670,9 @@ function redeHidro(G,LM){
   let fr=frente;
   if(fossa&&fossa.pos){ const te=anelT(fossa.pos.ent); fr=[te,te]; }
   let tf=null, best=1e9;
-  caixas.forEach(c=>{ const tt=Math.min(Math.max(c.t,fr[0]),fr[1]); const v=caixas.reduce((s,o)=>s+dist(o.t,tt),0); if(v<best){ best=v; tf=tt; } });
+  // ponto do trecho da frente mais perto de cada caixa (dando a volta no anel pelos dois lados)
+  const naFrente=t=>{ const tt=((t%PER)+PER)%PER; if(tt>=fr[0]-1e-9&&tt<=fr[1]+1e-9) return tt; return dist(tt,fr[0])<=dist(tt,fr[1])?fr[0]:fr[1]; };
+  caixas.forEach(c=>{ const tt=naFrente(c.t); const v=caixas.reduce((s,o)=>s+dist(o.t,tt),0); if(v<best){ best=v; tf=tt; } });
   if(tf===null) tf=(fr[0]+fr[1])/2;
   // coletor pelo anel, sempre pelo caminho mais curto até a caixa final
   const trechos=[]; caixas.forEach(c=>{ let a=c.t, b=tf; let dd=((b-a)%PER+PER)%PER; if(dd>PER/2){ [a,b]=[b,a]; dd=PER-dd; } if(dd>0.05) trechos.push([a,a+dd]); });
@@ -2859,7 +2877,7 @@ function render(){
     $("sitAvisos").innerHTML=Tr.pol?(Tr.recL.some(v=>v<0)?`<div class="alert bad">Parte da construção fica fora do lote. Confira a posição (lado paralelo e as duas distâncias) e se as paredes acompanham os ângulos do lote (${Tr.PO.ang.map(v=>f(v,1)+"°").join(", ")}).</div>`:""):(Tr.rec.dir<0||Tr.rec.fundo<0||Tr.rec.frente<0||Tr.rec.esq<0)?`<div class="alert bad">A construção não cabe no terreno com esses recuos (lateral direito ${f(Tr.rec.dir)} m, fundos ${f(Tr.rec.fundo)} m). Confira testada, profundidade e recuos.</div>`:""; }
   { const bs=G.rooms.filter(r=>ehBanho(r.n)), kb=0.03;
     $("banhos").innerHTML=!bs.length?`<div class="sheet"><p class="cap" style="margin:0">Nenhum ambiente com nome de banheiro (Banho, Banheiro, WC, Lavabo). Dê o nome tocando no ambiente na aba Planta.</p></div>`:
-      bs.map(r=>!r.ret?`<div class="sheet"><h2>${esc(r.n)}</h2><p class="cap">Este banheiro não é retangular: nesta versão o detalhe com louças é só para banheiro retangular.</p><div class="draw">${svgDe(desenhoBanheiro(G,r,kb))}</div></div>`:
+      bs.map(r=>!retUtil(r)?`<div class="sheet"><h2>${esc(r.n)}</h2><p class="cap">Este banheiro foge muito do retângulo: o detalhe com louças é feito para banheiro retangular ou com uma parede inclinada.</p><div class="draw">${svgDe(desenhoBanheiro(G,r,kb))}</div></div>`:
         `<div class="sheet"><h2>${esc(r.n)} · planta ampliada</h2><div class="draw" style="max-width:520px">${svgDe(desenhoBanheiro(G,r,kb))}</div>
         <div class="grid2" style="margin-top:12px">${["A","B","C","D"].map(l=>`<div><h3 style="margin-top:0">Vista ${l}</h3><div class="draw">${svgDe(vistaBanheiro(G,r,kb,l))}</div></div>`).join("")}</div>
         <ol class="notes" style="margin-top:12px">${notasBanho().map(t=>`<li>${esc(t)}</li>`).join("")}</ol></div>`).join(""); }
@@ -3214,7 +3232,7 @@ function pranchas(fmt){
   const QD=quadra(G), sep=fmt==="A4", wQ=sep?aw:aw*0.42, sq=QD?encaixar(k=>desenhoQuadra(G,k,QD),wQ,ah-TT):null, si=encaixar(k=>desenhoSituacao(G,k),sq&&!sep?aw-wQ-8:aw,ah-TT);   // no A4 a situação vai numa folha só dela
   const LC=locacao(G), lo=LC?encaixar(k=>desenhoLocacao(G,k,LC),aw,ah-TT):null;
   const EC=escada(), eP=S.esc.on==="sim"?encaixar(k=>desenhoEscadaPlanta(k,EC),aw*0.42,ah-TT):null, eC=eP?encaixar(k=>desenhoEscadaCorte(k,EC),aw*0.58-8,ah-TT):null;
-  const bans=G.rooms.filter(r=>ehBanho(r.n)&&r.ret).map(r=>{ const bwP=aw*0.42, pl=encaixar(k=>desenhoBanheiro(G,r,k),bwP,ah-TT), bwV=(aw-bwP-8-6)/2, bhV=(ah-6)/2;
+  const bans=G.rooms.filter(r=>ehBanho(r.n)&&retUtil(r)).map(r=>{ const bwP=aw*0.42, pl=encaixar(k=>desenhoBanheiro(G,r,k),bwP,ah-TT), bwV=(aw-bwP-8-6)/2, bhV=(ah-6)/2;
     let vs=[]; for(const s0 of [20,25,50,75]){ const k=s0/1000; vs=["A","B","C","D"].map(l=>{ const D=vistaBanheiro(G,r,k,l), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k}; }); if(vs.every(d=>d.w<=bwV&&d.h<=bhV-TT)) break; }
     return {r,pl,vs,bwP,bwV,bhV}; });
   const nE=Math.max(1,Q.length), cE=Math.min(nE,nE>6?4:3), rE=Math.ceil(nE/cE), bwE=(aw-6*(cE-1))/cE, bhE=(ah-6*(rE-1))/rE;
