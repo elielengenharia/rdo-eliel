@@ -259,7 +259,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <section id="tab-hid" hidden>
     <div class="sheet">
       <h2>Planta hidrossanitária</h2>
-      <p class="cap">Água fria e esgoto traçados sozinhos a partir das louças do Banheiro e dos móveis do Layout (pia, tanque, máquina). Água: reservatório sobre o banheiro, coluna (AF1, AF2…) em cada área molhada e ramal pela parede até cada ponto. Esgoto: aparelhos para a caixa sifonada, vaso direto em Ø100, pia para a caixa de gordura, saída para caixas de inspeção do lado de fora e coletor até a rede ou fossa na frente do lote.</p>
+      <p class="cap">Água fria e esgoto traçados sozinhos a partir das louças do Banheiro e dos móveis do Layout (pia, tanque, máquina). Água: reservatório sobre o banheiro, coluna (AF1, AF2…) em cada área molhada e ramal pela parede até cada ponto. Esgoto: aparelhos para a caixa sifonada, vaso direto em Ø100, pia para a caixa de gordura, saída para caixas de inspeção do lado de fora (ou dentro da edificação no lado em que ela encosta na divisa ou no alinhamento, para nada cair no lote vizinho) e coletor até a rede ou fossa na frente do lote.</p>
       <div class="draw" id="hid"></div>
       <div class="chips" id="hidChips"></div><div id="hidAvisos"></div>
     </div>
@@ -521,7 +521,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 4.0 · planta de situação e lote pelas medidas do mapa";
+const VERSAO="versão 4.1 · caixas de esgoto dentro do lote";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1606,8 +1606,14 @@ function redeHidro(G,LM){
     if(!A.length) return;
     if(cs&&!saida) saida={p:cs,d:50};
     salas.push({r,A,cs,saida}); });
-  // anel externo (onde ficam as caixas de inspeção), a 0,80 m da casa
-  const X0=bb.x0-d, Y0=bb.y0-d, X1=bb.x1+d, Y1=bb.y1+d, Wr=X1-X0, Hr=Y1-Y0, PER=2*(Wr+Hr);
+  // anel das caixas de inspeção: a 0,80 m da casa, por fora; no lado em que isso cai fora do lote
+  // (construção na divisa ou no alinhamento) as caixas ficam dentro da edificação, a 0,60 m da parede
+  const TL=G.vazio?null:terreno(G).lote, nT=TL?TL.length:0;
+  const okP=p=>!TL||(pontoDentro(p,TL)&&Math.min(...TL.map((a,i)=>distSeg(p,{x1:a[0],y1:a[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.25);
+  const livre=(pa,pb)=>[0,0.25,0.5,0.75,1].every(t=>okP([pa[0]+(pb[0]-pa[0])*t,pa[1]+(pb[1]-pa[1])*t]));
+  const dIn=-0.60, dC=livre([bb.x0,bb.y0-d],[bb.x1,bb.y0-d])?d:dIn, dB=livre([bb.x0,bb.y1+d],[bb.x1,bb.y1+d])?d:dIn, dE=livre([bb.x0-d,bb.y0],[bb.x0-d,bb.y1])?d:dIn, dD=livre([bb.x1+d,bb.y0],[bb.x1+d,bb.y1])?d:dIn;
+  if([dC,dB,dE,dD].some(v=>v<0)) aviso.push("Construção encostada na divisa ou no alinhamento: as caixas desse lado ficam dentro da edificação (caixa com tampa no piso), sem passar para o lote vizinho nem para a calçada.");
+  const X0=bb.x0-dE, Y0=bb.y0-dC, X1=bb.x1+dD, Y1=bb.y1+dB, Wr=X1-X0, Hr=Y1-Y0, PER=2*(Wr+Hr);
   const anelP=t=>{ t=((t%PER)+PER)%PER; if(t<=Wr) return [X0+t,Y0]; t-=Wr; if(t<=Hr) return [X1,Y0+t]; t-=Hr; if(t<=Wr) return [X1-t,Y1]; t-=Wr; return [X0,Y1-t]; };
   const anelT=p=>{ const [x,y]=p; const c=[[Math.abs(y-Y0),x-X0],[Math.abs(x-X1),Wr+y-Y0],[Math.abs(y-Y1),Wr+Hr+X1-x],[Math.abs(x-X0),2*Wr+Hr+Y1-y]]; return c.reduce((m,v)=>v[0]<m[0]?v:m)[1]; };
   const lados={cima:[0,Wr],dir:[Wr,Wr+Hr],baixo:[Wr+Hr,2*Wr+Hr],esq:[2*Wr+Hr,PER]};
@@ -1646,7 +1652,8 @@ function redeHidro(G,LM){
     sa.A.forEach(a=>{ const t=contT(P,a.af.p); a.afPipe=contTrecho(sa.r,t,t+0.001,0.07)[0]; }); });
   if(!salas.length) aviso.push("Nenhuma área molhada com louças: dê nome de Banheiro, Cozinha ou Lavanderia aos ambientes (e confira a aba Layout).");
   // hidrômetro na frente do lote, fora do anel do esgoto
-  const hd=fim?(()=>{ const t=fim.t+((fr[1]-fim.t)>2?1.8:-1.8), p=anelP(t), v={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente||"baixo"]||[0,1]; return [p[0]+v[0]*1.0,p[1]+v[1]*1.0]; })():null;
+  const dFr={cima:dC,baixo:dB,esq:dE,dir:dD}[S.frente]??dB, oHd=dFr>0?1.0:-dFr-0.15;   // na divisa: hidrômetro no nicho da fachada
+  const hd=fim?(()=>{ const t=fim.t+((fr[1]-fim.t)>2?1.8:-1.8), p=anelP(t), v={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente||"baixo"]||[0,1]; return [p[0]+v[0]*oHd,p[1]+v[1]*oHd]; })():null;
   return {ap,salas,ramal,trechos,anelP,caixas:cx2,fim,out,res,desc,ramaisAF,hd,pessoas,cons,Vn,aviso,com}; }
 function simbHidro(D,q){ const k=D.k, [x,y]=q.p;
   if(q.t==="af"){ CI(D,x,y,0.9*k,.25,"AGUA"); PG(D,[[x-0.6*k,y],[x,y-0.6*k],[x+0.6*k,y],[x,y+0.6*k]],"AGUA"); return; }
