@@ -607,7 +607,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.2 · um quadro por sala comercial";
+const VERSAO="versão 5.3 · símbolos elétricos menores";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1644,11 +1644,12 @@ function pontosEletricos(G,LM){
   const C=UN.flatMap(U=>U.C), tot=C.reduce((s,c)=>s+c.va,0), out={pts,C,tot,aviso,VF,UN,multi};
   out.RE=UN[0].RE; return out; }
 // símbolos (tamanhos em mm de papel)
-function simbolo(D,q){ const k=D.k, l="ELETRICA", [x,y]=q.p, N=q.N||[0,-1], u=[-N[1],N[0]];
+const SIMB=0.65;   // símbolos elétricos menores para a planta não ficar carregada
+function simbolo(D,q){ const k=D.k*SIMB, l="ELETRICA", [x,y]=q.p, N=q.N||[0,-1], u=[-N[1],N[0]];
   const P=(a,b)=>[x+u[0]*a*k+N[0]*b*k,y+u[1]*a*k+N[1]*b*k];
   if(q.t==="luz"){ const r=1.8*k; CI(D,x,y,r,.3,l); L(D,x-r*0.7,y-r*0.7,x+r*0.7,y+r*0.7,.18,l); L(D,x-r*0.7,y+r*0.7,x+r*0.7,y-r*0.7,.18,l);
-    q.leg||TX(D,x+r+0.6*k,y-1.2*k,String(q.va),1.4,{a:"s",l}); q.leg||TX(D,x+r+0.6*k,y+1.3*k,`C${q.c}-${q.cmd}`,1.4,{a:"s",l,b:true}); return; }
-  if(q.t==="int"){ PG(D,[P(-0.8,0.6),P(0.8,0.6),P(0.8,2.2),P(-0.8,2.2)],l); q.leg||TX(D,...P(0,3.6),q.cmd,1.6,{l,b:true});
+    q.leg||TX(D,x+r+0.6*k,y-1.2*k,String(q.va),1.1,{a:"s",l}); q.leg||TX(D,x+r+0.6*k,y+1.3*k,`C${q.c}-${q.cmd}`,1.1,{a:"s",l,b:true}); return; }
+  if(q.t==="int"){ PG(D,[P(-0.8,0.6),P(0.8,0.6),P(0.8,2.2),P(-0.8,2.2)],l); q.leg||TX(D,...P(0,3.6),q.cmd,1.2,{l,b:true});
     // ligação até a(s) luz(es)
     (q.liga||[]).forEach(t=>{ const a=P(0,2.2), mx=(a[0]+t[0])/2, my=(a[1]+t[1])/2, dx=t[0]-a[0], dy=t[1]-a[1], dd=Math.hypot(dx,dy)||1, cv=[mx-dy/dd*dd*0.18,my+dx/dd*dd*0.18], pts=[];
       for(let i=0;i<=14;i++){ const s=i/14, x1=(1-s)*(1-s)*a[0]+2*(1-s)*s*cv[0]+s*s*t[0], y1=(1-s)*(1-s)*a[1]+2*(1-s)*s*cv[1]+s*s*t[1]; pts.push([x1,y1]); }
@@ -1656,13 +1657,13 @@ function simbolo(D,q){ const k=D.k, l="ELETRICA", [x,y]=q.p, N=q.N||[0,-1], u=[-
       const rr=1.8*k; while(pts.length>2&&Math.hypot(pts[pts.length-2][0]-t[0],pts[pts.length-2][1]-t[1])<rr) pts.pop(); const pe=pts[pts.length-2]||a, qx=t[0]-pe[0], qy=t[1]-pe[1], ql=Math.hypot(qx,qy)||1; pts[pts.length-1]=[t[0]-qx/ql*rr,t[1]-qy/ql*rr];
       PL(D,pts,.13,l,true); });
     return; }
-  if(q.t==="qd"){ const a=P(-2.4,0.3), b=P(2.4,0.3), c=P(2.4,2.3), d=P(-2.4,2.3); PL(D,[a,b,c,d,a],.3,l); PG(D,[a,b,c],l); q.leg||TX(D,...P(0,4),q.nome||"QD",1.8,{l,b:true}); return; }
+  if(q.t==="qd"){ const a=P(-2.4,0.3), b=P(2.4,0.3), c=P(2.4,2.3), d=P(-2.4,2.3); PL(D,[a,b,c,d,a],.3,l); PG(D,[a,b,c],l); q.leg||TX(D,...P(0,4),q.nome||"QD",1.4,{l,b:true}); return; }
   if(q.ch){ const s=1.2; PL(D,[P(-s,0.4),P(s,0.4),P(s,0.4+2*s),P(-s,0.4+2*s),P(-s,0.4)],.3,l); L(D,...P(-s,0.4),...P(s,0.4+2*s),.18,l); L(D,...P(s,0.4),...P(-s,0.4+2*s),.18,l);
-    q.leg||TX(D,...P(0,0.4+2*s+2),`C${q.c} ${q.va}W`,1.4,{l,b:true}); return; }
+    q.leg||TX(D,...P(0,0.4+2*s+2),`C${q.c} ${q.va}W`,1.1,{l,b:true}); return; }
   // tomada: triângulo com a base na parede (vazio = baixa, meio cheio = média, cheio = alta)
   const A=P(-1.2,0.3), B=P(1.2,0.3), T=P(0,2.4); PL(D,[A,B,T,A],.25,l);
   if(q.alt==="a") PG(D,[A,B,T],l); else if(q.alt==="m") PG(D,[A,P(0,0.3),T],l);
-  q.leg||TX(D,...P(0,4.1),q.t==="tue"?`C${q.c} ${q.ar?"AR":"TUE"}`:`C${q.c}`,1.4,{l,b:q.t==="tue"}); }
+  q.leg||TX(D,...P(0,4.1),q.t==="tue"?`C${q.c} ${q.ar?"AR":"TUE"}`:`C${q.c}`,1.1,{l,b:q.t==="tue"}); }
 function desenhoEletrica(G,k,LM,EL,legenda=true){
   const D=Dw(k), bb=G.bb;
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
@@ -1673,14 +1674,14 @@ function desenhoEletrica(G,k,LM,EL,legenda=true){
   // eletrodutos no forro/laje (linha cheia, NBR 5444) com os circuitos de cada trecho; o do interruptor já sai no símbolo
   if(S.ele.rede!=="não") (EL.UN||[EL]).forEach(U=>U.RE&&U.RE.TR.forEach(t=>{ if(t.int) return; const a=t.a, b=t.b, dx=b[0]-a[0], dy=b[1]-a[1], dd=Math.hypot(dx,dy); if(dd<0.05) return;
     const cv=[(a[0]+b[0])/2-dy*0.12,(a[1]+b[1])/2+dx*0.12], bz=s=>[(1-s)*(1-s)*a[0]+2*(1-s)*s*cv[0]+s*s*b[0],(1-s)*(1-s)*a[1]+2*(1-s)*s*cv[1]+s*s*b[1]];
-    const ra=t.n.q&&t.n.q.t==="luz"?1.8*k:t.n.teto?0:0.6*k, rb=t.n.pai.q&&t.n.pai.q.t==="luz"?1.8*k:0, P=[];
+    const ra=t.n.q&&t.n.q.t==="luz"?1.8*k*SIMB:t.n.teto?0:0.6*k*SIMB, rb=t.n.pai.q&&t.n.pai.q.t==="luz"?1.8*k*SIMB:0, P=[];
     for(let i=0;i<=16;i++){ const p=bz(i/16); if(Math.hypot(p[0]-a[0],p[1]-a[1])>=ra&&Math.hypot(p[0]-b[0],p[1]-b[1])>=rb) P.push(p); }
     if(P.length<2) return; PL(D,P,.2,"ELETRICA");
     if((t.teto&&t.cs.length)||t.dia>20){ const m=bz(0.5), nn=[-dy/dd,dx/dd], tx=`${t.teto?t.cs.join(","):""}${t.dia>20?` ${t.nE>1?t.nE+"x":""}ø${t.dia}`:""}`.trim(), c0=[m[0]+nn[0]*1.6*k,m[1]+nn[1]*1.6*k], w=tx.length*1.2*0.45*k, h=1.1*k;
       TX(D,...c0,tx,1.2,{l:"COTAS"}); rotE.push([[c0[0]-w,c0[1]-h],[c0[0]+w,c0[1]-h],[c0[0]+w,c0[1]+h],[c0[0]-w,c0[1]+h]]); } }));
   EL.pts.forEach(q=>simbolo(D,q));
   // nome do ambiente longe dos pontos e dos móveis
-  LM.forEach(R=>{ const r=R.r, obs=[...R.sol,...rotE,...EL.pts.filter(q=>q.r===r).map(q=>{ const e=(q.t==="luz"?4.5:3)*k; return [[q.p[0]-e,q.p[1]-e],[q.p[0]+e*2,q.p[1]-e],[q.p[0]+e*2,q.p[1]+e],[q.p[0]-e,q.p[1]+e]]; })], nome=r.n.toUpperCase();
+  LM.forEach(R=>{ const r=R.r, obs=[...R.sol,...rotE,...EL.pts.filter(q=>q.r===r).map(q=>{ const e=(q.t==="luz"?4.5:3)*k*SIMB; return [[q.p[0]-e,q.p[1]-e],[q.p[0]+e*2,q.p[1]-e],[q.p[0]+e*2,q.p[1]+e],[q.p[0]-e,q.p[1]+e]]; })], nome=r.n.toUpperCase();
     let pos=null, hh=1.9; for(const h0 of [1.9,1.6,1.4]){ pos=lugarRotulo(r,obs,r.cx,r.cy+3.5*k,nome.length*h0*0.85*k+0.04,h0*1.6*k); hh=h0; if(pos) break; }
     TX(D,...(pos||[r.cx,r.cy+3.5*k]),nome,hh,{b:true,l:"COTAS"}); });
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
