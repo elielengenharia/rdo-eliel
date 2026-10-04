@@ -366,28 +366,59 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
     <div class="sheet">
       <h2>Terreno</h2>
       <p class="cap">A frente do terreno é o lado da rua, o mesmo escolhido como "Frente da casa" na aba Planta. Esquerdo e direito = olhando da rua da frente para o terreno. Se a frente é uma parede chanfrada (avenida inclinada), marque "Frente acompanha a parede chanfrada"; em terreno de esquina, informe de que lado fica a outra rua.</p>
-      <div class="form">
-        <label>Testada (frente, m)<input type="number" step="0.05" id="terr.testada"></label>
-        <label>Profundidade (m)<input type="number" step="0.05" id="terr.prof"></label>
-        <label>Recuo frontal (m)<input type="number" step="0.05" id="terr.recFrente"></label>
-        <label>Recuo lateral esquerdo (m)<input type="number" step="0.05" id="terr.recEsq"></label>
+      <div class="form wide"><label>Formato do lote<select id="terr.forma"><option value="ret">Retangular (testada x profundidade)</option><option value="pol">Pelas medidas do mapa (lote irregular, com chanfro)</option></select></label></div>
+      <div id="ladosBox" hidden style="margin-top:10px">
+        <p class="cap">Digite os lados como estão no mapa do lote. Comece pela <b>frente</b> (da esquerda para a direita, olhando da rua) e siga contornando o lote pelo lado direito. Marque "Rua" nos lados que dão para rua (o chanfro de esquina também). Com a área do mapa o app acha os ângulos do lote.</p>
+        <div class="tbl"><table id="ladosTab"></table></div>
+        <div class="row"><button class="btn" id="ladoAdd" type="button">+ lado</button><label style="display:flex;align-items:center;gap:6px;font-size:13px">Área do mapa (m²)<input type="number" step="0.01" id="terr.areaMapa" style="width:110px"></label></div>
+        <div id="ladosMsg"></div>
+        <p class="cap" style="margin-top:10px">Posição da construção no lote: escolha o lado com que as paredes ficam paralelas e a distância da construção a dois lados (0 = encostada na divisa).</p>
+        <div class="form wide">
+          <label>Na esquina, a rua que passa direto (a outra termina nela)<select id="terr.ruaPassa" data-lsel></select></label>
+          <label>Construção paralela ao lado<select id="terr.alinha" data-lsel></select></label>
+          <label>Distância ao lado<select id="terr.encA" data-lsel></select></label>
+          <label>… de (m)<input type="number" step="0.05" id="terr.recA"></label>
+          <label>Distância ao lado<select id="terr.encB" data-lsel></select></label>
+          <label>… de (m)<input type="number" step="0.05" id="terr.recB"></label>
+        </div>
+      </div>
+      <div class="form" style="margin-top:10px">
+        <label data-soret>Testada (frente, m)<input type="number" step="0.05" id="terr.testada"></label>
+        <label data-soret>Profundidade (m)<input type="number" step="0.05" id="terr.prof"></label>
+        <label data-soret>Recuo frontal (m)<input type="number" step="0.05" id="terr.recFrente"></label>
+        <label data-soret>Recuo lateral esquerdo (m)<input type="number" step="0.05" id="terr.recEsq"></label>
         <label>Largura do passeio (m)<input type="number" step="0.1" id="terr.calcada"></label>
         <label>Norte (graus, 0 = para cima na planta)<input type="number" step="5" id="terr.norte"></label>
       </div>
       <div class="form wide" style="margin-top:10px">
         <label>Rua da frente<input type="text" id="terr.rua"></label>
-        <label>Terreno de esquina<select id="terr.esquina"><option value="não">Não</option><option value="esq">Sim, rua do lado esquerdo</option><option value="dir">Sim, rua do lado direito</option></select></label>
-        <label>Rua lateral (esquina)<input type="text" id="terr.rua2"></label>
-        <label>Frente acompanha a parede chanfrada<select id="terr.chanfro"><option value="não">Não (frente reta)</option><option value="sim">Sim (alinhamento paralelo ao chanfro)</option></select></label>
+        <label data-soret>Terreno de esquina<select id="terr.esquina"><option value="não">Não</option><option value="esq">Sim, rua do lado esquerdo</option><option value="dir">Sim, rua do lado direito</option></select></label>
+        <label data-soret>Rua lateral (esquina)<input type="text" id="terr.rua2"></label>
+        <label data-soret>Frente acompanha a parede chanfrada<select id="terr.chanfro"><option value="não">Não (frente reta)</option><option value="sim">Sim (alinhamento paralelo ao chanfro)</option></select></label>
         <label>Lote<input type="text" id="terr.lote"></label>
         <label>Quadra<input type="text" id="terr.quadra"></label>
-        <label>Vizinho à esquerda<input type="text" id="terr.confEsq"></label>
-        <label>Vizinho à direita<input type="text" id="terr.confDir"></label>
-        <label>Vizinho aos fundos<input type="text" id="terr.confFundo"></label>
+        <label data-soret>Vizinho à esquerda<input type="text" id="terr.confEsq"></label>
+        <label data-soret>Vizinho à direita<input type="text" id="terr.confDir"></label>
+        <label data-soret>Vizinho aos fundos<input type="text" id="terr.confFundo"></label>
       </div>
     </div>
     <div class="sheet">
-      <h2>Planta de situação</h2>
+      <h2>Planta de situação (lote na quadra)</h2>
+      <p class="cap" id="quadraCap">Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada).</p>
+      <div class="form wide" id="quadraForm">
+        <label>Esquina de referência<select id="terr.ladoRef"><option value="esq">À esquerda do lote</option><option value="dir">À direita do lote</option></select></label>
+        <label>Distância do lote até a esquina (m)<input type="number" step="0.05" id="terr.dEsq"></label>
+        <label>Rua transversal à esquerda<input type="text" id="terr.ruaE"></label>
+        <label>Rua transversal à direita<input type="text" id="terr.ruaD"></label>
+        <label>Rua dos fundos da quadra<input type="text" id="terr.ruaF"></label>
+        <label>Comprimento da quadra na frente (m, 0 = estimar)<input type="number" step="0.5" id="terr.qFrente"></label>
+        <label>Profundidade da quadra (m, 0 = estimar)<input type="number" step="0.5" id="terr.qProf"></label>
+      </div>
+      <div class="draw" id="sitQ" style="margin-top:10px"></div>
+      <div class="tbl"><table id="tabConf"></table></div>
+    </div>
+    <div class="sheet">
+      <h2>Planta de implantação (casa no lote)</h2>
       <div class="draw" id="sit"></div>
       <div class="chips" id="sitChips"></div>
       <div id="sitAvisos"></div>
@@ -490,7 +521,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 3.9 · PDF salva no celular";
+const VERSAO="versão 4.0 · planta de situação e lote pelas medidas do mapa";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -521,7 +552,7 @@ const AB42=[
   {n:"Cozinha",t:"Janela",w:1,d:1.2,l:1.20,a:1.00,p:1.10},
   {n:"Banho",t:"Janela",w:2,d:2.8,l:0.60,a:0.60,p:1.50}
 ];
-const TERR0={testada:12,prof:25,recFrente:4,recEsq:2.5,calcada:2,rua:"Rua projetada",lote:"",quadra:"",confEsq:"Lote vizinho",confDir:"Lote vizinho",confFundo:"Lote vizinho",norte:0,esquina:"não",rua2:"",chanfro:"não"};
+const TERR0={testada:12,prof:25,recFrente:4,recEsq:2.5,calcada:2,rua:"Rua projetada",lote:"",quadra:"",confEsq:"Lote vizinho",confDir:"Lote vizinho",confFundo:"Lote vizinho",norte:0,esquina:"não",rua2:"",chanfro:"não",dEsq:0,ladoRef:"esq",ruaE:"",ruaD:"",ruaF:"",qFrente:0,qProf:0,forma:"ret",lados:[],areaMapa:0,ruaPassa:0,alinha:1,encA:1,recA:4,encB:0,recB:2.5};
 const TEL0={tipo:2,dir:"h",telha:"Cerâmica",inc:30,beiral:0.60,plat:"não"};
 const INC_TELHA={"Cerâmica":30,"Concreto":30,"Fibrocimento":15,"Metálica":10};
 const ABDEF={Porta:{l:0.80,a:2.10,p:0},Janela:{l:1.20,a:1.00,p:1.10},"Vão":{l:1.00,a:2.10,p:0}};
@@ -1733,7 +1764,7 @@ function memorial(){
   const S1=[];
   const sec=(t,ps)=>S1.push({t,ps:ps.filter(Boolean)});
   sec("1. IDENTIFICAÇÃO",[`Obra: ${S.obra||"a definir"}.`,`Proprietário: ${S.cliente||"a definir"}.`,`Local: ${S.local||"a definir"}${S.terr.rua?` - frente para ${S.terr.rua}`:""}${S.terr.esquina==="esq"||S.terr.esquina==="dir"?`, terreno de esquina com ${S.terr.rua2||"rua lateral"}`:""}${S.terr.lote||S.terr.quadra?` (lote ${S.terr.lote||"-"}, quadra ${S.terr.quadra||"-"})`:""}.`,
-    `Responsável técnico: ${S.rtNome||"-"}${S.crea?`, ${S.crea}`:""}.`,`Área do terreno: ${f(Tr.area)} m² (${f(Tr.testada)} x ${f(Tr.prof)} m). Área construída: ${f(G.areaC)} m². Área útil: ${f(util)} m². Taxa de ocupação: ${f(Tr.to*100,1)}%. Coeficiente de aproveitamento: ${f(Tr.ca)}.`]);
+    `Responsável técnico: ${S.rtNome||"-"}${S.crea?`, ${S.crea}`:""}.`,`Área do terreno: ${f(Tr.area)} m² (${Tr.desc}). Área construída: ${f(G.areaC)} m². Área útil: ${f(util)} m². Taxa de ocupação: ${f(Tr.to*100,1)}%. Coeficiente de aproveitamento: ${f(Tr.ca)}.`]);
   sec("2. OBJETIVO",[`Este memorial descreve os materiais e os serviços para a construção de ${com?"edificação comercial":"residência unifamiliar"} térrea, em complemento às pranchas do projeto arquitetônico. Em caso de dúvida, prevalecem as cotas do projeto e as normas da ABNT.`]);
   sec("3. DESCRIÇÃO DA EDIFICAÇÃO",[`A edificação tem ${G.rooms.length} ambientes: ${lista(G.rooms.map(r=>`${r.n} (${f(r.area)} m²)`))}.`,`Pé-direito de ${f(num(S.pd))} m. Piso interno a ${f(num(S.piso))} m acima do terreno. Recuos: frontal ${f(Tr.rec.frente)} m, laterais ${f(Tr.rec.esq)} m e ${f(Tr.rec.dir)} m, fundos ${f(Tr.rec.fundo)} m.`]);
   sec("4. SERVIÇOS PRELIMINARES",[`Limpeza do terreno com retirada de entulho e vegetação. Locação da obra com gabarito de madeira, conferindo esquadro e níveis. Instalações provisórias de água e energia, e placa da obra conforme o CREA.`]);
@@ -2185,6 +2216,31 @@ function terreno(G){
   const testada=Math.max(0.5,num(T.testada)), prof=Math.max(0.5,num(T.prof)), F1=fMax+num(T.recFrente), F0=F1-prof, R0=rMin-num(T.recEsq), R1=R0+testada;
   const P=(f,r)=>[f*V[0]+r*Rt[0],f*V[1]+r*Rt[1]];
   const TI=infoTelhado(G);
+  // lote pelas medidas do mapa: x ao longo da frente (da esquerda para a direita), y para dentro do lote
+  const PO=T.forma==="pol"&&Array.isArray(T.lados)&&T.lados.length>=3?poligonoLote(T.lados,num(T.areaMapa)):null;
+  if(PO){ const n=PO.P.length, ar=PO.area, sel=(v,d)=>{ const i=Math.round(num(v)); return i>=1&&i<=n?i-1:d; };
+    // gira o lote para o lado escolhido ficar paralelo às paredes da construção
+    const j=sel(T.alinha,0), sa=PO.P[j], sb=PO.P[(j+1)%n], phi=Math.atan2(sb[1]-sa[1],sb[0]-sa[0]);
+    // o lado fica paralelo à parede da construção de direção mais parecida (inclusive a parede chanfrada)
+    const wr=q0=>{ let v=q0%Math.PI; if(v>Math.PI/2) v-=Math.PI; if(v<=-Math.PI/2) v+=Math.PI; return v; };
+    let th=wr(Math.round(phi/(Math.PI/2))*(Math.PI/2)-phi);
+    G.contExt.forEach(s0=>{ const dr=dR([s0[2],s0[3]])-dR([s0[0],s0[1]]), df=dV([s0[2],s0[3]])-dV([s0[0],s0[1]]); if(Math.hypot(dr,df)<0.5) return; const c=wr(Math.atan2(-df,dr)-phi); if(Math.abs(c)<Math.abs(th)-1e-6) th=c; });
+    const ct=Math.cos(th), st=Math.sin(th);
+    const q=PO.P.map(([x,y])=>{ const xr=x*ct-y*st, yr=x*st+y*ct; return [xr,-yr]; });   // (r, f) sem a translação
+    const pts=[]; G.contExt.forEach(s0=>{ pts.push([s0[0],s0[1]],[s0[2],s0[3]]); }); const H=pts.map(p=>[dR(p),dV(p)]);
+    const cq=q.reduce((s0,p)=>[s0[0]+p[0]/n,s0[1]+p[1]/n],[0,0]);
+    const nor=q.map((a,i)=>{ const b=q[(i+1)%n], L0=Math.hypot(b[0]-a[0],b[1]-a[1])||1; let nn=[-(b[1]-a[1])/L0,(b[0]-a[0])/L0]; if(nn[0]*(cq[0]-a[0])+nn[1]*(cq[1]-a[1])<0) nn=[-nn[0],-nn[1]]; return nn; });   // para dentro
+    const mi=i=>Math.min(...H.map(h=>nor[i][0]*(h[0]-q[i][0])+nor[i][1]*(h[1]-q[i][1])));
+    // distâncias pedidas: construção a dA do lado A e a dB do lado B (sistema linear na translação t)
+    const A=sel(T.encA,0), B=sel(T.encB,n-1), dA=num(T.recA), dB=num(T.recB), nA=nor[A], nB=nor[B], det=nA[0]*nB[1]-nA[1]*nB[0];
+    let t; if(Math.abs(det)>0.05){ const a1=mi(A)-dA, b1=mi(B)-dB; t=[(a1*nB[1]-b1*nA[1])/det,(nA[0]*b1-nB[0]*a1)/det]; }
+    else { const a1=mi(A)-dA; t=[nA[0]*a1,nA[1]*a1]; }
+    const rf=q.map(p=>[p[0]+t[0],p[1]+t[1]]), lote=rf.map(([r,f0])=>P(f0,r));
+    const dSeg=(p,a,b)=>distSeg(p,{x1:a[0],y1:a[1],x2:b[0],y2:b[1]}), fora=pts.some(p=>!pontoDentro(p,lote)&&Math.min(...lote.map((a,i)=>dSeg(p,a,lote[(i+1)%n])))>0.02);   // encostar na divisa não é estar fora
+    const recL=lote.map((a,i)=>{ const b=lote[(i+1)%n]; return (fora?-1:1)*Math.min(...pts.map(p=>dSeg(p,a,b))); });
+    const rs=rf.map(p=>p[0]), fs=rf.map(p=>p[1]), resto=recL.slice(1,-1);
+    return {V,Rt,P,F0:Math.min(...fs),F1:rf[0][1],R0:rf[0][0],R1:Math.max(...rs),fMax,fMin,rMin,rMax,testada:num(T.lados[0].m),prof:Math.max(...fs)-Math.min(...fs),area:ar,lote,pol:true,PO,recL,encA:A,encB:B,
+      desc:`irregular, ${n} lados`,rec:{frente:recL[0],esq:recL[n-1],dir:Math.min(...resto),fundo:Math.min(...resto)},to:G.areaC/ar,ca:G.areaC/ar,livre:ar-G.areaC,cobProj:TI.areaProj}; }
   // frente inclinada: o alinhamento fica paralelo à parede chanfrada da frente, a "recuo frontal" dela
   let ch=null; if(T.chanfro==="sim"){ G.incl.forEach(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, C=G.compAt(mx+w.nX*(G.h+0.12),my+w.nY*(G.h+0.12)), sg=(!C||C.ext)?1:-1, on=[w.nX*sg,w.nY*sg];
     if(on[0]*V[0]+on[1]*V[1]>0.5&&(!ch||w.L>ch.w.L)) ch={w,on}; }); }
@@ -2195,12 +2251,76 @@ function terreno(G){
     const fa=P(F1L,R0), fb=P(F1R,R1), fu=[fb[0]-fa[0],fb[1]-fa[1]], fL=Math.hypot(...fu), fd=[fu[0]/fL,fu[1]/fL], fn=on;
     const linhaF=d=>[[fa[0]-fd[0]*4+fn[0]*d,fa[1]-fd[1]*4+fn[1]*d],[fb[0]+fd[0]*4+fn[0]*d,fb[1]+fd[1]*4+fn[1]*d]];
     return {V,Rt,P,F0:F0i,F1:F1L,R0,R1,fMax,fMin,rMin,rMax,testada,prof,area:ar,lote,incl:true,linhaF,fn,frenteL:fL,chW:w,
-      rec:{frente:num(T.recFrente),esq:num(T.recEsq),dir:R1-rMax,fundo:fMin-F0i},to:G.areaC/ar,ca:G.areaC/ar,livre:ar-G.areaC,cobProj:TI.areaProj}; }
+      desc:"frente inclinada",rec:{frente:num(T.recFrente),esq:num(T.recEsq),dir:R1-rMax,fundo:fMin-F0i},to:G.areaC/ar,ca:G.areaC/ar,livre:ar-G.areaC,cobProj:TI.areaProj}; }
   const area=testada*prof;
-  return {V,Rt,P,F0,F1,R0,R1,fMax,fMin,rMin,rMax,testada,prof,area,lote:[P(F1,R0),P(F1,R1),P(F0,R1),P(F0,R0)],
+  return {V,Rt,P,F0,F1,R0,R1,fMax,fMin,rMin,rMax,testada,prof,area,desc:`${f(testada)} x ${f(prof)} m`,lote:[P(F1,R0),P(F1,R1),P(F0,R1),P(F0,R0)],
     rec:{frente:num(T.recFrente),esq:num(T.recEsq),dir:R1-rMax,fundo:fMin-F0},
     to:G.areaC/area, ca:G.areaC/area, livre:area-G.areaC, cobProj:TI.areaProj};
 }
+
+/* ---------------- Lote pelas medidas do mapa (polígono) ---------------- */
+// lados em sequência a partir da frente (da esquerda para a direita, olhando da rua), contornando o lote.
+// Acha os ângulos que fecham o polígono com a área do mapa, ficando o mais perto possível de cantos a 90°
+// (e 45° nos dois cantos de um chanfro: lado curto entre duas ruas).
+function poligonoLote(lados,area){
+  const n=lados.length; if(n<3) return null; const Lm=lados.map(s=>Math.max(0.01,num(s.m)));
+  const med=Lm.slice().sort((a,b)=>a-b)[Math.floor(n/2)], curto=i=>Lm[i]<0.4*med;
+  const pri=Lm.map((_,i)=>{ const j=(i+1)%n; return (curto(i)||curto(j))?Math.PI/4:Math.PI/2; });
+  { const s=pri.reduce((a,b)=>a+b,0), dd=(2*Math.PI-s)/n; for(let i=0;i<n;i++) pri[i]+=dd; }
+  const pts=t=>{ let h=0, x=0, y=0; const P=[[0,0]]; for(let i=0;i<n;i++){ x+=Lm[i]*Math.cos(h); y+=Lm[i]*Math.sin(h); P.push([x,y]); h+=t[i]; } return P; };
+  const A=+area>0?+area:0;
+  const res=t=>{ const P=pts(t), e=P[n], ar=P.slice(0,n).reduce((s,p,i)=>{ const q=P[i+1]; return s+(p[0]*q[1]-q[0]*p[1])/2; },0);
+    const r=[50*e[0],50*e[1],50*(t.reduce((a,b)=>a+b,0)-2*Math.PI)*med]; if(A) r.push(50*(ar-A)/Math.sqrt(A)); t.forEach((v,i)=>r.push((v-pri[i])*med*0.3)); return r; };
+  let t=pri.slice(), lam=1e-3, r=res(t), c=r.reduce((s,v)=>s+v*v,0);
+  for(let it=0;it<200;it++){ const J=r.map(()=>new Array(n).fill(0)); for(let j=0;j<n;j++){ const t2=t.slice(); t2[j]+=1e-6; const r2=res(t2); r2.forEach((v,i)=>J[i][j]=(v-r[i])/1e-6); }
+    const H=[...Array(n)].map((_,a)=>[...Array(n)].map((_,b)=>J.reduce((s,row)=>s+row[a]*row[b],0)+(a===b?lam*(1+J.reduce((s,row)=>s+row[a]*row[a],0)):0))), g=[...Array(n)].map((_,a)=>-J.reduce((s,row,i)=>s+row[a]*r[i],0));
+    // resolve H d = g (Gauss)
+    const M=H.map((row,i)=>[...row,g[i]]); for(let a=0;a<n;a++){ let p=a; for(let b=a+1;b<n;b++) if(Math.abs(M[b][a])>Math.abs(M[p][a])) p=b; [M[a],M[p]]=[M[p],M[a]]; const d=M[a][a]||1e-12; for(let b=a+1;b<n;b++){ const fct=M[b][a]/d; for(let q=a;q<=n;q++) M[b][q]-=fct*M[a][q]; } }
+    const d=new Array(n).fill(0); for(let a=n-1;a>=0;a--){ let s=M[a][n]; for(let q=a+1;q<n;q++) s-=M[a][q]*d[q]; d[a]=s/(M[a][a]||1e-12); }
+    const t2=t.map((v,i)=>v+d[i]), r2=res(t2), c2=r2.reduce((s,v)=>s+v*v,0);
+    if(c2<c){ t=t2; r=r2; const fim=c-c2<1e-12; c=c2; lam=Math.max(1e-7,lam/3); if(fim) break; } else lam*=4; }
+  const P=pts(t).slice(0,n), e=pts(t)[n], fech=Math.hypot(e[0],e[1]), ar=Math.abs(P.reduce((s,p,i)=>{ const q=P[(i+1)%n]; return s+(p[0]*q[1]-q[0]*p[1])/2; },0));
+  return {P,ang:t.map(v=>180-v*180/Math.PI),fech,area:ar,ok:fech<0.05&&(!A||Math.abs(ar-A)<0.5)}; }
+const pontoDentro=(p,P)=>{ let d=false; for(let i=0,j=P.length-1;i<P.length;j=i++){ const [xi,yi]=P[i],[xj,yj]=P[j]; if(((yi>p[1])!==(yj>p[1]))&&p[0]<(xj-xi)*(p[1]-yi)/((yj-yi)||1e-12)+xi) d=!d; } return d; };
+const ehRuaLado=s=>s&&s.rua==="sim";
+// ruas ao longo dos lados marcados como rua: meio-fio, outro lado da rua e nome; vizinhos com o nome por fora
+function ruasDoLote(D,pts,lados,o={}){
+  const k=D.k, n=pts.length, cal=Math.max(0,num(S.terr.calcada)), rua=8, ext=o.ext||3, cx=pts.reduce((s,p)=>s+p[0],0)/n, cy=pts.reduce((s,p)=>s+p[1],0)/n;
+  const sd=pts.map((a,i)=>{ const b=pts[(i+1)%n], L0=Math.hypot(b[0]-a[0],b[1]-a[1])||1, u=[(b[0]-a[0])/L0,(b[1]-a[1])/L0]; let nn=[u[1],-u[0]];
+    if((a[0]+b[0])/2*nn[0]+(a[1]+b[1])/2*nn[1]-(cx*nn[0]+cy*nn[1])<0) nn=[-nn[0],-nn[1]]; return {a,b,u,n:nn,L:L0,rua:ehRuaLado(lados[i]),c:String((lados[i]||{}).c||"")}; });
+  const cruza=(p,u,q,v)=>{ const den=u[0]*v[1]-u[1]*v[0]; if(Math.abs(den)<1e-6) return null; const t=((q[0]-p[0])*v[1]-(q[1]-p[1])*v[0])/den; return [p[0]+u[0]*t,p[1]+u[1]*t]; };
+  const linha=(i,d)=>{ const s=sd[i], p=[s.a[0]+s.n[0]*d,s.a[1]+s.n[1]*d], q=[s.b[0]+s.n[0]*d,s.b[1]+s.n[1]*d], pv=sd[(i+n-1)%n], nx=sd[(i+1)%n];
+    const ini=pv.rua?cruza(p,s.u,[pv.a[0]+pv.n[0]*d,pv.a[1]+pv.n[1]*d],pv.u):null, fim=nx.rua?cruza(q,s.u,[nx.a[0]+nx.n[0]*d,nx.a[1]+nx.n[1]*d],nx.u):null;
+    return [ini||[p[0]-s.u[0]*ext,p[1]-s.u[1]*ext],fim||[q[0]+s.u[0]*ext,q[1]+s.u[1]*ext]]; };
+  const rotA=u=>{ let a=Math.atan2(u[1],u[0])*180/Math.PI; if(a>=89.99) a-=180; if(a<-90.01) a+=180; return a; };
+  // encontro de duas ruas (com ou sem chanfro entre elas): uma passa direto e a outra termina nela (em T)
+  const W=2*cal+rua, LN=(i,d)=>[[sd[i].a[0]+sd[i].n[0]*d,sd[i].a[1]+sd[i].n[1]*d],sd[i].u], X=(i,d,kk,dk)=>{ const [p,u]=LN(i,d), [q,v]=LN(kk,dk); return cruza(p,u,q,v); };
+  const nomeada=i=>sd[i].rua&&sd[i].c.trim()!=="";
+  const viz=(i,dir)=>{ for(let st=1;st<n;st++){ const kk=(i+dir*st+n*st)%n; if(nomeada(kk)) return kk; if(!sd[kk].rua) return -1; } return -1; };
+  const passa=(i,kk)=>{ const pz=Math.round(num(S.terr.ruaPassa))-1; if(pz===i||pz===kk) return pz===i; if(i===0||kk===0) return i===0; return sd[i].L>=sd[kk].L; };
+  sd.forEach((s,i)=>{ if(!nomeada(i)) return;
+    const pon=[viz(i,-1),viz(i,1)], seg=(p,q,w)=>p&&q&&L(D,...p,...q,w,"LOTE");
+    const fimLivre=(d,e)=>{ const [p,u]=LN(i,d), base=e?[s.b[0]+s.n[0]*d,s.b[1]+s.n[1]*d]:p; return [base[0]+(e?1:-1)*u[0]*ext,base[1]+(e?1:-1)*u[1]*ext]; };
+    const longe=(pt,e)=>[pt[0]+(e?1:-1)*s.u[0]*ext,pt[1]+(e?1:-1)*s.u[1]*ext];
+    // pontas de cada linha (d) nos dois sentidos; perto do lote o meio-fio pode ter um vão (a outra rua chegando)
+    const linhas={}; [cal,cal+rua,W].forEach(d=>linhas[d]=[]);
+    const ends=[0,1].map(e=>{ const kk=pon[e]; if(kk<0) return null; return {kk,th:passa(i,kk)}; });
+    [cal,cal+rua,W].forEach(d=>{ const pa=[0,1].map(e=>{ const E=ends[e]; if(!E) return fimLivre(d,e);
+        if(!E.th) return X(i,d,E.kk,d===W?0:cal)||fimLivre(d,e);   // termina na outra rua
+        return d===cal?(X(i,d,E.kk,cal)||fimLivre(d,e)):longe(X(i,d,E.kk,W)||fimLivre(d,e),e); });
+      seg(pa[0],pa[1],d===W?.35:.18);
+      // rua que passa direto: depois do cruzamento, o meio-fio e o alinhamento do outro lado da rua que chega
+      [0,1].forEach(e=>{ const E=ends[e]; if(!E||!E.th) return; if(d===cal){ const p0=X(i,cal,E.kk,cal+rua), p1=X(i,cal,E.kk,W); p0&&p1&&seg(p0,longe(p1,e),.18); } });
+    });
+    [0,1].forEach(e=>{ const E=ends[e]; if(!E||!E.th) return; const p0=X(i,0,E.kk,W); if(p0) seg(p0,longe(p0,e),.5); });
+    if(o.alin) [0,1].forEach(e=>{ if(ends[e]) return; const pt=e?s.b:s.a; L(D,...pt,...longe(pt,e),.5,"LOTE"); });
+    const m=[(s.a[0]+s.b[0])/2,(s.a[1]+s.b[1])/2]; if(s.L>4) TX(D,m[0]+s.n[0]*(cal+rua/2),m[1]+s.n[1]*(cal+rua/2),s.c.toUpperCase(),o.hr||2.6,{b:true,rot:rotA(s.u)}); });
+  sd.forEach((s,i)=>{ const m=[(s.a[0]+s.b[0])/2,(s.a[1]+s.b[1])/2];
+    if(!s.rua&&s.c) TX(D,m[0]+s.n[0]*3.2*k,m[1]+s.n[1]*3.2*k,s.c.toUpperCase(),1.8,{l:"COTAS",rot:rotA(s.u)});
+    // medida do lado, por dentro
+    const pi=[s.a[0]-s.n[0]*3*k,s.a[1]-s.n[1]*3*k], qi=[s.b[0]-s.n[0]*3*k,s.b[1]-s.n[1]*3*k]; cotaLivre(D,pi,qi,f(s.L)); });
+  return sd; }
+
 function cotaLivre(D,p,q,txt){ const k=D.k, dx=q[0]-p[0], dy=q[1]-p[1], l=Math.hypot(dx,dy); if(l<0.01) return;
   const ux=dx/l, uy=dy/l, nx=-uy, ny=ux; L(D,...p,...q,.18,"COTAS");
   [p,q].forEach(e=>{ const tx=(ux+nx)*0.65*k, ty=(uy+ny)*0.65*k; L(D,e[0]-tx,e[1]-ty,e[0]+tx,e[1]+ty,.35,"COTAS"); });
@@ -2326,6 +2446,7 @@ const notasLocacao=LC=>[`P0 = canto do alinhamento (frente) com a divisa esquerd
 function desenhoSituacao(G,k){
   const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
   const T=terreno(G), {P,F0,F1,R0,R1,V,Rt}=T, cal=Math.max(0,num(S.terr.calcada)), rua=8, TI=infoTelhado(G);
+  if(T.pol) return implantacaoPol(G,k,D,T,TI);
   const angR=Math.atan2(Rt[1],Rt[0])*180/Math.PI, rotR=ang=>{ let a=ang; if(a>=89.99) a-=180; if(a<-90.01) a+=180; return a; };
   const ext=(a,b)=>L(D,...a,...b,.13,"COTAS");
   // rua: alinhamento do lote, meio-fio e o outro lado da rua
@@ -2369,6 +2490,91 @@ function desenhoSituacao(G,k){
   TX(D,c[0]+d[0]*(r+2.6*k),c[1]+d[1]*(r+2.6*k),"N",2.4,{b:true});
   return D;
 }
+
+
+function implantacaoPol(G,k,D,T,TI){
+  const {P,F1,R0}=T, rotR=a=>{ if(a>=89.99) a-=180; if(a<-90.01) a+=180; return a; }, angR=Math.atan2(T.Rt[1],T.Rt[0])*180/Math.PI;
+  ruasDoLote(D,T.lote,S.terr.lados,{ext:3,hr:3});
+  PL(D,[...T.lote,T.lote[0]],.6,"LOTE");
+  (G.casas||[]).forEach(Pc=>PG(D,Pc,"HACHURA")); G.contExt.forEach(s0=>L(D,...s0,.5,"PAREDE"));
+  if(TI.poly) PL(D,[...TI.poly,TI.poly[0]],.2,"PROJECAO",true);
+  const fm=(T.fMin+T.fMax)/2, rm=(T.rMin+T.rMax)/2, ar=rotR(angR)*Math.PI/180, dn=[-Math.sin(ar),Math.cos(ar)], c0=P(fm,rm);
+  TX(D,c0[0]-dn[0]*1.4*k,c0[1]-dn[1]*1.4*k,"CONSTRUÇÃO",2,{b:true,rot:rotR(angR)}); TX(D,c0[0]+dn[0]*1.8*k,c0[1]+dn[1]*1.8*k,`${f(G.areaC)} m²`,1.8,{rot:rotR(angR)});
+  const cl=T.lote.reduce((s,p)=>[s[0]+p[0]/T.lote.length,s[1]+p[1]/T.lote.length],[0,0]), lb=[S.terr.lote?`LOTE ${S.terr.lote}`:"",S.terr.quadra?`QUADRA ${S.terr.quadra}`:""].filter(Boolean).join(" · ")||"TERRENO";
+  const fb=P(T.F0+1.2,(T.R0+T.R1)/2); TX(D,(fb[0]+cl[0])/2,(fb[1]+cl[1])/2,lb,2.2,{b:true,rot:rotR(angR)});
+  { const pts=[]; G.contExt.forEach(s0=>{ pts.push([s0[0],s0[1]],[s0[2],s0[3]]); }); const n=T.lote.length;
+    [T.encA,T.encB].forEach(i=>{ const a=T.lote[i], b=T.lote[(i+1)%n], dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1; let best=null;
+      pts.forEach(p=>{ const u=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2)), pr=[a[0]+dx*u,a[1]+dy*u], d=Math.hypot(p[0]-pr[0],p[1]-pr[1]); if(!best||d<best.d) best={d,p,pr}; });
+      if(best&&best.d>0.05) cotaLivre(D,best.p,best.pr,f(best.d)); }); }
+  const xs=T.lote.map(p=>p[0]), ys=T.lote.map(p=>p[1]), c=[Math.max(...xs)+2*Math.max(0,num(S.terr.calcada))+8+10*k,Math.min(...ys)-6*k], th=num(S.terr.norte)*Math.PI/180, d=[Math.sin(th),-Math.cos(th)], pp=[-d[1],d[0]], r=5*k;
+  CI(D,c[0],c[1],r,.25,"GERAL"); PG(D,[[c[0]+d[0]*r,c[1]+d[1]*r],[c[0]+pp[0]*1.8*k-d[0]*r*0.6,c[1]+pp[1]*1.8*k-d[1]*r*0.6],[c[0]-pp[0]*1.8*k-d[0]*r*0.6,c[1]-pp[1]*1.8*k-d[1]*r*0.6]],"TELHADO");
+  TX(D,c[0]+d[0]*(r+2.6*k),c[1]+d[1]*(r+2.6*k),"N",2.4,{b:true});
+  return D; }
+
+/* ---------------- Planta de situação (lote na quadra) ---------------- */
+// desenho no referencial do lote: x = da esquerda para a direita (olhando da rua da frente), y cresce para a rua da frente
+function quadra(G){ if(G.vazio) return null; const T=terreno(G), t=S.terr, loc=p=>[p[0]*T.Rt[0]+p[1]*T.Rt[1],p[0]*T.V[0]+p[1]*T.V[1]];
+  if(T.pol){ const rs=t.lados.filter(ehRuaLado); return {pol:true,T,loc,lote:T.lote.map(loc),dE:0,Lq:0,Pq:0,lado:"esq",ruas:{frente:String(t.lados[0].c||"RUA").toUpperCase()},ruaRef:rs.length>1?"lote de esquina":"-"}; }
+  const lote=T.lote.map(loc), [A,B]=[lote[0],lote[1]], m=(B[1]-A[1])/((B[0]-A[0])||1), yF=x=>A[1]+(x-A[0])*m, c=1/Math.hypot(1,m);
+  const esqn=t.esquina==="esq"||t.esquina==="dir"?t.esquina:"", lado=esqn||(t.ladoRef==="dir"?"dir":"esq");
+  const dE=esqn?0:Math.max(0,num(t.dEsq)), testF=Math.hypot(B[0]-A[0],B[1]-A[1]);
+  let Lq=num(t.qFrente)>0?num(t.qFrente):dE+testF+2*T.testada; Lq=Math.max(Lq,dE+testF);
+  const prof=Math.max(T.prof,...lote.map(p=>yF(p[0])-p[1])), Pq=Math.max(num(t.qProf)>0?num(t.qProf):2*T.prof,prof+0.5);
+  const x0=lado==="esq"?A[0]-dE*c:B[0]+dE*c-Lq*c, x1=x0+Lq*c, yB=Math.min(yF(x0),yF(x1))-Pq;
+  const Q=[[x0,yF(x0)],[x1,yF(x1)],[x1,yB],[x0,yB]];
+  const nome=(s,v)=>String(s||v).toUpperCase();
+  const ruas={frente:nome(t.rua,"RUA"),esq:nome(t.esquina==="esq"?(t.rua2||t.ruaE):t.ruaE,"RUA"),dir:nome(t.esquina==="dir"?(t.rua2||t.ruaD):t.ruaD,"RUA"),fundo:nome(t.ruaF,"RUA")};
+  return {T,loc,lote,A,B,yF,c,lado,dE,Lq,Pq,Q,x0,x1,yB,ruas,ruaRef:lado==="esq"?ruas.esq:ruas.dir}; }
+function confrontacoes(G,QD){ if(QD.pol) return S.terr.lados.map((l,i)=>[i?`Lado ${i+1}`:"Frente",String(l.c||(ehRuaLado(l)?"Esquina (chanfro)":"-")),f(num(l.m))]);
+  const T=QD.T, t=S.terr, lt=lote=>{ const [a,b]=lote; return Math.hypot(b[0]-a[0],b[1]-a[1]); }, L4=[0,1,2,3].map(i=>lt([QD.lote[i],QD.lote[(i+1)%4]]));
+  return [["Frente",QD.ruas.frente,f(L4[0])],["Lado direito",t.esquina==="dir"?QD.ruas.dir:(t.confDir||"Lote vizinho"),f(L4[1])],["Fundos",t.confFundo||"Lote vizinho",f(L4[2])],["Lado esquerdo",t.esquina==="esq"?QD.ruas.esq:(t.confEsq||"Lote vizinho"),f(L4[3])],
+    ["Até a esquina",`${QD.ruaRef} (${QD.lado==="esq"?"à esquerda":"à direita"})`,f(QD.dE)]]; }
+function desenhoQuadra(G,k,QD){
+  const D=Dw(k); QD=QD||quadra(G); if(!QD){ TX(D,0,0,"Sem paredes.",3); return D; }
+  if(QD.pol){ const {T,loc,lote}=QD; ruasDoLote(D,lote,S.terr.lados,{ext:18,alin:true,hr:2.4});
+    PG(D,lote,"HACHURA"); PL(D,[...lote,lote[0]],.7,"LOTE"); (G.casas||[]).forEach(Pc=>PG(D,Pc.map(loc),"CONCRETOS"));
+    const cl=lote.reduce((s,p)=>[s[0]+p[0]/lote.length,s[1]+p[1]/lote.length],[0,0]);
+    const yl=(cl[1]+Math.min(...lote.map(p=>p[1])))/2; TX(D,cl[0],yl-1.5*k,S.terr.lote?`LOTE ${S.terr.lote}`:"LOTE",2.2,{b:true}); if(S.terr.quadra) TX(D,cl[0],yl+1.8*k,`QUADRA ${String(S.terr.quadra).toUpperCase()}`,1.8,{b:true});
+    const xs=lote.map(p=>p[0]), ys=lote.map(p=>p[1]), th=num(S.terr.norte)*Math.PI/180, dw=[Math.sin(th),-Math.cos(th)], d=[dw[0]*T.Rt[0]+dw[1]*T.Rt[1],dw[0]*T.V[0]+dw[1]*T.V[1]], pp=[-d[1],d[0]], r=5*k, c=[Math.max(...xs)+26,Math.min(...ys)-10];
+    CI(D,c[0],c[1],r,.25,"GERAL"); PG(D,[[c[0]+d[0]*r,c[1]+d[1]*r],[c[0]+pp[0]*1.8*k-d[0]*r*0.6,c[1]+pp[1]*1.8*k-d[1]*r*0.6],[c[0]-pp[0]*1.8*k-d[0]*r*0.6,c[1]-pp[1]*1.8*k-d[1]*r*0.6]],"TELHADO");
+    TX(D,c[0]+d[0]*(r+2.6*k),c[1]+d[1]*(r+2.6*k),"N",2.4,{b:true}); return D; }
+  const {T,loc,lote,A,B,yF,Q,x0,x1,yB,ruas,lado,dE}=QD, cal=Math.max(0,num(S.terr.calcada)), W=Math.max(6,2*cal+8), M=Math.max(8,W);
+  const rotA=a=>{ a=a*180/Math.PI; if(a>=89.99) a-=180; if(a<-90.01) a+=180; return a; };
+  // ruas em volta: alinhamento da quadra em frente (com cantos), meios-fios e nome
+  const nomes=[ruas.frente,ruas.dir,ruas.fundo,ruas.esq];
+  for(let i=0;i<4;i++){ const a=Q[i], b=Q[(i+1)%4], L0=Math.hypot(b[0]-a[0],b[1]-a[1]), u=[(b[0]-a[0])/L0,(b[1]-a[1])/L0];
+    // normal para fora da quadra (polígono no sentido horário na tela: frente, direita, fundos, esquerda)
+    let n=[u[1],-u[0]]; const cx=(x0+x1)/2, cy=(yF(cx)+yB)/2; if((a[0]-cx)*n[0]+(a[1]-cy)*n[1]<0) n=[-n[0],-n[1]];
+    const off=(p,d,e=0)=>[p[0]+n[0]*d+u[0]*e,p[1]+n[1]*d+u[1]*e];
+    L(D,...off(a,W),...off(b,W),.4,"LOTE"); L(D,...off(a,W),...off(a,W+M),.4,"LOTE"); L(D,...off(b,W),...off(b,W+M),.4,"LOTE");
+    if(cal>0.2){ L(D,...off(a,cal,-cal),...off(b,cal,cal),.15,"LOTE"); L(D,...off(a,W-cal,-cal),...off(b,W-cal,cal),.15,"LOTE"); }
+    const mm=off([(a[0]+b[0])/2,(a[1]+b[1])/2],W/2), ang=rotA(Math.atan2(u[1],u[0]));
+    TX(D,mm[0],mm[1],nomes[i],2.4,{b:true,rot:ang}); }
+  // quadra e lotes vizinhos (ilustrativos, mesma testada)
+  PL(D,[...Q,Q[0]],.5,"LOTE");
+  const tx=T.testada*QD.c, yL=Math.min(...lote.map(p=>p[1]));   // fundo do lote
+  for(let x=A[0]-tx;x>x0+0.5;x-=tx) L(D,x,yF(x),x,yL,.13,"LOTE",true);
+  for(let x=B[0]+tx;x<x1-0.5;x+=tx) L(D,x,yF(x),x,yL,.13,"LOTE",true);
+  if(yL-yB>T.prof*0.3) L(D,x0,yL,x1,yL,.13,"LOTE",true);
+  // o lote do projeto: hachurado, com a construção
+  PG(D,lote,"HACHURA"); PL(D,[...lote,lote[0]],.7,"LOTE");
+  (G.casas||[]).forEach(Pc=>PG(D,Pc.map(loc),"CONCRETOS"));
+  const cl=[lote.reduce((s,p)=>s+p[0],0)/4,lote.reduce((s,p)=>s+p[1],0)/4];
+  const rot=[S.terr.lote?`LOTE ${S.terr.lote}`:"LOTE"].join(""); TX(D,cl[0],Math.min(...lote.map(p=>p[1]))-2.5*k,rot,2,{b:true,a:"m"});
+  TX(D,(x0+x1)/2,yB+Math.min(QD.Pq*0.25,6)+1*k,S.terr.quadra?`QUADRA ${String(S.terr.quadra).toUpperCase()}`:"QUADRA",2.6,{b:true});
+  // cotas pela frente, por dentro da quadra: distância até a esquina e testada
+  const nf=[-QD.c*(B[1]-A[1])/((B[0]-A[0])||1),QD.c], inw=p=>[p[0]+nf[0]*3.5*k,p[1]+nf[1]*3.5*k];   // no passeio, junto ao alinhamento
+  const ce=lado==="esq"?[x0,yF(x0)]:[x1,yF(x1)], le=lado==="esq"?A:B;
+  if(dE>0.05) cotaLivre(D,...(lado==="esq"?[inw(ce),inw(le)]:[inw(le),inw(ce)]),f(dE));
+  cotaLivre(D,inw(A),inw(B),f(T.incl?T.frenteL:T.testada));
+  // profundidade do lote (pela lateral, por dentro)
+  const sx=lado==="esq"?B[0]:A[0], xs=sx+(lado==="esq"?2.5:-2.5)*k; cotaLivre(D,[xs,yF(sx)],[xs,yL],f(yF(sx)-yL));
+  // norte
+  const th=num(S.terr.norte)*Math.PI/180, dw=[Math.sin(th),-Math.cos(th)], d=[dw[0]*T.Rt[0]+dw[1]*T.Rt[1],dw[0]*T.V[0]+dw[1]*T.V[1]], pp=[-d[1],d[0]], r=5*k;
+  const c=[x1+W+M*0.5+8*k,yB-W-M*0.5+8*k];
+  CI(D,c[0],c[1],r,.25,"GERAL"); PG(D,[[c[0]+d[0]*r,c[1]+d[1]*r],[c[0]+pp[0]*1.8*k-d[0]*r*0.6,c[1]+pp[1]*1.8*k-d[1]*r*0.6],[c[0]-pp[0]*1.8*k-d[0]*r*0.6,c[1]-pp[1]*1.8*k-d[1]*r*0.6]],"TELHADO");
+  TX(D,c[0]+d[0]*(r+2.6*k),c[1]+d[1]*(r+2.6*k),"N",2.4,{b:true});
+  return D; }
 
 /* ---------------- Planta de cobertura ---------------- */
 function desenhoCobertura(G,k){
@@ -2501,9 +2707,12 @@ function render(){
     $("tabLoc").innerHTML=`<tr><th>Eixo</th><th>Medido a partir de</th><th class="n">Distância (m)</th></tr>`+LC.eixos.slice().sort((p,q)=>p.nome.localeCompare(q.nome,"pt",{numeric:true})).map(e=>`<tr><td><b>${e.nome}</b></td><td>${e.ref}</td><td class="n">${f(e.d,3)}</td></tr>`).join("")+
       LC.incl.map((w,j)=>`<tr><td><b>C${j+1}</b></td><td>parede chanfrada ${w.i+1}: ponta a / ponta b (${LC.T.incl?"a partir do P0 ao longo da divisa":"do alinhamento"}; da divisa esq.)</td><td class="n">${f(w.fa,3)}; ${f(w.ra,3)} / ${f(w.fb,3)}; ${f(w.rb,3)}</td></tr>`).join("");
     $("locNotas").innerHTML=notasLocacao(LC).map(t=>`<li>${esc(t)}</li>`).join(""); }
+  renderLados(G);
+  if(!G.vazio){ const QD=quadra(G), wq=QD.pol?Math.max(...[0,1].map(j=>Math.max(...QD.lote.map(p=>p[j]))-Math.min(...QD.lote.map(p=>p[j]))))+60:Math.max(QD.x1-QD.x0,QD.yF(QD.x0)-QD.yB)+40; $("sitQ").innerHTML=svgDe(desenhoQuadra(G,wq/130,QD)); const cf=confrontacoes(G,QD);
+    $("tabConf").innerHTML=`<tr><th>Confrontação</th><th>Com</th><th class="n">m</th></tr>`+cf.map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td class="n">${r[2]}</td></tr>`).join(""); }
   if(!G.vazio){ const Tr=terreno(G); $("sit").innerHTML=svgDe(desenhoSituacao(G,Math.max(0.05,(Math.max(Tr.testada,Tr.prof)+12)/120)));
-    $("sitChips").innerHTML=[`Terreno ${f(Tr.testada)} × ${f(Tr.prof)} = ${f(Tr.area)} m²`,`Construída ${f(G.areaC)} m²`,`Taxa de ocupação ${f(Tr.to*100,1)}%`,`Coef. aproveitamento ${f(Tr.ca)}`,`Área livre ${f(Tr.livre)} m²`].map(t=>`<span class="chip">${t}</span>`).join("");
-    $("sitAvisos").innerHTML=(Tr.rec.dir<0||Tr.rec.fundo<0||Tr.rec.frente<0||Tr.rec.esq<0)?`<div class="alert bad">A construção não cabe no terreno com esses recuos (lateral direito ${f(Tr.rec.dir)} m, fundos ${f(Tr.rec.fundo)} m). Confira testada, profundidade e recuos.</div>`:""; }
+    $("sitChips").innerHTML=[`Terreno ${Tr.desc} = ${f(Tr.area)} m²`,`Construída ${f(G.areaC)} m²`,`Taxa de ocupação ${f(Tr.to*100,1)}%`,`Coef. aproveitamento ${f(Tr.ca)}`,`Área livre ${f(Tr.livre)} m²`].map(t=>`<span class="chip">${t}</span>`).join("");
+    $("sitAvisos").innerHTML=Tr.pol?(Tr.recL.some(v=>v<0)?`<div class="alert bad">Parte da construção fica fora do lote. Confira a posição (lado paralelo e as duas distâncias) e se as paredes acompanham os ângulos do lote (${Tr.PO.ang.map(v=>f(v,1)+"°").join(", ")}).</div>`:""):(Tr.rec.dir<0||Tr.rec.fundo<0||Tr.rec.frente<0||Tr.rec.esq<0)?`<div class="alert bad">A construção não cabe no terreno com esses recuos (lateral direito ${f(Tr.rec.dir)} m, fundos ${f(Tr.rec.fundo)} m). Confira testada, profundidade e recuos.</div>`:""; }
   { const bs=G.rooms.filter(r=>ehBanho(r.n)), kb=0.03;
     $("banhos").innerHTML=!bs.length?`<div class="sheet"><p class="cap" style="margin:0">Nenhum ambiente com nome de banheiro (Banho, Banheiro, WC, Lavabo). Dê o nome tocando no ambiente na aba Planta.</p></div>`:
       bs.map(r=>!r.ret?`<div class="sheet"><h2>${esc(r.n)}</h2><p class="cap">Este banheiro não é retangular: nesta versão o detalhe com louças é só para banheiro retangular.</p><div class="draw">${svgDe(desenhoBanheiro(G,r,kb))}</div></div>`:
@@ -2680,8 +2889,21 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
+  if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
+  const tb=$("ladosTab"), foco=document.activeElement&&tb.contains(document.activeElement)?[document.activeElement.dataset.li,document.activeElement.dataset.lc]:null;
+  if(!foco) tb.innerHTML=`<tr><th>Lado</th><th class="n">Medida (m)</th><th>Confronta com</th><th>Rua?</th><th></th></tr>`+t.lados.map((l,i)=>`<tr><td><b>${i?i+1:"1 · frente"}</b></td><td><input type="number" step="0.01" data-li="${i}" data-lc="m" value="${num(l.m)}" style="width:90px" aria-label="Medida do lado ${i+1}"></td><td><input type="text" data-li="${i}" data-lc="c" value="${esc(l.c||"")}" aria-label="Confrontante do lado ${i+1}"></td><td><select data-li="${i}" data-lc="rua" aria-label="Lado ${i+1} é rua"><option value="não"${l.rua!=="sim"?" selected":""}>Não</option><option value="sim"${l.rua==="sim"?" selected":""}>Sim</option></select></td><td>${t.lados.length>3?`<button class="btn" type="button" data-ldel="${i}" aria-label="Tirar lado ${i+1}">✕</button>`:""}</td></tr>`).join("");
+  const nL=t.lados.length; if(!(num(t.encB)>=1&&num(t.encB)<=nL)) t.encB=nL;
+  document.querySelectorAll("[data-lsel]").forEach(el=>{ const id=el.id.split(".")[1], v=Math.min(nL,Math.max(1,Math.round(num(t[id]))||1));
+    el.innerHTML=t.lados.map((l,i)=>`<option value="${i+1}">${i+1}${i?"":" · frente"}${l.c?` · ${esc(l.c)}`:ehRuaLado(l)?" · chanfro":""}</option>`).join(""); el.value=String(v); });
+  const PO=poligonoLote(t.lados,num(t.areaMapa));
+  $("ladosMsg").innerHTML=!PO?"":PO.ok?`<div class="alert ok">Lote fechado: área ${f(PO.area)} m². Ângulos: ${PO.ang.map((a,i)=>`${i+1}/${(i+1)%t.lados.length+1} ${f(a,1)}°`).join(" · ")}.</div>`
+    :`<div class="alert bad">As medidas não fecham o lote${num(t.areaMapa)?` com ${f(num(t.areaMapa))} m²`:""} (sobra ${f(PO.fech)} m; área ${f(PO.area)} m²). Confira as medidas e a ordem dos lados.</div>`; }
+$("ladosTab").addEventListener("input",e=>{ const el=e.target, i=+el.dataset.li, c=el.dataset.lc; if(!c) return; S.terr.lados[i][c]=c==="m"?num(el.value):el.value; if(i===0&&c==="c"){ S.terr.rua=el.value; $("terr.rua").value=el.value; } if(el.tagName==="SELECT") render(); else later(); });
+$("ladosTab").addEventListener("click",e=>{ const b=e.target.closest("[data-ldel]"); if(!b) return; S.terr.lados.splice(+b.dataset.ldel,1); $("ladosTab").innerHTML=""; render(); });
+$("ladoAdd").onclick=()=>{ S.terr.lados.push({m:0,c:"",rua:"não"}); $("ladosTab").innerHTML=""; render(); };
 function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
@@ -2816,7 +3038,7 @@ const slug=()=>(S.obra||"arquitetonico").normalize("NFD").replace(/[̀-ͯ]/g,"")
 /* ======================================================================
    PRANCHAS: escala de cada desenho e posição na folha
    ====================================================================== */
-const ESCALAS=[20,25,50,75,100,125,150,200,250,500];
+const ESCALAS=[20,25,50,75,100,125,150,200,250,500,750,1000,1500,2000];
 function encaixar(gerar,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=s/1000, D=gerar(k), e=extensao(D), w=(e.x1-e.x0)/k, h=(e.y1-e.y0)/k; ult={D,s,k,e,w,h}; if(w<=bw&&h<=bh) return ult; } return ult; }
 function encaixar2(g1,g2,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=s/1000, D1=g1(k), D2=g2(k), e1=extensao(D1), e2=extensao(D2);
     const a={D:D1,s,k,e:e1,w:(e1.x1-e1.x0)/k,h:(e1.y1-e1.y0)/k}, b={D:D2,s,k,e:e2,w:(e2.x1-e2.x0)/k,h:(e2.y1-e2.y0)/k}; ult=[a,b];
@@ -2840,7 +3062,7 @@ function pranchas(fmt){
   const ET=G.vazio?null:estruturaTelhado(G), wE=aw*0.56, es=ET?encaixar(k=>desenhoEstrutura(G,k,ET),wE,ah-TT):null, wD=aw-wE-8, cum=TI.tipo>1;
   const db=ET?encaixar(k=>desenhoBeiral(G,k),wD,(cum?ah*0.55:ah)-TT):null, dc=ET&&cum?encaixar(k=>desenhoCumeeira(G,k),wD,ah*0.45-6-TT):null;
   const FA=fachadas(), bw2=(aw-8)/2, bh2=(ah-6)/2;
-  const si=encaixar(k=>desenhoSituacao(G,k),aw,ah-TT);
+  const QD=quadra(G), sep=fmt==="A4", wQ=sep?aw:aw*0.42, sq=QD?encaixar(k=>desenhoQuadra(G,k,QD),wQ,ah-TT):null, si=encaixar(k=>desenhoSituacao(G,k),sq&&!sep?aw-wQ-8:aw,ah-TT);   // no A4 a situação vai numa folha só dela
   const LC=locacao(G), lo=LC?encaixar(k=>desenhoLocacao(G,k,LC),aw,ah-TT):null;
   const EC=escada(), eP=S.esc.on==="sim"?encaixar(k=>desenhoEscadaPlanta(k,EC),aw*0.42,ah-TT):null, eC=eP?encaixar(k=>desenhoEscadaCorte(k,EC),aw*0.58-8,ah-TT):null;
   const bans=G.rooms.filter(r=>ehBanho(r.n)&&r.ret).map(r=>{ const bwP=aw*0.42, pl=encaixar(k=>desenhoBanheiro(G,r,k),bwP,ah-TT), bwV=(aw-bwP-8-6)/2, bhV=(ah-6)/2;
@@ -2866,7 +3088,9 @@ function pranchas(fmt){
     ...(ET?[{n:"",conteudo:"ESTRUTURA E DETALHES DO TELHADO",escala:`1:${es.s} / 1:${db.s}`,itens:[{d:es,titulo:"ESTRUTURA DO TELHADO",box:[area.x0,area.y0,wE,ah]},{d:db,titulo:TI.plat?"DETALHE DA PLATIBANDA":"DETALHE DO BEIRAL",box:[area.x0+wE+8,area.y0,wD,cum?ah*0.55:ah]},...(dc?[{d:dc,titulo:"DETALHE DA CUMEEIRA",box:[area.x0+wE+8,area.y0+ah*0.55+6,wD,ah*0.45-6]}]:[])],lado:"estrutura",ET}]:[]),
     {n:"04/05",conteudo:"FACHADAS",escala:`1:${fa[0].s}`,itens:fa.map((d,i)=>({d,titulo:FA[i][1],box:[area.x0+(i%2)*(bw2+8),area.y0+Math.floor(i/2)*(bh2+6),bw2,bh2]})),lado:"fachadas"},
     ...(G.vazio?[]:[{n:"",conteudo:"PAGINAÇÃO DAS FACHADAS",escala:`1:${fp[0].s}`,itens:fp.map((d,i)=>({d,titulo:`PAGINAÇÃO - ${FA[i][1]}`,box:[area.x0+(i%2)*(bw2+8),area.y0+Math.floor(i/2)*(bh2+6),bw2,bh2]})),lado:"pagina"}]),
-    {n:"05/05",conteudo:"PLANTA DE SITUAÇÃO",escala:`1:${si.s}`,itens:[{d:si,titulo:"PLANTA DE SITUAÇÃO",box:[area.x0,area.y0,aw,ah]}],lado:"situacao"},
+    ...(sq&&sep?[{n:"",conteudo:"PLANTA DE SITUAÇÃO",escala:`1:${sq.s}`,itens:[{d:sq,titulo:"PLANTA DE SITUAÇÃO",box:[area.x0,area.y0,aw,ah]}],lado:"situacaoQ",QD},
+      {n:"",conteudo:"PLANTA DE IMPLANTAÇÃO",escala:`1:${si.s}`,itens:[{d:si,titulo:"PLANTA DE IMPLANTAÇÃO",box:[area.x0,area.y0,aw,ah]}],lado:"situacao"}]
+    :[{n:"05/05",conteudo:sq?"PLANTA DE SITUAÇÃO E IMPLANTAÇÃO":"PLANTA DE IMPLANTAÇÃO",escala:sq?`1:${sq.s} / 1:${si.s}`:`1:${si.s}`,itens:[...(sq?[{d:sq,titulo:"PLANTA DE SITUAÇÃO",box:[area.x0,area.y0,wQ,ah]}]:[]),{d:si,titulo:"PLANTA DE IMPLANTAÇÃO",box:sq?[area.x0+wQ+8,area.y0,aw-wQ-8,ah]:[area.x0,area.y0,aw,ah]}],lado:"situacao",QD}]),
     ...(eP?[{n:"",conteudo:"DETALHE DA ESCADA",escala:`1:${eP.s} / 1:${eC.s}`,itens:[{d:eP,titulo:"PLANTA DA ESCADA",box:[area.x0,area.y0,aw*0.42,ah]},{d:eC,titulo:"CORTE DA ESCADA",box:[area.x0+aw*0.42+8,area.y0,aw*0.58-8,ah]}],lado:"escada",EC}]:[]),
     ...(lo?[{n:"",conteudo:"PLANTA DE LOCAÇÃO DA OBRA",escala:`1:${lo.s}`,itens:[{d:lo,titulo:"PLANTA DE LOCAÇÃO DA OBRA",box:[area.x0,area.y0,aw,ah]}],lado:"locacao",LC}]:[]),
     ...bans.map(b=>({n:"",conteudo:`DETALHE DO ${b.r.n.toUpperCase()}`,escala:`1:${b.pl.s} / 1:${b.vs[0].s}`,itens:[{d:b.pl,titulo:`PLANTA - ${b.r.n.toUpperCase()}`,box:[area.x0,area.y0,b.bwP,ah]},
@@ -2900,9 +3124,14 @@ function textosLado(P,lado,fl){
   }
   if(lado==="banho") return [{t:"NOTAS DO BANHEIRO",linhas:notasBanho()}];
   if(lado==="esquadrias") return [{t:"QUADRO DE ESQUADRIAS",cols:[["CÓD.",0],["TIPO",0],["MATERIAL",0],["L x H",1],["PEIT.",1],["QTD",1]],rows:Q.map(q=>[q.cod,`${q.desc}${q.tipo!=="Vão"?` ${q.nf}F`:""}`,q.mat,`${f(q.l)} x ${f(q.a)}`,q.tipo==="Janela"?f(q.p):"-",String(q.q)])}];
+  const tabConf=QD=>({t:"CONFRONTAÇÕES",cols:[["LADO",0],["CONFRONTA COM",0],["m",1]],pc:[0.27,0.57,0.16],rows:confrontacoes(G,QD).map(r=>[r[0],String(r[1]),r[2]])});
+  if(lado==="situacaoQ"&&fl.QD.pol) return [tabConf(fl.QD),{t:"LOTE",cols:[["ITEM",0],["VALOR",1]],rows:[["Área (mapa)",`${f(num(S.terr.areaMapa))} m²`],["Área do desenho",`${f(fl.QD.T.area)} m²`],["Lados",String(fl.QD.lote.length)]]}];
+  if(lado==="situacaoQ") return [tabConf(fl.QD),{t:"QUADRA",cols:[["ITEM",0],["m",1]],rows:[["Frente da quadra",f(fl.QD.Lq)],["Profundidade da quadra",f(fl.QD.Pq)],["Testada do lote",f(fl.QD.T.incl?fl.QD.T.frenteL:fl.QD.T.testada)]]}];
   if(lado==="situacao"){ const Tr=terreno(G); return [
     {t:"QUADRO DO TERRENO",cols:[["ITEM",0],["VALOR",1]],rows:[["Área do terreno",`${f(Tr.area)} m²`],["Área construída",`${f(G.areaC)} m²`],["Taxa de ocupação",`${f(Tr.to*100,1)} %`],["Coef. de aproveitamento",f(Tr.ca)],["Área livre",`${f(Tr.livre)} m²`]]},
-    {t:"RECUOS",cols:[["RECUO",0],["m",1]],rows:[["Frontal",f(Tr.rec.frente)],["Lateral esquerdo",f(Tr.rec.esq)],["Lateral direito",f(Tr.rec.dir)],["Fundos",f(Tr.rec.fundo)]]}]; }
+    Tr.pol?{t:"RECUOS (MENOR DISTÂNCIA)",cols:[["LADO",0],["m",1]],rows:Tr.recL.map((v,i)=>[`${i?`Lado ${i+1}`:"Frente"} · ${S.terr.lados[i].c||(ehRuaLado(S.terr.lados[i])?"esquina (chanfro)":"-")}`,f(v)])}
+    :{t:"RECUOS",cols:[["RECUO",0],["m",1]],rows:[["Frontal",f(Tr.rec.frente)],["Lateral esquerdo",f(Tr.rec.esq)],["Lateral direito",f(Tr.rec.dir)],["Fundos",f(Tr.rec.fundo)]]},
+    ...(fl.QD?[tabConf(fl.QD)]:[])]; }
   if(lado==="fachadas") return [{t:"NOTAS",linhas:[`Frente da casa: ${{baixo:"lado de baixo",cima:"lado de cima",esq:"lado esquerdo",dir:"lado direito"}[S.frente]||"lado de baixo"} da planta baixa.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}`+(TI.plat?", escondido por platibanda.":`, beiral ${f(TI.b)} m.`),`Esquadrias conforme quadro da prancha 01 (códigos P, J e V).`,`Níveis em metros a partir do piso acabado (±0,00).`]}];
   if(lado==="alturas") return [{t:"NOTAS",linhas:[`Pé-direito: ${f(pd)} m.`,...(S.viga.on!=="não"?[`Viga/cinta de concreto ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm no topo das paredes, sob a laje. Concreto cortado em cinza escuro.`]:[]),`Níveis de piso: ${G.rooms.map(r=>`${r.n} ${fNv(r.nv)}`).join("; ")}.`,`Laje/forro: ${f(num(S.laje))} m. Piso a ${f(num(S.piso))} m do terreno.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}, i = ${f(num(S.tel.inc),0)}%.`,`Paredes com ${f(G.t)} m de espessura.`,`Cotas e níveis em metros. Conferir as medidas na obra.`]}];
   return [{t:"COBERTURA",linhas:[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}.`,`Inclinação ${f(num(S.tel.inc),0)}%.`+(TI.plat?" Platibanda com calha.":` Beiral ${f(TI.b)} m.`),`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`,(TI.Lcum?`Cumeeira: ${f(TI.Lcum)} m.`:"")+(TI.Lesp?` Espigões: ${f(TI.Lesp)} m.`:""),`Altura máxima: ${f(TI.plat?TI.topoPlat:TI.zmax)} m acima do piso.`].filter(Boolean)}];
