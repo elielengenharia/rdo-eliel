@@ -572,7 +572,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 4.7 · forro de gesso acartonado (drywall)";
+const VERSAO="versão 4.7 · forro e parede de gesso acartonado (drywall)";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -691,7 +691,7 @@ function geom(todas=false){
   const t=Math.max(0.05,num(S.esp)), h=t/2;
   const walls=[];
   S.walls.forEach((w0,i)=>{ if(!todas&&w0.st==="d") return;
-    const w={x1:num(w0.x1),y1:num(w0.y1),x2:num(w0.x2),y2:num(w0.y2),i};
+    const w={x1:num(w0.x1),y1:num(w0.y1),x2:num(w0.x2),y2:num(w0.y2),i,dw:w0.mat==="dw"};
     const dx=w.x2-w.x1, dy=w.y2-w.y1; w.L=Math.hypot(dx,dy); if(w.L<0.01) return;
     w.ux=dx/w.L; w.uy=dy/w.L; w.hz=Math.abs(dy)<1e-6; w.vt=Math.abs(dx)<1e-6; w.nX=-w.uy; w.nY=w.ux;
     walls.push(w);
@@ -932,11 +932,15 @@ function posCorte(G,q){
   for(let n=0;n<8&&ax.some(a=>Math.abs(a-c)<G.h+0.02);n++) c+=G.h+0.05;   // não deixa a linha de corte em cima de uma parede
   return Math.min(hi-0.02,c);
 }
+// divisória de gesso acartonado: eixo tracejado e rótulo (o desenho usa a espessura geral das paredes)
+function marcaDrywall(D,G){ const k=D.k; G.walls.filter(w=>w.dw).forEach(w=>{ L(D,w.x1,w.y1,w.x2,w.y2,.25,"PAREDE",true);
+  if(w.L>1.2){ let an=Math.atan2(w.uy,w.ux)*180/Math.PI; if(an>90) an-=180; if(an<-90) an+=180; const m=[(w.x1+w.x2)/2+w.nX*(G.h+2.2*k),(w.y1+w.y2)/2+w.nY*(G.h+2.2*k)]; TX(D,...m,"DRYWALL 9,5 cm",1.3,{l:"COTAS",rot:an}); } }); }
 function desenhoPlanta(G,k,ajuda){
   const D=Dw(k), h=G.h, bb=G.bb;
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
   G.pecas.forEach(P=>PG(D,P,"HACHURA"));
   G.contPar.forEach(s=>L(D,...s,.5,"PAREDE"));
+  marcaDrywall(D,G);
   // parede inclinada (chanfro): cota alinhada pela face de fora
   G.incl.forEach(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, o=h+0.12, Cp=G.compAt(mx+w.nX*o,my+w.nY*o), sg=(!Cp||Cp.ext)?1:-1;
     const a=sg>0?w.cA[0]:w.cA[1], b=sg>0?w.cB[0]:w.cB[1]; cotaAlinhada(D,a,b,sg,w.nX,w.nY,f(Math.hypot(b[0]-a[0],b[1]-a[1]))); });
@@ -1908,7 +1912,7 @@ function cfgFund(){ const d={vb:{b:15,h:20,bit:"5/16",ga:7,gb:14,est:"4.2",s:15}
   const c={...d,...["vaoMax","peca","trasp","lastro","cap","fck"].reduce((m,k)=>o[k]!=null?{...m,[k]:num(o[k])||d[k]}:m,{})}; ["vb","ci","tr","pl","br"].forEach(k=>c[k]={...d[k],...(o[k]||{})}); c.ci.b=12; /* no arquitetônico a parede tem ~15 cm com reboco: cinta 12x20, mesmo que o Detalhador use 10 */ if(!o.brv12&&num(c.br.prof)===2) c.br.prof=1.2;
   const E2=S.estS||{}; if(num(E2.vmax)>0) c.vaoMax=num(E2.vmax); if(num(E2.prof)>0) c.br.prof=num(E2.prof); if(E2.cinta) c.ci.on=E2.cinta; c.pl.alt=num(S.pd)||c.pl.alt; return c; }
 function estrutural(G,simples){ if(G.vazio) return null; const E=S.estr||{}, CF=simples?cfgFund():null, t=G.t, b=simples?num(CF.pl.b)/100:Math.min(0.20,Math.max(0.14,Math.round(t*100)/100)), hp=simples?num(CF.pl.h)/100:0.30;
-  const vmax=simples?Math.min(4,Math.max(1.5,num(CF.vaoMax)||3.0)):Math.min(6,Math.max(2.5,num(E.vmax)||4.5)), W=G.walls, near=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1]);
+  const vmax=simples?Math.min(4,Math.max(1.5,num(CF.vaoMax)||3.0)):Math.min(6,Math.max(2.5,num(E.vmax)||4.5)), W=G.walls.filter(w=>!w.dw), near=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1]);
   // nós: pontas e cruzamentos das paredes
   const nos=[]; const addNo=p=>{ const o=nos.find(q=>near(q,p)<0.25); if(!o) nos.push([p[0],p[1]]); };
   W.forEach(w=>{ addNo([w.x1,w.y1]); addNo([w.x2,w.y2]); });
@@ -2195,6 +2199,9 @@ const notasForro=FO=>[...quantForro(FO).map(q=>`${nomeForro(q.ft)}: ${f(q.area)}
   `Alturas (H) medidas do piso acabado até a face de baixo do forro.`,`Luminárias conforme a planta de pontos elétricos.`,`Alçapão 60x60 para acesso ao telhado e ao reservatório.`,`Forro de PVC com réguas no sentido do menor vão, presas em estrutura de metalon ou madeira a cada 0,60 m.`];
 
 /* ---------------- Memorial descritivo ---------------- */
+// divisórias de gesso acartonado: área (sem as aberturas) e material
+function quantDrywall(G){ const pd=num(S.pd)||2.8, ws=G.walls.filter(w=>w.dw), L0=ws.reduce((s0,w)=>s0+w.L,0), ab=G.abs.filter(g=>g.w&&g.w.dw).reduce((s0,g)=>s0+g.l*(g.tipo==="Janela"?num(g.a.a):num(g.a.a)||2.10),0);
+  const area=Math.max(0,L0*pd-ab); return {ws,L:L0,area,placas:Math.ceil(area*2*1.1/2.88),mont:ws.reduce((s0,w)=>s0+Math.ceil(w.L/0.60)+1,0),guia:2*L0,fita:Math.ceil(area*2*1.5),paredes:ws.map(w=>w.i+1)}; }
 function memorial(){
   const G=geom(); if(G.vazio) return [{t:"MEMORIAL DESCRITIVO",ps:["Cadastre ou importe a planta na aba Dados."]}];
   const Q=esquadrias(G), TI=infoTelhado(G), Tr=terreno(G), LM=layoutMoveis(G), EL=pontosEletricos(G,LM), HD=redeHidro(G,LM), FO=forros(G), PI=pisos(G);
@@ -2212,7 +2219,8 @@ function memorial(){
   sec("5. FUNDAÇÃO E ESTRUTURA",[`Fundação conforme projeto estrutural, com impermeabilização das vigas baldrame (cinta) com emulsão asfáltica antes de subir a alvenaria.`,
     S.viga.on!=="não"?`Vigas e cintas de concreto armado no topo das paredes, seção ${f(G.t*100,0)} x ${f(num(S.viga.h)*100,0)} cm, e vergas e contravergas em todas as portas e janelas, passando 30 cm de cada lado.`:`Vergas e contravergas de concreto armado em todas as portas e janelas, passando 30 cm de cada lado.`,
     num(S.laje)>0?`Laje com ${f(num(S.laje)*100,0)} cm de espessura, conforme projeto estrutural.`:""]);
-  { const rb=Math.max(0,num(S.reb)), tj=Math.max(5,G.t*100-2*rb); sec("6. ALVENARIA",[`Paredes em tijolo cerâmico assentado em pé, com ${f(tj,0)} cm de espessura, com argamassa de cimento, cal e areia, em prumo e esquadro; reboco de ${f(rb,1)} cm em cada face, ficando a parede acabada com ${f(G.t*100,0)} cm.`]); }
+  { const rb=Math.max(0,num(S.reb)), tj=Math.max(5,G.t*100-2*rb); sec("6. ALVENARIA",[`Paredes em tijolo cerâmico assentado em pé, com ${f(tj,0)} cm de espessura, com argamassa de cimento, cal e areia, em prumo e esquadro; reboco de ${f(rb,1)} cm em cada face, ficando a parede acabada com ${f(G.t*100,0)} cm.`,
+    ...(DWm=>DWm.area>0?[`Divisórias em gesso acartonado (drywall) de 95 mm nas paredes nº ${DWm.paredes.join(", ")} (${f(DWm.area)} m²): guias e montantes de aço galvanizado de 70 mm a cada 60 cm, uma placa ST de 12,5 mm em cada face (placa RU nas áreas molhadas), parafusadas, com juntas tratadas com fita e massa; lã de vidro opcional entre as placas para isolamento acústico. Reforço de madeira ou metálico dentro da parede onde houver armários, prateleiras ou TV.`]:[])(quantDrywall(G))]); }
   sec("7. COBERTURA",[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}, inclinação de ${f(num(S.tel.inc),0)}%, sobre estrutura de madeira tratada (ou metálica) dimensionada para o vão.`,
     TI.plat?`Telhado escondido por platibanda, com calha e rufo em chapa galvanizada e condutores até o terreno.`:`Beiral de ${f(TI.b)} m em todo o contorno.`,`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`]);
   sec("8. ESQUADRIAS",[...Q.map(q=>`${q.cod}: ${q.desc}${q.tipo==="Porta"?` (folha ${nomeFolha(q.fol).toLowerCase()}; ${ferragens(q)[0].toLowerCase()})`:""}${q.tipo!=="Vão"?`, ${q.nf} ${q.nf===1?"folha":"folhas"}`:""}, ${q.mat.toLowerCase()}, ${f(q.l)} x ${f(q.a)} m${q.tipo==="Janela"?`, peitoril ${f(q.p)} m`:""} - ${q.q} ${q.q===1?"unidade":"unidades"}.`),
@@ -2494,7 +2502,7 @@ const notasReforma=q=>[`Demolição: ${f(q.dem)} m² de alvenaria (${f(q.Ld)} m 
 const PRECO0={fach_porc:180,fach_cer:120,fach_pedra:160,fach_tijolinho:140,fach_ripado:260,fach_acm:420,demolicao:35,retirada:60,entulho:90,limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
   telha_Cerâmica:55,telha_Concreto:60,telha_Fibrocimento:40,telha_Metálica:75,cumeeira:35,calha:90,
   porta:850,janela:650,box:900,contrapiso:45,piso_porc60:120,piso_porc80:150,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
-  forro_pvc:75,forro_gesso:90,forro_drywall:110,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,pt_agua:220,pt_esgoto:180,caixa:350,reservatorio:900,fossa:6500,
+  forro_pvc:75,forro_gesso:90,forro_drywall:110,parede_dw:150,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,pt_agua:220,pt_esgoto:180,caixa:350,reservatorio:900,fossa:6500,
   vaso:750,lavatorio:350,chuveiro:250,pia:650,tanque:450,pint_int:28,pint_ext:32,limpfinal:8};
 const preco=k=>{ const v=S.orc&&S.orc.p&&S.orc.p[k]; return v!=null&&v!==""&&isFinite(+v)?+v:(PRECO0[k]??0); };
 const money=v=>{ const s=Math.abs(v).toFixed(2).split("."); return (v<0?"-":"")+"R$ "+s[0].replace(/\B(?=(\d{3})+(?!\d))/g,".")+","+s[1]; };
@@ -2502,8 +2510,8 @@ function orcamento(){
   const G=geom(); if(G.vazio) return {etapas:[],direto:0,bdi:0,total:0,areaC:0};
   const Q=esquadrias(G), TI=infoTelhado(G), Tr=terreno(G), LM=layoutMoveis(G), EL=pontosEletricos(G,LM), HD=redeHidro(G,LM), FO=forros(G), PI=pisos(G);
   const pd=num(S.pd), util=G.rooms.reduce((s,r)=>s+r.area,0), Lpar=G.walls.reduce((s,w)=>s+w.L,0);
-  const altAb=g=>g.tipo==="Janela"?num(g.a.a):num(g.a.a)||2.10, abA=G.abs.reduce((s,g)=>s+g.l*altAb(g),0);
-  const alv=Math.max(0,Lpar*pd-abA);
+  const altAb=g=>g.tipo==="Janela"?num(g.a.a):num(g.a.a)||2.10, abA=G.abs.reduce((s,g)=>s+g.l*altAb(g),0), DW=quantDrywall(G);
+  const alv=Math.max(0,Lpar*pd-abA-DW.area);   // divisórias de drywall saem da alvenaria e do reboco
   const perExt=G.contExt.reduce((s,q)=>s+Math.hypot(q[2]-q[0],q[3]-q[1]),0), abExt=G.abs.filter(g=>g.externa).reduce((s,g)=>s+g.l*altAb(g),0);
   const pintExt=fachadaRev(G).area;
   const RV=revParede(G,LM,FO), cer=RV.reduce((s0,x)=>s0+x.cer,0), cerTxt=Object.keys(quantRevp(RV).c).map(nomeRevp).join(" / ");
@@ -2517,7 +2525,8 @@ function orcamento(){
   etapa("FUNDAÇÃO E ESTRUTURA"); it("Fundação e viga baldrame (por metro de parede)","m",Lnova,"fundacao");
   if(S.viga.on!=="não") it(`Viga/cinta superior ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm`,"m",Lnova,"cinta");
   if(num(S.laje)>0) it("Laje pré-moldada com capeamento","m²",G.areaC,"laje");
-  etapa("ALVENARIA E REVESTIMENTOS"); { const rb=Math.max(0,num(S.reb)), tj=Math.max(5,G.t*100-2*rb), aA=REF?QR.con:alv; it(`Alvenaria de tijolo cerâmico em pé (e = ${f(tj,0)} cm)`,"m²",aA,"alvenaria"); it(`Chapisco e reboco e = ${f(rb,1)} cm, 2 faces (${f(2*aA*rb/100,2)} m³ de argamassa)`,"m²",2*aA,"reboco"); } it(`Revestimento cerâmico de parede${cerTxt?` (${cerTxt.toLowerCase()})`:""} com 10% de perda`,"m²",cer*1.1,"ceramica");
+  etapa("ALVENARIA E REVESTIMENTOS"); { const rb=Math.max(0,num(S.reb)), tj=Math.max(5,G.t*100-2*rb), aA=REF?QR.con:alv; it(`Alvenaria de tijolo cerâmico em pé (e = ${f(tj,0)} cm)`,"m²",aA,"alvenaria"); it(`Chapisco e reboco e = ${f(rb,1)} cm, 2 faces (${f(2*aA*rb/100,2)} m³ de argamassa)`,"m²",2*aA,"reboco");
+    if(DW.area>0) it(`Parede de gesso acartonado (drywall) 95 mm: ${DW.placas} placas ST, ${DW.mont} montantes 70 mm, ${f(DW.guia)} m de guia, ${DW.fita} m de fita`,"m²",DW.area,"parede_dw"); } it(`Revestimento cerâmico de parede${cerTxt?` (${cerTxt.toLowerCase()})`:""} com 10% de perda`,"m²",cer*1.1,"ceramica");
   etapa("COBERTURA"); it("Estrutura de madeira do telhado","m²",TI.areaInc,"madeiramento"); it(`Telha ${String(S.tel.telha).toLowerCase()}`,"m²",TI.areaInc,`telha_${S.tel.telha}`); it("Cumeeira","m",TI.Lcum,"cumeeira");
   if(TI.plat) it("Calha e rufo galvanizados","m",perExt,"calha");
   etapa("ESQUADRIAS");
@@ -3372,11 +3381,11 @@ $("roofTypes").addEventListener("click",e=>{ const b=e.target.closest("[data-tip
 ["A","B"].forEach(q=>{ const set=v=>{ S["c"+q]=num(v); later(); }; $("c"+q+"r").addEventListener("input",e=>{ $("c"+q+"n").value=e.target.value; set(e.target.value); }); $("c"+q+"n").addEventListener("change",e=>set(e.target.value)); });
 
 function renderWalls(){
-  $("wtab").innerHTML=`<tr><th>Nº</th><th>x1</th><th>y1</th><th>x2</th><th>y2</th><th class="n">m</th><th>Situação</th><th></th></tr>`+S.walls.map((w,i)=>
-    `<tr><td class="n" style="font-size:12px">${i+1}</td>${["x1","y1","x2","y2"].map(c=>`<td><input type="number" step="0.05" data-i="${i}" data-c="${c}" value="${w[c]}" aria-label="Parede ${i+1} ${c}"></td>`).join("")}<td class="n" style="font-size:12px;color:var(--muted)">${f(Math.hypot(num(w.x2)-num(w.x1),num(w.y2)-num(w.y1)))}</td><td><select data-i="${i}" data-c="st" aria-label="Situação da parede ${i+1}" style="width:auto">${ST_PAR.map(([v,t])=>`<option value="${v}"${(w.st||"e")===v?" selected":""}>${t}</option>`).join("")}</select></td><td><button class="btn x" data-del="${i}" aria-label="Remover parede ${i+1}">×</button></td></tr>`).join("");
+  $("wtab").innerHTML=`<tr><th>Nº</th><th>x1</th><th>y1</th><th>x2</th><th>y2</th><th class="n">m</th><th>Situação</th><th>Material</th><th></th></tr>`+S.walls.map((w,i)=>
+    `<tr><td class="n" style="font-size:12px">${i+1}</td>${["x1","y1","x2","y2"].map(c=>`<td><input type="number" step="0.05" data-i="${i}" data-c="${c}" value="${w[c]}" aria-label="Parede ${i+1} ${c}"></td>`).join("")}<td class="n" style="font-size:12px;color:var(--muted)">${f(Math.hypot(num(w.x2)-num(w.x1),num(w.y2)-num(w.y1)))}</td><td><select data-i="${i}" data-c="st" aria-label="Situação da parede ${i+1}" style="width:auto">${ST_PAR.map(([v,t])=>`<option value="${v}"${(w.st||"e")===v?" selected":""}>${t}</option>`).join("")}</select></td><td><select data-i="${i}" data-c="mat" aria-label="Material da parede ${i+1}" style="width:auto"><option value="alv"${w.mat!=="dw"?" selected":""}>Alvenaria</option><option value="dw"${w.mat==="dw"?" selected":""}>Drywall</option></select></td><td><button class="btn x" data-del="${i}" aria-label="Remover parede ${i+1}">×</button></td></tr>`).join("");
 }
-$("wtab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||c==="st")return; S.walls[i][c]=num(e.target.value); later();});
-$("wtab").addEventListener("change",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||c!=="st")return; S.walls[i].st=e.target.value; render();});
+$("wtab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||c==="st"||c==="mat")return; S.walls[i][c]=num(e.target.value); later();});
+$("wtab").addEventListener("change",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||(c!=="st"&&c!=="mat"))return; S.walls[i][c]=e.target.value; render();});
 $("wtab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; const i=+d; S.walls.splice(i,1);
   S.ab=S.ab.filter(a=>Math.round(num(a.w))!==i).map(a=>Math.round(num(a.w))>i?{...a,w:Math.round(num(a.w))-1}:a); renderWalls(); renderAb(); render();});
 $("addW").onclick=()=>{S.walls.push({x1:0,y1:0,x2:1,y2:0}); renderWalls(); render(); const ins=$("wtab").querySelectorAll(`input[data-i="${S.walls.length-1}"]`); if(ins[0]) ins[0].focus();};
