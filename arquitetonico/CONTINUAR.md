@@ -13,6 +13,7 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   demanda, entrada, DR, DPS, quadro com reserva, diagrama unifilar e material elétrico.
 - 5.2: imóvel comercial com 2+ salas: um quadro e medidor por sala (banheiro vai para a sala de onde se entra).
 - 5.3: símbolos elétricos menores (65 %).
+- 5.11: cotas da planta sem os cantos do chanfro na cadeia de cima/esquerda (sala 1 = 6,00), sem cota inclinada curta junto das cadeias; texto dos ambientes num tamanho só (nome 2,0 · área 1,6 · NV 1,4) em todas as plantas; ambiente pequeno mostra só as linhas que cabem.
 - 5.10: nome, área e nível dos ambientes diminuem para caber dentro do ambiente (planta baixa, pluvial, hidro, reforma), desviando do giro das portas.
 - 5.9: revisão das 24 pranchas das salas: modelo sem laje (estrutura simples), portas da fachada em alumínio e vidro temperado (folha "vidro temperado 10 mm", contramarco), detalhe do piso sem a parte de veículo quando não há garagem, notas dos cortes sem laje.
 - 5.8: vários projetos no aparelho (aba Dados: trocar, duplicar, renomear, excluir, baixar/abrir .json); modelo "Salas comerciais Av. Paraná" (do PDF WALISSON_PALMEIRA_REV_2: 2 salas + banheiro, fachada chanfrada, platibanda caindo para a frente, pluvial para a Guarani); verificação contra goteira e umidade na aba Cobertura. Lote 277 ainda pelas medidas do mapa (o prédio não cabe na frente de 11,14): esperar o DWG da situação.
