@@ -199,6 +199,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
         <label data-soplat>Caimento da calha (%)<input type="number" step="0.1" id="tel.icalha" placeholder="0,5"></label>
         <label id="lblBeiral">Beiral (m)<input type="number" step="0.05" id="tel.beiral"></label>
       </div>
+      <h3 style="margin-top:12px">Verificação contra goteira e umidade</h3><div id="telCheck"></div>
     </div>
     <div class="sheet">
       <h2>Planta de cobertura</h2>
@@ -530,6 +531,14 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <!-- DADOS -->
   <section id="tab-dados" hidden>
     <div class="sheet">
+      <h2>Projetos</h2>
+      <p class="cap">Cada projeto fica guardado neste aparelho: troque aqui entre eles (o que estava aberto é salvo antes). Comece um novo pelo modelo da casa ou das salas comerciais da Av. Paraná. Baixe o arquivo .json de vez em quando como cópia de segurança (ele também abre em outro celular ou computador).</p>
+      <div class="form"><label>Projeto aberto<select id="pjSel"></select></label></div>
+      <div class="row"><button class="btn" id="pjCasa">Novo: casa modelo 42 m²</button><button class="btn" id="pjSalas">Novo: salas comerciais Av. Paraná</button><button class="btn" id="pjDup">Duplicar</button><button class="btn" id="pjRen">Renomear</button><button class="btn" id="pjDel">Excluir</button></div>
+      <div class="row"><button class="btn" id="pjBaixar">Baixar projeto (.json)</button><label class="btn" for="pjFile" style="display:inline-block">Abrir projeto (.json)</label><input type="file" id="pjFile" accept=".json,application/json" style="position:absolute;width:1px;height:1px;opacity:0"></div>
+      <div class="cap" id="pjMsg"></div>
+    </div>
+    <div class="sheet">
       <h2>Importar planta baixa</h2>
       <p class="cap"><b>Maquete do SketchUp</b> (exportada em .dae, .obj ou .stl): o app corta a maquete e lê paredes, portas, janelas com peitoril, pé-direito e altura do piso. PDF exportado do CAD (vetorial) ou DXF: o app lê as paredes e os vãos de porta direto do arquivo, sem internet. PDF escaneado ou foto: o Claude lê paredes, cotas, portas e janelas (só com o app aberto dentro do Claude). Em todos os casos você confere antes de usar.</p>
       <div class="row" style="margin-top:0"><label class="btn pri" for="impFile" style="display:inline-block">Anexar planta</label><input type="file" id="impFile" accept=".pdf,.dxf,.dae,.obj,.stl,.skp,image/*" style="position:absolute;width:1px;height:1px;opacity:0"><span class="cap" id="impName" style="margin:0"></span></div>
@@ -617,7 +626,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.7 · calha nos cortes e no detalhe do beiral";
+const VERSAO="versão 5.8 · projetos no aparelho, modelo das salas e telhado sem goteira";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -660,8 +669,28 @@ function defaults(){
   };
 }
 let S;
-try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote"},o.fossa||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim"},o.estS||{}); }catch(e){ S=defaults(); }
-function save(){ try{ localStorage.setItem("arq-casa-v1",JSON.stringify(S)); }catch(e){} }
+// modelo: duas salas comerciais e banheiro na Av. Paraná (lote 277, esquina com a Rua Guarani), fachada chanfrada com duas portas de correr
+function modeloSalas(){ const o=defaults();
+  o.obra="Salas comerciais - Av. Paraná"; o.local="Lote 277 - Av. Paraná x Rua Guarani"; o.uso="comercial"; o.frente="baixo";
+  const W=[[0.075,0.075,15.275,0.075],[15.275,0.075,15.275,8.43],[15.275,8.43,3.28,5.80],[3.28,5.80,2.215,4.70],[2.215,4.70,2.215,1.575],[2.215,1.575,0.30,1.575],[0.30,1.575,0.075,0.075],[2.215,0.075,2.215,1.575],[8.365,0.075,8.365,6.916]];
+  o.walls=W.map(([x1,y1,x2,y2])=>({x1,y1,x2,y2}));
+  o.rooms=[{n:"Banheiro",x:1.2,y:0.8,nv:0},{n:"Sala comercial 1",x:5.2,y:3,nv:0},{n:"Sala comercial 2",x:11.8,y:4,nv:0}];
+  o.ab=[{n:"Sala comercial 2",t:"Porta",w:2,d:1.40,l:4.00,a:2.10,p:0,mod:"correr4"},{n:"Sala comercial 1",t:"Porta",w:2,d:7.60,l:4.00,a:2.10,p:0,mod:"correr4"},{n:"Banheiro",t:"Porta",w:7,d:0.70,l:0.70,a:2.10,p:0}];
+  o.cA=null; o.cB=null;
+  o.terr=Object.assign(clone(TERR0),{forma:"pol",areaMapa:259.17,lote:"277",alinha:1,encA:1,recA:0,encB:2,recB:0,calcada:2,rua:"Avenida Paraná",rua2:"Rua Guarani",
+    lados:[{m:11.14,c:"Avenida Paraná",rua:"sim"},{m:21.31,c:"Lote 243",rua:"não"},{m:14.15,c:"Lote 290",rua:"não"},{m:14.69,c:"Rua Guarani",rua:"sim"},{m:4.04,c:"",rua:"sim"}]});
+  // telhado escondido por platibanda, caindo para a frente (Av. Paraná): calha atrás da platibanda da fachada, longe das divisas
+  o.tel=Object.assign(clone(TEL0),{tipo:1,dir:"baixo",telha:"Fibrocimento",inc:15,plat:"sim"});
+  o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua Guarani (o terreno cai para ela)
+  return o; }
+// estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
+function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote"},o.fossa||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim"},o.estS||{}); }catch(e){ S=defaults(); } return S; }
+let _o0=null; try{ _o0=JSON.parse(localStorage.getItem("arq-casa-v1")); }catch(e){} S=estadoDe(_o0||{});
+/* vários projetos no mesmo aparelho: a lista fica em arq-projetos-v1; o aberto continua em arq-casa-v1 */
+const PJ_KEY="arq-projetos-v1";
+let PJ=null; try{ PJ=JSON.parse(localStorage.getItem(PJ_KEY)); }catch(e){}
+if(!PJ||!PJ.lista||!PJ.atual||!PJ.lista[PJ.atual]){ PJ={atual:String(S.obra||"Meu projeto"),lista:{}}; PJ.lista[PJ.atual]=S; } else PJ.lista[PJ.atual]=S;
+function save(){ try{ localStorage.setItem("arq-casa-v1",JSON.stringify(S)); }catch(e){} PJ.lista[PJ.atual]=S; try{ localStorage.setItem(PJ_KEY,JSON.stringify(PJ)); }catch(e){} }
 
 /* ---------- polígonos: utilidades ---------- */
 const pip=(P,x,y)=>{ let d=false; for(let i=0,j=P.length-1;i<P.length;j=i++){ const [xi,yi]=P[i],[xj,yj]=P[j]; if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi) d=!d; } return d; };
@@ -3447,6 +3476,30 @@ const notasCalha=CL=>[`Calhas pela NBR 10844: chuva de ${f(CL.I,0)} mm/h (5 anos
   `Ladrão (extravasor) Ø50 atravessando a platibanda em cada calha, 5 cm acima do fundo, para a água sair por fora se a calha entupir.`,
   `Rufo e contra-rufo galvanizados no topo e na face interna da platibanda; impermeabilizar com manta asfáltica o fundo e as laterais da calha de alvenaria (se houver).`];
 
+/* ---------------- Verificação contra goteira e umidade ---------------- */
+// inclinação mínima usual de cada telha (catálogos dos fabricantes; fibrocimento com recobrimento de 20 cm, metálica trapezoidal)
+const INC_MIN={"Cerâmica":30,"Concreto":30,"Fibrocimento":10,"Metálica":5};
+function verificaTelhado(G){ if(G.vazio) return []; const TI=infoTelhado(G), T=S.tel, out=[], add=(ok,t)=>out.push({ok,t});
+  const im=INC_MIN[T.telha]||30, inc=num(T.inc), tl=String(T.telha).toLowerCase();
+  add(inc>=im,inc>=im?`Inclinação de ${f(inc,0)}% atende o mínimo da telha ${tl} (${im}%).`:`Inclinação de ${f(inc,0)}% abaixo do mínimo da telha ${tl} (${im}%): com vento a água volta por baixo da telha e dá goteira. Aumente para ${im}% ou troque a telha.`);
+  const Tr=terreno(G), TL=Tr.lote, nL=TL.length, PS=passeios(G), rua=i=>PS.some(q=>q.i===i)||(!Tr.pol&&i===0);
+  const nomeL=i=>Tr.pol?String((S.terr.lados[i]||{}).c||`lado ${i+1}`):["a frente",`o lado direito (${S.terr.confDir||"vizinho"})`,`o fundo (${S.terr.confFundo||"vizinho"})`,`o lado esquerdo (${S.terr.confEsq||"vizinho"})`][i]||`lado ${i+1}`;
+  const perto=p=>{ let b=null; TL.forEach((a,i)=>{ const c=TL[(i+1)%nL], d=distSeg(p,{x1:a[0],y1:a[1],x2:c[0],y2:c[1]}); if(!b||d<b.d) b={d,i}; }); return b; };
+  if(TI.plat){ const CL=calhasPlat(G,TI);
+    if(CL) CL.lista.forEach(c=>{ const m=[(c.seg[0]+c.seg[2])/2,(c.seg[1]+c.seg[3])/2], pr=perto(m);
+      if(pr&&!rua(pr.i)&&pr.d<0.8) add(false,`Calha ${c.nome} encostada na parede da divisa com ${nomeL(pr.i)}: risco de umidade na parede e no vizinho. Prefira o caimento do telhado para o lado da rua; se ficar assim, impermeabilize a calha com manta asfáltica, faça o ladrão para dentro do lote e suba o contra-rufo 30 cm.`);
+      else add(true,`Calha ${c.nome} (${f(c.b*100,0)}x${f(c.h*100,0)} cm) do lado ${pr&&rua(pr.i)?`da ${nomeL(pr.i)}`:"de dentro do lote"}, longe das divisas.`); });
+    add(true,`Platibanda ${f((TI.topoPlat||0)-TI.zmax,2)} m acima do ponto mais alto do telhado, com rufo no topo, contra-rufo na face de dentro e ladrão Ø50 em cada calha.`); }
+  else { const R=TI.R, ed={cima:[[R.x0,R.y0],[R.x1,R.y0]],baixo:[[R.x0,R.y1],[R.x1,R.y1]],esq:[[R.x0,R.y0],[R.x0,R.y1]],dir:[[R.x1,R.y0],[R.x1,R.y1]]}, calha=S.ap.beiral!=="não";
+    TI.bordas.forEach(e=>{ const [a,b]=ed[e]; [0.1,0.5,0.9].map(t=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]).some(p=>{ const fora=!pontoDentro(p,TL), pr=perto(p); if(!pr) return false;
+        if(!rua(pr.i)&&(fora||pr.d<0.5)){ add(false,`O beiral joga água ${fora?"dentro do":"junto do"} lote vizinho (${nomeL(pr.i)}): o Código Civil (art. 1.300) não permite. Use platibanda com calha ou mude o caimento para o lado da rua.`); return true; }
+        if(rua(pr.i)&&fora&&!calha){ add(false,`O beiral avança sobre a calçada da ${nomeL(pr.i)} sem calha: a água cai em quem passa. Coloque calha no beiral (aba Hidrossanitário) ou platibanda.`); return true; }
+        return false; }); });
+    if(!out.some(x=>!x.ok)) add(true,`Beirais de ${f(TI.b,2)} m dentro do lote${calha?", com calha":""}: a água não cai no vizinho nem na calçada.`);
+    if(!calha) add(true,`Sem calha: faça calçada de proteção de 0,60 m com caimento de 2% em volta da casa para a água do beiral não molhar a base das paredes.`); }
+  add(true,`Pingadeira (chapim) no topo dos muros e peitoris das janelas com caimento para fora; impermeabilizar o respaldo da fundação (baldrame) para evitar umidade subindo nas paredes.`);
+  return out; }
+
 /* ---------------- Planta de cobertura ---------------- */
 // condutores (AP) com diâmetro, setas de caimento da calha e rótulo de cada calha
 function desenhaCalhas(D,G,TI){ const k=D.k, CL=calhasPlat(G,TI); if(!CL) return;
@@ -3572,6 +3625,7 @@ function render(){
     $("sec"+q).innerHTML=svgDe(desenhoCorte(G,k,q)); });
   // cobertura
   $("roofTypes").innerHTML=[1,2,3,4].map(tp=>`<button type="button" data-tipo="${tp}" aria-pressed="${TI.tipo===tp}">${iconeTelhado(tp)}${tp} ${tp===1?"água":"águas"}</button>`).join("");
+  $("telCheck").innerHTML=verificaTelhado(G).map(x=>`<div class="alert ${x.ok?"ok":"warn"}">${x.ok?"OK: ":"Atenção: "}${esc(x.t)}</div>`).join("");
   const ds=DIRS[TI.tipo]; $("tel.dir").innerHTML=ds.map(([v,t])=>`<option value="${v}"${v===(S.tel.dir||"")?" selected":""}>${t}</option>`).join("");
   $("lblDir").hidden=TI.tipo===4; $("lblBeiral").hidden=TI.plat; document.querySelectorAll("[data-soplat]").forEach(e=>e.hidden=!TI.plat);
   $("cob").innerHTML=svgDe(desenhoCobertura(G,k));
@@ -3858,6 +3912,22 @@ $("atab").addEventListener("change",e=>{const i=e.target.dataset.i,c=e.target.da
   if(c==="t"){ S.ab[i].t=e.target.value; const df=ABDEF[S.ab[i].t]; S.ab[i].a=df.a; S.ab[i].p=df.p; delete S.ab[i].mod; delete S.ab[i].mat; renderAb(); } else if(c==="w") S.ab[i].w=+e.target.value; else S.ab[i][c]=e.target.value; render();});
 $("atab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; S.ab.splice(+d,1); renderAb(); render();});
 $("addA").onclick=()=>{S.ab.push({n:"",t:"Janela",w:0,d:0.5,l:1.2,a:1.0,p:1.1}); renderAb(); render();};
+/* troca de projeto */
+const pjMsg=t=>{ $("pjMsg").textContent=t; };
+function pjUI(){ $("pjSel").innerHTML=Object.keys(PJ.lista).map(n=>`<option value="${esc(n)}"${n===PJ.atual?" selected":""}>${esc(n)}</option>`).join(""); }
+function pjNome(base){ base=String(base||"Projeto").trim()||"Projeto"; let n=base, i=2; while(PJ.lista[n]) n=`${base} (${i++})`; return n; }
+function pjUsar(nome,o){ PJ.lista[PJ.atual]=S; PJ.atual=nome; S=estadoDe(JSON.parse(JSON.stringify(o))); PJ.lista[nome]=S; save(); loadForm(); render(); pjUI(); }
+$("pjSel").onchange=e=>{ const n=e.target.value; if(PJ.lista[n]&&n!==PJ.atual){ pjUsar(n,PJ.lista[n]); pjMsg(`Aberto: ${n}.`); } };
+$("pjCasa").onclick=()=>{ const n=pjNome("Casa modelo 42 m²"); pjUsar(n,defaults()); pjMsg(`Novo projeto: ${n}.`); };
+$("pjSalas").onclick=()=>{ const n=pjNome("Salas comerciais Av. Paraná"); pjUsar(n,modeloSalas()); pjMsg(`Novo projeto: ${n}. Confira as medidas na aba Planta.`); };
+$("pjDup").onclick=()=>{ const n=pjNome(PJ.atual+" - cópia"); pjUsar(n,S); pjMsg(`Cópia criada: ${n}.`); };
+$("pjRen").onclick=()=>{ const v=prompt("Novo nome do projeto:",PJ.atual); if(!v||!v.trim()||v.trim()===PJ.atual) return; const n=pjNome(v.trim()); PJ.lista[n]=S; delete PJ.lista[PJ.atual]; PJ.atual=n; save(); pjUI(); pjMsg(`Renomeado para ${n}.`); };
+$("pjDel").onclick=()=>{ const nomes=Object.keys(PJ.lista); if(nomes.length<2){ pjMsg("Este é o único projeto: crie outro antes de excluir."); return; } if(!confirm(`Excluir o projeto "${PJ.atual}" deste aparelho? (baixe o .json antes, se quiser guardar)`)) return;
+  const velho=PJ.atual; delete PJ.lista[velho]; const n=Object.keys(PJ.lista)[0]; PJ.atual=n; S=estadoDe(JSON.parse(JSON.stringify(PJ.lista[n]))); PJ.lista[n]=S; save(); loadForm(); render(); pjUI(); pjMsg(`Excluído: ${velho}. Aberto: ${n}.`); };
+$("pjBaixar").onclick=async()=>{ try{ const txt=JSON.stringify({app:"projeto-arquitetonico",versao:1,nome:PJ.atual,estado:S}); const st=await saveFile(`${slug()}-projeto.json`,new TextEncoder().encode(txt),"application/json"); pjMsg(st==="shared"?"Arquivo pronto: salve em Arquivos ou envie.":"Projeto baixado."); }catch(e){ pjMsg(falhou(e,"o arquivo do projeto")); } };
+$("pjFile").onchange=async e=>{ const fl=e.target.files&&e.target.files[0]; if(!fl) return; try{ const o=JSON.parse(await fl.text()), est=o&&o.estado?o.estado:o; if(!est||!Array.isArray(est.walls)) throw 0;
+    const n=pjNome(o.nome||est.obra||fl.name.replace(/\.json$/i,"")); pjUsar(n,est); pjMsg(`Projeto aberto: ${n}.`); }catch(err){ pjMsg("Este arquivo não é um projeto deste app."); } e.target.value=""; };
+pjUI();
 $("preset42").onclick=()=>{S.walls=clone(WALLS42); S.rooms=clone(ROOMS42); S.ab=clone(AB42); S.esp=0.15; S.cA=1.8; S.cB=4.5; loadForm(); render();};
 $("novo").onclick=()=>{$("novoConf").hidden=false;};
 $("novoNao").onclick=()=>{$("novoConf").hidden=true;};
