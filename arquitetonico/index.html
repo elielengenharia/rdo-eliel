@@ -629,7 +629,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.14 · salas com platibanda de 5 m e telhado para o fundo";
+const VERSAO="versão 5.15 · nomes fora dos ambientes corrigidos sozinhos";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -832,6 +832,12 @@ function geom(todas=false){
     r.n=r.labIdx>=0?String(S.rooms[r.labIdx].n||"").trim():"";
     r.nv=r.labIdx>=0?num(S.rooms[r.labIdx].nv):0;
   });
+  // nomes que ficaram fora de todos os ambientes ou empilhados no mesmo ponto (ex.: todos em 1,00 x 1,00): vão para os ambientes sem nome
+  // banheiro/lavabo/WC no menor; os outros na ordem da lista, da esquerda para a direita; o ponto do nome é gravado no lugar certo
+  { const usados=new Set(rooms.map(r=>r.labIdx)), orf=S.rooms.map((q,j)=>({q,j})).filter(({q,j})=>String(q.n||"").trim()&&!usados.has(j)), livres=rooms.filter(r=>r.labIdx<0);   // fora de tudo ou repetido num ambiente que já tem nome
+    if(orf.length&&livres.length){ const usa=(o,r)=>{ const c=pontoTexto(r.poly); o.q.x=+c[0].toFixed(2); o.q.y=+c[1].toFixed(2); r.labIdx=o.j; r.n=String(o.q.n).trim(); r.nv=num(o.q.nv); livres.splice(livres.indexOf(r),1); };
+      orf.filter(o=>/banh|lavabo|\bwc\b|sanit/i.test(o.q.n)).forEach(o=>{ if(livres.length) usa(o,livres.reduce((a,b)=>b.area<a.area?b:a)); });
+      orf.filter(o=>!/banh|lavabo|\bwc\b|sanit/i.test(o.q.n)).forEach(o=>{ if(livres.length) usa(o,[...livres].sort((a,b)=>Math.abs(a.cx-b.cx)>0.3?a.cx-b.cx:a.cy-b.cy)[0]); }); } }
   rooms.sort((p,q)=>Math.abs(p.cy-q.cy)>0.3?p.cy-q.cy:p.cx-q.cx);
   let sem=0; rooms.forEach(r=>{ if(!r.n) r.n="Ambiente "+(++sem); });
   G.rooms=rooms;
