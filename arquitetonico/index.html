@@ -626,7 +626,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.9 · revisão das pranchas das salas comerciais";
+const VERSAO="versão 5.10 · nome dos ambientes cabendo no ambiente";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1010,6 +1010,11 @@ function posCorte(G,q){
 // divisória de gesso acartonado: eixo tracejado e rótulo (o desenho usa a espessura geral das paredes)
 function marcaDrywall(D,G){ const k=D.k; G.walls.filter(w=>w.dw).forEach(w=>{ L(D,w.x1,w.y1,w.x2,w.y2,.25,"PAREDE",true);
   if(w.L>1.2){ let an=Math.atan2(w.uy,w.ux)*180/Math.PI; if(an>90) an-=180; if(an<-90) an+=180; const m=[(w.x1+w.x2)/2+w.nX*(G.h+2.2*k),(w.y1+w.y2)/2+w.nY*(G.h+2.2*k)]; TX(D,...m,"DRYWALL 9,5 cm",1.3,{l:"COTAS",rot:an}); } }); }
+// rótulo do ambiente que cabe dentro dele: diminui o texto (até 42%) e procura um lugar livre perto do ponto pedido
+function rotuloAmb(D,r,ls,x,y,obs=[]){ const k=D.k, P=paraDentro(r.poly,0.08)||r.poly, alt=sc=>ls.reduce((s0,l)=>s0+l.h*sc*1.45,0)*k; let best=null;
+  for(const sc of [1,0.85,0.72,0.6,0.5,0.42]){ const wt=Math.max(...ls.map(l=>l.t.length*l.h*sc*(l.b?0.78:0.64)))*k+0.12, pos=lugarRotulo({...r,poly:P},obs,x,y,wt,alt(sc)); if(pos){ best={pos,sc}; break; } }
+  const sc=best?best.sc:0.42, [x0,y0]=best?best.pos:[x,y]; let yy=y0-alt(sc)/2;
+  ls.forEach(l=>{ const hh=l.h*sc*1.45*k; TX(D,x0,yy+hh/2,l.t,l.h*sc,{b:!!l.b,l:l.l||"TEXTO"}); yy+=hh; }); }
 function desenhoPlanta(G,k,ajuda){
   const D=Dw(k), h=G.h, bb=G.bb;
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
@@ -1022,10 +1027,7 @@ function desenhoPlanta(G,k,ajuda){
   desenhaAberturas(D,G,G.abs);
   // ambientes
   G.rooms.forEach(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; const x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy;
-    TX(D,x,y-2.4*k,r.n.toUpperCase(),2.3,{b:true});
-    TX(D,x,y+0.6*k,`A = ${f(r.area)} m²`,1.8);
-    if(r.ret) TX(D,x,y+3.2*k,`${f(r.x1-r.x0)} x ${f(r.y1-r.y0)}`,1.6,{l:"COTAS"});
-    TX(D,x,y+(r.ret?5.8:3.2)*k,`NV ${fNv(r.nv)}`,1.6,{l:"COTAS"}); });
+    rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:2.3,b:true},{t:`A = ${f(r.area)} m²`,h:1.8},...(r.ret?[{t:`${f(r.x1-r.x0)} x ${f(r.y1-r.y0)}`,h:1.6,l:"COTAS"}]:[]),{t:`NV ${fNv(r.nv)}`,h:1.6,l:"COTAS"}],x,y,(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })()); });   // fora do giro das portas
   // cotas: faces das paredes (em cima e à esquerda) e totais
   const fora=G.incl.flatMap(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, Cp=G.compAt(mx+w.nX*(h+0.12),my+w.nY*(h+0.12)); return (!Cp||Cp.ext)?[w.cA[0],w.cB[0]]:[w.cA[1],w.cB[1]]; });
   const fx=uniq([bb.x0,bb.x1,...fora.map(p=>p[0]),...G.orto.filter(w=>w.vt).flatMap(w=>[w.x1-h,w.x1+h])]), fy=uniq([bb.y0,bb.y1,...fora.map(p=>p[1]),...G.orto.filter(w=>w.hz).flatMap(w=>[w.y1-h,w.y1+h])]);
@@ -2044,7 +2046,7 @@ function desenhoPluvial(G,k,PV,legenda=true){ const D=Dw(k), bb=G.bb, l="PLUVIAL
   if(G.vazio||!PV){ TX(D,0,0,"Sem paredes.",3); return D; }
   G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s0=>L(D,...s0,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
   const TI=PV.TI, R=TI.R; if(TI.poly) PL(D,[...TI.poly,TI.poly[0]],.2,"PROJECAO",true); else PL(D,[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1],[R.x0,R.y0]],.2,"PROJECAO",true);
-  G.rooms.forEach(r=>TX(D,r.cx,r.cy,r.n.toUpperCase(),1.6,{b:true,l:"COTAS"}));
+  G.rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.6,b:true,l:"COTAS"}],r.cx,r.cy));
   if(PV.livre){ TX(D,(bb.x0+bb.x1)/2,bb.y1+8*k,"TELHADO SEM CALHA: ÁGUA CAI LIVRE DO BEIRAL - CALÇADA DE PROTEÇÃO COM CAIMENTO DE 2%",1.6,{b:true,l}); return D; }
   // calhas
   PV.CL.lista.forEach(c=>{ const [x0,y0,x1,y1]=c.seg, u=[(x1-x0)/(c.L||1),(y1-y0)/(c.L||1)]; L(D,x0,y0,x1,y1,.45,l);
@@ -2408,7 +2410,7 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
   G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
   LM=LM||layoutMoveis(G); HD=HD||redeHidro(G,LM);
   LM.forEach(R=>{ R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des,"MOBILIAC")); if(R.banho){ const n0=D.p.length; desenhaLoucas(D,R.r,R.banho,k,false); for(let i=n0;i<D.p.length;i++) D.p[i].l="MOBILIAC"; } });
-  LM.forEach(R=>{ const r=R.r; TX(D,r.cx,r.cy,r.n.toUpperCase(),1.8,{b:true,l:"COTAS"}); });
+  LM.forEach(R=>{ const r=R.r; rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.8,b:true,l:"COTAS"}],r.cx,r.cy); });
   // esgoto
   HD.salas.forEach(sa=>{ const sd=sa.saida.p;
     sa.A.forEach(a=>{ if(!a.es) return; simbHidro(D,{t:"es",p:a.es});
@@ -2856,7 +2858,7 @@ function desenhoReforma(G2,k,G,leg=true){
   // rótulos dos vãos alterados
   G2.abs.forEach(g=>{ const st=stA(g.a); if(st==="e"||stW(g.w.i)==="d") return; const w=g.w, m=[w.x1+w.ux*(g.d+g.l/2)-g.nX*(h+5.5*k)*g.lado,w.y1+w.uy*(g.d+g.l/2)-g.nY*(h+5.5*k)*g.lado];
     TX(D,...m,st==="d"?"FECHAR":"ABRIR",1.4,{b:true,l:st==="d"?"CONSTRUIR":"DEMOLIR"}); });
-  (G||geom()).rooms.forEach(r=>TX(D,r.cx,r.cy,r.n.toUpperCase(),2,{b:true}));
+  (G||geom()).rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:2,b:true}],r.cx,r.cy));
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
   if(leg){ const x0=bb.x1+14*k; let y=bb.y0; TX(D,x0,y,"LEGENDA",2,{a:"s",b:true}); y+=6*k;
     const sw=(st,txt)=>{ const P=[[x0,y-1.5*k],[x0+6*k,y-1.5*k],[x0+6*k,y+1.5*k],[x0,y+1.5*k]];
