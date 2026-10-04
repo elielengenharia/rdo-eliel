@@ -259,9 +259,19 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <section id="tab-hid" hidden>
     <div class="sheet">
       <h2>Planta hidrossanitária</h2>
-      <p class="cap">Água fria e esgoto traçados sozinhos a partir das louças do Banheiro e dos móveis do Layout (pia, tanque, máquina). Água: reservatório sobre o banheiro, coluna (AF1, AF2…) em cada área molhada e ramal pela parede até cada ponto. Esgoto: aparelhos para a caixa sifonada, vaso direto em Ø100, pia para a caixa de gordura, saída para caixas de inspeção do lado de fora e coletor até a rede ou fossa na frente do lote.</p>
+      <p class="cap">Água fria e esgoto traçados sozinhos a partir das louças do Banheiro e dos móveis do Layout (pia, tanque, máquina). Água: reservatório sobre o banheiro, coluna (AF1, AF2…) em cada área molhada e ramal pela parede até cada ponto. Esgoto: aparelhos para a caixa sifonada, vaso direto em Ø100, pia para a caixa de gordura, saída para caixas de inspeção do lado de fora (ou dentro da edificação no lado em que ela encosta na divisa ou no alinhamento, para nada cair no lote vizinho) e coletor até a rede ou fossa na frente do lote.</p>
       <div class="draw" id="hid"></div>
       <div class="chips" id="hidChips"></div><div id="hidAvisos"></div>
+    </div>
+    <div class="sheet"><h2>Conjunto fossa séptica, filtro anaeróbio e sumidouro</h2>
+      <p class="cap">Para onde não tem rede pública de esgoto. Tanque séptico pela NBR 7229, filtro anaeróbio e sumidouro pela NBR 13969, dimensionados pelo número de pessoas da planta hidrossanitária. O app procura o lugar no lote com 1,50 m de afastamento da construção, das divisas e entre as unidades, o mais perto da última caixa de inspeção.</p>
+      <div class="form wide">
+        <label>Destino do esgoto<select id="fossa.on"><option value="não">Rede pública</option><option value="sim">Fossa séptica + filtro + sumidouro</option></select></label>
+        <label>Local do conjunto<select id="fossa.local"><option value="lote">Dentro do lote</option></select></label>
+        <label>Limpeza do tanque a cada<select id="fossa.lim"><option value="1">1 ano</option><option value="2">2 anos</option><option value="3">3 anos</option><option value="4">4 anos</option><option value="5">5 anos</option></select></label>
+        <label>Coeficiente de infiltração do solo (L/m²·dia)<input type="number" step="5" id="fossa.ci"></label>
+      </div>
+      <div id="fossaBox" hidden><div class="draw" id="fossaDes" style="margin-top:10px"></div><div id="fossaAvisos"></div><div class="tbl"><table id="tabFossa"></table></div><ol class="notes" id="fossaNotas" style="margin-top:12px"></ol></div>
     </div>
     <div class="sheet"><h2>Quadro de pontos hidráulicos</h2><div class="tbl"><table id="tabHid"></table></div><ol class="notes" id="hidNotas" style="margin-top:12px"></ol></div>
   </section>
@@ -355,7 +365,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <section id="tab-ban" hidden>
     <div class="sheet">
       <h2>Detalhe do banheiro</h2>
-      <p class="cap">Para cada ambiente chamado Banho, Banheiro, WC ou Lavabo: planta ampliada com as louças e as vistas das 4 paredes. As louças são colocadas sozinhas: box no canto oposto à porta, vaso ao lado do box (mesma parede hidráulica) e lavatório na parede ao lado. Nesta versão só para banheiro retangular.</p>
+      <p class="cap">Para cada ambiente chamado Banho, Banheiro, WC ou Lavabo: planta ampliada com as louças e as vistas das 4 paredes. As louças são colocadas sozinhas: box no canto oposto à porta, vaso ao lado do box (mesma parede hidráulica) e lavatório na parede ao lado. Funciona em banheiro retangular ou com uma parede inclinada (usa o maior retângulo que cabe nele).</p>
       <div class="form"><label>Revestimento cerâmico nas paredes<select id="banho.rev"><option value="0">Até o teto</option><option value="1.5">Até 1,50 m</option><option value="1.8">Até 1,80 m</option><option value="2.1">Até 2,10 m</option></select></label></div>
     </div>
     <div id="banhos"></div>
@@ -521,7 +531,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 4.0 · planta de situação e lote pelas medidas do mapa";
+const VERSAO="versão 4.2 · fossa séptica, caixas na calçada e banheiro com parede inclinada";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -560,11 +570,11 @@ function defaults(){
   return {
     obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
-    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, memo:{obs:""}, orc:{bdi:20,cub:"",p:{}}, revp:{int:"latex",ext:"textura"}, fpag:[{},{},{},{}], esc:{on:"não",h:"",larg:0.90,tipo:"reta"}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, memo:{obs:""}, orc:{bdi:20,cub:"",p:{}}, revp:{int:"latex",ext:"textura"}, fpag:[{},{},{},{}], esc:{on:"não",h:"",larg:0.90,tipo:"reta"}, fossa:{on:"não",lim:1,ci:60,local:"lote"}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
 }
 let S;
-try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); }catch(e){ S=defaults(); }
+try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote"},o.fossa||{}); }catch(e){ S=defaults(); }
 function save(){ try{ localStorage.setItem("arq-casa-v1",JSON.stringify(S)); }catch(e){} }
 
 /* ---------- polígonos: utilidades ---------- */
@@ -1132,15 +1142,28 @@ function desenhoFachada(G,k,lado,pag=null){
 /* ---------------- Detalhe do banheiro ---------------- */
 const ehBanho=n=>/banh|\bwc\b|lavabo|sanit|toalete/i.test(String(n||""));
 // louças em coordenadas da planta. Cada parede do ambiente: origem no canto, "a" ao longo da parede, "n" para dentro do ambiente
+// banheiro quase retangular (uma parede inclinada, como na divisa de rua): usa o maior retângulo que cabe nele
+function retUtil(r){ if(r.ret) return r; if(r._util!==undefined) return r._util; const P=r.poly, n=P.length; r._util=null; if(n<4||n>8) return null;
+  const xs=new Set(P.map(p=>p[0])), ys=new Set(P.map(p=>p[1]));
+  P.forEach((a,i)=>{ const b=P[(i+1)%n]; if(Math.abs(a[0]-b[0])<1e-6||Math.abs(a[1]-b[1])<1e-6) return;
+    [...ys].forEach(y=>{ const t=(y-a[1])/(b[1]-a[1]); if(t>0&&t<1) xs.add(a[0]+(b[0]-a[0])*t); }); [...xs].forEach(x=>{ const t=(x-a[0])/(b[0]-a[0]); if(t>0&&t<1) ys.add(a[1]+(b[1]-a[1])*t); }); });
+  const X=[...xs].sort((p,q)=>p-q), Y=[...ys].sort((p,q)=>p-q), dentro=p=>pontoDentro(p,P)||P.some((a,i)=>distSeg(p,{x1:a[0],y1:a[1],x2:P[(i+1)%n][0],y2:P[(i+1)%n][1]})<1e-4);
+  let best=null;
+  for(let i=0;i<X.length;i++) for(let j=i+1;j<X.length;j++) for(let a=0;a<Y.length;a++) for(let b=a+1;b<Y.length;b++){
+    const x0=X[i], x1=X[j], y0=Y[a], y1=Y[b], ar=(x1-x0)*(y1-y0); if(best&&ar<=best.ar) continue;
+    const ok=[0,0.25,0.5,0.75,1].every(t=>dentro([x0+(x1-x0)*t,y0])&&dentro([x0+(x1-x0)*t,y1])&&dentro([x0,y0+(y1-y0)*t])&&dentro([x1,y0+(y1-y0)*t]))&&!P.some(p=>p[0]>x0+1e-6&&p[0]<x1-1e-6&&p[1]>y0+1e-6&&p[1]<y1-1e-6);
+    if(ok) best={x0,x1,y0,y1,ar}; }
+  if(!best||best.ar<0.7*r.area||Math.min(best.x1-best.x0,best.y1-best.y0)<0.8) return null;
+  const {x0,x1,y0,y1}=best; r._util={...r,x0,x1,y0,y1,poly:[[x0,y0],[x1,y0],[x1,y1],[x0,y1]],areaUtil:best.ar,cx:(x0+x1)/2,cy:(y0+y1)/2,ret:true,util:true,real:r}; return r._util; }
 function layoutBanheiro(G,r){
-  if(!r.ret) return null;
+  if(!r.ret){ r=retUtil(r); if(!r) return null; }
   const h=G.h, x0=r.x0,x1=r.x1,y0=r.y0,y1=r.y1, W=x1-x0, H=y1-y0;
   const porta=G.abs.find(g=>g.tipo!=="Janela"&&(()=>{ const mx=(g.p0[0]+g.p1[0])/2, my=(g.p0[1]+g.p1[1])/2, dentroX=mx>x0-0.01&&mx<x1+0.01, dentroY=my>y0-0.01&&my<y1+0.01;
     return (dentroX&&(Math.abs(my-(y0-h))<0.03||Math.abs(my-(y1+h))<0.03))||(dentroY&&(Math.abs(mx-(x0-h))<0.03||Math.abs(mx-(x1+h))<0.03)); })());
   const pc=porta?[(porta.p0[0]+porta.p1[0])/2,(porta.p0[1]+porta.p1[1])/2]:[x0,y0];
   const cs=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]], cd=cs.reduce((m,c)=>Math.hypot(c[0]-pc[0],c[1]-pc[1])<Math.hypot(m[0]-pc[0],m[1]-pc[1])?c:m,cs[0]);
   const sx=Math.abs(cd[0]-x0)<1e-6?-1:1, sy=Math.abs(cd[1]-y0)<1e-6?-1:1, cb=[sx>0?x0:x1,sy>0?y0:y1];   // canto do box (oposto à porta); sx, sy: do canto para dentro
-  const lavabo=r.area<2.2||Math.min(W,H)<1.1;
+  const lavabo=r.area<2.2||Math.min(W,H)<1.1||(S.uso==="comercial"&&r.area<4);   // sala comercial: banheiro pequeno sem chuveiro
   let box=null;
   if(!lavabo){ const bs=Math.min(0.90,Math.max(0.70,Math.min(W,H)-0.65));
     if(Math.min(W,H)<=1.25){ if(W<=H) box={x0,x1,y0:sy>0?y0:y1-0.9,y1:sy>0?y0+0.9:y1}; else box={x0:sx>0?x0:x1-0.9,x1:sx>0?x0+0.9:x1,y0,y1}; }
@@ -1163,6 +1186,7 @@ function layoutBanheiro(G,r){
   return {box,vaso,lav,porta,cb,sx,sy,lavabo,chuv:box?(cheioX?{c:[(box.x0+box.x1)/2,cb[1]],n:[0,sy]}:cheioY?{c:[cb[0],(box.y0+box.y1)/2],n:[sx,0]}:{c:[(box.x0+box.x1)/2,cb[1]],n:[0,sy]}):null};
 }
 function desenhoBanheiro(G,r,k){
+  if(!r.ret&&retUtil(r)) r=retUtil(r);   // parede inclinada: detalhe pelo retângulo útil
   const D=Dw(k), h=G.h, t=G.t, m=t+0.35, win={x0:r.x0-m,y0:r.y0-m,x1:r.x1+m,y1:r.y1+m};
   // paredes recortadas na janela em volta do ambiente
   const corta=P=>{ let out=P; [[0,win.x0,1],[0,win.x1,-1],[1,win.y0,1],[1,win.y1,-1]].forEach(([c,v,sg])=>{ const inn=q=>(q[c]-v)*sg>=0, res=[];
@@ -1187,6 +1211,7 @@ function desenhoBanheiro(G,r,k){
 }
 // vista interna de uma parede do banheiro: lado = "A" (parede de cima), "B" (direita), "C" (baixo), "D" (esquerda)
 function vistaBanheiro(G,r,k,lado){
+  if(!r.ret&&retUtil(r)) r=retUtil(r);   // parede inclinada: detalhe pelo retângulo útil
   const D=Dw(k), Y=z=>-z, h=G.h, pd=num(S.pd), rev=num(S.banho&&S.banho.rev)>0?Math.min(pd,num(S.banho.rev)):pd, Lb=layoutBanheiro(G,r);
   const F={A:[0,-1],B:[1,0],C:[0,1],D:[-1,0]}[lado], Rt=[-F[1],F[0]], U=(x,y)=>x*Rt[0]+y*Rt[1];
   const face={A:[[r.x0,r.y0],[r.x1,r.y0]],B:[[r.x1,r.y0],[r.x1,r.y1]],C:[[r.x0,r.y1],[r.x1,r.y1]],D:[[r.x0,r.y0],[r.x0,r.y1]]}[lado];
@@ -1228,7 +1253,8 @@ function vistaBanheiro(G,r,k,lado){
   if(rev<pd-1e-6) TX(D,(ua+ub)/2,Y(rev)-1.8*k,`REVESTIMENTO CERÂMICO ATÉ ${f(rev)}`,1.4,{l:"COTAS"}); else TX(D,(ua+ub)/2,Y(pd)+2.4*k,"REVESTIMENTO CERÂMICO ATÉ O TETO",1.4,{l:"COTAS"});
   return D;
 }
-const notasBanho=()=>[`Revestimento cerâmico nas paredes ${num(S.banho.rev)>0?`até ${f(num(S.banho.rev))} m`:"até o teto"}; piso cerâmico antiderrapante.`,`Box em vidro temperado 8 mm, altura 1,90 m.`,`Pontos de água: chuveiro 2,10 m, registro 1,10 m, lavatório 0,60 m, vaso 0,20 m (do piso acabado).`,`Caimento do piso do box de 1% para o ralo; piso do banheiro 2 cm abaixo dos ambientes vizinhos.`,`Bancada do lavatório a 0,80 m; espelho de 1,10 a 1,90 m.`,`Posição das louças sugerida pelo app: confirmar com o projeto hidrossanitário.`];
+const notasBanho=()=>{ const comBox=(GG||geom()).rooms.some(r=>ehBanho(r.n)&&(()=>{ const L0=layoutBanheiro(GG||geom(),r); return L0&&L0.box; })());
+  return [`Revestimento cerâmico nas paredes ${num(S.banho.rev)>0?`até ${f(num(S.banho.rev))} m`:"até o teto"}; piso cerâmico antiderrapante.`,...(comBox?[`Box em vidro temperado 8 mm, altura 1,90 m.`,`Pontos de água: chuveiro 2,10 m, registro 1,10 m, lavatório 0,60 m, vaso 0,20 m (do piso acabado).`,`Caimento do piso do box de 1% para o ralo; piso do banheiro 2 cm abaixo dos ambientes vizinhos.`]:[`Pontos de água: lavatório 0,60 m e vaso 0,20 m (do piso acabado); ralo sifonado no piso.`,`Piso do banheiro 1 cm abaixo dos ambientes vizinhos, com caimento para o ralo.`]),`Bancada do lavatório a 0,80 m; espelho de 1,10 a 1,90 m.`,`Posição das louças sugerida pelo app: confirmar com o projeto hidrossanitário.`]; };
 
 /* ---------------- Planta de layout (móveis) ---------------- */
 // cada móvel é desenhado num sistema local: "s" ao longo da parede, "t" da parede para dentro do ambiente
@@ -1358,9 +1384,9 @@ function candidatos(it,ctx){ const r=ctx.r, P=r.poly, out=[];
 // arranjo de todos os ambientes (feito uma vez por desenho)
 function layoutMoveis(G){
   return G.rooms.map(r=>{ const tipo=tipoMob(r), lab=r.labIdx>=0?S.rooms[r.labIdx]:null, v=lab?Math.round(num(lab.mv)):0, res={r,tipo,pos:[],faltou:[],sol:[],banho:null,carro:null};
-    if(tipo==="banho"){ const Lb=r.ret?layoutBanheiro(G,r):null; if(Lb){ res.banho=Lb; const loc=(it,s0,t0)=>[it.c[0]+it.a[0]*s0+it.n[0]*t0,it.c[1]+it.a[1]*s0+it.n[1]*t0], rq=(it,s0,s1,t0,t1)=>[loc(it,s0,t0),loc(it,s1,t0),loc(it,s1,t1),loc(it,s0,t1)];
+    if(tipo==="banho"){ const Lb=layoutBanheiro(G,r); if(Lb){ res.banho=Lb; const loc=(it,s0,t0)=>[it.c[0]+it.a[0]*s0+it.n[0]*t0,it.c[1]+it.a[1]*s0+it.n[1]*t0], rq=(it,s0,s1,t0,t1)=>[loc(it,s0,t0),loc(it,s1,t0),loc(it,s1,t1),loc(it,s0,t1)];
         res.sol.push(rq(Lb.vaso,-0.2,0.2,0,0.68),rq(Lb.lav,-Lb.lav.larg/2,Lb.lav.larg/2,0,Lb.lav.prof)); if(Lb.box){ const b=Lb.box; res.sol.push([[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]]); } }
-      else if(!r.ret) res.faltou.push("louças (banheiro não retangular)"); return res; }
+      else if(!r.ret) res.faltou.push("louças (banheiro muito fora do retângulo)"); return res; }
     if(tipo==="garagem"){ const W=r.x1-r.x0, H=r.y1-r.y0, lg=W>=H, Lc=4.30, Wc=1.80, cx=(r.x0+r.x1)/2, cy=(r.y0+r.y1)/2;
       const T={A:lg?[cx-Lc/2,cy-Wc/2]:[cx+Wc/2,cy-Lc/2],u:lg?[1,0]:[0,1],N:lg?[0,1]:[-1,0],s0:0,w:Lc,m:1}, Q=retW(T,[0,0,Lc,Wc]);
       if(dentroAmb(r,Q)){ res.carro=T; res.sol.push(Q); } else res.faltou.push("carro"); return res; }
@@ -1606,33 +1632,66 @@ function redeHidro(G,LM){
     if(!A.length) return;
     if(cs&&!saida) saida={p:cs,d:50};
     salas.push({r,A,cs,saida}); });
-  // anel externo (onde ficam as caixas de inspeção), a 0,80 m da casa
-  const X0=bb.x0-d, Y0=bb.y0-d, X1=bb.x1+d, Y1=bb.y1+d, Wr=X1-X0, Hr=Y1-Y0, PER=2*(Wr+Hr);
-  const anelP=t=>{ t=((t%PER)+PER)%PER; if(t<=Wr) return [X0+t,Y0]; t-=Wr; if(t<=Hr) return [X1,Y0+t]; t-=Hr; if(t<=Wr) return [X1-t,Y1]; t-=Wr; return [X0,Y1-t]; };
-  const anelT=p=>{ const [x,y]=p; const c=[[Math.abs(y-Y0),x-X0],[Math.abs(x-X1),Wr+y-Y0],[Math.abs(y-Y1),Wr+Hr+X1-x],[Math.abs(x-X0),2*Wr+Hr+Y1-y]]; return c.reduce((m,v)=>v[0]<m[0]?v:m)[1]; };
-  const lados={cima:[0,Wr],dir:[Wr,Wr+Hr],baixo:[Wr+Hr,2*Wr+Hr],esq:[2*Wr+Hr,PER]};
+  // anel das caixas de inspeção: a 0,80 m da casa, por fora; no lado em que isso cai fora do lote
+  // (construção na divisa ou no alinhamento) as caixas ficam dentro da edificação, a 0,60 m da parede
+  // o anel acompanha o contorno da construção (inclusive parede chanfrada), lado a lado
+  const TL=G.vazio?null:terreno(G).lote, nT=TL?TL.length:0;
+  const PS=passeios(G);
+  const okP=p=>!TL||noPasseio(p,PS,0.25)||(pontoDentro(p,TL)&&Math.min(...TL.map((a,i)=>distSeg(p,{x1:a[0],y1:a[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.25);
+  const livre=(pa,pb)=>[0,0.25,0.5,0.75,1].every(t=>okP([pa[0]+(pb[0]-pa[0])*t,pa[1]+(pb[1]-pa[1])*t]));
+  let C=(G.casas&&G.casas.length?G.casas.slice().sort((p,q)=>Math.abs(areaS(q))-Math.abs(areaS(p)))[0]:[[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x1,bb.y1],[bb.x0,bb.y1]]).map(p=>[p[0],p[1]]);
+  for(let it=0;it<50&&C.length>3;it++){ const n0=C.length; let tira=-1;
+    for(let i=0;i<n0;i++){ const a=C[(i+n0-1)%n0], b=C[i], c=C[(i+1)%n0], l1=Math.hypot(b[0]-a[0],b[1]-a[1]), l2=Math.hypot(c[0]-b[0],c[1]-b[1]), cr=((b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]))/((l1*l2)||1);
+      if(l2<0.25||Math.abs(cr)<0.02){ tira=l2<0.25?(i+1)%n0:i; break; } }
+    if(tira<0) break; C.splice(tira,1); }
+  if(areaS(C)<0) C.reverse();   // mesmo sentido do retângulo antigo (cima, direita, baixo, esquerda na tela)
+  const nC=C.length, dIn=-0.60, ED=C.map((a,i)=>{ const b=C[(i+1)%nC], L0=Math.hypot(b[0]-a[0],b[1]-a[1])||1, u=[(b[0]-a[0])/L0,(b[1]-a[1])/L0]; let nn=[u[1],-u[0]];
+      const m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; if(pontoDentro([m[0]+nn[0]*0.05,m[1]+nn[1]*0.05],C)) nn=[-nn[0],-nn[1]];
+      // primeiro a 0,80 m; se cair numa faixa estreita do lote, vai mais para fora até a calçada; senão, dentro da obra
+      const tenta=[d,1.0,1.25,1.5,1.75,2.0,2.5,3.0].find(o=>livre([a[0]+nn[0]*o+u[0]*0.3,a[1]+nn[1]*o+u[1]*0.3],[b[0]+nn[0]*o-u[0]*0.3,b[1]+nn[1]*o-u[1]*0.3]));
+      return {a,b,u,n:nn,dd:tenta===undefined?dIn:tenta}; });
+  const R=ED.map((e,i)=>{ const pv=ED[(i+nC-1)%nC], p1=[e.a[0]+e.n[0]*e.dd,e.a[1]+e.n[1]*e.dd], p0=[pv.b[0]+pv.n[0]*pv.dd,pv.b[1]+pv.n[1]*pv.dd], den=pv.u[0]*e.u[1]-pv.u[1]*e.u[0];
+    if(Math.abs(den)<1e-6) return [(p0[0]+p1[0])/2,(p0[1]+p1[1])/2];
+    const t=((p1[0]-p0[0])*e.u[1]-(p1[1]-p0[1])*e.u[0])/den, X=[p0[0]+pv.u[0]*t,p0[1]+pv.u[1]*t]; return Math.hypot(X[0]-e.a[0],X[1]-e.a[1])>3?[(p0[0]+p1[0])/2,(p0[1]+p1[1])/2]:X; });
+  const cum=[0]; R.forEach((p,i)=>{ const q=R[(i+1)%nC]; cum.push(cum[i]+Math.hypot(q[0]-p[0],q[1]-p[1])); }); const PER=cum[nC]||1;
+  const anelP=t=>{ t=((t%PER)+PER)%PER; let i=0; while(i<nC-1&&t>cum[i+1]) i++; const p=R[i], q=R[(i+1)%nC], L0=cum[i+1]-cum[i]||1, f0=(t-cum[i])/L0; return [p[0]+(q[0]-p[0])*f0,p[1]+(q[1]-p[1])*f0]; };
+  const anelT=(p,soFora)=>{ let best=null; R.forEach((a,i)=>{ if(soFora&&!(ED[i].dd>0)) return; const b=R[(i+1)%nC], dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1, u=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2)), q=[a[0]+dx*u,a[1]+dy*u], dd=Math.hypot(p[0]-q[0],p[1]-q[1]); if(!best||dd<best.d) best={d:dd,t:cum[i]+u*Math.sqrt(L2)}; }); return soFora?best:best.t; };
+  // lado da frente: o trecho do anel cuja face olha para a rua (o mais comprido)
+  const VF={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente]||[0,1];
+  let iF=0, bF=-1e9; ED.forEach((e,i)=>{ const v=(e.n[0]*VF[0]+e.n[1]*VF[1])>0.6?Math.hypot(e.b[0]-e.a[0],e.b[1]-e.a[1]):-1+(e.n[0]*VF[0]+e.n[1]*VF[1]); if(v>bF){ bF=v; iF=i; } });
+  const frente=[cum[iF],cum[iF+1]], dFr=ED[iF].dd;
   const caixas=[], ramal=[];
-  salas.forEach(sa=>{ const p=sa.saida.p, ds=[[p[1]-Y0,[p[0],Y0]],[X1-p[0],[X1,p[1]]],[Y1-p[1],[p[0],Y1]],[p[0]-X0,[X0,p[1]]]], q=ds.reduce((m,v)=>v[0]<m[0]?v:m)[1];
+  // a saída de cada área molhada vai para o anel do lado de fora (lote ou calçada), se não for muito mais longe que o de dentro
+  salas.forEach(sa=>{ const p=sa.saida.p, tIn=anelT(p), qIn=anelP(tIn), bo=anelT(p,true), q=bo&&bo.d<=Math.hypot(qIn[0]-p[0],qIn[1]-p[1])+4?anelP(bo.t):qIn;
     ramal.push({a:p,b:q,d:sa.saida.d,r:sa.r});
     caixas.push({p:q,t:anelT(q),tipo:sa.saida.cg?"CG":"CI",r:sa.r}); });
-  // caixa final no lado da frente, na posição mais perto das outras
-  const fr=lados[S.frente]||lados.baixo, dist=(a,b)=>{ const x=Math.abs(a-b)%PER; return Math.min(x,PER-x); };
+  const qts=G.rooms.filter(r=>/su[ií]te|quarto|dormit/i.test(r.n)).length, com=S.uso==="comercial";
+  const pessoas=com?Math.max(2,Math.ceil(LM.filter(R=>R.tipo==="escrit").reduce((s,R)=>s+R.r.area,0)/7.5)):Math.max(2,2*qts), cons=com?50:150, Vn=pessoas*cons;
+  // sem rede pública: o conjunto fossa/filtro/sumidouro é colocado no lote e a caixa final fica no lado virado para ele
+  const fossa=(S.fossa||{}).on==="sim"&&caixas.length?(()=>{ const FSd=dimFossa({pessoas,com}), al=[caixas.reduce((s0,c)=>s0+c.p[0],0)/caixas.length,caixas.reduce((s0,c)=>s0+c.p[1],0)/caixas.length]; return {...FSd,...posFossa(G,FSd,al)}; })():null;
+  // caixa final no lado da frente (ou do lado da fossa), na posição mais perto das outras
+  const dist=(a,b)=>{ const x=Math.abs(a-b)%PER; return Math.min(x,PER-x); };
+  let fr=frente;
+  if(fossa&&fossa.pos){ const te=anelT(fossa.pos.ent); fr=[te,te]; }
   let tf=null, best=1e9;
-  caixas.forEach(c=>{ const tt=Math.min(Math.max(c.t,fr[0]),fr[1]); const v=caixas.reduce((s,o)=>s+dist(o.t,tt),0); if(v<best){ best=v; tf=tt; } });
+  // ponto do trecho da frente mais perto de cada caixa (dando a volta no anel pelos dois lados)
+  const naFrente=t=>{ const tt=((t%PER)+PER)%PER; if(tt>=fr[0]-1e-9&&tt<=fr[1]+1e-9) return tt; return dist(tt,fr[0])<=dist(tt,fr[1])?fr[0]:fr[1]; };
+  caixas.forEach(c=>{ const tt=naFrente(c.t); const v=caixas.reduce((s,o)=>s+dist(o.t,tt),0); if(v<best){ best=v; tf=tt; } });
   if(tf===null) tf=(fr[0]+fr[1])/2;
   // coletor pelo anel, sempre pelo caminho mais curto até a caixa final
   const trechos=[]; caixas.forEach(c=>{ let a=c.t, b=tf; let dd=((b-a)%PER+PER)%PER; if(dd>PER/2){ [a,b]=[b,a]; dd=PER-dd; } if(dd>0.05) trechos.push([a,a+dd]); });
-  const cantos=[0,Wr,Wr+Hr,2*Wr+Hr]; const usados=new Set();
+  const cantos=cum.slice(0,nC); const usados=new Set();
   trechos.forEach(([a,b])=>cantos.forEach(cn=>[cn,cn+PER].forEach(v=>{ if(v>a+0.05&&v<b-0.05) usados.add(cn); })));
   const ci=[...caixas];
   usados.forEach(cn=>{ if(!ci.some(c=>dist(c.t,cn)<0.6)) ci.push({p:anelP(cn),t:cn,tipo:"CI"}); });
   if(!ci.some(c=>dist(c.t,tf)<0.6)) ci.push({p:anelP(tf),t:tf,tipo:"CI",fim:true}); else ci.find(c=>dist(c.t,tf)<0.6).fim=true;
   // caixas muito juntas viram uma só
   const cx2=[]; ci.forEach(c=>{ const o=cx2.find(q=>dist(q.t,c.t)<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; o.fim=o.fim||c.fim; } else cx2.push({...c}); });
-  const fim=cx2.find(c=>c.fim), out=fim?(()=>{ const p=fim.p, s=S.frente||"baixo", v={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[s]||[0,1]; return [p[0]+v[0]*1.6,p[1]+v[1]*1.6]; })():null;
+  const dentroObra=c=>(G.casas||[]).some(P0=>pontoDentro(c.p,P0));
+  if(cx2.some(dentroObra)) aviso.push("Construção encostada na divisa do vizinho: a caixa desse trecho fica dentro da edificação (caixa com tampa no piso), para não passar para o lote vizinho.");
+  if(TL&&cx2.some(c=>!dentroObra(c)&&noPasseio(c.p,PS,0))) aviso.push("Construção no alinhamento: caixa de inspeção na calçada, junto da parede (confirmar com a prefeitura).");
+  const fim=cx2.find(c=>c.fim), out=fim&&!fossa?(()=>{ const p=fim.p, v=ED[iF].n; return [p[0]+v[0]*1.6,p[1]+v[1]*1.6]; })():null;
   // água fria: reservatório sobre o maior banheiro (ou a maior área molhada)
-  const qts=G.rooms.filter(r=>/su[ií]te|quarto|dormit/i.test(r.n)).length, com=S.uso==="comercial";
-  const pessoas=com?Math.max(2,Math.ceil(LM.filter(R=>R.tipo==="escrit").reduce((s,R)=>s+R.r.area,0)/7.5)):Math.max(2,2*qts), cons=com?50:150, Vn=pessoas*cons;
   const VOL=[310,500,750,1000,1500,2000,3000,5000].find(v=>v>=Vn)||5000, DIA={310:1.0,500:1.2,750:1.35,1000:1.5,1500:1.7,2000:1.9,3000:2.2,5000:2.6}[VOL];
   const rb=salas.filter(s=>s.r&&ehBanho(s.r.n)).sort((a,b)=>b.r.area-a.r.area)[0]||salas.slice().sort((a,b)=>b.r.area-a.r.area)[0];
   const res=rb?{p:[rb.r.cx,rb.r.cy],dia:DIA,vol:VOL}:null;
@@ -1646,8 +1705,143 @@ function redeHidro(G,LM){
     sa.A.forEach(a=>{ const t=contT(P,a.af.p); a.afPipe=contTrecho(sa.r,t,t+0.001,0.07)[0]; }); });
   if(!salas.length) aviso.push("Nenhuma área molhada com louças: dê nome de Banheiro, Cozinha ou Lavanderia aos ambientes (e confira a aba Layout).");
   // hidrômetro na frente do lote, fora do anel do esgoto
-  const hd=fim?(()=>{ const t=fim.t+((fr[1]-fim.t)>2?1.8:-1.8), p=anelP(t), v={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente||"baixo"]||[0,1]; return [p[0]+v[0]*1.0,p[1]+v[1]*1.0]; })():null;
-  return {ap,salas,ramal,trechos,anelP,caixas:cx2,fim,out,res,desc,ramaisAF,hd,pessoas,cons,Vn,aviso,com}; }
+  const noLote=p=>!TL||(pontoDentro(p,TL)&&Math.min(...TL.map((a,i)=>distSeg(p,{x1:a[0],y1:a[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.25);
+  const oHdF=p=>dFr>0&&noLote([p[0]+ED[iF].n[0]*1.0,p[1]+ED[iF].n[1]*1.0])?1.0:-dFr;   // sem recuo na frente: hidrômetro no nicho da fachada   // na divisa: hidrômetro no nicho da fachada
+  const hd=fim?(()=>{ const fF=frente, t0=fossa?Math.min(Math.max(fim.t,fF[0]+1),fF[1]-1):fim.t, t=t0+((fF[1]-t0)>2?1.8:-1.8), p=anelP(t), v=ED[iF].n, oHd=oHdF(p); return [p[0]+v[0]*oHd,p[1]+v[1]*oHd]; })():null;
+  return {ap,salas,ramal,trechos,anelP,anelCn:cum.slice(0,nC),PER,fossa,caixas:cx2,fim,out,res,desc,ramaisAF,hd,pessoas,cons,Vn,aviso,com}; }
+
+/* ---------------- Conjunto fossa séptica (NBR 7229), filtro anaeróbio e sumidouro (NBR 13969) ---------------- */
+const up5=v=>Math.ceil(v*20-1e-9)/20;
+function dimFossa(HD){ const F=S.fossa||{}, N=Math.max(1,HD.pessoas), com=!!HD.com, C=com?50:130, Lf=com?0.2:1, Q=N*C;
+  const faixa=[1500,3000,4500,6000,7500,9000], fx=faixa.findIndex(v=>Q<=v), T=[1,0.92,0.83,0.75,0.67,0.58,0.5][fx<0?6:fx];
+  const lim=Math.min(5,Math.max(1,Math.round(num(F.lim))||1)), K=[57,97,137,177,217][lim-1];
+  const V=Math.max(1250,1000+N*(C*T+K*Lf)), Vm=V/1000, hmin=Vm<=6?1.2:Vm<=10?1.5:1.8, hmax=hmin+1.0;
+  // tanque prismático retangular: largura >= 0,80 m e comprimento de 2 a 4 vezes a largura
+  let h=hmin, W=Math.max(0.8,up5(Math.sqrt(Vm/(2*h)))), Lt=Math.max(2*W,up5(Vm/(W*h))); while(Lt>4*W&&h<hmax){ h=Math.min(hmax,h+0.1); Lt=Math.max(2*W,up5(Vm/(W*h))); }
+  h=up5(Math.max(hmin,Vm/(W*Lt)));
+  // filtro anaeróbio (esgoto acima de 25 °C)
+  const Tf=[0.92,0.83,0.75,0.67,0.58,0.5,0.5][fx<0?6:fx], Vf=Math.max(1000,1.6*N*C*Tf), Df=Math.max(0.95,up5(Math.sqrt(4*(Vf/1000)/1.2/Math.PI)));
+  // sumidouro: área de infiltração = contribuição / coeficiente de infiltração do solo
+  const ci=num(F.ci)>0?num(F.ci):60, Ai=Q/ci; let ns=1, Ds=1.2, hs=0;
+  for(;;){ const a=Ai/ns; const ok=[1.2,1.5,2.0,2.5].find(d=>(a-Math.PI*d*d/4)/(Math.PI*d)<=3); if(ok){ Ds=ok; hs=Math.max(1.0,up5((a-Math.PI*ok*ok/4)/(Math.PI*ok))); break; } ns++; if(ns>6){ Ds=2.5; hs=3; break; } }
+  return {N,C,Lf,Q,T,lim,K,V,h,W,L:Lt,Tf,Vf,Df,ci,Ai,ns,Ds,hs,com,e:0.15,afast:1.5}; }
+let _fossaCache=null;
+// passeios (calçadas) dos lados do lote que dão para rua: faixa entre o alinhamento e o meio-fio
+function passeios(G){ if(G.vazio) return []; const T=terreno(G), L0=T.lote, n=L0.length, cal=Math.max(0,num(S.terr.calcada)); if(cal<0.6) return [];
+  const rua=i=>{ if(T.pol) return ehRuaLado(S.terr.lados[i]); if(i===0) return true; const e=S.terr.esquina; return (e==="dir"&&i===1)||(e==="esq"&&i===n-1); };
+  const nome=i=>T.pol?String(S.terr.lados[i].c||"esquina"):i===0?String(S.terr.rua||"rua da frente"):String(S.terr.rua2||"rua lateral");
+  const cx=L0.reduce((s0,p)=>s0+p[0],0)/n, cy=L0.reduce((s0,p)=>s0+p[1],0)/n, out=[];
+  L0.forEach((a,i)=>{ if(!rua(i)) return; const b=L0[(i+1)%n], Ls=Math.hypot(b[0]-a[0],b[1]-a[1])||1, u=[(b[0]-a[0])/Ls,(b[1]-a[1])/Ls]; let nn=[u[1],-u[0]];
+    if(((a[0]+b[0])/2-cx)*nn[0]+((a[1]+b[1])/2-cy)*nn[1]<0) nn=[-nn[0],-nn[1]]; out.push({i,a,b,u,n:nn,L:Ls,cal,nome:nome(i)}); });
+  return out; }
+const noPasseio=(p,PS,m=0.05)=>PS.some(q=>{ const dx=p[0]-q.a[0], dy=p[1]-q.a[1], s0=dx*q.u[0]+dy*q.u[1], t0=dx*q.n[0]+dy*q.n[1]; return t0>=m&&t0<=q.cal-m&&s0>=-q.cal&&s0<=q.L+q.cal; });
+function fossaSeptica(G,HD){ return HD&&HD.fossa||null; }
+function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, gap=FS.afast, loc=String((S.fossa||{}).local||"lote");
+  const key=JSON.stringify([TL,G.contExt,FS.L,FS.W,FS.Df,FS.Ds,FS.ns,alvo,loc,S.terr.calcada]); if(_fossaCache&&_fossaCache.key===key) return _fossaCache.pos;
+  if(loc!=="lote"){ const pos=fossaNoPasseio(G,FS,alvo,+loc-1); _fossaCache={key,pos}; return pos; }
+  const segs=[...TL.map((a,i)=>({a,b:TL[(i+1)%nT],lote:1}))], dS=(p,s0)=>distSeg(p,{x1:s0.a[0],y1:s0.a[1],x2:s0.b[0],y2:s0.b[1]});
+  const casas=G.casas||[], walls=G.contExt.map(s0=>({a:[s0[0],s0[1]],b:[s0[2],s0[3]]}));
+  const folga=p=>{ const dl=Math.min(...segs.map(s0=>dS(p,s0))), dc=walls.length?Math.min(...walls.map(s0=>dS(p,s0))):99;
+    return Math.min(pontoDentro(p,TL)?dl:-dl,casas.some(P=>pontoDentro(p,P))?-dc:dc); };
+  const Lo=FS.L+2*e, Wo=FS.W+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e;
+  const xs=TL.map(p=>p[0]), ys=TL.map(p=>p[1]), x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  let best=null;
+  for(const ax of [[1,0],[-1,0],[0,1],[0,-1]]){ const pr=[-ax[1],ax[0]];
+    for(let x=x0;x<=x1;x+=0.5) for(let y=y0;y<=y1;y+=0.5){
+      const ct=[x,y], cf=[x+ax[0]*(Lo/2+gap+rf),y+ax[1]*(Lo/2+gap+rf)], cs=[]; let c0=[cf[0]+ax[0]*(rf+gap+rs),cf[1]+ax[1]*(rf+gap+rs)];
+      for(let i=0;i<FS.ns;i++){ cs.push(c0); c0=[c0[0]+ax[0]*(2*rs+gap),c0[1]+ax[1]*(2*rs+gap)]; }
+      const pts=[]; [-1,0,1].forEach(a=>[-1,0,1].forEach(b=>{ if(a||b) pts.push([ct[0]+ax[0]*a*Lo/2+pr[0]*b*Wo/2,ct[1]+ax[1]*a*Lo/2+pr[1]*b*Wo/2]); }));
+      [[cf,rf],...cs.map(c=>[c,rs])].forEach(([c,r])=>{ for(let i=0;i<12;i++){ const an=i*Math.PI/6; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } });
+      const cl=Math.min(...pts.map(folga));
+      const ent=[ct[0]-ax[0]*Lo/2,ct[1]-ax[1]*Lo/2], dd=Math.hypot(ent[0]-alvo[0],ent[1]-alvo[1]);
+      const sc=cl>=gap-1e-9?dd:1e6-cl*1000+dd;
+      if(!best||sc<best.sc) best={sc,cl,ct,cf,cs,ax,pr,ent}; } }
+  const pos={pos:best,cabe:!!best&&best.cl>=gap-1e-9}; _fossaCache={key,pos}; return pos; }
+// conjunto em fila no passeio da rua escolhida, paralelo ao meio-fio, começando o mais perto da caixa final
+function fossaNoPasseio(G,FS,alvo,i){ const PS=passeios(G), q=PS.find(p=>p.i===i)||PS[0]; if(!q) return {pos:null,cabe:false,passeio:true,motivo:"Nenhum lado do lote marcado como rua (ou passeio com menos de 0,60 m)."};
+  const e=FS.e, Lo=FS.L+2*e, Wo=FS.W+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, gap=0.50, t0=q.cal/2, walls=G.contExt.map(s0=>({x1:s0[0],y1:s0[1],x2:s0[2],y2:s0[3]})), casas=G.casas||[];
+  const larg=Math.max(Wo,2*rf,2*rs); let best=null;
+  for(const sg of [1,-1]){ const ax=[q.u[0]*sg,q.u[1]*sg], pr=q.n;
+    for(let s0=-q.cal;s0<=q.L+q.cal;s0+=0.25){ const base=[q.a[0]+q.u[0]*s0+q.n[0]*t0,q.a[1]+q.u[1]*s0+q.n[1]*t0], ct=[base[0]+ax[0]*Lo/2,base[1]+ax[1]*Lo/2];
+      const cf=[ct[0]+ax[0]*(Lo/2+gap+rf),ct[1]+ax[1]*(Lo/2+gap+rf)], cs=[]; let c0=[cf[0]+ax[0]*(rf+gap+rs),cf[1]+ax[1]*(rf+gap+rs)];
+      for(let k=0;k<FS.ns;k++){ cs.push(c0); c0=[c0[0]+ax[0]*(2*rs+gap),c0[1]+ax[1]*(2*rs+gap)]; }
+      const pts=[]; [-1,0,1].forEach(a=>[-1,1].forEach(b=>pts.push([ct[0]+ax[0]*a*Lo/2+pr[0]*b*Wo/2,ct[1]+ax[1]*a*Lo/2+pr[1]*b*Wo/2])));
+      [[cf,rf],...cs.map(c=>[c,rs])].forEach(([c,r])=>{ for(let k=0;k<8;k++){ const an=k*Math.PI/4; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } });
+      const fora=pts.filter(p=>!noPasseio(p,PS,0)).length, bate=pts.some(p=>casas.some(P=>pontoDentro(p,P))||walls.some(w=>distSeg(p,w)<0.05));
+      const ent=[ct[0]-ax[0]*Lo/2,ct[1]-ax[1]*Lo/2], dd=Math.hypot(ent[0]-alvo[0],ent[1]-alvo[1]), sc=(bate?1e6:0)+fora*1000+dd;
+      if(!best||sc<best.sc) best={sc,cl:0,ct,cf,cs,ax,pr,ent,fora,bate}; } }
+  return {pos:best,cabe:!!best&&!best.fora&&!best.bate,passeio:true,rua:q.nome,estreito:larg>q.cal}; }
+// trajeto em L do coletor até a entrada do tanque, sem atravessar a casa
+function trajetoFossa(G,a,b){ const c1=[b[0],a[1]], c2=[a[0],b[1]], dentro=p=>(G.casas||[]).some(P=>pontoDentro(p,P)), meio=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];
+  const bad=c=>[meio(a,c),meio(c,b),c].filter(dentro).length; return bad(c1)<=bad(c2)?[a,c1,b]:[a,c2,b]; }
+function desenhaPasseios(D,G){ passeios(G).forEach(q=>{ const ex=q.cal; L(D,q.a[0]+q.n[0]*q.cal-q.u[0]*ex,q.a[1]+q.n[1]*q.cal-q.u[1]*ex,q.b[0]+q.n[0]*q.cal+q.u[0]*ex,q.b[1]+q.n[1]*q.cal+q.u[1]*ex,.18,"LOTE");
+  if(q.L>3){ const m=[(q.a[0]+q.b[0])/2+q.n[0]*q.cal/2,(q.a[1]+q.b[1])/2+q.n[1]*q.cal/2]; let an=Math.atan2(q.u[1],q.u[0])*180/Math.PI; if(an>90) an-=180; if(an<-90) an+=180; TX(D,m[0]+q.u[0]*q.L*0.3,m[1]+q.u[1]*q.L*0.3,`PASSEIO · ${q.nome.toUpperCase()}`,1.3,{l:"COTAS",rot:an}); } }); }
+function desenhaFossaPlanta(D,G,FS,HD){ const k=D.k, P=FS.pos; if(!P) return;
+  const T=terreno(G); PL(D,[...T.lote,T.lote[0]],.25,"LOTE",true); desenhaPasseios(D,G);
+  const {ct,cf,cs,ax,pr}=P, Lo=FS.L+0.3, Wo=FS.W+0.3, q=(a,b)=>[ct[0]+ax[0]*a+pr[0]*b,ct[1]+ax[1]*a+pr[1]*b];
+  PL(D,[q(-Lo/2,-Wo/2),q(Lo/2,-Wo/2),q(Lo/2,Wo/2),q(-Lo/2,Wo/2),q(-Lo/2,-Wo/2)],.4,"ESGOTO"); PL(D,[q(-FS.L/2,-FS.W/2),q(FS.L/2,-FS.W/2),q(FS.L/2,FS.W/2),q(-FS.L/2,FS.W/2),q(-FS.L/2,-FS.W/2)],.2,"ESGOTO");
+  const cir=(c,r,w,dash)=>{ const pts=[]; for(let i=0;i<=36;i++){ const an=i/36*2*Math.PI; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } PL(D,pts,w,"ESGOTO",dash); };
+  cir(cf,FS.Df/2+0.15,.4); cir(cf,FS.Df/2,.2); cs.forEach(c=>{ cir(c,FS.Ds/2+0.15,.4); cir(c,FS.Ds/2,.2,true); });
+  TX(D,...ct,"TS",2,{b:true,l:"ESGOTO"}); TX(D,ct[0],ct[1]+2.6*k,`${f(FS.W)}x${f(FS.L)} h=${f(FS.h)}`,1.3,{l:"ESGOTO"});
+  TX(D,...cf,"FA",2,{b:true,l:"ESGOTO"}); TX(D,cf[0],cf[1]+2.6*k,`Ø${f(FS.Df)}`,1.3,{l:"ESGOTO"});
+  cs.forEach((c,i)=>{ TX(D,...c,FS.ns>1?`SM${i+1}`:"SM",2,{b:true,l:"ESGOTO"}); TX(D,c[0],c[1]+2.6*k,`Ø${f(FS.Ds)} h=${f(FS.hs)}`,1.3,{l:"ESGOTO"}); });
+  const tr=trajetoFossa(G,HD.fim.p,P.ent); PL(D,tr,.5,"ESGOTO"); setaFluxo(D,tr[tr.length-2],tr[tr.length-1],"ESGOTO");
+  const sT=[ct[0]+ax[0]*Lo/2,ct[1]+ax[1]*Lo/2], eF=[cf[0]-ax[0]*(FS.Df/2+0.15),cf[1]-ax[1]*(FS.Df/2+0.15)]; L(D,...sT,...eF,.5,"ESGOTO"); setaFluxo(D,sT,eF,"ESGOTO");
+  let prev=[cf[0]+ax[0]*(FS.Df/2+0.15),cf[1]+ax[1]*(FS.Df/2+0.15)]; cs.forEach(c=>{ const e1=[c[0]-ax[0]*(FS.Ds/2+0.15),c[1]-ax[1]*(FS.Ds/2+0.15)]; L(D,...prev,...e1,.5,"ESGOTO"); setaFluxo(D,prev,e1,"ESGOTO"); prev=[c[0]+ax[0]*(FS.Ds/2+0.15),c[1]+ax[1]*(FS.Ds/2+0.15)]; });
+  rotuloLinha(D,sT,eF,"Ø100","ESGOTO"); }
+// detalhe: planta do conjunto e corte longitudinal
+function desenhoFossa(k,FS){ const D=Dw(k), e=FS.e, g=FS.afast, Lo=FS.L+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, Y=z=>-z;
+  const xT0=0, xT1=Lo, xF=xT1+g+rf, xS=[]; { let x=xF+rf+g+rs; for(let i=0;i<FS.ns;i++){ xS.push(x); x+=2*rs+g; } } const xEnd=xS[xS.length-1]+rs;
+  const cir=(c,r,w,l="ESGOTO",dash)=>{ const pts=[]; for(let i=0;i<=36;i++){ const an=i/36*2*Math.PI; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } PL(D,pts,w,l,dash); };
+  const box=(x0,y0,x1,y1,w,l="ESGOTO")=>PL(D,[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]],w,l);
+  // planta (em cima)
+  const yP=-2.6-Math.max(FS.W/2+e,rf,rs); TX(D,-1.0,yP-Math.max(FS.W/2+e,rf,rs)-6*k,"PLANTA",1.8,{b:true,a:"s"});
+  box(xT0,yP-FS.W/2-e,xT1,yP+FS.W/2+e,.4); box(xT0+e,yP-FS.W/2,xT1-e,yP+FS.W/2,.2);
+  L(D,xT0+e+FS.L*2/3,yP-FS.W/2,xT0+e+FS.L*2/3,yP+FS.W/2,.18,"ESGOTO",true);
+  cir([xF,yP],rf,.4); cir([xF,yP],FS.Df/2,.2); xS.forEach(x=>{ cir([x,yP],rs,.4); cir([x,yP],FS.Ds/2,.2,"ESGOTO",true); });
+  L(D,-1.0,yP,xT0,yP,.5,"ESGOTO"); L(D,xT1,yP,xF-rf,yP,.5,"ESGOTO"); let px=xF+rf; xS.forEach(x=>{ L(D,px,yP,x-rs,yP,.5,"ESGOTO"); px=x+rs; });
+  TX(D,(xT0+xT1)/2,yP-FS.W/2-e-2.5*k,"TANQUE SÉPTICO",1.6,{b:true}); TX(D,xF,yP-rf-2.5*k,"FILTRO ANAERÓBIO",1.6,{b:true}); xS.forEach((x,i)=>TX(D,x,yP-rs-2.5*k,FS.ns>1?`SUMIDOURO ${i+1}`:"SUMIDOURO",1.6,{b:true}));
+  cotaH(D,xT0+e,xT1-e,yP+FS.W/2+e+5*k,yP+FS.W/2+e,f(FS.L)); cotaV(D,yP-FS.W/2,yP+FS.W/2,xT0-5*k,xT0,f(FS.W));
+  cotaH(D,xF-FS.Df/2,xF+FS.Df/2,yP+rf+5*k,yP+rf,`Ø${f(FS.Df)}`); xS.forEach(x=>cotaH(D,x-FS.Ds/2,x+FS.Ds/2,yP+rs+5*k,yP+rs,`Ø${f(FS.Ds)}`));
+  cotaH(D,xT1,xF-rf,yP+Math.max(FS.W/2+e,rf)+11*k,yP,`${f(g)} (mín.)`);
+  // corte (embaixo): terreno no nível 0
+  L(D,-1.2,Y(0),xEnd+1.0,Y(0),.45,"TERRENO");
+  const hT=FS.h, liv=0.30, tl=0.10;   // tanque
+  PG(D,[[xT0,Y(0)],[xT1,Y(0)],[xT1,Y(-hT-liv-tl)],[xT0,Y(-hT-liv-tl)]],"HACHURA");
+  PG(D,[[xT0+e,Y(-tl)],[xT1-e,Y(-tl)],[xT1-e,Y(-hT-liv)],[xT0+e,Y(-hT-liv)]],"FUNDO");
+  box(xT0,Y(0),xT1,Y(-hT-liv-tl),.35); box(xT0+e,Y(-tl),xT1-e,Y(-hT-liv),.25);
+  const zN=-tl-liv; L(D,xT0+e,Y(zN),xT1-e,Y(zN),.18,"AGUA",true);
+  L(D,-1.0,Y(zN+0.05),xT0+e+0.15,Y(zN+0.05),.5,"ESGOTO"); L(D,xT0+e+0.15,Y(zN+0.25),xT0+e+0.15,Y(zN-0.45),.4,"ESGOTO");   // entrada com T
+  L(D,xT1-e-0.15,Y(zN),xT1+0.0,Y(zN),.5,"ESGOTO"); L(D,xT1-e-0.15,Y(zN+0.20),xT1-e-0.15,Y(zN-0.40),.4,"ESGOTO");   // saída 5 cm abaixo
+  cotaV(D,Y(zN),Y(-hT-liv),xT1+3*k,xT1,`h = ${f(hT)}`); TX(D,(xT0+xT1)/2,Y(-hT-liv)-2*k,"LODO",1.3,{l:"COTAS"});
+  // filtro: fundo falso, leito de brita nº 4, lâmina
+  const hF=1.50, ff=0.50, zF0=-tl-0.30-hF;
+  PG(D,[[xF-rf,Y(0)],[xF+rf,Y(0)],[xF+rf,Y(zF0-tl)],[xF-rf,Y(zF0-tl)]],"HACHURA"); PG(D,[[xF-FS.Df/2,Y(-tl)],[xF+FS.Df/2,Y(-tl)],[xF+FS.Df/2,Y(zF0)],[xF-FS.Df/2,Y(zF0)]],"FUNDO");
+  box(xF-rf,Y(0),xF+rf,Y(zF0-tl),.35); box(xF-FS.Df/2,Y(-tl),xF+FS.Df/2,Y(zF0),.25);
+  L(D,xF-FS.Df/2,Y(zF0+ff),xF+FS.Df/2,Y(zF0+ff),.4,"ESGOTO");
+  for(let x=xF-FS.Df/2+0.08;x<xF+FS.Df/2-0.05;x+=0.12) for(let z=zF0+ff+0.08;z<zF0+1.2;z+=0.12) CI(D,x+((Math.round(z*100)%24)?0.06:0),Y(z),0.035,.1,"COTAS");
+  L(D,xF-FS.Df/2,Y(zF0+hF),xF+FS.Df/2,Y(zF0+hF),.18,"AGUA",true);
+  L(D,xT1,Y(zN),xF-FS.Df/2+0.12,Y(zN),.5,"ESGOTO"); L(D,xF-FS.Df/2+0.12,Y(zN),xF-FS.Df/2+0.12,Y(zF0+0.15),.4,"ESGOTO");   // entrada por baixo
+  L(D,xF+FS.Df/2-0.15,Y(zF0+hF),xF+rf,Y(zF0+hF),.5,"ESGOTO");
+  cotaV(D,Y(zF0+1.2),Y(zF0),xF+rf+3*k,xF+rf,"1,20"); cotaV(D,Y(zF0+ff),Y(zF0),xF-rf-3*k,xF-rf,f(ff));
+  TX(D,xF,Y(zF0+0.85),"BRITA Nº 4",1.3,{b:true,l:"COTAS"}); TX(D,xF,Y(zF0+ff/2),"FUNDO FALSO",1.2,{l:"COTAS"});
+  // sumidouro: parede de tijolo crivado (ou anéis perfurados), brita no fundo
+  xS.forEach(x=>{ const z0=-0.40, z1=z0-FS.hs; PG(D,[[x-FS.Ds/2,Y(z1)],[x+FS.Ds/2,Y(z1)],[x+FS.Ds/2,Y(z1-0.5)],[x-FS.Ds/2,Y(z1-0.5)]],"HACHURA");
+    [x-FS.Ds/2-e,x+FS.Ds/2].forEach(xa=>{ for(let z=z0;z>z1;z-=0.2) box(xa,Y(z),xa+e,Y(Math.max(z1,z-0.12)),.15); });
+    box(x-FS.Ds/2-e,Y(0),x+FS.Ds/2+e,Y(-tl),.35); L(D,x-FS.Ds/2,Y(z1),x+FS.Ds/2,Y(z1),.25,"ESGOTO");
+    cotaV(D,Y(z0),Y(z1),x+rs+3*k,x+rs,`h = ${f(FS.hs)}`); TX(D,x,Y(z1-0.25),"BRITA",1.2,{b:true,l:"COTAS"}); });
+  L(D,xF+rf,Y(zF0+hF),xS[0]-FS.Ds/2-e,Y(zF0+hF-0.02),.5,"ESGOTO");
+  TX(D,-1.0,Y(0)-4*k,"CORTE LONGITUDINAL",1.8,{b:true,a:"s"}); TX(D,xEnd/2,Y(-0.4-FS.hs-0.5)+5*k,"Tubos de PVC Ø100 com declividade mínima de 1%. Medidas internas em metros.",1.3,{l:"COTAS"});
+  return D; }
+const linhasFossa=FS=>[["Contribuintes (N)",`${FS.N} ${FS.com?"pessoas (escritório)":"pessoas"}`],["Contribuição (C)",`${FS.C} L/pessoa·dia`],["Contribuição diária",`${f(FS.Q,0)} L/dia`],["Tempo de detenção (T)",`${f(FS.T)} dia`],["Taxa de lodo (K) · lodo fresco (Lf)",`${FS.K} · ${f(FS.Lf,1)}`],
+  ["Tanque séptico: volume útil",`${f(FS.V,0)} L`],["Tanque: largura x comprimento x h útil",`${f(FS.W)} x ${f(FS.L)} x ${f(FS.h)} m`],["Filtro anaeróbio: volume útil",`${f(FS.Vf,0)} L`],["Filtro: diâmetro x leito",`Ø${f(FS.Df)} x 1,20 m`],
+  ["Sumidouro: área de infiltração",`${f(FS.Ai)} m²`],["Sumidouro: diâmetro x h útil",`${FS.ns>1?FS.ns+" x ":""}Ø${f(FS.Ds)} x ${f(FS.hs)} m`]];
+const notasFossa=FS=>[`Tanque séptico (NBR 7229): V = 1000 + N (C·T + K·Lf) = 1000 + ${FS.N} (${FS.C}×${f(FS.T)} + ${FS.K}×${f(FS.Lf,1)}) = ${f(FS.V,0)} L; limpeza a cada ${FS.lim} ano${FS.lim>1?"s":""}.`,
+  `Filtro anaeróbio (NBR 13969): Vu = 1,6 N C T = 1,6 × ${FS.N} × ${FS.C} × ${f(FS.Tf)} = ${f(FS.Vf,0)} L; leito de brita nº 4 com 1,20 m sobre fundo falso perfurado.`,
+  `Sumidouro: área de infiltração = ${f(FS.Q,0)} L/dia ÷ ${f(FS.ci,0)} L/m²·dia = ${f(FS.Ai)} m² (${FS.ns} un). Confirmar o coeficiente com teste de percolação (NBR 7229, anexo A).`,
+  FS.passeio?`Conjunto no passeio da ${FS.rua}, com autorização da prefeitura; tampas niveladas com a calçada e resistentes a tráfego de pedestres. Manter 15 m de poços e o fundo do sumidouro 1,50 m acima do lençol freático.`:`Afastamento mínimo de 1,50 m de construções, divisas, entre as unidades e do ramal de água; 15 m de poços. Fundo do sumidouro a pelo menos 1,50 m acima do lençol freático.`,
+  `Tampas de inspeção de concreto 60x60 sobre cada unidade; tubos de entrada e saída com T de PVC Ø100.`];
+
 function simbHidro(D,q){ const k=D.k, [x,y]=q.p;
   if(q.t==="af"){ CI(D,x,y,0.9*k,.25,"AGUA"); PG(D,[[x-0.6*k,y],[x,y-0.6*k],[x+0.6*k,y],[x,y+0.6*k]],"AGUA"); return; }
   if(q.t==="es"){ CI(D,x,y,1.0*k,.3,"ESGOTO"); return; }
@@ -1676,13 +1870,15 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
       if(Math.hypot(sa.cs[0]-sd[0],sa.cs[1]-sd[1])>0.05){ L(D,...sa.cs,...sd,.4,"ESGOTO"); setaFluxo(D,sa.cs,sd,"ESGOTO"); rotuloLinha(D,sa.cs,sd,"Ø50 i=2%","ESGOTO"); } }
     if(sa.saida.tv){ const tv=sa.saida.tv; simbHidro(D,{t:"tv",p:[tv.p[0]+tv.N[0]*0.08,tv.p[1]+tv.N[1]*0.08]}); TX(D,tv.p[0]+tv.N[0]*(0.08+4*k),tv.p[1]+tv.N[1]*(0.08+4*k),"TV",1.3,{b:true,l:"ESGOTO"}); } });
   HD.ramal.forEach(rm=>{ L(D,...rm.a,...rm.b,.5,"ESGOTO"); setaFluxo(D,rm.a,rm.b,"ESGOTO"); rotuloLinha(D,rm.a,rm.b,`Ø${rm.d} i=${rm.d>=100?1:2}%`,"ESGOTO"); });
-  { const Wr=bb.x1-bb.x0+1.6, Hr=bb.y1-bb.y0+1.6, cn=[0,Wr,Wr+Hr,2*Wr+Hr], PER=2*(Wr+Hr);
+  { const cn=HD.anelCn, PER=HD.PER;
     HD.trechos.forEach(([a,b])=>{ const ts=[a]; [0,PER].forEach(v=>cn.forEach(c=>{ const x=c+v; if(x>a+1e-6&&x<b-1e-6) ts.push(x); })); ts.sort((p,q)=>p-q); ts.push(b);
       for(let i=0;i+1<ts.length;i++){ const p=HD.anelP(ts[i]), q=HD.anelP(ts[i+1]); L(D,...p,...q,.5,"ESGOTO"); if(Math.hypot(q[0]-p[0],q[1]-p[1])>0.8) setaFluxo(D,p,q,"ESGOTO"); } }); }
   // rótulo do coletor no trecho mais longo
   { let lg=null; HD.trechos.forEach(([a,b])=>{ if(!lg||b-a>lg[1]-lg[0]) lg=[a,b]; }); if(lg){ const p=HD.anelP(lg[0]+(lg[1]-lg[0])*0.3), q=HD.anelP(lg[0]+(lg[1]-lg[0])*0.3+0.3); rotuloLinha(D,p,q,"Ø100 i=1%","ESGOTO",-1); } }
   HD.caixas.forEach(c=>{ simbHidro(D,{t:c.tipo==="CG"?"cg":"ci",p:c.p}); TX(D,c.p[0]+3*k,c.p[1]-3*k,c.tipo==="CG"?"CG":"CI",1.5,{a:"s",b:true,l:"ESGOTO"}); });
-  if(HD.fim&&HD.out){ L(D,...HD.fim.p,...HD.out,.5,"ESGOTO"); setaFluxo(D,HD.fim.p,HD.out,"ESGOTO"); TX(D,HD.out[0],HD.out[1]+2.5*k*(HD.out[1]>=HD.fim.p[1]?1:-1),"PARA A REDE PÚBLICA / FOSSA",1.5,{b:true,l:"ESGOTO"}); }
+  const FS=fossaSeptica(G,HD); if(FS&&FS.pos) desenhaFossaPlanta(D,G,FS,HD);
+  else if(HD.caixas.some(c=>!(G.casas||[]).some(P=>pontoDentro(c.p,P)))&&passeios(G).length){ const T=terreno(G); PL(D,[...T.lote,T.lote[0]],.25,"LOTE",true); desenhaPasseios(D,G); }
+  else if(HD.fim&&HD.out){ L(D,...HD.fim.p,...HD.out,.5,"ESGOTO"); setaFluxo(D,HD.fim.p,HD.out,"ESGOTO"); TX(D,HD.out[0],HD.out[1]+2.5*k*(HD.out[1]>=HD.fim.p[1]?1:-1),"PARA A REDE PÚBLICA / FOSSA",1.5,{b:true,l:"ESGOTO"}); }
   // água fria
   HD.ramaisAF.forEach(rm=>PL(D,rm.pts,.3,"AGUA"));
   HD.salas.forEach(sa=>sa.A.forEach(a=>{ const p=a.afPipe; L(D,...p,...a.af.p,.3,"AGUA"); simbHidro(D,{t:"af",p}); const n=a.af.N; TX(D,p[0]+n[0]*2.8*k,p[1]+n[1]*2.8*k,`Ø${a.dAf}`,1.3,{l:"AGUA"}); }));
@@ -1791,7 +1987,7 @@ function memorial(){
       `${nT("luz")} pontos de luz, ${nT("int")} interruptores, ${nT("tug")} tomadas de uso geral e ${nT("tue")} de uso específico, em ${EL.C.length} circuitos. Potência instalada: ${f(EL.tot/1000)} kVA.`,
       `Quadro de distribuição com disjuntores termomagnéticos, DR de 30 mA nos circuitos de áreas molhadas e aterramento. Entrada de energia no padrão da concessionária.`]); }
   if(HD.salas.length) sec("13. INSTALAÇÕES HIDROSSANITÁRIAS",[`Água fria em PVC soldável, a partir do hidrômetro, com reservatório de ${HD.res?HD.res.vol:"-"} L sobre a laje (${HD.pessoas} pessoas x ${HD.cons} L/dia) e registros de gaveta nas colunas.`,
-    `Esgoto em PVC série normal: vaso em Ø100, ramais Ø40/Ø50, caixas sifonadas nas áreas molhadas, caixa de gordura na pia da cozinha, caixas de inspeção fora da edificação e coletor Ø100 com 1% até a rede pública ou fossa e sumidouro. Ventilação Ø50 até acima do telhado.`]);
+    `Esgoto em PVC série normal: vaso em Ø100, ramais Ø40/Ø50, caixas sifonadas nas áreas molhadas, caixa de gordura na pia da cozinha, caixas de inspeção fora da edificação e coletor Ø100 com 1% até ${(S.fossa||{}).on==="sim"?"o conjunto tanque séptico, filtro anaeróbio e sumidouro (NBR 7229 e NBR 13969), conforme prancha de detalhe":"a rede pública"}. Ventilação Ø50 até acima do telhado.`]);
   if(HD.ap.length){ const por=new Map(); HD.ap.forEach(a=>{ if(!por.has(a.r.n)) por.set(a.r.n,[]); por.get(a.r.n).push(a.nome.toLowerCase()); });
     sec("14. LOUÇAS E METAIS",[...[...por].map(([n,l])=>`${n}: ${lista(l)}.`),`Louças brancas, metais cromados, assentos e acessórios do banheiro (papeleira, saboneteira e cabide).`]); }
   sec(`${HD.ap.length?15:14}. PINTURA`,[`Paredes internas: selador, massa corrida PVA e duas demãos de tinta látex acrílica. Paredes externas: selador e duas demãos de tinta acrílica.`,`Esquadrias de madeira em esmalte sintético ou verniz; metálicas com fundo anticorrosivo e esmalte.`]);
@@ -2054,7 +2250,7 @@ const notasReforma=q=>[`Demolição: ${f(q.dem)} m² de alvenaria (${f(q.Ld)} m 
 const PRECO0={fach_porc:180,fach_cer:120,fach_pedra:160,fach_tijolinho:140,fach_ripado:260,fach_acm:420,demolicao:35,retirada:60,entulho:90,limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
   telha_Cerâmica:55,telha_Concreto:60,telha_Fibrocimento:40,telha_Metálica:75,cumeeira:35,calha:90,
   porta:850,janela:650,box:900,contrapiso:45,piso_porc60:120,piso_porc80:150,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
-  forro_pvc:75,forro_gesso:90,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,pt_agua:220,pt_esgoto:180,caixa:350,reservatorio:900,
+  forro_pvc:75,forro_gesso:90,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,pt_agua:220,pt_esgoto:180,caixa:350,reservatorio:900,fossa:6500,
   vaso:750,lavatorio:350,chuveiro:250,pia:650,tanque:450,pint_int:28,pint_ext:32,limpfinal:8};
 const preco=k=>{ const v=S.orc&&S.orc.p&&S.orc.p[k]; return v!=null&&v!==""&&isFinite(+v)?+v:(PRECO0[k]??0); };
 const money=v=>{ const s=Math.abs(v).toFixed(2).split("."); return (v<0?"-":"")+"R$ "+s[0].replace(/\B(?=(\d{3})+(?!\d))/g,".")+","+s[1]; };
@@ -2092,7 +2288,8 @@ function orcamento(){
   etapa("INSTALAÇÕES ELÉTRICAS"); { const n=EL.pts.filter(q=>["luz","int","tug","tue"].includes(q.t)).length; it("Pontos elétricos (luz, interruptor, tomadas) com fiação","pt",n,"pt_ele"); }
   it("Quadro de distribuição com disjuntores e DR","un",EL.pts.some(q=>q.t==="qd")?1:(EL.C.length?1:0),"qd"); it("Entrada de energia (padrão da concessionária)","un",G.rooms.length?1:0,"padrao");
   if(HD.salas.length){ etapa("INSTALAÇÕES HIDROSSANITÁRIAS"); it("Pontos de água fria","pt",HD.ap.length,"pt_agua"); it("Pontos de esgoto","pt",HD.ap.filter(a=>a.es).length+HD.salas.filter(s=>s.cs).length,"pt_esgoto");
-    it("Caixas de inspeção, gordura e sifonadas","un",HD.caixas.length+HD.salas.filter(s=>s.cs).length,"caixa"); it(`Reservatório ${HD.res?HD.res.vol:""} L com instalação`,"un",HD.res?1:0,"reservatorio");
+    it("Caixas de inspeção, gordura e sifonadas","un",HD.caixas.length+HD.salas.filter(s=>s.cs).length,"caixa");
+    { const FS=fossaSeptica(G,HD); if(FS) it(`Conjunto tanque séptico ${f(FS.V,0)} L + filtro anaeróbio + sumidouro`,"un",1,"fossa"); } it(`Reservatório ${HD.res?HD.res.vol:""} L com instalação`,"un",HD.res?1:0,"reservatorio");
     etapa("LOUÇAS E METAIS"); const c=t=>HD.ap.filter(a=>a.nome===t).length;
     it("Bacia com caixa acoplada","un",c("Bacia com caixa acoplada"),"vaso"); it("Lavatório com torneira","un",c("Lavatório"),"lavatorio"); it("Chuveiro","un",c("Chuveiro"),"chuveiro"); it("Pia de cozinha com cuba e torneira","un",c("Pia da cozinha"),"pia"); it("Tanque com torneira","un",c("Tanque"),"tanque"); }
   etapa("PINTURA"); it("Pintura interna (selador, massa e látex acrílico)","m²",pintInt,"pint_int"); Object.entries(quantFachadas(areasFachadas(G))).forEach(([m,a])=>it(`Fachada: ${nomeMatF(m).toLowerCase()}${["textura","latex"].includes(m)?"":" (com 10% de perda)"}`,"m²",["textura","latex"].includes(m)?a:a*1.1,["textura","latex"].includes(m)?"pint_ext":`fach_${m}`));
@@ -2715,7 +2912,7 @@ function render(){
     $("sitAvisos").innerHTML=Tr.pol?(Tr.recL.some(v=>v<0)?`<div class="alert bad">Parte da construção fica fora do lote. Confira a posição (lado paralelo e as duas distâncias) e se as paredes acompanham os ângulos do lote (${Tr.PO.ang.map(v=>f(v,1)+"°").join(", ")}).</div>`:""):(Tr.rec.dir<0||Tr.rec.fundo<0||Tr.rec.frente<0||Tr.rec.esq<0)?`<div class="alert bad">A construção não cabe no terreno com esses recuos (lateral direito ${f(Tr.rec.dir)} m, fundos ${f(Tr.rec.fundo)} m). Confira testada, profundidade e recuos.</div>`:""; }
   { const bs=G.rooms.filter(r=>ehBanho(r.n)), kb=0.03;
     $("banhos").innerHTML=!bs.length?`<div class="sheet"><p class="cap" style="margin:0">Nenhum ambiente com nome de banheiro (Banho, Banheiro, WC, Lavabo). Dê o nome tocando no ambiente na aba Planta.</p></div>`:
-      bs.map(r=>!r.ret?`<div class="sheet"><h2>${esc(r.n)}</h2><p class="cap">Este banheiro não é retangular: nesta versão o detalhe com louças é só para banheiro retangular.</p><div class="draw">${svgDe(desenhoBanheiro(G,r,kb))}</div></div>`:
+      bs.map(r=>!retUtil(r)?`<div class="sheet"><h2>${esc(r.n)}</h2><p class="cap">Este banheiro foge muito do retângulo: o detalhe com louças é feito para banheiro retangular ou com uma parede inclinada.</p><div class="draw">${svgDe(desenhoBanheiro(G,r,kb))}</div></div>`:
         `<div class="sheet"><h2>${esc(r.n)} · planta ampliada</h2><div class="draw" style="max-width:520px">${svgDe(desenhoBanheiro(G,r,kb))}</div>
         <div class="grid2" style="margin-top:12px">${["A","B","C","D"].map(l=>`<div><h3 style="margin-top:0">Vista ${l}</h3><div class="draw">${svgDe(vistaBanheiro(G,r,kb,l))}</div></div>`).join("")}</div>
         <ol class="notes" style="margin-top:12px">${notasBanho().map(t=>`<li>${esc(t)}</li>`).join("")}</ol></div>`).join(""); }
@@ -2757,6 +2954,13 @@ function render(){
     $("hidAvisos").innerHTML=HD.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join("");
     $("tabHid").innerHTML=`<tr><th>Ambiente</th><th>Aparelho</th><th class="n">Água fria</th><th class="n">Altura</th><th class="n">Esgoto</th></tr>`+(HD.ap.length?HD.ap.map(a=>`<tr><td>${esc(a.r.n)}</td><td>${esc(a.nome)}</td><td class="n">Ø${a.dAf}</td><td class="n">${a.h} m</td><td class="n">${a.dEs?`Ø${a.dEs}`:"pelo ralo"}</td></tr>`).join(""):`<tr><td colspan="5" style="color:var(--muted)">Sem pontos.</td></tr>`);
     $("hidNotas").innerHTML=notasHidro(HD).map(t=>`<li>${esc(t)}</li>`).join("");
+    { const sl=$("fossa.local"), PSs=passeios(G); sl.innerHTML=`<option value="lote">Dentro do lote (1,50 m de afastamento)</option>`+PSs.map(q=>`<option value="${q.i+1}">No passeio da ${esc(q.nome)}</option>`).join("");
+      if(![...sl.options].some(o=>o.value===String(S.fossa.local))) S.fossa.local="lote"; sl.value=String(S.fossa.local); }
+    { const FS=fossaSeptica(G,HD); $("fossaBox").hidden=!FS;
+      if(FS){ $("fossaDes").innerHTML=svgDe(desenhoFossa(0.05,FS)); $("tabFossa").innerHTML=`<tr><th>Item</th><th class="n">Valor</th></tr>`+linhasFossa(FS).map(r=>`<tr><td>${esc(r[0])}</td><td class="n">${esc(r[1])}</td></tr>`).join("");
+        $("fossaNotas").innerHTML=notasFossa(FS).map(t=>`<li>${esc(t)}</li>`).join("");
+        $("fossaAvisos").innerHTML=FS.passeio?(FS.pos?`<div class="alert warn">Conjunto no passeio da ${esc(FS.rua)}: precisa de autorização da prefeitura/concessionária. A NBR 7229 recomenda 1,50 m de afastamento de construções; aqui ele fica junto da parede.${FS.estreito?` O passeio (${f(num(S.terr.calcada))} m) é mais estreito que o conjunto: confira a largura da calçada.`:""}${FS.cabe?"":" Parte do conjunto sai do passeio."}</div>`:`<div class="alert bad">${esc(FS.motivo||"Não achei lugar no passeio.")}</div>`)
+          :FS.cabe?"":`<div class="alert bad">O conjunto não cabe no lote com 1,50 m de afastamento da construção e das divisas (folga máxima encontrada ${f(FS.pos?FS.pos.cl:0)} m). Ele foi colocado no melhor lugar possível; avalie outra solução (unidades mais compactas, tanque e filtro conjugados, vala de infiltração) com a concessionária/prefeitura.</div>`; } }
     const nT=t=>EL.pts.filter(q=>q.t===t).length;
     $("eleChips").innerHTML=G.vazio?"":[`${nT("luz")} pontos de luz`,`${nT("int")} interruptores`,`${nT("tug")} tomadas (TUG)`,`${nT("tue")} TUE`,`${EL.C.length} circuitos`,`Potência instalada ${f(EL.tot/1000)} kVA`].map(t=>`<span class="chip">${t}</span>`).join("");
     $("eleAvisos").innerHTML=EL.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join("");
@@ -2889,8 +3093,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["fossa.local","fossa.on","fossa.lim","fossa.ci","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["fossa.local","fossa.on","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
   const tb=$("ladosTab"), foco=document.activeElement&&tb.contains(document.activeElement)?[document.activeElement.dataset.li,document.activeElement.dataset.lc]:null;
@@ -3054,6 +3258,7 @@ function pranchas(fmt){
   const LM=layoutMoveis(G), temMob=LM.some(R=>R.pos.length||R.banho||R.carro), la=temMob?encaixar(k=>desenhoLayout(G,k,LM),aw,ah-TT):null;
   const EL=pontosEletricos(G,LM), el=G.rooms.length?encaixar(k=>desenhoEletrica(G,k,LM,EL),aw,ah-TT):null;
   const HD=redeHidro(G,LM), hi=HD.salas.length?encaixar(k=>desenhoHidro(G,k,LM,HD),aw,ah-TT):null;
+  const FS=HD.salas.length?fossaSeptica(G,HD):null, fs=FS?encaixar(k=>desenhoFossa(k,FS),aw,ah-TT):null;
   const FO=forros(G), fo=G.rooms.length?encaixar(k=>desenhoForro(G,k,LM,EL,FO),aw,ah-TT):null;
   const PI=pisos(G), pi=G.rooms.length?encaixar(k=>desenhoPiso(G,k,LM,HD,PI),aw,ah-TT):null;
   const RV=revParede(G,LM,FO), rv=G.rooms.length?encaixar(k=>desenhoRevp(G,k,RV),aw,ah-TT):null;
@@ -3065,7 +3270,7 @@ function pranchas(fmt){
   const QD=quadra(G), sep=fmt==="A4", wQ=sep?aw:aw*0.42, sq=QD?encaixar(k=>desenhoQuadra(G,k,QD),wQ,ah-TT):null, si=encaixar(k=>desenhoSituacao(G,k),sq&&!sep?aw-wQ-8:aw,ah-TT);   // no A4 a situação vai numa folha só dela
   const LC=locacao(G), lo=LC?encaixar(k=>desenhoLocacao(G,k,LC),aw,ah-TT):null;
   const EC=escada(), eP=S.esc.on==="sim"?encaixar(k=>desenhoEscadaPlanta(k,EC),aw*0.42,ah-TT):null, eC=eP?encaixar(k=>desenhoEscadaCorte(k,EC),aw*0.58-8,ah-TT):null;
-  const bans=G.rooms.filter(r=>ehBanho(r.n)&&r.ret).map(r=>{ const bwP=aw*0.42, pl=encaixar(k=>desenhoBanheiro(G,r,k),bwP,ah-TT), bwV=(aw-bwP-8-6)/2, bhV=(ah-6)/2;
+  const bans=G.rooms.filter(r=>ehBanho(r.n)&&retUtil(r)).map(r=>{ const bwP=aw*0.42, pl=encaixar(k=>desenhoBanheiro(G,r,k),bwP,ah-TT), bwV=(aw-bwP-8-6)/2, bhV=(ah-6)/2;
     let vs=[]; for(const s0 of [20,25,50,75]){ const k=s0/1000; vs=["A","B","C","D"].map(l=>{ const D=vistaBanheiro(G,r,k,l), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k}; }); if(vs.every(d=>d.w<=bwV&&d.h<=bhV-TT)) break; }
     return {r,pl,vs,bwP,bwV,bhV}; });
   const nE=Math.max(1,Q.length), cE=Math.min(nE,nE>6?4:3), rE=Math.ceil(nE/cE), bwE=(aw-6*(cE-1))/cE, bhE=(ah-6*(rE-1))/rE;
@@ -3080,6 +3285,7 @@ function pranchas(fmt){
     ...(la?[{n:"",conteudo:"PLANTA DE LAYOUT",escala:`1:${la.s}`,itens:[{d:la,titulo:"PLANTA DE LAYOUT",box:[area.x0,area.y0,aw,ah]}],lado:"layout",LM}]:[]),
     ...(el?[{n:"",conteudo:"PLANTA DE PONTOS ELÉTRICOS",escala:`1:${el.s}`,itens:[{d:el,titulo:"PLANTA DE PONTOS ELÉTRICOS",box:[area.x0,area.y0,aw,ah]}],lado:"eletrica",EL}]:[]),
     ...(hi?[{n:"",conteudo:"PLANTA HIDROSSANITÁRIA",escala:`1:${hi.s}`,itens:[{d:hi,titulo:"PLANTA HIDROSSANITÁRIA",box:[area.x0,area.y0,aw,ah]}],lado:"hidro",HD}]:[]),
+    ...(fs?[{n:"",conteudo:"FOSSA SÉPTICA, FILTRO ANAERÓBIO E SUMIDOURO",escala:`1:${fs.s}`,itens:[{d:fs,titulo:"CONJUNTO FOSSA SÉPTICA, FILTRO ANAERÓBIO E SUMIDOURO",box:[area.x0,area.y0,aw,ah]}],lado:"fossa",FS}]:[]),
     ...(fo?[{n:"",conteudo:"PLANTA DE FORRO",escala:`1:${fo.s}`,itens:[{d:fo,titulo:"PLANTA DE FORRO",box:[area.x0,area.y0,aw,ah]}],lado:"forro",FO}]:[]),
     ...(pi?[{n:"",conteudo:"PLANTA DE PISO",escala:`1:${pi.s}`,itens:[{d:pi,titulo:"PLANTA DE PISO",box:[area.x0,area.y0,aw,ah]}],lado:"piso",PI,SO:pi.D.SO||[]}]:[]),
     ...(rv?[{n:"",conteudo:"REVESTIMENTOS DE PAREDE",escala:`1:${rv.s}`,itens:[{d:rv,titulo:"PLANTA DE REVESTIMENTOS DE PAREDE",box:[area.x0,area.y0,aw,ah]}],lado:"revp",RV}]:[]),
@@ -3114,6 +3320,7 @@ function textosLado(P,lado,fl){
   if(lado==="reforma") return [{t:"QUANTIDADES",cols:[["SERVIÇO",0],["QTD.",1]],rows:[["Alvenaria a demolir",`${f(fl.QR.dem)} m²`],["Alvenaria a construir",`${f(fl.QR.con)} m²`],["Vãos a fechar",String(fl.QR.nFe)],["Vãos a abrir",String(fl.QR.nAb)],["Esquadrias a retirar",String(fl.QR.nRet)],["Entulho",`${f(fl.QR.entulho,1)} m³`]]},{t:"NOTAS",linhas:notasReforma(fl.QR)}];
   if(lado==="piso") return [{t:"QUADRO DE PISOS",pc:[0.28,0.42,0.15,0.15],cols:[["AMBIENTE",0],["PISO",0],["ÁREA",1],["RODAPÉ",1]],rows:fl.PI.map(F=>[F.r.n,infoPiso(F.pt)[1],f(F.area),F.rod?f(F.rod):"-"])},{t:"QUANTITATIVO E NOTAS",linhas:notasPiso(fl.PI,fl.SO)}];
   if(lado==="forro") return [{t:"QUADRO DE FORROS",pc:[0.30,0.42,0.13,0.15],cols:[["AMBIENTE",0],["FORRO",0],["H (m)",1],["ÁREA",1]],rows:fl.FO.map(F=>[F.r.n,nomeForro(F.ft),F.ft==="sem"?"-":f(F.h),f(F.area)])},{t:"QUANTITATIVO E NOTAS",linhas:notasForro(fl.FO)}];
+  if(lado==="fossa") return [{t:"DIMENSIONAMENTO",cols:[["ITEM",0],["VALOR",1]],pc:[0.58,0.42],rows:linhasFossa(fl.FS)},{t:"NOTAS",linhas:notasFossa(fl.FS)}];
   if(lado==="hidro"){ const H=fl.HD; return [{t:"QUADRO DE PONTOS",pc:[0.24,0.38,0.12,0.12,0.14],cols:[["AMBIENTE",0],["APARELHO",0],["AF",1],["ALT.",1],["ESG.",1]],rows:H.ap.map(a=>[a.r.n,a.nome,`Ø${a.dAf}`,a.h,a.dEs?`Ø${a.dEs}`:"ralo"])},{t:"NOTAS",linhas:notasHidro(H)}]; }
   if(lado==="eletrica"){ const E=fl.EL; return [{t:"QUADRO DE CARGAS",pc:[0.08,0.46,0.12,0.10,0.11,0.13],cols:[["C",0],["DESCRIÇÃO",0],["VA",1],["V",1],["DISJ.",1],["FIO",1]],rows:[...E.C.map(c=>[`C${c.n}`,c.desc.length>46?c.desc.slice(0,43)+"...":c.desc,String(c.va),String(c.v),`${c.disj} A`,`${f(c.fio,1)}`+(c.dr?" DR":"")]),["","TOTAL INSTALADO",String(E.tot),"","","",1]]},{t:"NOTAS",linhas:notasEletrica(E)}]; }
   if(lado==="layout") return [{t:"MOBILIÁRIO",linhas:fl.LM.filter(R=>resumoMob(R).length).map(R=>`${R.r.n}: ${resumoMob(R).join(", ")}.`)},{t:"NOTAS",linhas:notasLayout(fl.LM)}];
