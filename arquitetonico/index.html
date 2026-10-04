@@ -105,7 +105,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <header class="top">
     <div>
       <h1>Projeto Arquitetônico</h1>
-      <div class="sub">Planta baixa com áreas e cotas · Demolir e construir · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Revestimento de parede · Paginação da fachada · Memorial descritivo · Orçamento estimado · Cortes AA e BB · Cobertura · Fachadas · Situação · Escada · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
+      <div class="sub">Planta baixa com áreas e cotas · Demolir e construir · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Revestimento de parede · Paginação da fachada · Memorial descritivo · Orçamento estimado · Cortes AA e BB · Cobertura · Fachadas · Situação · Escada · Banheiro · Quadro de esquadrias · Pintura · Estrutural · Diagrama unifilar · <b id="versao"></b></div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
@@ -607,7 +607,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.3 · símbolos elétricos menores";
+const VERSAO="versão 5.4 · revisão geral das pranchas";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1158,7 +1158,7 @@ function desenhoPortaDet(q,k,G){
   PL(D,[[X(0),Z(-e2)],[X(bt),Z(-e2)],[X(bt),Z(e2-0.04)],[X(bt-0.012),Z(e2-0.04)],[X(bt-0.012),Z(e2)],[X(0),Z(e2)],[X(0),Z(-e2)]],.3,"ESQUADRIA");
   [-1,1].forEach(sg=>{ const y0=sg*e2; PL(D,[[X(-gu+bt*0),Z(y0)],[X(bt+0.01),Z(y0)],[X(bt+0.01),Z(y0+sg*0.012)],[X(-gu),Z(y0+sg*0.012)],[X(-gu),Z(y0)]],.25,"ESQUADRIA"); });
   if(c4){ [[0.02,0.035,"FIXA"],[-0.02,-0.005,"DE CORRER"]].forEach(([y0,y1,tx])=>{ PL(D,[[X(bt),Z(y0)],[X(0.55),Z(y0)],[X(0.55),Z(y1)],[X(bt),Z(y1)],[X(bt),Z(y0)]],.3,"ESQUADRIA"); });
-    TX(D,X(0.2),Z(-e2)-9*k,"2 TRILHOS: FOLHAS FIXAS POR FORA, DE CORRER POR DENTRO",1.3,{l:"COTAS"}); }
+    TX(D,X(-wl),Z(e2+0.12)+5*k,"2 TRILHOS: FIXAS POR FORA, DE CORRER POR DENTRO",1.3,{a:"s",l:"COTAS"}); }
   else if(cor){ PL(D,[[X(-0.25),Z(e2+0.015)],[X(0.55),Z(e2+0.015)],[X(0.55),Z(e2+0.05)],[X(-0.25),Z(e2+0.05)],[X(-0.25),Z(e2+0.015)]],.3,"ESQUADRIA");
     TX(D,X(-0.05),Z(e2+0.05)+7*k,"FOLHA CORRE POR FORA (TRILHO EM CIMA)",1.3,{l:"COTAS"}); }
   else { PL(D,[[X(bt-0.012),Z(e2-0.04)],[X(0.45),Z(e2-0.04)],[X(0.45),Z(e2-0.005)],[X(bt-0.012),Z(e2-0.005)]],.3,"ESQUADRIA"); }
@@ -1169,7 +1169,9 @@ function desenhoPortaDet(q,k,G){
   TX(D,X(0.1),Z(-e2)-6*k,"CORTE HORIZONTAL (ampliado)",1.5,{b:true});
   // descrição
   const lin=[`${q.desc.toUpperCase()} · FOLHA ${nomeFolha(q.fol).toUpperCase()}`,`${String(q.mat).toUpperCase()} · ${f(q.l)} x ${f(q.a)} · QTD ${q.q}${q.locais.length?` · ${q.locais.join(", ")}`:""}`,ferragens(q)[0].toUpperCase()];
-  lin.forEach((tx,i)=>TX(D,(Lq+X(0.6))/2,Y(0)+(18+i*3.2)*k,tx,i?1.4:1.7,{l:i?"COTAS":"TEXTO",b:!i}));
+  // linhas longas (kit de correr) quebradas para não sair da folha
+  const quebra=(t,mx)=>{ const o=[]; let c=""; t.split(" ").forEach(w=>{ if((c+" "+w).trim().length>mx&&c){ o.push(c); c=w; } else c=(c+" "+w).trim(); }); if(c) o.push(c); return o; }, mx=Math.max(34,Math.round((X(0.6)+pw)/k/1.5));
+  lin.flatMap((tx,i)=>quebra(tx,mx).map(t=>[t,i])).forEach(([tx,i],j)=>TX(D,(Lq+X(0.6))/2,Y(0)+(18+j*3.2)*k,tx,i?1.4:1.7,{l:i?"COTAS":"TEXTO",b:!i}));
   return D; }
 function desenhoFachada(G,k,lado,pag=null){
   const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
@@ -4036,9 +4038,11 @@ function buildPDF(fmt){
   const desenho=(it)=>{
     const {D,e,k,s,w,h}=it.d, [bx,by,bw,bh]=it.box;
     const ox=bx+(bw-w)/2, oy=by+TT+Math.max(0,(bh-TT-h)/2), X=x=>ox+(x-e.x0)/k, Y=y=>oy+(y-e.y0)/k;
-    const tw=it.titulo.length*3.2*1.39*0.68;
-    gray(0,true); text(ox,oy-TT+4,3.2,it.titulo,true); text(ox+tw+3,oy-TT+4,2.2,it.sem?"SEM ESCALA":`ESC. 1:${s}`);
-    lw(.3); gray(0); line(ox,oy-TT+6.5,ox+tw+24,oy-TT+6.5);
+    // título e escala cabem na caixa do desenho (folhas com 2 ou 4 desenhos no A4)
+    const escT=it.sem?"SEM ESCALA":`ESC. 1:${s}`, escW=escT.length*2.2*0.62+3; let hT=3.2, tw=it.titulo.length*hT*1.39*0.68, tx0=ox;
+    if(tx0+tw+escW>bx+bw){ tx0=Math.max(bx,Math.min(ox,bx+bw-tw-escW)); if(tx0+tw+escW>bx+bw){ hT=Math.max(1.9,hT*(bw-escW)/tw); tw=it.titulo.length*hT*1.39*0.68; tx0=bx; } }
+    gray(0,true); text(tx0,oy-TT+4,hT,it.titulo,true); text(tx0+tw+3,oy-TT+4,2.2,escT);
+    lw(.3); gray(0); line(tx0,oy-TT+6.5,Math.min(bx+bw,tx0+tw+escW+2),oy-TT+6.5);
     // na mesma ordem da tela: o que vem depois cobre o que vem antes (fachadas: a parede da frente tampa a de trás)
     const FUNDOS=["HACHURA","FUNDO","CONCRETOS","CONCRETOF"];
     D.p.forEach(q=>{ const st=PDFCOR[q.l]||PDFCOR.GERAL;
@@ -4058,7 +4062,8 @@ function buildPDF(fmt){
       const sz=1.8, lh=3.4;
       if(b.cols){ const n_=b.cols.length, pc=b.pc||(n_===6?[0.09,0.34,0.17,0.18,0.11,0.11]:n_>2?[0.12,0.22,0.32,0.18,0.16]:[0.64,0.36]), cwid=b.cols.map((_,i)=>wcol*pc[i]); let xx=x; const cx=[]; cwid.forEach(w=>{ cx.push(xx); xx+=w; });
         b.cols.forEach(([t,al],i)=>text(al?cx[i]+cwid[i]-1:cx[i],y,1.5,t,true,al?2:0)); lw(.2); gray(0); line(x,y+1.8,x+wcol,y+1.8); y+=lh+0.6;
-        b.rows.forEach(r=>{ if(y>side.y1-1) return; r.slice(0,n_).forEach((t,i)=>text(b.cols[i][1]?cx[i]+cwid[i]-1:cx[i],y,sz,t,!!r[n_]||i===0&&n_>2,b.cols[i][1]?2:0)); y+=lh; });
+        const cabe=(t,w,bo)=>{ t=String(t??""); const mx=Math.max(3,Math.floor((w-1.5)/(sz*(bo?0.68:0.62)))); return t.length>mx?t.slice(0,mx-2).trimEnd()+"..":t; };   // não invade a coluna do lado
+        b.rows.forEach(r=>{ if(y>side.y1-1) return; r.slice(0,n_).forEach((t,i)=>{ const bo=!!r[n_]||i===0&&n_>2; text(b.cols[i][1]?cx[i]+cwid[i]-1:cx[i],y,sz,cabe(t,cwid[i],bo),bo,b.cols[i][1]?2:0); }); y+=lh; });
         if(!b.rows.length) text(x,y,sz,"Nenhuma.");
       } else b.linhas.forEach(l=>wrap(l,sz,wcol).forEach(t=>{ if(y<side.y1-1){ text(x,y,sz,t); y+=lh; } }));
     });
