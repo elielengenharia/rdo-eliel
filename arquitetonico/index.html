@@ -374,6 +374,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
         <div id="ladosMsg"></div>
         <p class="cap" style="margin-top:10px">Posição da construção no lote: escolha o lado com que as paredes ficam paralelas e a distância da construção a dois lados (0 = encostada na divisa).</p>
         <div class="form wide">
+          <label>Na esquina, a rua que passa direto (a outra termina nela)<select id="terr.ruaPassa" data-lsel></select></label>
           <label>Construção paralela ao lado<select id="terr.alinha" data-lsel></select></label>
           <label>Distância ao lado<select id="terr.encA" data-lsel></select></label>
           <label>… de (m)<input type="number" step="0.05" id="terr.recA"></label>
@@ -551,7 +552,7 @@ const AB42=[
   {n:"Cozinha",t:"Janela",w:1,d:1.2,l:1.20,a:1.00,p:1.10},
   {n:"Banho",t:"Janela",w:2,d:2.8,l:0.60,a:0.60,p:1.50}
 ];
-const TERR0={testada:12,prof:25,recFrente:4,recEsq:2.5,calcada:2,rua:"Rua projetada",lote:"",quadra:"",confEsq:"Lote vizinho",confDir:"Lote vizinho",confFundo:"Lote vizinho",norte:0,esquina:"não",rua2:"",chanfro:"não",dEsq:0,ladoRef:"esq",ruaE:"",ruaD:"",ruaF:"",qFrente:0,qProf:0,forma:"ret",lados:[],areaMapa:0,alinha:1,encA:1,recA:4,encB:0,recB:2.5};
+const TERR0={testada:12,prof:25,recFrente:4,recEsq:2.5,calcada:2,rua:"Rua projetada",lote:"",quadra:"",confEsq:"Lote vizinho",confDir:"Lote vizinho",confFundo:"Lote vizinho",norte:0,esquina:"não",rua2:"",chanfro:"não",dEsq:0,ladoRef:"esq",ruaE:"",ruaD:"",ruaF:"",qFrente:0,qProf:0,forma:"ret",lados:[],areaMapa:0,ruaPassa:0,alinha:1,encA:1,recA:4,encB:0,recB:2.5};
 const TEL0={tipo:2,dir:"h",telha:"Cerâmica",inc:30,beiral:0.60,plat:"não"};
 const INC_TELHA={"Cerâmica":30,"Concreto":30,"Fibrocimento":15,"Metálica":10};
 const ABDEF={Porta:{l:0.80,a:2.10,p:0},Janela:{l:1.20,a:1.00,p:1.10},"Vão":{l:1.00,a:2.10,p:0}};
@@ -2287,12 +2288,30 @@ function ruasDoLote(D,pts,lados,o={}){
     const ini=pv.rua?cruza(p,s.u,[pv.a[0]+pv.n[0]*d,pv.a[1]+pv.n[1]*d],pv.u):null, fim=nx.rua?cruza(q,s.u,[nx.a[0]+nx.n[0]*d,nx.a[1]+nx.n[1]*d],nx.u):null;
     return [ini||[p[0]-s.u[0]*ext,p[1]-s.u[1]*ext],fim||[q[0]+s.u[0]*ext,q[1]+s.u[1]*ext]]; };
   const rotA=u=>{ let a=Math.atan2(u[1],u[0])*180/Math.PI; if(a>=89.99) a-=180; if(a<-90.01) a+=180; return a; };
+  // encontro de duas ruas (com ou sem chanfro entre elas): uma passa direto e a outra termina nela (em T)
+  const W=2*cal+rua, LN=(i,d)=>[[sd[i].a[0]+sd[i].n[0]*d,sd[i].a[1]+sd[i].n[1]*d],sd[i].u], X=(i,d,kk,dk)=>{ const [p,u]=LN(i,d), [q,v]=LN(kk,dk); return cruza(p,u,q,v); };
+  const nomeada=i=>sd[i].rua&&sd[i].c.trim()!=="";
+  const viz=(i,dir)=>{ for(let st=1;st<n;st++){ const kk=(i+dir*st+n*st)%n; if(nomeada(kk)) return kk; if(!sd[kk].rua) return -1; } return -1; };
+  const passa=(i,kk)=>{ const pz=Math.round(num(S.terr.ruaPassa))-1; if(pz===i||pz===kk) return pz===i; if(i===0||kk===0) return i===0; return sd[i].L>=sd[kk].L; };
+  sd.forEach((s,i)=>{ if(!nomeada(i)) return;
+    const pon=[viz(i,-1),viz(i,1)], seg=(p,q,w)=>p&&q&&L(D,...p,...q,w,"LOTE");
+    const fimLivre=(d,e)=>{ const [p,u]=LN(i,d), base=e?[s.b[0]+s.n[0]*d,s.b[1]+s.n[1]*d]:p; return [base[0]+(e?1:-1)*u[0]*ext,base[1]+(e?1:-1)*u[1]*ext]; };
+    const longe=(pt,e)=>[pt[0]+(e?1:-1)*s.u[0]*ext,pt[1]+(e?1:-1)*s.u[1]*ext];
+    // pontas de cada linha (d) nos dois sentidos; perto do lote o meio-fio pode ter um vão (a outra rua chegando)
+    const linhas={}; [cal,cal+rua,W].forEach(d=>linhas[d]=[]);
+    const ends=[0,1].map(e=>{ const kk=pon[e]; if(kk<0) return null; return {kk,th:passa(i,kk)}; });
+    [cal,cal+rua,W].forEach(d=>{ const pa=[0,1].map(e=>{ const E=ends[e]; if(!E) return fimLivre(d,e);
+        if(!E.th) return X(i,d,E.kk,d===W?0:cal)||fimLivre(d,e);   // termina na outra rua
+        return d===cal?(X(i,d,E.kk,cal)||fimLivre(d,e)):longe(X(i,d,E.kk,W)||fimLivre(d,e),e); });
+      seg(pa[0],pa[1],d===W?.35:.18);
+      // rua que passa direto: depois do cruzamento, o meio-fio e o alinhamento do outro lado da rua que chega
+      [0,1].forEach(e=>{ const E=ends[e]; if(!E||!E.th) return; if(d===cal){ const p0=X(i,cal,E.kk,cal+rua), p1=X(i,cal,E.kk,W); p0&&p1&&seg(p0,longe(p1,e),.18); } });
+    });
+    [0,1].forEach(e=>{ const E=ends[e]; if(!E||!E.th) return; const p0=X(i,0,E.kk,W); if(p0) seg(p0,longe(p0,e),.5); });
+    if(o.alin) [0,1].forEach(e=>{ if(ends[e]) return; const pt=e?s.b:s.a; L(D,...pt,...longe(pt,e),.5,"LOTE"); });
+    const m=[(s.a[0]+s.b[0])/2,(s.a[1]+s.b[1])/2]; if(s.L>4) TX(D,m[0]+s.n[0]*(cal+rua/2),m[1]+s.n[1]*(cal+rua/2),s.c.toUpperCase(),o.hr||2.6,{b:true,rot:rotA(s.u)}); });
   sd.forEach((s,i)=>{ const m=[(s.a[0]+s.b[0])/2,(s.a[1]+s.b[1])/2];
-    if(s.rua){ const [p1,q1]=linha(i,cal), [p2,q2]=linha(i,cal+rua), [p3,q3]=linha(i,2*cal+rua);
-      if(cal>0.2){ L(D,...p1,...q1,.18,"LOTE"); L(D,...p3,...q3,.35,"LOTE"); } L(D,...p2,...q2,.18,"LOTE");
-      if(o.alin){ const pv=sd[(i+n-1)%n], nx=sd[(i+1)%n]; if(!pv.rua) L(D,...s.a,s.a[0]-s.u[0]*ext,s.a[1]-s.u[1]*ext,.5,"LOTE"); if(!nx.rua) L(D,...s.b,s.b[0]+s.u[0]*ext,s.b[1]+s.u[1]*ext,.5,"LOTE"); }
-      if(s.c&&s.L>4) TX(D,m[0]+s.n[0]*(cal+rua/2),m[1]+s.n[1]*(cal+rua/2),s.c.toUpperCase(),o.hr||2.6,{b:true,rot:rotA(s.u)}); }
-    else if(s.c) TX(D,m[0]+s.n[0]*3.2*k,m[1]+s.n[1]*3.2*k,s.c.toUpperCase(),1.8,{l:"COTAS",rot:rotA(s.u)});
+    if(!s.rua&&s.c) TX(D,m[0]+s.n[0]*3.2*k,m[1]+s.n[1]*3.2*k,s.c.toUpperCase(),1.8,{l:"COTAS",rot:rotA(s.u)});
     // medida do lado, por dentro
     const pi=[s.a[0]-s.n[0]*3*k,s.a[1]-s.n[1]*3*k], qi=[s.b[0]-s.n[0]*3*k,s.b[1]-s.n[1]*3*k]; cotaLivre(D,pi,qi,f(s.L)); });
   return sd; }
@@ -2865,7 +2884,7 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const FIELDS=["terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
 const TEXTOS=["terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
