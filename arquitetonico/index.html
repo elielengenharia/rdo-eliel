@@ -197,6 +197,9 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
         <label>Platibanda<select id="tel.plat"><option value="não">Não (com beiral)</option><option value="sim">Sim (telhado escondido)</option></select></label>
         <label data-soplat>Chuva de projeto (mm/h)<input type="number" step="5" id="tel.chuva" placeholder="160"></label>
         <label data-soplat>Caimento da calha (%)<input type="number" step="0.1" id="tel.icalha" placeholder="0,5"></label>
+        <label data-soplat>Altura final da platibanda (m)<input type="number" step="0.05" id="tel.hPlat" placeholder="automática"></label>
+        <label>Calha: largura mínima (cm)<input type="number" step="5" id="tel.cbMin" placeholder="25"></label>
+        <label>Calha: altura mínima (cm)<input type="number" step="5" id="tel.chMin" placeholder="15"></label>
         <label id="lblBeiral">Beiral (m)<input type="number" step="0.05" id="tel.beiral"></label>
       </div>
       <h3 style="margin-top:12px">Verificação contra goteira e umidade</h3><div id="telCheck"></div>
@@ -626,7 +629,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.13 · prancha A0 e pranchas agrupadas";
+const VERSAO="versão 5.14 · salas com platibanda de 5 m e telhado para o fundo";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -680,8 +683,9 @@ function modeloSalas(){ const o=defaults();
   o.cA=null; o.cB=null;
   o.terr=Object.assign(clone(TERR0),{forma:"pol",areaMapa:259.17,lote:"277",alinha:1,encA:1,recA:0,encB:2,recB:0,calcada:2,rua:"Avenida Paraná",rua2:"Rua Guarani",
     lados:[{m:11.14,c:"Avenida Paraná",rua:"sim"},{m:21.31,c:"Lote 243",rua:"não"},{m:14.15,c:"Lote 290",rua:"não"},{m:14.69,c:"Rua Guarani",rua:"sim"},{m:4.04,c:"",rua:"sim"}]});
-  // telhado escondido por platibanda, caindo para a frente (Av. Paraná): calha atrás da platibanda da fachada, longe das divisas
-  o.tel=Object.assign(clone(TEL0),{tipo:1,dir:"baixo",telha:"Fibrocimento",inc:15,plat:"sim"});
+  // telhado escondido por platibanda, caindo da frente (Av. Paraná) para o fundo
+  o.pd=3.50;   // pé-direito das salas comerciais
+  o.tel=Object.assign(clone(TEL0),{tipo:1,dir:"cima",telha:"Fibrocimento",inc:15,plat:"sim",cbMin:35,chMin:20,hPlat:5.00});   // platibanda até 5,00 m   // uma água caindo da Av. Paraná para o fundo, calha de 35x20 no fundo
   o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua Guarani (o terreno cai para ela)
   return o; }
 // estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
@@ -926,7 +930,7 @@ function infoTelhado(G){
   const len=s=>Math.hypot(s[2]-s[0],s[3]-s[1]);
   const Lcum=cumF.reduce((s,c)=>s+len(c),0), LespP=espF.reduce((s,c)=>s+len(c),0), Lesp=LespP*Math.sqrt(1+i*i/2);
   const areaProj=poly?Math.abs(areaS(poly)):W*D, areaInc=areaProj*Math.sqrt(1+i*i);
-  const topoPlat=plat?Math.ceil((zmax+0.15)*20-1e-6)/20:null;
+  const topoPlat=plat?(num(T.hPlat)>0?num(T.hPlat):Math.ceil((zmax+0.15)*20-1e-6)/20):null;   // altura final da platibanda escolhida, ou 15 cm acima do ponto mais alto do telhado
   const NOMES={1:"uma água",2:"duas águas",3:"três águas",4:"quatro águas"};
   return {T,i,plat,b,R,tipo,bordas,H0,z,zmax,cum:cumF,esp:espF,setas:setasF,calhas,poly,dentroT,Lcum,Lesp,areaProj,areaInc,topoPlat,nome:NOMES[tipo],W,D};
 }
@@ -3473,7 +3477,7 @@ function calhasDe(TI,segs){ const T=S.tel, I=num(T.chuva)>0?num(T.chuva):160, ic
   const lista=segs.map((s0,j)=>{ const L0=Math.hypot(s0[2]-s0[0],s0[3]-s0[1]), A=ap[j]*(1+TI.i/2), Q=I*A/60;
     let nC=Math.max(1,Math.ceil(L0/12-1e-9)); let dia=[75,100,150].find(dm=>Q/nC<=CAP_AP[dm]); while(!dia){ nC++; dia=[75,100,150].find(dm=>Q/nC<=CAP_AP[dm]); }
     const Qs=Q/nC, cap=b0=>{ const y=b0/4, Am=b0*y, Rh=Am/(b0+2*y); return 60000*Am*Math.pow(Rh,2/3)*Math.sqrt(ic)/nM; };
-    const bQ=[0.15,0.20,0.25,0.30,0.35,0.40,0.50,0.60].find(b0=>cap(b0)>=Qs)||0.60, b=Math.max(0.25,bQ), h=Math.max(0.15,Math.ceil(b/2*20-1e-9)/20);   // mínimo prático 25x15 para limpeza e não transbordar
+    const bQ=[0.15,0.20,0.25,0.30,0.35,0.40,0.50,0.60].find(b0=>cap(b0)>=Qs)||0.60, bMin=Math.max(0.15,(num(T.cbMin)||25)/100), hMin=Math.max(0.10,(num(T.chMin)||15)/100), b=Math.max(bMin,bQ), h=Math.max(hMin,Math.ceil(b/2*20-1e-9)/20);   // mínimo prático 25x15 (ou o escolhido) para limpeza e não transbordar
     const pos=nC===1?[[s0[2],s0[3]]]:Array.from({length:nC},(_,m)=>[s0[0]+(s0[2]-s0[0])*m/(nC-1),s0[1]+(s0[3]-s0[1])*m/(nC-1)]);
     return {nome:`CH${j+1}`,seg:s0,L:L0,Aproj:ap[j],A,Q,nC,dia,b,h,bQ,Qs,Qcap:cap(b),pos}; });
   const bMax=Math.max(...lista.map(c=>c.b)), hMax=Math.max(...lista.map(c=>c.h));
@@ -3501,7 +3505,7 @@ function verificaTelhado(G){ if(G.vazio) return []; const TI=infoTelhado(G), T=S
     if(CL) CL.lista.forEach(c=>{ const m=[(c.seg[0]+c.seg[2])/2,(c.seg[1]+c.seg[3])/2], pr=perto(m);
       if(pr&&!rua(pr.i)&&pr.d<0.8) add(false,`Calha ${c.nome} encostada na parede da divisa com ${nomeL(pr.i)}: risco de umidade na parede e no vizinho. Prefira o caimento do telhado para o lado da rua; se ficar assim, impermeabilize a calha com manta asfáltica, faça o ladrão para dentro do lote e suba o contra-rufo 30 cm.`);
       else add(true,`Calha ${c.nome} (${f(c.b*100,0)}x${f(c.h*100,0)} cm) do lado ${pr&&rua(pr.i)?`da ${nomeL(pr.i)}`:"de dentro do lote"}, longe das divisas.`); });
-    add(true,`Platibanda ${f((TI.topoPlat||0)-TI.zmax,2)} m acima do ponto mais alto do telhado, com rufo no topo, contra-rufo na face de dentro e ladrão Ø50 em cada calha.`); }
+    { const fol=(TI.topoPlat||0)-TI.zmax; add(fol>=0.10,fol>=0.10?`Platibanda com topo em ${f(TI.topoPlat)} m, ${f(fol,2)} m acima do ponto mais alto do telhado, com rufo no topo, contra-rufo na face de dentro e ladrão Ø50 em cada calha.`:`Platibanda com topo em ${f(TI.topoPlat)} m não esconde o telhado (ponto mais alto em ${f(TI.zmax)} m): suba a platibanda para ${f(Math.ceil((TI.zmax+0.15)*20)/20)} m, diminua a inclinação até o mínimo da telha ou baixe o pé-direito.`); } }
   else { const R=TI.R, ed={cima:[[R.x0,R.y0],[R.x1,R.y0]],baixo:[[R.x0,R.y1],[R.x1,R.y1]],esq:[[R.x0,R.y0],[R.x0,R.y1]],dir:[[R.x1,R.y0],[R.x1,R.y1]]}, calha=S.ap.beiral!=="não";
     TI.bordas.forEach(e=>{ const [a,b]=ed[e]; [0.1,0.5,0.9].map(t=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]).some(p=>{ const fora=!pontoDentro(p,TL), pr=perto(p); if(!pr) return false;
         if(!rua(pr.i)&&(fora||pr.d<0.5)){ add(false,`O beiral joga água ${fora?"dentro do":"junto do"} lote vizinho (${nomeL(pr.i)}): o Código Civil (art. 1.300) não permite. Use platibanda com calha ou mude o caimento para o lado da rua.`); return true; }
@@ -3866,7 +3870,7 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const FIELDS=["ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
 const TEXTOS=["ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
