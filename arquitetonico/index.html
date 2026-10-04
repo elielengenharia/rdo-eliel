@@ -143,7 +143,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <div id="selPanel" class="panel" hidden></div>
       <div class="chips" id="planChips"></div>
       <div id="warnings"></div>
-      <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><span class="toast" id="pdfMsg" role="status"></span></div>
+      <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Desenhos por folha<select id="agrupar" style="width:auto"><option value="auto">Automático (A1 até 6, A2 até 4)</option><option value="não">Um por folha</option><option value="2">Até 2 por folha</option><option value="4">Até 4 por folha</option><option value="6">Até 6 por folha</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><span class="toast" id="pdfMsg" role="status"></span></div>
       <div class="row"><button class="btn pri" data-dxf>Baixar DXF para o AutoCAD</button><button class="btn" data-dxfcopy>Copiar DXF</button><span class="toast" data-dxfmsg role="status"></span></div>
       <p class="cap" style="margin-top:8px">O PDF sai com 6 pranchas e carimbo: 01 planta baixa com quadros, 02 cortes AA e BB, 03 cobertura, 04 fachadas, 05 situação, detalhe de cada banheiro e quadro/detalhe das esquadrias. O DXF tem os mesmos desenhos em escala real (metros), cada elemento no seu layer. Dentro do Claude o DXF vem compactado (.zip).</p>
     </div>
@@ -626,7 +626,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.11 · cotas e textos padronizados na planta";
+const VERSAO="versão 5.12 · pranchas agrupadas (menos folhas no A1 e A2)";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -3883,13 +3883,14 @@ $("ladosTab").addEventListener("click",e=>{ const b=e.target.closest("[data-ldel
 $("ladoAdd").onclick=()=>{ S.terr.lados.push({m:0,c:"",rua:"não"}); $("ladosTab").innerHTML=""; render(); };
 { const tbP=$("tabPint"), labDeIdx=i=>{ const k=+i; return k>=0?S.rooms[k]:null; };
   tbP.addEventListener("input",e=>{ const el=e.target, L0=labDeIdx(el.dataset.pc??el.dataset.pt??el.dataset.pp); if(!L0) return; if(el.dataset.pc!=null) L0.cp=el.value; else if(el.dataset.pt!=null) L0.ct=el.value; else if(el.dataset.pp!=null){ L0.rp=el.value; render(); return; } later(); }); }
-function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; renderWalls(); renderRooms(); renderAb(); }
+function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; $("agrupar").value=S.agrupar||"auto"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
   el.addEventListener(el.tagName==="SELECT"?"change":"input",()=>{ const v=TEXTOS.includes(id)?el.value:num(el.value); setv(id,v);
     if(id==="tel.telha"){ S.tel.inc=INC_TELHA[v]||S.tel.inc; $("tel.inc").value=S.tel.inc; }
     if(el.tagName==="SELECT") render(); else later(); }); });
 $("fmt").onchange=()=>{ S.fmt=$("fmt").value; save(); };
+$("agrupar").onchange=()=>{ S.agrupar=$("agrupar").value; save(); };
 $("roofTypes").addEventListener("click",e=>{ const b=e.target.closest("[data-tipo]"); if(!b) return; const tp=+b.dataset.tipo; S.tel.tipo=tp; S.tel.dir=dirPadrao(tp,GG||geom()); render(); });
 ["A","B"].forEach(q=>{ const set=v=>{ S["c"+q]=num(v); later(); }; $("c"+q+"r").addEventListener("input",e=>{ $("c"+q+"n").value=e.target.value; set(e.target.value); }); $("c"+q+"n").addEventListener("change",e=>set(e.target.value)); });
 
@@ -4034,9 +4035,26 @@ const slug=()=>(S.obra||"arquitetonico").normalize("NFD").replace(/[̀-ͯ]/g,"")
    PRANCHAS: escala de cada desenho e posição na folha
    ====================================================================== */
 const ESCALAS=[20,25,50,75,100,125,150,200,250,500,750,1000,1500,2000];
-function encaixar(gerar,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=s/1000, D=gerar(k), e=extensao(D), w=(e.x1-e.x0)/k, h=(e.y1-e.y0)/k; ult={D,s,k,e,w,h}; if(w<=bw&&h<=bh) return ult; } return ult; }
+function encaixar(gerar,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=s/1000, D=gerar(k), e=extensao(D), w=(e.x1-e.x0)/k, h=(e.y1-e.y0)/k; ult={D,s,k,e,w,h,gen:gerar}; if(w<=bw&&h<=bh) return ult; } return ult; }
+const naEscala=(gerar,s)=>{ const k=s/1000, D=gerar(k), e=extensao(D); return {D,s,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:gerar}; };
+/* pranchas agrupadas: junta desenhos da mesma disciplina numa folha (A1 até 6, A2 até 4) */
+const GRUPOS=[/PLANTA BAIXA|DEMOLIR|LAYOUT|CORTES|FACHADAS|COBERTURA|SITUAÇÃO|PAGINAÇÃO|LOCAÇÃO DA OBRA/,/FORMA|COLUNINHAS|PILARES|ESTRUTURA E DETALHES DO TELHADO|ESCADA/,/ELÉTRIC|UNIFILAR|HIDROSS|PLUVIA|FOSSA/,/PINTURA|FORRO|PISO|REVESTIMENTO/,/BANHEIRO|PORTAS|ESQUADRIAS/];
+const grupoFolha=fl=>{ const i=GRUPOS.findIndex(r=>r.test(fl.conteudo)); return i<0?GRUPOS.length:i; };
+function agruparFolhas(folhas,cap,area,TT){ const aw=area.x1-area.x0, ah=area.y1-area.y0, out=[];
+  const ordem=folhas.map((fl,i)=>({fl,i,g:grupoFolha(fl)})).sort((a,b)=>a.g-b.g||a.i-b.i);
+  let cur=null; const fecha=()=>{ if(!cur) return; out.push(cur.fs.length===1?cur.fs[0]:montaGrupo(cur.fs)); cur=null; };
+  const montaGrupo=fs=>{ const its=fs.flatMap(fl=>fl.itens), n=its.length, cols=n===1?1:n===2?(aw>=ah*1.25?2:1):n<=4?2:3, rows=Math.ceil(n/cols), bw=(aw-(cols-1)*8)/cols, bh=(ah-(rows-1)*6)/rows;
+    // plantas da mesma folha numa escala só (a maior que cada uma precisa); detalhes (até 1:25) ficam na escala deles
+    const fit=its.map(it=>{ if(it.zgen){ let d=null; for(const Z of [1.9,1.6,1.35,1.15,1,0.85,0.72,0.6]){ d=encaixar(it.zgen(Z),bw,bh-TT); if(d.w<=bw&&d.h<=bh-TT) break; } return d; } return encaixar(it.d.gen,bw,bh-TT); }), planta=j=>!its[j].sem&&fit[j].s>=50, comuns=fit.filter((x,j)=>planta(j)).map(x=>x.s).sort((a,b)=>a-b), sc=comuns.length?comuns[Math.floor((comuns.length-1)/2)]:null;
+    const itens=its.map((it,j)=>({...it,d:planta(j)&&sc&&fit[j].s<=sc?naEscala(it.d.gen,sc):fit[j],box:[area.x0+(j%cols)*(bw+8),area.y0+Math.floor(j/cols)*(bh+6),bw,bh]}));
+    const conteudo=fs.map(fl=>fl.conteudo).join(" / "), esc=[...new Set(itens.filter(it=>!it.sem).map(it=>it.d.s))];
+    return {n:"",conteudo:conteudo.length>78?conteudo.slice(0,76)+"...":conteudo,escala:esc.length===1?`1:${esc[0]}`:esc.length?"INDICADA":"SEM ESCALA",itens,lado:"grupo",subs:fs}; };
+  ordem.forEach(({fl,g})=>{ const n=fl.itens.length, ok=fl.itens.every(it=>it.d&&it.d.gen)&&n<=cap;
+    if(cur&&ok&&cur.g===g&&cur.n+n<=cap){ cur.fs.push(fl); cur.n+=n; return; }
+    fecha(); if(ok) cur={g,fs:[fl],n}; else out.push(fl); });
+  fecha(); return out; }
 function encaixar2(g1,g2,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=s/1000, D1=g1(k), D2=g2(k), e1=extensao(D1), e2=extensao(D2);
-    const a={D:D1,s,k,e:e1,w:(e1.x1-e1.x0)/k,h:(e1.y1-e1.y0)/k}, b={D:D2,s,k,e:e2,w:(e2.x1-e2.x0)/k,h:(e2.y1-e2.y0)/k}; ult=[a,b];
+    const a={D:D1,s,k,e:e1,w:(e1.x1-e1.x0)/k,h:(e1.y1-e1.y0)/k,gen:g1}, b={D:D2,s,k,e:e2,w:(e2.x1-e2.x0)/k,h:(e2.y1-e2.y0)/k,gen:g2}; ult=[a,b];
     if(a.w<=bw&&b.w<=bw&&a.h<=bh&&b.h<=bh) return ult; } return ult; }
 const SHEETS={A4:[297,210],A3:[420,297],A2:[594,420],A1:[841,594]};
 function pranchas(fmt){
@@ -4054,7 +4072,7 @@ function pranchas(fmt){
   const FS=HD.salas.length?fossaSeptica(G,HD):null, fs=FS?encaixar(k=>desenhoFossa(k,FS),aw,ah-TT):null;
   const FO=forros(G), fo=G.rooms.length?encaixar(k=>desenhoForro(G,k,LM,EL,FO),aw,ah-TT):null;
   const PQ=G.rooms.length?pintura(G):null, ptz=PQ?encaixar(k=>desenhoPintura(G,k,PQ),aw,ah-TT):null;
-  const BP=basePiso(G), bpz=BP?(()=>{ let u=null; for(const s0 of [5,10,15,20,25]){ const k=s0/1000, D=desenhoBasePiso(k,BP), e=extensao(D); u={D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k}; if(u.w<=aw&&u.h<=ah-TT) break; } return u; })():null;
+  const BP=basePiso(G), bpz=BP?(()=>{ let u=null; for(const s0 of [5,10,15,20,25]){ const k=s0/1000, D=desenhoBasePiso(k,BP), e=extensao(D); u={D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:kk=>desenhoBasePiso(kk,BP)}; if(u.w<=aw&&u.h<=ah-TT) break; } return u; })():null;
   const PI=pisos(G), pi=G.rooms.length?encaixar(k=>desenhoPiso(G,k,LM,HD,PI),aw,ah-TT):null;
   const RV=revParede(G,LM,FO), rv=G.rooms.length?encaixar(k=>desenhoRevp(G,k,RV),aw,ah-TT):null;
   const [ca,cb]=encaixar2(k=>desenhoCorte(G,k,"A"),k=>desenhoCorte(G,k,"B"),aw,(ah-2*TT-6)/2);
@@ -4071,8 +4089,8 @@ function pranchas(fmt){
     return {r,pl,vs,bwP,bwV,bhV}; });
   const nE=Math.max(1,Q.length), cE=Math.min(nE,nE>6?4:3), rE=Math.ceil(nE/cE), bwE=(aw-6*(cE-1))/cE, bhE=(ah-6*(rE-1))/rE;
   const QP=Q.filter(q=>q.tipo==="Porta"), nP=Math.max(1,QP.length), cP=Math.min(nP,nP>4?3:2), rP=Math.ceil(nP/cP), bwP2=(aw-6*(cP-1))/cP, bhP=(ah-6*(rP-1))/rP;
-  let dp=[]; for(const s0 of [20,25,30,40,50,60,75]){ const k=s0/1000; dp=QP.map(q=>{ const D=desenhoPortaDet(q,k,G), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k}; }); if(dp.every(d=>d.w<=bwP2&&d.h<=bhP-TT)) break; }
-  let de=[]; for(const s0 of [20,25,50,75,100]){ const k=s0/1000; de=Q.map(q=>{ const D=desenhoEsquadria(q,k), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k}; }); if(de.every(d=>d.w<=bwE&&d.h<=bhE-TT)) break; }
+  let dp=[]; for(const s0 of [20,25,30,40,50,60,75]){ const k=s0/1000; dp=QP.map(q=>{ const D=desenhoPortaDet(q,k,G), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:kk=>desenhoPortaDet(q,kk,G)}; }); if(dp.every(d=>d.w<=bwP2&&d.h<=bhP-TT)) break; }
+  let de=[]; for(const s0 of [20,25,50,75,100]){ const k=s0/1000; de=Q.map(q=>{ const D=desenhoEsquadria(q,k), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:kk=>desenhoEsquadria(q,kk)}; }); if(de.every(d=>d.w<=bwE&&d.h<=bhE-TT)) break; }
   let fp=null; for(const s0 of ESCALAS){ const k=s0/1000, ds=FA.map(([l],i)=>{ const D=desenhoFachada(G,k,l,cfgFach(i)), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k}; }); fp=ds; if(ds.every(d=>d.w<=bw2&&d.h<=bh2-TT)) break; }
   let fa=null; for(const s0 of ESCALAS){ const k=s0/1000, ds=FA.map(([l])=>{ const D=desenhoFachada(G,k,l), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k}; }); fa=ds; if(ds.every(d=>d.w<=bw2&&d.h<=bh2-TT)) break; }
   const folhas=[
@@ -4080,7 +4098,7 @@ function pranchas(fmt){
     ...(rf?[{n:"",conteudo:"PLANTA DE DEMOLIR E CONSTRUIR",escala:`1:${rf.s}`,itens:[{d:rf,titulo:"PLANTA DE DEMOLIR E CONSTRUIR",box:[area.x0,area.y0,aw,ah]}],lado:"reforma",QR}]:[]),
     ...(la?[{n:"",conteudo:"PLANTA DE LAYOUT",escala:`1:${la.s}`,itens:[{d:la,titulo:"PLANTA DE LAYOUT",box:[area.x0,area.y0,aw,ah]}],lado:"layout",LM}]:[]),
     ...(el?[{n:"",conteudo:"PLANTA DE PONTOS ELÉTRICOS",escala:`1:${el.s}`,itens:[{d:el,titulo:"PLANTA DE PONTOS ELÉTRICOS",box:[area.x0,area.y0,aw,ah]}],lado:"eletrica",EL}]:[]),
-    ...uns.map(({U,un})=>({n:"",conteudo:EL.multi?`DIAGRAMA UNIFILAR ${U.qdNome} E ENTRADA - ${U.nome.toUpperCase()}`:"DIAGRAMA UNIFILAR E ENTRADA DE ENERGIA",escala:"SEM ESCALA",itens:[{d:un,titulo:EL.multi?`DIAGRAMA UNIFILAR ${U.qdNome} - ${U.nome.toUpperCase()}`:"DIAGRAMA UNIFILAR DO QUADRO DE DISTRIBUIÇÃO",sem:1,box:[area.x0,area.y0,aw,ah]}],lado:"unifilar",EL:U})),
+    ...uns.map(({U,un})=>({n:"",conteudo:EL.multi?`DIAGRAMA UNIFILAR ${U.qdNome} E ENTRADA - ${U.nome.toUpperCase()}`:"DIAGRAMA UNIFILAR E ENTRADA DE ENERGIA",escala:"SEM ESCALA",itens:[{d:un,zgen:Z=>k=>desenhoUnifilar(U,k,Z),titulo:EL.multi?`DIAGRAMA UNIFILAR ${U.qdNome} - ${U.nome.toUpperCase()}`:"DIAGRAMA UNIFILAR DO QUADRO DE DISTRIBUIÇÃO",sem:1,box:[area.x0,area.y0,aw,ah]}],lado:"unifilar",EL:U})),
     ...(hi?[{n:"",conteudo:"PLANTA HIDROSSANITÁRIA",escala:`1:${hi.s}`,itens:[{d:hi,titulo:"PLANTA HIDROSSANITÁRIA",box:[area.x0,area.y0,aw,ah]}],lado:"hidro",HD}]:[]),
     ...(fs?[{n:"",conteudo:"FOSSA SÉPTICA, FILTRO ANAERÓBIO E SUMIDOURO",escala:`1:${fs.s}`,itens:[{d:fs,titulo:"CONJUNTO FOSSA SÉPTICA, FILTRO ANAERÓBIO E SUMIDOURO",box:[area.x0,area.y0,aw,ah]}],lado:"fossa",FS}]:[]),
     ...(pv?[{n:"",conteudo:"PLANTA DE ÁGUAS PLUVIAIS",escala:`1:${pv.s}`,itens:[{d:pv,titulo:"PLANTA DE ÁGUAS PLUVIAIS",box:[area.x0,area.y0,aw,ah]}],lado:"pluvial",PV}]:[]),
@@ -4106,8 +4124,10 @@ function pranchas(fmt){
     ...(QP.length?[{n:"",conteudo:"DETALHE DAS PORTAS",escala:`1:${dp[0].s}`,itens:dp.map((d,i)=>({d,titulo:`DETALHE ${QP[i].cod}`,box:[area.x0+(i%cP)*(bwP2+6),area.y0+Math.floor(i/cP)*(bhP+6),bwP2,bhP]})),lado:"portas"}]:[]),
     ...(Q.length?[{n:"06/06",conteudo:"QUADRO E DETALHE DAS ESQUADRIAS",escala:`1:${de[0].s}`,itens:de.map((d,i)=>({d,titulo:Q[i].cod,box:[area.x0+(i%cE)*(bwE+6),area.y0+Math.floor(i/cE)*(bhE+6),bwE,bhE]})),lado:"esquadrias"}]:[])
   ];
-  folhas.forEach((fl,i)=>fl.n=`${String(i+1).padStart(2,"0")}/${String(folhas.length).padStart(2,"0")}`);
-  return {W,H,mo,ml,cw,ch,TT,area,side,G,Q,TI,folhas};
+  const cap=S.agrupar==="não"?1:S.agrupar==="2"?2:S.agrupar==="4"?4:S.agrupar==="6"?6:({A1:6,A2:4}[fmt]||1);
+  const fls=cap>1?agruparFolhas(folhas,cap,area,TT):folhas;
+  fls.forEach((fl,i)=>fl.n=`${String(i+1).padStart(2,"0")}/${String(fls.length).padStart(2,"0")}`);
+  return {W,H,mo,ml,cw,ch,TT,area,side,G,Q,TI,folhas:fls};
 }
 function textosLado(P,lado,fl){
   const {G,Q,TI}=P, pd=num(S.pd);
@@ -4269,7 +4289,7 @@ function buildPDF(fmt){
     dash(false);
   };
   const ladoBox=(fl)=>{
-    const blocos=textosLado(P,fl.lado,fl), x0=side.x0, x1=side.x1, gap=6, pesos=blocos.map(b=>b.cols&&b.cols.length>2?1.5:1), tot=pesos.reduce((a,b)=>a+b,0);
+    const maxB=Math.max(3,Math.floor((side.x1-side.x0)/62)), blocos=fl.subs?(()=>{ let bs=fl.subs.flatMap(sf=>textosLado(P,sf.lado,sf)); if(bs.length>maxB) bs=bs.filter((b,j)=>b.cols||j===bs.findIndex(x=>!x.cols)); return bs.slice(0,maxB); })():textosLado(P,fl.lado,fl), x0=side.x0, x1=side.x1, gap=6, pesos=blocos.map(b=>b.cols&&b.cols.length>2?1.5:1), tot=pesos.reduce((a,b)=>a+b,0);
     let xc=x0;
     blocos.forEach((b,bi)=>{ const wcol=(x1-x0-gap*(blocos.length-1))*pesos[bi]/tot, x=xc; xc+=wcol+gap; let y=side.y0+4; gray(0,true); text(x,y,2.4,b.t,true); y+=5;
       const sz=1.8, lh=3.4;
