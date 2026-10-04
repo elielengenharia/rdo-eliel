@@ -102,7 +102,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <header class="top">
     <div>
       <h1>Projeto Arquitetônico</h1>
-      <div class="sub">Planta baixa com áreas e cotas · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Cortes AA e BB · Cobertura · Fachadas · Situação · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
+      <div class="sub">Planta baixa com áreas e cotas · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Memorial descritivo · Cortes AA e BB · Cobertura · Fachadas · Situação · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
@@ -114,6 +114,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
     <button role="tab" data-tab="hid" aria-selected="false">Hidrossanitário</button>
     <button role="tab" data-tab="for" aria-selected="false">Forro</button>
     <button role="tab" data-tab="pis" aria-selected="false">Piso</button>
+    <button role="tab" data-tab="mem" aria-selected="false">Memorial</button>
     <button role="tab" data-tab="cortes" aria-selected="false">Cortes</button>
     <button role="tab" data-tab="cob" aria-selected="false">Cobertura</button>
     <button role="tab" data-tab="fach" aria-selected="false">Fachadas</button>
@@ -261,6 +262,17 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <h3>Soleiras e peitoris de granito</h3><div class="tbl"><table id="tabSoleira"></table></div><ol class="notes" id="pisNotas" style="margin-top:12px"></ol></div>
   </section>
 
+  <!-- MEMORIAL -->
+  <section id="tab-mem" hidden>
+    <div class="sheet">
+      <h2>Memorial descritivo</h2>
+      <p class="cap">Montado sozinho com os dados do projeto: áreas, ambientes, estrutura, cobertura, esquadrias, revestimentos, pisos, forro, elétrica, hidrossanitário, louças e pintura. Mudou algo nas outras abas, o memorial acompanha. Escreva abaixo o que quiser acrescentar (uma linha por item).</p>
+      <div class="form"><label style="grid-column:1/-1">Observações do responsável técnico<textarea id="memo.obs" rows="4" placeholder="ex.: Muro de divisa em bloco de concreto com 2,00 m de altura."></textarea></label></div>
+      <div class="row"><button class="btn pri" id="memPdf">Baixar memorial em PDF (A4)</button><button class="btn" id="memCopy">Copiar texto</button><span class="toast" id="memMsg" role="status"></span></div>
+    </div>
+    <div class="sheet" id="memTexto"></div>
+  </section>
+
   <!-- BANHEIRO -->
   <section id="tab-ban" hidden>
     <div class="sheet">
@@ -381,7 +393,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 2.6 · planta de piso";
+const VERSAO="versão 2.7 · memorial descritivo";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -420,11 +432,11 @@ function defaults(){
   return {
     obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
-    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, memo:{obs:""}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
 }
 let S;
-try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); }catch(e){ S=defaults(); }
+try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.memo=Object.assign({obs:""},o.memo||{}); }catch(e){ S=defaults(); }
 function save(){ try{ localStorage.setItem("arq-casa-v1",JSON.stringify(S)); }catch(e){} }
 
 /* ---------- polígonos: utilidades ---------- */
@@ -1543,6 +1555,74 @@ function quantForro(FO){ const m={}; FO.forEach(F=>{ if(!m[F.ft]) m[F.ft]={ft:F.
 const notasForro=FO=>[...quantForro(FO).map(q=>`${nomeForro(q.ft)}: ${f(q.area)} m²`+(["pvc","gesso","madeira"].includes(q.ft)?` (comprar ${f(q.area*1.1)} m² com 10% de perda); ${q.ft==="gesso"?"tabica":"roda-forro"} ${f(q.per)} m.`:".")),
   `Alturas (H) medidas do piso acabado até a face de baixo do forro.`,`Luminárias conforme a planta de pontos elétricos.`,`Alçapão 60x60 para acesso ao telhado e ao reservatório.`,`Forro de PVC com réguas no sentido do menor vão, presas em estrutura de metalon ou madeira a cada 0,60 m.`];
 
+/* ---------------- Memorial descritivo ---------------- */
+function memorial(){
+  const G=geom(); if(G.vazio) return [{t:"MEMORIAL DESCRITIVO",ps:["Cadastre ou importe a planta na aba Dados."]}];
+  const Q=esquadrias(G), TI=infoTelhado(G), Tr=terreno(G), LM=layoutMoveis(G), EL=pontosEletricos(G,LM), HD=redeHidro(G,LM), FO=forros(G), PI=pisos(G);
+  const util=G.rooms.reduce((s,r)=>s+r.area,0), com=S.uso==="comercial", lista=a=>a.length<=1?a.join(""):a.slice(0,-1).join(", ")+" e "+a[a.length-1];
+  const molh=PI.filter(F=>["banho","lavand","cozinha","salacoz"].includes(F.tp)).map(F=>F.r.n), rev=num(S.banho.rev);
+  const SO=G.abs.filter(g=>g.tipo!=="Janela").length, PE=G.abs.filter(g=>g.tipo==="Janela").length;
+  const S1=[];
+  const sec=(t,ps)=>S1.push({t,ps:ps.filter(Boolean)});
+  sec("1. IDENTIFICAÇÃO",[`Obra: ${S.obra||"a definir"}.`,`Proprietário: ${S.cliente||"a definir"}.`,`Local: ${S.local||"a definir"}${S.terr.lote||S.terr.quadra?` (lote ${S.terr.lote||"-"}, quadra ${S.terr.quadra||"-"})`:""}.`,
+    `Responsável técnico: ${S.rtNome||"-"}${S.crea?`, ${S.crea}`:""}.`,`Área do terreno: ${f(Tr.area)} m² (${f(Tr.testada)} x ${f(Tr.prof)} m). Área construída: ${f(G.areaC)} m². Área útil: ${f(util)} m². Taxa de ocupação: ${f(Tr.to*100,1)}%. Coeficiente de aproveitamento: ${f(Tr.ca)}.`]);
+  sec("2. OBJETIVO",[`Este memorial descreve os materiais e os serviços para a construção de ${com?"edificação comercial":"residência unifamiliar"} térrea, em complemento às pranchas do projeto arquitetônico. Em caso de dúvida, prevalecem as cotas do projeto e as normas da ABNT.`]);
+  sec("3. DESCRIÇÃO DA EDIFICAÇÃO",[`A edificação tem ${G.rooms.length} ambientes: ${lista(G.rooms.map(r=>`${r.n} (${f(r.area)} m²)`))}.`,`Pé-direito de ${f(num(S.pd))} m. Piso interno a ${f(num(S.piso))} m acima do terreno. Recuos: frontal ${f(Tr.rec.frente)} m, laterais ${f(Tr.rec.esq)} m e ${f(Tr.rec.dir)} m, fundos ${f(Tr.rec.fundo)} m.`]);
+  sec("4. SERVIÇOS PRELIMINARES",[`Limpeza do terreno com retirada de entulho e vegetação. Locação da obra com gabarito de madeira, conferindo esquadro e níveis. Instalações provisórias de água e energia, e placa da obra conforme o CREA.`]);
+  sec("5. FUNDAÇÃO E ESTRUTURA",[`Fundação conforme projeto estrutural, com impermeabilização das vigas baldrame (cinta) com emulsão asfáltica antes de subir a alvenaria.`,
+    S.viga.on!=="não"?`Vigas e cintas de concreto armado no topo das paredes, seção ${f(G.t*100,0)} x ${f(num(S.viga.h)*100,0)} cm, e vergas e contravergas em todas as portas e janelas, passando 30 cm de cada lado.`:`Vergas e contravergas de concreto armado em todas as portas e janelas, passando 30 cm de cada lado.`,
+    num(S.laje)>0?`Laje com ${f(num(S.laje)*100,0)} cm de espessura, conforme projeto estrutural.`:""]);
+  sec("6. ALVENARIA",[`Paredes em bloco cerâmico, assentado com argamassa de cimento, cal e areia, com espessura final de ${f(G.t*100,0)} cm já rebocada, em prumo e esquadro.`]);
+  sec("7. COBERTURA",[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}, inclinação de ${f(num(S.tel.inc),0)}%, sobre estrutura de madeira tratada (ou metálica) dimensionada para o vão.`,
+    TI.plat?`Telhado escondido por platibanda, com calha e rufo em chapa galvanizada e condutores até o terreno.`:`Beiral de ${f(TI.b)} m em todo o contorno.`,`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`]);
+  sec("8. ESQUADRIAS",[...Q.map(q=>`${q.cod}: ${q.desc}${q.tipo!=="Vão"?`, ${q.nf} ${q.nf===1?"folha":"folhas"}`:""}, ${q.mat.toLowerCase()}, ${f(q.l)} x ${f(q.a)} m${q.tipo==="Janela"?`, peitoril ${f(q.p)} m`:""} - ${q.q} ${q.q===1?"unidade":"unidades"}.`),
+    Q.length?`Ferragens e fechaduras de boa qualidade; portas de madeira com batente e guarnição; janelas com vidro liso de 4 mm (box e fixas em vidro temperado).`:""]);
+  sec("9. REVESTIMENTOS DE PAREDE",[`Chapisco, emboço e reboco em todas as paredes internas e externas.`,
+    molh.length?`Revestimento cerâmico ${rev>0?`até ${f(rev)} m de altura`:"até o teto"} no banheiro e de 1,50 m nas paredes da pia e do tanque (${lista(molh)}), assentado com argamassa colante e rejunte.`:""]);
+  sec("10. PISOS",[...quantPiso(PI).map(x=>`${infoPiso(x.pt)[1]}: ${lista(PI.filter(F=>F.pt===x.pt).map(F=>F.r.n))} - ${f(x.area)} m².`),
+    `Contrapiso de concreto regularizado, com caimento de 1% para os ralos nas áreas molhadas.`,
+    PI.some(F=>F.rod)?`Rodapé de 7 cm do mesmo piso nas áreas secas (${f(PI.reduce((s,F)=>s+F.rod,0))} m).`:"",
+    SO||PE?`Soleiras de granito nas ${SO} portas e vãos e peitoris de granito com pingadeira nas ${PE} janelas.`:""]);
+  sec("11. FORRO",[...quantForro(FO).map(x=>`${nomeForro(x.ft)}: ${lista(x.amb)} - ${f(x.area)} m².`),`Alturas do forro conforme a planta de forro. Alçapão de 60 x 60 cm para acesso ao telhado e ao reservatório.`]);
+  { const nT=t=>EL.pts.filter(q=>q.t===t).length;
+    sec("12. INSTALAÇÕES ELÉTRICAS",[`Instalação conforme NBR 5410, em ${EL.VF} V${EL.VF===127?` (chuveiro${S.ele.ar==="sim"?" e ar-condicionado":""} em 220 V)`:""}, com eletrodutos de PVC flexível embutidos e fios de cobre com isolamento antichama.`,
+      `${nT("luz")} pontos de luz, ${nT("int")} interruptores, ${nT("tug")} tomadas de uso geral e ${nT("tue")} de uso específico, em ${EL.C.length} circuitos. Potência instalada: ${f(EL.tot/1000)} kVA.`,
+      `Quadro de distribuição com disjuntores termomagnéticos, DR de 30 mA nos circuitos de áreas molhadas e aterramento. Entrada de energia no padrão da concessionária.`]); }
+  if(HD.salas.length) sec("13. INSTALAÇÕES HIDROSSANITÁRIAS",[`Água fria em PVC soldável, a partir do hidrômetro, com reservatório de ${HD.res?HD.res.vol:"-"} L sobre a laje (${HD.pessoas} pessoas x ${HD.cons} L/dia) e registros de gaveta nas colunas.`,
+    `Esgoto em PVC série normal: vaso em Ø100, ramais Ø40/Ø50, caixas sifonadas nas áreas molhadas, caixa de gordura na pia da cozinha, caixas de inspeção fora da edificação e coletor Ø100 com 1% até a rede pública ou fossa e sumidouro. Ventilação Ø50 até acima do telhado.`]);
+  if(HD.ap.length){ const por=new Map(); HD.ap.forEach(a=>{ if(!por.has(a.r.n)) por.set(a.r.n,[]); por.get(a.r.n).push(a.nome.toLowerCase()); });
+    sec("14. LOUÇAS E METAIS",[...[...por].map(([n,l])=>`${n}: ${lista(l)}.`),`Louças brancas, metais cromados, assentos e acessórios do banheiro (papeleira, saboneteira e cabide).`]); }
+  sec(`${HD.ap.length?15:14}. PINTURA`,[`Paredes internas: selador, massa corrida PVA e duas demãos de tinta látex acrílica. Paredes externas: selador e duas demãos de tinta acrílica.`,`Esquadrias de madeira em esmalte sintético ou verniz; metálicas com fundo anticorrosivo e esmalte.`]);
+  sec(`${HD.ap.length?16:15}. LIMPEZA E ENTREGA`,[`Retirada de entulho, limpeza geral de pisos, vidros e louças, teste de todas as instalações e entrega da obra em condição de uso.`]);
+  const obs=String(S.memo&&S.memo.obs||"").trim(); if(obs) sec(`${HD.ap.length?17:16}. OBSERVAÇÕES`,obs.split(/\n+/));
+  return S1; }
+function textoMemorial(M){ return ["MEMORIAL DESCRITIVO",(S.obra||"").toUpperCase(),"",...M.flatMap(s=>[s.t,...s.ps,""]),`${S.local||""}${S.local?", ":""}${S.data||today}.`,"",S.rtNome||"",S.crea||""].join("\n"); }
+function buildMemorialPDF(M){
+  const W=210, H=297, mx=22, n=v=>(+v).toFixed(3), pages=[]; let c=null, y=0;
+  const text=(x,yy,sz,t,b=false)=>c.push(`BT /${b?"F2":"F1"} ${n(sz)} Tf 1 0 0 1 ${n(x)} ${n(H-yy)} Tm (${pdfTxt(t)}) Tj ET`);
+  const wrap=(t,sz,wmm)=>{ const max=Math.max(10,Math.floor(wmm/(sz*0.5))); const out=[]; let cur="";
+    String(t).split(" ").forEach(wd=>{ if((cur+" "+wd).trim().length>max){ if(cur.trim()) out.push(cur.trim()); cur=wd; } else cur+=" "+wd; }); if(cur.trim()) out.push(cur.trim()); return out; };
+  const nova=()=>{ c=["2.834646 0 0 2.834646 0 0 cm"]; pages.push(c); y=20;
+    c.push("0 g"); text(mx,14,3,(S.emp||"").toUpperCase(),true); text(W-mx-60,14,2.6,"MEMORIAL DESCRITIVO",false); c.push(`0.2 w ${n(mx)} ${n(H-16)} m ${n(W-mx)} ${n(H-16)} l S`); y=26; };
+  const precisa=h=>{ if(y+h>H-20) nova(); };
+  nova();
+  text(mx,y+4,5.2,"MEMORIAL DESCRITIVO",true); y+=10; text(mx,y,3.6,S.obra||"",true); y+=8;
+  M.forEach(s=>{ precisa(14); text(mx,y,3.5,s.t,true); y+=6;
+    s.ps.forEach(p=>wrap(p,3.1,W-2*mx).forEach((l,i,arr)=>{ precisa(5); text(mx,y,3.1,l); y+=4.6; if(i===arr.length-1) y+=1.4; })); y+=3; });
+  precisa(40); y+=6; text(mx,y,3.1,`${S.local||""}${S.local?", ":""}${S.data||today}.`); y+=22;
+  c.push(`0.25 w ${n(mx)} ${n(H-y)} m ${n(mx+80)} ${n(H-y)} l S`); y+=5; text(mx,y,3.2,S.rtNome||"",true); y+=4.8; text(mx,y,3,S.crea||"");
+  pages.forEach((pc,i)=>{ c=pc; text(W/2-6,H-10,2.6,`${i+1}/${pages.length}`); });
+  const objs=["<< /Type /Catalog /Pages 2 0 R >>",`<< /Type /Pages /Kids [${pages.map((_,i)=>`${5+2*i} 0 R`).join(" ")}] /Count ${pages.length} >>`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>","<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"];
+  pages.forEach((pc,i)=>{ const content=pc.join("\n");
+    objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${n(W*2.834646)} ${n(H*2.834646)}] /Contents ${6+2*i} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>`);
+    objs.push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`); });
+  let out="%PDF-1.4\n%\xE2\xE3\xCF\xD3\n"; const offs=[];
+  objs.forEach((o,i)=>{ offs.push(out.length); out+=`${i+1} 0 obj\n${o}\nendobj\n`; });
+  const xr=out.length; out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+offs.map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("");
+  out+=`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF\n`;
+  return to1252(out); }
+
 /* ---------------- Planta de piso (paginação, soleiras, peitoris, rodapé) ---------------- */
 const PISOS=[["porc60","Porcelanato 60x60",0.60,0.60],["porc80","Porcelanato 80x80",0.80,0.80],["cer60","Cerâmica 60x60",0.60,0.60],["cer45","Cerâmica 45x45 antiderrapante",0.45,0.45],["cer33","Cerâmica 33x33",0.33,0.33],["vinil","Piso vinílico/laminado (réguas 0,20x1,20)",1.20,0.20],["cimento","Cimentado (juntas a cada 1,50 m)",1.50,1.50]];
 const infoPiso=t=>PISOS.find(q=>q[0]===t)||PISOS[0];
@@ -1824,6 +1904,7 @@ function render(){
         <td style="font-size:13px">${esc(resumoMob(R).join("; "))||"—"}${R.faltou.length?`<div style="color:var(--bad,#C4302B);font-size:12px">Não coube: ${esc(R.faltou.join(", "))}</div>`:""}</td>
         <td>${(R.nVar||0)>1?`<button class="btn" data-var="${i}">Outra posição</button>`:""}</td></tr>`; }).join(""); }
   $("fachadas").innerHTML=G.vazio?"":fachadas().map(([l,t])=>`<div class="sheet"><h2>${t}</h2><div class="draw">${svgDe(desenhoFachada(G,k,l))}</div></div>`).join("");
+  if(!$("tab-mem").hidden) renderMemorial();
   window.__R={G,Q,TI};
   save();
 }
@@ -1894,8 +1975,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
@@ -1946,6 +2027,11 @@ $("novoSim").onclick=()=>{
   $("novoConf").hidden=true; loadForm(); render(); $("obra").focus();
 };
 function labDe(r){ if(r.labIdx<0){ S.rooms.push({n:"",x:+r.cx.toFixed(2),y:+r.cy.toFixed(2),nv:0}); r.labIdx=S.rooms.length-1; renderRooms(); } return S.rooms[r.labIdx]; }
+function renderMemorial(){ const M=memorial(); $("memTexto").innerHTML=`<h2 style="margin-bottom:2px">MEMORIAL DESCRITIVO</h2><p class="cap" style="margin-top:0"><b>${esc(S.obra||"")}</b></p>`+
+  M.map(sc=>`<h3>${esc(sc.t)}</h3>${sc.ps.map(t=>`<p style="margin:6px 0;line-height:1.5">${esc(t)}</p>`).join("")}`).join("")+
+  `<p style="margin-top:22px">${esc(S.local||"")}${S.local?", ":""}${esc(S.data||today)}.</p><p style="margin-top:28px;border-top:1px solid var(--line);display:inline-block;padding-top:6px;min-width:240px"><b>${esc(S.rtNome||"")}</b><br>${esc(S.crea||"")}</p>`; return M; }
+$("memPdf").onclick=async()=>{ const msg=$("memMsg"); try{ const st=await saveFile(`${slug()}-memorial.pdf`,buildMemorialPDF(memorial()),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar o PDF agora."; } };
+$("memCopy").onclick=async()=>{ const t=textoMemorial(memorial()); try{ await navigator.clipboard.writeText(t); $("memMsg").textContent="Texto copiado."; }catch(e){ showText($("memCopy"),t); $("memMsg").textContent="Selecione e copie o texto abaixo."; } };
 $("tabPiso").addEventListener("change",e=>{ const i=e.target.dataset.pt; if(i==null||!GG) return; labDe(GG.rooms[+i]).pt=e.target.value; render(); });
 $("tabForro").addEventListener("change",e=>{ const i=e.target.dataset.ft; if(i==null||!GG) return; labDe(GG.rooms[+i]).ft=e.target.value; render(); });
 $("tabForro").addEventListener("change",e=>{ const i=e.target.dataset.hf; if(i==null||!GG) return; const v=e.target.value.trim(); labDe(GG.rooms[+i]).hf=v===""?null:num(v); render(); });
@@ -1953,7 +2039,8 @@ $("layAmb").addEventListener("change",e=>{ const i=e.target.dataset.lay; if(i==n
 $("layAmb").addEventListener("click",e=>{ const b=e.target.closest("[data-var]"); if(!b||!GG) return; const lb=labDe(GG.rooms[+b.dataset.var]); lb.mv=Math.round(num(lb.mv))+1; render(); });
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
-  ["planta","lay","ele","hid","for","pis","cortes","cob","fach","sit","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
+  ["planta","lay","ele","hid","for","pis","mem","cortes","cob","fach","sit","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
+  if(b.dataset.tab==="mem") renderMemorial();
 });
 
 /* ======================================================================
