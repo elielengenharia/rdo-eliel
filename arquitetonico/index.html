@@ -626,7 +626,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.10 · nome dos ambientes cabendo no ambiente";
+const VERSAO="versão 5.11 · cotas e textos padronizados na planta";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1011,10 +1011,14 @@ function posCorte(G,q){
 function marcaDrywall(D,G){ const k=D.k; G.walls.filter(w=>w.dw).forEach(w=>{ L(D,w.x1,w.y1,w.x2,w.y2,.25,"PAREDE",true);
   if(w.L>1.2){ let an=Math.atan2(w.uy,w.ux)*180/Math.PI; if(an>90) an-=180; if(an<-90) an+=180; const m=[(w.x1+w.x2)/2+w.nX*(G.h+2.2*k),(w.y1+w.y2)/2+w.nY*(G.h+2.2*k)]; TX(D,...m,"DRYWALL 9,5 cm",1.3,{l:"COTAS",rot:an}); } }); }
 // rótulo do ambiente que cabe dentro dele: diminui o texto (até 42%) e procura um lugar livre perto do ponto pedido
-function rotuloAmb(D,r,ls,x,y,obs=[]){ const k=D.k, P=paraDentro(r.poly,0.08)||r.poly, alt=sc=>ls.reduce((s0,l)=>s0+l.h*sc*1.45,0)*k; let best=null;
-  for(const sc of [1,0.85,0.72,0.6,0.5,0.42]){ const wt=Math.max(...ls.map(l=>l.t.length*l.h*sc*(l.b?0.78:0.64)))*k+0.12, pos=lugarRotulo({...r,poly:P},obs,x,y,wt,alt(sc)); if(pos){ best={pos,sc}; break; } }
-  const sc=best?best.sc:0.42, [x0,y0]=best?best.pos:[x,y]; let yy=y0-alt(sc)/2;
-  ls.forEach(l=>{ const hh=l.h*sc*1.45*k; TX(D,x0,yy+hh/2,l.t,l.h*sc,{b:!!l.b,l:l.l||"TEXTO"}); yy+=hh; }); }
+// rótulo do ambiente no tamanho padrão (igual em todos): procura um lugar livre dentro do ambiente, fora do giro das portas;
+// se não couber, aceita encostar na porta e, em último caso, tira as linhas de baixo (o nível e a área estão no quadro de áreas)
+function rotuloAmb(D,r,ls,x,y,obs=[]){ const k=D.k, P=paraDentro(r.poly,0.06)||r.poly, alt=L0=>L0.reduce((s0,l)=>s0+l.h*1.45,0)*k, larg=L0=>Math.max(...L0.map(l=>l.t.length*l.h*(l.b?0.74:0.62)))*k+0.04+2*k;   // 1 mm de folga de cada lado
+  let best=null;
+  for(const ob of [obs,[]]) for(let n=ls.length;n>=Math.min(2,ls.length)&&!best;n--){ const L0=ls.slice(0,n), pos=lugarRotulo({...r,poly:P},ob,x,y,larg(L0),alt(L0)); if(pos) best={pos,L0}; }
+  if(!best) for(const ob of [obs,[]]){ const L0=ls.slice(0,1), pos=lugarRotulo({...r,poly:P},ob,x,y,larg(L0),alt(L0)); if(pos){ best={pos,L0}; break; } }
+  const L0=best?best.L0:ls.slice(0,1), [x0,y0]=best?best.pos:[x,y]; let yy=y0-alt(L0)/2;
+  L0.forEach(l=>{ const hh=l.h*1.45*k; TX(D,x0,yy+hh/2,l.t,l.h,{b:!!l.b,l:l.l||"TEXTO"}); yy+=hh; }); }
 function desenhoPlanta(G,k,ajuda){
   const D=Dw(k), h=G.h, bb=G.bb;
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
@@ -1023,14 +1027,17 @@ function desenhoPlanta(G,k,ajuda){
   marcaDrywall(D,G);
   // parede inclinada (chanfro): cota alinhada pela face de fora
   G.incl.forEach(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, o=h+0.12, Cp=G.compAt(mx+w.nX*o,my+w.nY*o), sg=(!Cp||Cp.ext)?1:-1;
+    if((mx-bb.x0<0.8||my-bb.y0<0.8)&&Math.hypot(w.x2-w.x1,w.y2-w.y1)<2.5) return;   // parede curta junto das cadeias: a medida já está nelas
     const a=sg>0?w.cA[0]:w.cA[1], b=sg>0?w.cB[0]:w.cB[1]; cotaAlinhada(D,a,b,sg,w.nX,w.nY,f(Math.hypot(b[0]-a[0],b[1]-a[1]))); });
   desenhaAberturas(D,G,G.abs);
   // ambientes
   G.rooms.forEach(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; const x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy;
-    rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:2.3,b:true},{t:`A = ${f(r.area)} m²`,h:1.8},...(r.ret?[{t:`${f(r.x1-r.x0)} x ${f(r.y1-r.y0)}`,h:1.6,l:"COTAS"}]:[]),{t:`NV ${fNv(r.nv)}`,h:1.6,l:"COTAS"}],x,y,(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })()); });   // fora do giro das portas
+    rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:2.0,b:true},{t:`A = ${f(r.area)} m²`,h:1.6},{t:`NV ${fNv(r.nv)}`,h:1.4,l:"COTAS"},...(r.ret?[{t:`${f(r.x1-r.x0)} x ${f(r.y1-r.y0)}`,h:1.4,l:"COTAS"}]:[])],x,y,(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })()); });   // fora do giro das portas
   // cotas: faces das paredes (em cima e à esquerda) e totais
+  // paredes inclinadas: só entram na cadeia os cantos que ficam junto da borda daquele lado (o chanfro da frente não parte a cota de cima)
   const fora=G.incl.flatMap(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, Cp=G.compAt(mx+w.nX*(h+0.12),my+w.nY*(h+0.12)); return (!Cp||Cp.ext)?[w.cA[0],w.cB[0]]:[w.cA[1],w.cB[1]]; });
-  const fx=uniq([bb.x0,bb.x1,...fora.map(p=>p[0]),...G.orto.filter(w=>w.vt).flatMap(w=>[w.x1-h,w.x1+h])]), fy=uniq([bb.y0,bb.y1,...fora.map(p=>p[1]),...G.orto.filter(w=>w.hz).flatMap(w=>[w.y1-h,w.y1+h])]);
+  const foraX=fora.filter(p=>p[1]-bb.y0<0.35), foraY=fora.filter(p=>p[0]-bb.x0<0.35);
+  const fx=uniq([bb.x0,bb.x1,...foraX.map(p=>p[0]),...G.orto.filter(w=>w.vt).flatMap(w=>[w.x1-h,w.x1+h])]), fy=uniq([bb.y0,bb.y1,...foraY.map(p=>p[1]),...G.orto.filter(w=>w.hz).flatMap(w=>[w.y1-h,w.y1+h])]);
   cadeiaH(D,fx,bb.y0-9*k,bb.y0); cotaH(D,bb.x0,bb.x1,bb.y0-16*k,bb.y0-9*k,f(bb.x1-bb.x0));
   cadeiaV(D,fy,bb.x0-9*k,bb.x0); cotaV(D,bb.y0,bb.y1,bb.x0-16*k,bb.x0-9*k,f(bb.y1-bb.y0));
   // linhas de corte
@@ -1589,7 +1596,7 @@ function desenhoLayout(G,k,LM){
     const lab=r.labIdx>=0?S.rooms[r.labIdx]:null, x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy, nome=r.n.toUpperCase(), ar=`A = ${f(r.area)} m²`;
     // ambiente pequeno: diminui a letra; se ainda não couber, fica só o nome (a área está no quadro)
     const Zp=zonasAmb(G,r).porta, So=[...R.sol,...Zp]; let ok=null, hn=2.3, sa=false;
-    for(const [hh,obs,s1] of [[2.3,So],[1.8,So],[1.5,So],[1.8,So,1],[1.5,So,1],[1.8,R.sol],[1.5,R.sol],[1.5,R.sol,1],[1.3,R.sol,1]]){ const wt=Math.max(nome.length*hh*0.85,s1?0:ar.length*hh*0.78*0.83)*k+0.04, ht=hh*(s1?1.6:3)*k; ok=lugarRotulo(r,obs,x,y,wt,ht); hn=hh; sa=!!s1; if(ok) break; }
+    for(const [hh,obs,s1] of [[2.0,So],[2.0,So,1],[2.0,R.sol],[2.0,R.sol,1],[2.0,[],1]]){ const wt=Math.max(nome.length*hh*0.85,s1?0:ar.length*hh*0.78*0.83)*k+0.04, ht=hh*(s1?1.6:3)*k; ok=lugarRotulo(r,obs,x,y,wt,ht); hn=hh; sa=!!s1; if(ok) break; }
     const [px,py]=ok||[x,y];
     if(sa) TX(D,px,py,nome,hn,{b:true}); else { TX(D,px,py-hn*0.6*k,nome,hn,{b:true}); TX(D,px,py+hn*0.8*k,ar,hn*0.78); } });
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
@@ -1741,7 +1748,7 @@ function desenhoEletrica(G,k,LM,EL,legenda=true){
   EL.pts.forEach(q=>simbolo(D,q));
   // nome do ambiente longe dos pontos e dos móveis
   LM.forEach(R=>{ const r=R.r, obs=[...R.sol,...rotE,...EL.pts.filter(q=>q.r===r).map(q=>{ const e=(q.t==="luz"?4.5:3)*k*SIMB; return [[q.p[0]-e,q.p[1]-e],[q.p[0]+e*2,q.p[1]-e],[q.p[0]+e*2,q.p[1]+e],[q.p[0]-e,q.p[1]+e]]; })], nome=r.n.toUpperCase();
-    let pos=null, hh=1.9; for(const h0 of [1.9,1.6,1.4]){ pos=lugarRotulo(r,obs,r.cx,r.cy+3.5*k,nome.length*h0*0.85*k+0.04,h0*1.6*k); hh=h0; if(pos) break; }
+    let pos=null, hh=1.8; for(const ob of [obs,R.sol,[]]){ pos=lugarRotulo(r,ob,r.cx,r.cy+3.5*k,nome.length*hh*0.85*k+0.04,hh*1.6*k); if(pos) break; }   // tamanho único em todos os ambientes
     TX(D,...(pos||[r.cx,r.cy+3.5*k]),nome,hh,{b:true,l:"COTAS"}); });
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
   if(legenda){ const x0=bb.x1+16*k, y0=bb.y0, l="ELETRICA"; let y=y0; TX(D,x0,y,"LEGENDA",2,{a:"s",b:true}); y+=6*k;
@@ -2793,10 +2800,11 @@ function pintura(G){ if(G.vazio) return null; const P0=S.pint||{}, LM=layoutMove
   return {amb,aTex,aLat,esq,aMad,aFer,aTetoP,aTetoV,aParede:aLatInt+aTexInt+aEpo,M,corFach:P0.corFach||"conforme projeto de fachada",corEsq:P0.corEsq||"Branco",verniz}; }
 function desenhoPintura(G,k,PQ){ const D=Dw(k); if(!PQ){ TX(D,0,0,"Sem paredes.",3); return D; }
   G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
-  PQ.amb.forEach(a=>{ const r=a.r, ls=[r.n.toUpperCase(), a.rp==="nenhuma"?"PAREDE: sem pintura":`PAREDE: ${PINTP[a.rp]||"-"}`, a.rp!=="nenhuma"?`cor ${a.corP}`:"",
+  PQ.amb.forEach(a=>{ const r=a.r; let ls=[r.n.toUpperCase(), a.rp==="nenhuma"?"PAREDE: sem pintura":`PAREDE: ${PINTP[a.rp]||"-"}`, a.rp!=="nenhuma"?`cor ${a.corP}`:"",
       a.teto?`TETO: ${a.teto==="pva"?"látex PVA":"verniz"} · ${a.corT}`:`TETO: ${a.ft==="pvc"?"forro PVC":"sem pintura"}`].filter(Boolean);
-    let pos=null, hh=1.8; for(const h0 of [1.8,1.5,1.25,1.05]){ const wt=Math.max(...ls.map((t,i)=>t.length*(i?0.72:1)))*h0*0.62*k+0.04;
-      pos=lugarRotulo({...r,poly:paraDentro(r.poly,0.12)||r.poly},[],r.cx,r.cy,wt,h0*ls.length*1.6*k); hh=h0; if(pos) break; }
+    let pos=null; const hh=1.6, L00=ls; for(let n=L00.length;n>=1&&!pos;n--){ const L1=L00.slice(0,n), wt=Math.max(...L1.map((t,i)=>t.length*(i?0.72:1)))*hh*0.62*k+0.04;
+      pos=lugarRotulo({...r,poly:paraDentro(r.poly,0.12)||r.poly},(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })(),r.cx,r.cy,wt,hh*L1.length*1.6*k); if(pos) ls=L1; }   // tamanho único; ambiente pequeno mostra só as linhas que cabem (o resto está na tabela)
+    if(!pos) ls=ls.slice(0,1);
     const [x0,y0]=pos||[r.cx,r.cy]; ls.forEach((t,i)=>TX(D,x0,y0+(i-(ls.length-1)/2)*hh*1.5*k,t,i?hh*0.72:hh,{b:!i,l:i?"COTAS":"TEXTO"})); });
   const bb=G.bb; cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0)); return D; }
 const notasPintura=PQ=>[`Reboco curado (no mínimo 28 dias) e seco antes de pintar; lixar, tirar o pó e corrigir trincas e furos.`,
@@ -2818,7 +2826,8 @@ function desenhoRevp(G,k,RV){
   RV.forEach(x=>{ if(!(x.cer>0)) return; const off=0.05; x.faces.forEach(e=>{ const a=[e.A[0]+e.N[0]*off,e.A[1]+e.N[1]*off], b=[e.A[0]+e.u[0]*e.Le+e.N[0]*off,e.A[1]+e.u[1]*e.Le+e.N[1]*off];
       L(D,...a,...b,.7,"REVEST"); const n=Math.floor(e.Le/0.15); for(let i=1;i<n;i++){ const p=[a[0]+e.u[0]*i*0.15,a[1]+e.u[1]*i*0.15]; L(D,...p,p[0]+e.N[0]*0.06,p[1]+e.N[1]*0.06,.13,"REVEST"); } }); });
   RV.forEach(x=>{ const r=x.r, l1=r.n.toUpperCase(), l2=x.cer>0?`${curtoRevp[x.rt]} ATÉ ${x.h>=x.H-1e-6?"O TETO":f(x.h)+" m"}`:"", l3=x.rp==="nenhuma"||!(x.pint>0)?"":(x.cer>0?"ACIMA: ":"")+nomePint(x.rp).toUpperCase();
-    const ls=[l1,l2,l3].filter(Boolean); let pos=null, hh=2; for(const h0 of [2,1.7,1.4,1.2]){ const wt=Math.max(...ls.map(t=>t.length))*h0*0.8*k+0.04; pos=lugarRotulo({...r,poly:paraDentro(r.poly,0.12)||r.poly},[],r.cx,r.cy,wt,h0*ls.length*1.7*k); hh=h0; if(pos) break; }
+    let ls=[l1,l2,l3].filter(Boolean); const L00=ls; let pos=null, hh=1.8; for(let n=L00.length;n>=1;n--){ const h0=1.8, L1=L00.slice(0,n), wt=Math.max(...L1.map((t,i)=>t.length*(i?0.75:1)))*h0*0.62*k+0.04; pos=lugarRotulo({...r,poly:paraDentro(r.poly,0.12)||r.poly},(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })(),r.cx,r.cy,wt,h0*L1.length*1.7*k); hh=h0; if(pos) ls=L1; if(pos) break; }
+    if(!pos) ls=ls.slice(0,1);
     const [x0,y0]=pos||[r.cx,r.cy]; ls.forEach((t,i)=>TX(D,x0,y0+(i-(ls.length-1)/2)*hh*1.6*k,t,i?hh*0.75:hh,{b:!i,l:i===1?"REVEST":i?"COTAS":"TEXTO"})); });
   const FA=fachadaRev(G); TX(D,(bb.x0+bb.x1)/2,bb.y1+7*k,`FACHADAS: ${nomePint(FA.tipo).toUpperCase()} (${f(FA.area)} m²)`,1.8,{b:true,l:"COTAS"});
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
