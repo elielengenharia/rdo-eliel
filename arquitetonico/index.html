@@ -572,7 +572,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 4.5 · estrutura simples igual ao Detalhador de Fundação";
+const VERSAO="versão 4.6 · cinta 10x20 na parede de tijolo em pé";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1902,10 +1902,10 @@ const notasFossa=FS=>[`Tanque séptico (NBR 7229): V = 1000 + N (C·T + K·Lf) =
 // vigas sobre as paredes, lajes treliçadas por ambiente, cargas por área de influência e fundação
 // mesmas peças do Detalhador de Fundação (/fundacao); usa o que estiver salvo lá neste aparelho
 const BIT_F={"1/4":{mm:6.3,kg:0.245},"5/16":{mm:8.0,kg:0.395},"3/8":{mm:10.0,kg:0.617},"1/2":{mm:12.5,kg:0.963}}, EST_F={"4.2":{mm:4.2,kg:0.109},"5.0":{mm:5.0,kg:0.154}};
-function cfgFund(){ const d={vb:{b:15,h:20,bit:"5/16",ga:7,gb:14,est:"4.2",s:15},ci:{on:"sim",b:12,h:20},tr:{nome:"TG8L",h:8,kg:0.68,peca:"12",b:9,hv:14,hc:14,apoio:30},
+function cfgFund(){ const d={vb:{b:15,h:20,bit:"5/16",ga:7,gb:14,est:"4.2",s:15},ci:{on:"sim",b:10,h:20},tr:{nome:"TG8L",h:8,kg:0.68,peca:"12",b:9,hv:14,hc:14,apoio:30},
     pl:{b:12,h:20,bit:"3/8",ga:7,gb:14,est:"4.2",s:15,alt:2.8},br:{d:25,prof:2.0,arr:1.0},vaoMax:3.0,peca:6.0,trasp:40,lastro:5,cap:50,fck:20};
   let o={}; try{ o=JSON.parse(localStorage.getItem("fund-casa-v1"))||{}; }catch(e){}
-  const c={...d,...["vaoMax","peca","trasp","lastro","cap","fck"].reduce((m,k)=>o[k]!=null?{...m,[k]:num(o[k])||d[k]}:m,{})}; ["vb","ci","tr","pl","br"].forEach(k=>c[k]={...d[k],...(o[k]||{})});
+  const c={...d,...["vaoMax","peca","trasp","lastro","cap","fck"].reduce((m,k)=>o[k]!=null?{...m,[k]:num(o[k])||d[k]}:m,{})}; ["vb","ci","tr","pl","br"].forEach(k=>c[k]={...d[k],...(o[k]||{})}); if(!o.civ10&&num(c.ci.b)===12) c.ci.b=10; if(!o.brv12&&num(c.br.prof)===2) c.br.prof=1.2;
   const E2=S.estS||{}; if(num(E2.vmax)>0) c.vaoMax=num(E2.vmax); if(num(E2.prof)>0) c.br.prof=num(E2.prof); if(E2.cinta) c.ci.on=E2.cinta; c.pl.alt=num(S.pd)||c.pl.alt; return c; }
 function estrutural(G,simples){ if(G.vazio) return null; const E=S.estr||{}, CF=simples?cfgFund():null, t=G.t, b=simples?num(CF.pl.b)/100:Math.min(0.20,Math.max(0.14,Math.round(t*100)/100)), hp=simples?num(CF.pl.h)/100:0.30;
   const vmax=simples?Math.min(4,Math.max(1.5,num(CF.vaoMax)||3.0)):Math.min(6,Math.max(2.5,num(E.vmax)||4.5)), W=G.walls, near=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1]);

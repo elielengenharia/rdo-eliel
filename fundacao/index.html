@@ -368,7 +368,7 @@ function defaults(){
     obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:JSON.parse(JSON.stringify(WALLS42)), rooms:JSON.parse(JSON.stringify(ROOMS42)),
     vb:{b:15,h:20,bit:"5/16",ga:7,gb:14,est:"4.2",s:15},
-    ci:{on:"sim",b:12,h:20},
+    ci:{on:"sim",b:10,h:20},
     tr:{nome:"TG8L",h:8,kg:0.68,peca:"12",b:9,hv:14,hc:14,apoio:30},
     ab:[{n:"P1 entrada",t:"Porta",l:0.80,a:2.10,q:1},{n:"P2 quartos/banho",t:"Porta",l:0.70,a:2.10,q:3},{n:"P3 lavanderia",t:"Porta",l:0.80,a:2.10,q:1},
         {n:"J1 quartos",t:"Janela",l:1.20,a:1.00,q:2},{n:"J2 sala",t:"Janela",l:1.50,a:1.20,q:1},{n:"J3 cozinha",t:"Janela",l:1.20,a:1.00,q:1},{n:"J4 banho",t:"Janela",l:0.60,a:0.60,q:1}],
@@ -378,7 +378,7 @@ function defaults(){
   };
 }
 let S;
-try{ const d=defaults(), o=JSON.parse(localStorage.getItem("fund-casa-v1"))||{}; S=Object.assign(d,o); ["vb","pl","br","ci","tr"].forEach(k=>S[k]=Object.assign(d[k]||defaults()[k],o[k]||{})); if(!o.brv12){ if(num(S.br.prof)===2) S.br.prof=1.2; S.brv12=1; } if(!o.ci) S.ci=defaults().ci; if(!o.ab) S.ab=defaults().ab; if(S.tr.b==12&&S.tr.hv==20&&S.tr.hc==20){ S.tr.b=9; S.tr.hv=14; S.tr.hc=14; } if(S.tr.nome==="TG12M"&&num(S.tr.h)===12){ S.tr.nome="TG8L"; S.tr.h=8; S.tr.kg=0.68; } }catch(e){ S = defaults(); }
+try{ const d=defaults(), o=JSON.parse(localStorage.getItem("fund-casa-v1"))||{}; S=Object.assign(d,o); ["vb","pl","br","ci","tr"].forEach(k=>S[k]=Object.assign(d[k]||defaults()[k],o[k]||{})); if(!o.brv12){ if(num(S.br.prof)===2) S.br.prof=1.2; S.brv12=1; } if(!o.civ10){ if(num(S.ci.b)===12) S.ci.b=10; S.civ10=1; } if(!o.ci) S.ci=defaults().ci; if(!o.ab) S.ab=defaults().ab; if(S.tr.b==12&&S.tr.hv==20&&S.tr.hc==20){ S.tr.b=9; S.tr.hv=14; S.tr.hc=14; } if(S.tr.nome==="TG12M"&&num(S.tr.h)===12){ S.tr.nome="TG8L"; S.tr.h=8; S.tr.kg=0.68; } }catch(e){ S = defaults(); }
 function save(){ try{ localStorage.setItem("fund-casa-v1", JSON.stringify(S)); }catch(e){} }
 
 const f = (n,d=2)=> (isFinite(n)? n.toFixed(d).replace(".",",") : "—");
@@ -752,7 +752,7 @@ function render(){
   const w=[]; const vb=S.vb, pl=S.pl;
   const st=vb.h>=vb.b, cl=(vb.b-(st?vb.ga:vb.gb))/2, cv=(vb.h-(st?vb.gb:vb.ga))/2;
   if(Math.min(cl,cv)<3) w.push(["bad",`Cobrimento do baldrame de ${f(Math.min(cl,cv),1)} cm. Em contato com o solo use no mínimo 3,0 cm: aumente a seção ou use coluna pronta menor.`]);
-  if(Q.ciOn){ const cst=S.ci.h>=S.ci.b, cc=Math.min((S.ci.b-(cst?vb.ga:vb.gb))/2,(S.ci.h-(cst?vb.gb:vb.ga))/2); if(cc<2.5) w.push(["warn",`Cobrimento da cinta de ${f(cc,1)} cm, abaixo de 2,5 cm.`]); }
+  if(Q.ciOn){ const cst=S.ci.h>=S.ci.b, cc=Math.min((S.ci.b-(cst?vb.ga:vb.gb))/2,(S.ci.h-(cst?vb.gb:vb.ga))/2); if(cc<1.5-1e-9) w.push(["warn",`Cobrimento da cinta de ${f(cc,1)} cm, abaixo de 1,5 cm.`]); }
   { const hm=Math.min(S.tr.hv,S.tr.hc), cv=(hm-num(S.tr.h))/2, cl=(S.tr.b-8)/2;
     if(cv<2.5) w.push(["warn",`Verga/contraverga ${S.tr.b}×${hm} com treliça de ${S.tr.h} cm: só ${f(Math.max(cv,0),1)} cm de concreto em cima e embaixo (mínimo 2,5 cm). Use treliça mais baixa ou peça mais alta.`]);
     else if(cl<2.5) w.push(["warn",`Verga/contraverga com ${S.tr.b} cm de largura: a treliça (base ≈ 8 cm) fica com ${f(Math.max(cl,0),1)} cm de concreto nas laterais. O reboco das duas faces completa a proteção.`]); }
