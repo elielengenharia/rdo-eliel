@@ -102,7 +102,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <header class="top">
     <div>
       <h1>Projeto Arquitetônico</h1>
-      <div class="sub">Planta baixa com áreas e cotas · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Memorial descritivo · Cortes AA e BB · Cobertura · Fachadas · Situação · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
+      <div class="sub">Planta baixa com áreas e cotas · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Memorial descritivo · Orçamento estimado · Cortes AA e BB · Cobertura · Fachadas · Situação · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
@@ -115,6 +115,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
     <button role="tab" data-tab="for" aria-selected="false">Forro</button>
     <button role="tab" data-tab="pis" aria-selected="false">Piso</button>
     <button role="tab" data-tab="mem" aria-selected="false">Memorial</button>
+    <button role="tab" data-tab="orc" aria-selected="false">Orçamento</button>
     <button role="tab" data-tab="cortes" aria-selected="false">Cortes</button>
     <button role="tab" data-tab="cob" aria-selected="false">Cobertura</button>
     <button role="tab" data-tab="fach" aria-selected="false">Fachadas</button>
@@ -273,6 +274,18 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
     <div class="sheet" id="memTexto"></div>
   </section>
 
+  <!-- ORÇAMENTO -->
+  <section id="tab-orc" hidden>
+    <div class="sheet">
+      <h2>Orçamento estimado</h2>
+      <p class="cap">Quantidades tiradas do projeto (paredes, reboco, cerâmica, telhado, esquadrias, pisos, forro, pontos elétricos e hidráulicos, louças, pintura). Os preços unitários são <b>referência</b> (material + mão de obra): troque pelos da SINAPI do mês ou dos seus fornecedores direto na tabela; o app guarda os seus preços.</p>
+      <div class="form"><label>BDI (%)<input type="number" step="0.5" min="0" id="orc.bdi"></label><label>CUB do mês (R$/m², opcional)<input type="number" step="0.01" min="0" id="orc.cub" placeholder="ex.: Sinduscon-PA"></label></div>
+      <div class="chips" id="orcChips"></div>
+      <div class="row"><button class="btn pri" id="orcPdf">Baixar orçamento em PDF (A4)</button><button class="btn" id="orcCsv">Baixar planilha (CSV para Excel)</button><button class="btn" id="orcReset">Voltar aos preços de referência</button><span class="toast" id="orcMsg" role="status"></span></div>
+    </div>
+    <div class="sheet"><div class="tbl"><table id="orcTab"></table></div></div>
+  </section>
+
   <!-- BANHEIRO -->
   <section id="tab-ban" hidden>
     <div class="sheet">
@@ -393,7 +406,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 2.7 · memorial descritivo";
+const VERSAO="versão 2.8 · orçamento estimado";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -432,11 +445,11 @@ function defaults(){
   return {
     obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
-    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, memo:{obs:""}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+    pd:2.80, laje:0.10, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, memo:{obs:""}, orc:{bdi:20,cub:"",p:{}}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
 }
 let S;
-try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.memo=Object.assign({obs:""},o.memo||{}); }catch(e){ S=defaults(); }
+try{ const d=defaults(), o=JSON.parse(localStorage.getItem("arq-casa-v1"))||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; }catch(e){ S=defaults(); }
 function save(){ try{ localStorage.setItem("arq-casa-v1",JSON.stringify(S)); }catch(e){} }
 
 /* ---------- polígonos: utilidades ---------- */
@@ -1623,6 +1636,99 @@ function buildMemorialPDF(M){
   out+=`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF\n`;
   return to1252(out); }
 
+/* ---------------- Orçamento estimado ---------------- */
+// preços de referência (R$, material + mão de obra): o usuário ajusta na tabela (SINAPI / fornecedor local)
+const PRECO0={limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
+  telha_Cerâmica:55,telha_Concreto:60,telha_Fibrocimento:40,telha_Metálica:75,cumeeira:35,calha:90,
+  porta:850,janela:650,box:900,contrapiso:45,piso_porc60:120,piso_porc80:150,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
+  forro_pvc:75,forro_gesso:90,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,pt_agua:220,pt_esgoto:180,caixa:350,reservatorio:900,
+  vaso:750,lavatorio:350,chuveiro:250,pia:650,tanque:450,pint_int:28,pint_ext:32,limpfinal:8};
+const preco=k=>{ const v=S.orc&&S.orc.p&&S.orc.p[k]; return v!=null&&v!==""&&isFinite(+v)?+v:(PRECO0[k]??0); };
+const money=v=>{ const s=Math.abs(v).toFixed(2).split("."); return (v<0?"-":"")+"R$ "+s[0].replace(/\B(?=(\d{3})+(?!\d))/g,".")+","+s[1]; };
+function orcamento(){
+  const G=geom(); if(G.vazio) return {etapas:[],direto:0,bdi:0,total:0,areaC:0};
+  const Q=esquadrias(G), TI=infoTelhado(G), Tr=terreno(G), LM=layoutMoveis(G), EL=pontosEletricos(G,LM), HD=redeHidro(G,LM), FO=forros(G), PI=pisos(G);
+  const pd=num(S.pd), util=G.rooms.reduce((s,r)=>s+r.area,0), Lpar=G.walls.reduce((s,w)=>s+w.L,0);
+  const altAb=g=>g.tipo==="Janela"?num(g.a.a):num(g.a.a)||2.10, abA=G.abs.reduce((s,g)=>s+g.l*altAb(g),0);
+  const alv=Math.max(0,Lpar*pd-abA);
+  const perExt=G.contExt.reduce((s,q)=>s+Math.hypot(q[2]-q[0],q[3]-q[1]),0), abExt=G.abs.filter(g=>g.externa).reduce((s,g)=>s+g.l*altAb(g),0);
+  const hExt=pd+num(S.piso)+(TI.plat?Math.max(0,(TI.topoPlat||pd)-pd):0), pintExt=Math.max(0,perExt*hExt-abExt);
+  // cerâmica de parede: banheiro até a altura escolhida; cozinha e lavanderia 1,50 m nas paredes da pia e do tanque
+  let cer=0; PI.forEach(F=>{ const r=F.r, ABS=aberturasAmb(G,r);
+    if(F.tp==="banho"){ const h=num(S.banho.rev)>0?num(S.banho.rev):pd; cer+=Math.max(0,r.per*h-ABS.reduce((s,o)=>{ const g=o.g, z0=g.tipo==="Janela"?num(g.a.p):0, z1=z0+altAb(g); return s+g.l*Math.max(0,Math.min(h,z1)-z0); },0)); }
+    else if(F.tp==="cozinha"||F.tp==="lavand"||F.tp==="salacoz"){ const R=LM.find(x=>x.r===r), lg=R?R.pos.filter(c=>/cozinha|tanque|máquina/.test(c.pc.nome)).reduce((s,c)=>s+c.pc.w,0):0; cer+=1.5*(lg>0?lg+0.6:F.tp==="salacoz"?2.5:r.per*0.5); } });
+  const pintInt=Math.max(0,2*alv-pintExt-cer);
+  const E=[]; let et=null;
+  const etapa=n=>{ et={n,itens:[]}; E.push(et); };
+  const it=(desc,un,q,k)=>{ if(!(q>0)) return; const pu=preco(k); et.itens.push({desc,un,q,k,pu,tot:q*pu}); };
+  etapa("SERVIÇOS PRELIMINARES"); it("Limpeza do terreno","m²",Math.min(Tr.area,G.areaC*2+40),"limpeza"); it("Locação da obra (gabarito)","m²",G.areaC,"locacao");
+  etapa("FUNDAÇÃO E ESTRUTURA"); it("Fundação e viga baldrame (por metro de parede)","m",Lpar,"fundacao");
+  if(S.viga.on!=="não") it(`Viga/cinta superior ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm`,"m",Lpar,"cinta");
+  if(num(S.laje)>0) it("Laje pré-moldada com capeamento","m²",G.areaC,"laje");
+  etapa("ALVENARIA E REVESTIMENTOS"); it(`Alvenaria de bloco cerâmico (e = ${f(G.t*100,0)} cm)`,"m²",alv,"alvenaria"); it("Chapisco, emboço e reboco (2 faces)","m²",2*alv,"reboco"); it("Revestimento cerâmico de parede","m²",cer,"ceramica");
+  etapa("COBERTURA"); it("Estrutura de madeira do telhado","m²",TI.areaInc,"madeiramento"); it(`Telha ${String(S.tel.telha).toLowerCase()}`,"m²",TI.areaInc,`telha_${S.tel.telha}`); it("Cumeeira","m",TI.Lcum,"cumeeira");
+  if(TI.plat) it("Calha e rufo galvanizados","m",perExt,"calha");
+  etapa("ESQUADRIAS");
+  Q.filter(q=>q.tipo==="Porta").forEach(q=>it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)}`,"un",q.q,"porta"));
+  Q.filter(q=>q.tipo==="Janela").forEach(q=>it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)} (${q.q} un)`,"m²",q.l*q.a*q.q,"janela"));
+  it("Box de vidro temperado","un",LM.filter(R=>R.banho&&R.banho.box).length,"box");
+  etapa("PISOS"); it("Contrapiso regularizado","m²",util,"contrapiso");
+  quantPiso(PI).forEach(x=>it(`${infoPiso(x.pt)[1]} (com 10% de perda)`,"m²",x.area*1.1,`piso_${x.pt}`));
+  it("Rodapé","m",PI.reduce((s,F)=>s+F.rod,0),"rodape"); it("Soleira de granito","m",G.abs.filter(g=>g.tipo!=="Janela").reduce((s,g)=>s+g.l,0),"soleira"); it("Peitoril de granito","m",G.abs.filter(g=>g.tipo==="Janela").reduce((s,g)=>s+g.l,0),"peitoril");
+  etapa("FORRO"); quantForro(FO).filter(x=>x.ft!=="sem").forEach(x=>it(x.ft==="laje"?"Pintura do teto (laje)":`${nomeForro(x.ft)}`,"m²",x.area*(x.ft==="laje"?1:1.1),`forro_${x.ft}`));
+  it("Roda-forro / tabica","m",quantForro(FO).filter(x=>["pvc","gesso","madeira"].includes(x.ft)).reduce((s,x)=>s+x.per,0),"rodaforro");
+  etapa("INSTALAÇÕES ELÉTRICAS"); { const n=EL.pts.filter(q=>["luz","int","tug","tue"].includes(q.t)).length; it("Pontos elétricos (luz, interruptor, tomadas) com fiação","pt",n,"pt_ele"); }
+  it("Quadro de distribuição com disjuntores e DR","un",EL.pts.some(q=>q.t==="qd")?1:(EL.C.length?1:0),"qd"); it("Entrada de energia (padrão da concessionária)","un",G.rooms.length?1:0,"padrao");
+  if(HD.salas.length){ etapa("INSTALAÇÕES HIDROSSANITÁRIAS"); it("Pontos de água fria","pt",HD.ap.length,"pt_agua"); it("Pontos de esgoto","pt",HD.ap.filter(a=>a.es).length+HD.salas.filter(s=>s.cs).length,"pt_esgoto");
+    it("Caixas de inspeção, gordura e sifonadas","un",HD.caixas.length+HD.salas.filter(s=>s.cs).length,"caixa"); it(`Reservatório ${HD.res?HD.res.vol:""} L com instalação`,"un",HD.res?1:0,"reservatorio");
+    etapa("LOUÇAS E METAIS"); const c=t=>HD.ap.filter(a=>a.nome===t).length;
+    it("Bacia com caixa acoplada","un",c("Bacia com caixa acoplada"),"vaso"); it("Lavatório com torneira","un",c("Lavatório"),"lavatorio"); it("Chuveiro","un",c("Chuveiro"),"chuveiro"); it("Pia de cozinha com cuba e torneira","un",c("Pia da cozinha"),"pia"); it("Tanque com torneira","un",c("Tanque"),"tanque"); }
+  etapa("PINTURA"); it("Pintura interna (selador, massa e látex acrílico)","m²",pintInt,"pint_int"); it("Pintura externa acrílica","m²",pintExt,"pint_ext");
+  etapa("LIMPEZA FINAL"); it("Limpeza final da obra","m²",G.areaC,"limpfinal");
+  const etapas=E.filter(e=>e.itens.length); etapas.forEach(e=>e.tot=e.itens.reduce((s,i)=>s+i.tot,0));
+  const direto=etapas.reduce((s,e)=>s+e.tot,0), bdiP=num(S.orc.bdi), bdi=direto*bdiP/100, total=direto+bdi, cub=num(S.orc.cub);
+  return {etapas,direto,bdiP,bdi,total,areaC:G.areaC,cub,totCub:cub>0?cub*G.areaC:0}; }
+function csvOrc(O){ const L=["Etapa;Item;Un;Quantidade;Preço unitário (R$);Total (R$)"], n=v=>(+v).toFixed(2).replace(".",",");
+  O.etapas.forEach(e=>{ e.itens.forEach(i=>L.push([e.n,i.desc,i.un,n(i.q),n(i.pu),n(i.tot)].map(x=>`"${String(x).replace(/"/g,'""')}"`).join(";"))); L.push(`"${e.n}";"SUBTOTAL";;;;${n(e.tot)}`); });
+  L.push(`;"CUSTO DIRETO";;;;${n(O.direto)}`,`;"BDI ${n(O.bdiP)}%";;;;${n(O.bdi)}`,`;"TOTAL GERAL";;;;${n(O.total)}`,`;"R$/m² (${n(O.areaC)} m²)";;;;${n(O.areaC?O.total/O.areaC:0)}`);
+  return "﻿"+L.join("\r\n")+"\r\n"; }
+function buildOrcPDF(O){
+  const W=210, H=297, mx=14, n=v=>(+v).toFixed(3), pages=[]; let c=null, y=0;
+  const text=(x,yy,sz,t,b=false,al=0)=>{ const w=al?String(t).length*sz*(b?0.56:0.5):0; c.push(`BT /${b?"F2":"F1"} ${n(sz)} Tf 1 0 0 1 ${n(x-(al===2?w:al===1?w/2:0))} ${n(H-yy)} Tm (${pdfTxt(t)}) Tj ET`); };
+  const ln=(x1,y1,x2,y2,w=.2)=>c.push(`${n(w)} w ${n(x1)} ${n(H-y1)} m ${n(x2)} ${n(H-y2)} l S`);
+  const col={item:mx,un:128,q:146,pu:172,tot:W-mx};
+  const cab=()=>{ text(col.item,y,2.5,"ITEM",true); text(col.un,y,2.5,"UN",true); text(col.q,y,2.5,"QTD.",true,2); text(col.pu,y,2.5,"PREÇO UNIT.",true,2); text(col.tot,y,2.5,"TOTAL",true,2); ln(mx,y+1.4,W-mx,y+1.4); y+=5; };
+  const nova=()=>{ c=["2.834646 0 0 2.834646 0 0 cm","0 g 0 G"]; pages.push(c); text(mx,12,3,(S.emp||"").toUpperCase(),true); text(W-mx,12,2.6,"ORÇAMENTO ESTIMADO",false,2); ln(mx,14,W-mx,14); y=21; };
+  const precisa=h=>{ if(y+h>H-18){ nova(); cab(); } };
+  nova(); text(mx,y+3,5,"ORÇAMENTO ESTIMADO",true); y+=9; text(mx,y,3.2,S.obra||"",true); y+=5;
+  text(mx,y,2.7,`${S.local||""}${S.local?" · ":""}Área construída ${f(O.areaC)} m² · ${S.data||today}`); y+=8; cab();
+  const corta=(t,max)=>t.length>max?t.slice(0,max-3)+"...":t;
+  O.etapas.forEach((e,ei)=>{ precisa(12); c.push("0.93 g"); c.push(`${n(mx)} ${n(H-y-1.6)} ${n(W-2*mx)} ${n(5)} re f`); c.push("0 g"); text(mx+1,y+2,2.8,`${ei+1}. ${e.n}`,true); text(col.tot,y+2,2.8,money(e.tot),true,2); y+=7;
+    e.itens.forEach((i,ii)=>{ precisa(5); text(mx+1,y,2.55,`${ei+1}.${ii+1}  ${corta(i.desc,78)}`); text(col.un,y,2.55,i.un); text(col.q,y,2.55,f(i.q),false,2); text(col.pu,y,2.55,money(i.pu),false,2); text(col.tot,y,2.55,money(i.tot),false,2); y+=4.4; }); y+=1.5; });
+  precisa(40); y+=2; ln(mx,y,W-mx,y,.3); y+=6;
+  [["CUSTO DIRETO",O.direto],[`BDI (${f(O.bdiP,1)}%)`,O.bdi],["TOTAL GERAL",O.total],[`Custo por m² (${f(O.areaC)} m²)`,O.areaC?O.total/O.areaC:0]].forEach(([a,v],i)=>{ text(col.pu,y,i===2?3.4:2.9,a,i===2,2); text(col.tot,y,i===2?3.4:2.9,money(v),i===2,2); y+=i===2?6:5; });
+  if(O.totCub){ y+=2; text(mx,y,2.7,`Comparação pelo CUB: ${money(O.cub)}/m² x ${f(O.areaC)} m² = ${money(O.totCub)}.`); y+=5; }
+  y+=3; ["Orçamento estimado a partir dos quantitativos do projeto, com preços de referência (material e mão de obra) que devem ser conferidos","com a tabela SINAPI do mês e com fornecedores locais. Não inclui projetos complementares, taxas, terreno nem muro."].forEach(t=>{ precisa(5); text(mx,y,2.5,t); y+=4; });
+  precisa(30); y+=16; ln(mx,y,mx+75,y,.25); y+=4.5; text(mx,y,3,S.rtNome||"",true); y+=4.2; text(mx,y,2.7,S.crea||"");
+  pages.forEach((pc,i)=>{ c=pc; text(W/2,H-9,2.5,`${i+1}/${pages.length}`,false,1); });
+  const objs=["<< /Type /Catalog /Pages 2 0 R >>",`<< /Type /Pages /Kids [${pages.map((_,i)=>`${5+2*i} 0 R`).join(" ")}] /Count ${pages.length} >>`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>","<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"];
+  pages.forEach((pc,i)=>{ const content=pc.join("\n");
+    objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${n(W*2.834646)} ${n(H*2.834646)}] /Contents ${6+2*i} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>`);
+    objs.push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`); });
+  let out="%PDF-1.4\n%\xE2\xE3\xCF\xD3\n"; const offs=[];
+  objs.forEach((o,i)=>{ offs.push(out.length); out+=`${i+1} 0 obj\n${o}\nendobj\n`; });
+  const xr=out.length; out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+offs.map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("");
+  out+=`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF\n`;
+  return to1252(out); }
+function renderOrc(){ const O=orcamento();
+  $("orcTab").innerHTML=`<tr><th>Item</th><th>Un</th><th class="n">Qtd.</th><th class="n">Preço unit. (R$)</th><th class="n">Total</th></tr>`+
+    O.etapas.map((e,ei)=>`<tr class="tot"><td colspan="4">${ei+1}. ${esc(e.n)} <span style="color:var(--muted);font-weight:400">· ${f(O.direto?e.tot/O.direto*100:0,1)}%</span></td><td class="n">${money(e.tot)}</td></tr>`+
+      e.itens.map((i,ii)=>`<tr><td>${ei+1}.${ii+1} ${esc(i.desc)}</td><td>${i.un}</td><td class="n">${f(i.q)}</td><td class="n"><input type="number" step="0.01" min="0" data-pk="${i.k}" value="${(+i.pu).toFixed(2)}" style="width:96px;text-align:right" aria-label="Preço unitário de ${esc(i.desc)}"></td><td class="n">${money(i.tot)}</td></tr>`).join("")).join("")+
+    `<tr class="tot"><td colspan="4">Custo direto</td><td class="n">${money(O.direto)}</td></tr><tr><td colspan="4">BDI (${f(O.bdiP,1)}%)</td><td class="n">${money(O.bdi)}</td></tr><tr class="tot"><td colspan="4">TOTAL GERAL</td><td class="n">${money(O.total)}</td></tr>`;
+  $("orcChips").innerHTML=O.etapas.length?[`Total ${money(O.total)}`,`${money(O.areaC?O.total/O.areaC:0)}/m²`,`Área ${f(O.areaC)} m²`,O.totCub?`Pelo CUB: ${money(O.totCub)} (${O.total>O.totCub?"+":""}${f((O.total/O.totCub-1)*100,1)}%)`:""].filter(Boolean).map(t=>`<span class="chip">${esc(t)}</span>`).join(""):"";
+  return O; }
+
 /* ---------------- Planta de piso (paginação, soleiras, peitoris, rodapé) ---------------- */
 const PISOS=[["porc60","Porcelanato 60x60",0.60,0.60],["porc80","Porcelanato 80x80",0.80,0.80],["cer60","Cerâmica 60x60",0.60,0.60],["cer45","Cerâmica 45x45 antiderrapante",0.45,0.45],["cer33","Cerâmica 33x33",0.33,0.33],["vinil","Piso vinílico/laminado (réguas 0,20x1,20)",1.20,0.20],["cimento","Cimentado (juntas a cada 1,50 m)",1.50,1.50]];
 const infoPiso=t=>PISOS.find(q=>q[0]===t)||PISOS[0];
@@ -1905,6 +2011,7 @@ function render(){
         <td>${(R.nVar||0)>1?`<button class="btn" data-var="${i}">Outra posição</button>`:""}</td></tr>`; }).join(""); }
   $("fachadas").innerHTML=G.vazio?"":fachadas().map(([l,t])=>`<div class="sheet"><h2>${t}</h2><div class="draw">${svgDe(desenhoFachada(G,k,l))}</div></div>`).join("");
   if(!$("tab-mem").hidden) renderMemorial();
+  if(!$("tab-orc").hidden) renderOrc();
   window.__R={G,Q,TI};
   save();
 }
@@ -1975,8 +2082,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
@@ -2032,6 +2139,10 @@ function renderMemorial(){ const M=memorial(); $("memTexto").innerHTML=`<h2 styl
   `<p style="margin-top:22px">${esc(S.local||"")}${S.local?", ":""}${esc(S.data||today)}.</p><p style="margin-top:28px;border-top:1px solid var(--line);display:inline-block;padding-top:6px;min-width:240px"><b>${esc(S.rtNome||"")}</b><br>${esc(S.crea||"")}</p>`; return M; }
 $("memPdf").onclick=async()=>{ const msg=$("memMsg"); try{ const st=await saveFile(`${slug()}-memorial.pdf`,buildMemorialPDF(memorial()),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar o PDF agora."; } };
 $("memCopy").onclick=async()=>{ const t=textoMemorial(memorial()); try{ await navigator.clipboard.writeText(t); $("memMsg").textContent="Texto copiado."; }catch(e){ showText($("memCopy"),t); $("memMsg").textContent="Selecione e copie o texto abaixo."; } };
+$("orcTab").addEventListener("change",e=>{ const k=e.target.dataset.pk; if(!k) return; S.orc.p[k]=e.target.value===""?null:num(e.target.value); save(); renderOrc(); });
+$("orcReset").onclick=()=>{ S.orc.p={}; save(); renderOrc(); $("orcMsg").textContent="Preços de referência restaurados."; };
+$("orcPdf").onclick=async()=>{ const msg=$("orcMsg"); try{ const st=await saveFile(`${slug()}-orcamento.pdf`,buildOrcPDF(orcamento()),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar o PDF agora."; } };
+$("orcCsv").onclick=async()=>{ const msg=$("orcMsg"); try{ const st=await saveFile(`${slug()}-orcamento.csv`,to1252(csvOrc(orcamento()).replace(/^\uFEFF/,"")),"text/csv"); msg.textContent=st==="saved"?"Planilha salva.":"Planilha enviada."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar a planilha agora."; } };
 $("tabPiso").addEventListener("change",e=>{ const i=e.target.dataset.pt; if(i==null||!GG) return; labDe(GG.rooms[+i]).pt=e.target.value; render(); });
 $("tabForro").addEventListener("change",e=>{ const i=e.target.dataset.ft; if(i==null||!GG) return; labDe(GG.rooms[+i]).ft=e.target.value; render(); });
 $("tabForro").addEventListener("change",e=>{ const i=e.target.dataset.hf; if(i==null||!GG) return; const v=e.target.value.trim(); labDe(GG.rooms[+i]).hf=v===""?null:num(v); render(); });
@@ -2039,8 +2150,9 @@ $("layAmb").addEventListener("change",e=>{ const i=e.target.dataset.lay; if(i==n
 $("layAmb").addEventListener("click",e=>{ const b=e.target.closest("[data-var]"); if(!b||!GG) return; const lb=labDe(GG.rooms[+b.dataset.var]); lb.mv=Math.round(num(lb.mv))+1; render(); });
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
-  ["planta","lay","ele","hid","for","pis","mem","cortes","cob","fach","sit","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
+  ["planta","lay","ele","hid","for","pis","mem","orc","cortes","cob","fach","sit","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
   if(b.dataset.tab==="mem") renderMemorial();
+  if(b.dataset.tab==="orc") renderOrc();
 });
 
 /* ======================================================================
