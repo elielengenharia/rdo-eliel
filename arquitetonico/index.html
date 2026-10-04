@@ -617,7 +617,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.6 · saída da água pluvial na rua mais baixa";
+const VERSAO="versão 5.7 · calha nos cortes e no detalhe do beiral";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1053,10 +1053,25 @@ function desenhoCorte(G,k,q){
     for(let m=0;m<=40;m++){ const v=A?(TI.R.y0+(TI.R.y1-TI.R.y0)*m/40):(TI.R.x0+(TI.R.x1-TI.R.x0)*m/40); if(dT(u,v)) zb=Math.max(zb??-1e9,A?TI.z(u,v):TI.z(v,u)); }
     if(zb!==null) sil.push([u,Y(zb)]); }
   const ss=simp(sil); if(ss.length>1) PL(D,ss,.18,"PROJECAO");   // o que se vê atrás do corte (cumeeira, águas)
-  // telhado cortado: o trecho todo (com beiral) ou, com platibanda no contorno real, só dentro do caixote
-  (TI.poly?naLinha(TI.poly,q,c):[[u0,u1]]).forEach(([a,b])=>{ const pr=[]; for(let n=0;n<=120;n++){ const u=a+(b-a)*n/120; pr.push([u,Y(zr(u))]); }
+  // calhas cortadas: onde a linha de corte atravessa uma calha (platibanda: junto da face de dentro; beiral: na ponta do beiral)
+  const cortadas=[]; { const CLc=TI.plat?calhasPlat(G,TI):calhasBeiral(G,TI), uc=(u0+u1)/2;
+    if(CLc) CLc.lista.forEach(cl=>{ const [x0,y0,x1,y1]=cl.seg, dd=A?y1-y0:x1-x0; if(Math.abs(dd)<1e-6) return;   // calha paralela ao corte: não é cortada
+      const t=A?(c-y0)/dd:(c-x0)/dd; if(t<-0.01||t>1.01) return; const u=A?x0+(x1-x0)*t:y0+(y1-y0)*t;
+      if(cortadas.some(v=>Math.abs(v.u-u)<0.3)) return;
+      const b=cl.b, h=cl.h, sIn=u<uc?1:-1; let ua, ub, zt;
+      if(TI.plat){ const uf=u-sIn*0.25; ua=uf; ub=uf+sIn*b; zt=Math.max(pd+lj+0.02+h,zr(ub)+0.03); }   // fundo apoiado sobre a laje, junto da platibanda; a ponta do telhado descarrega dentro dela
+      else { const ue=Math.abs(u-u0)<Math.abs(u-u1)?u0:u1, sOut=ue===u0?-1:1; ua=ue+sOut*0.02; ub=ua+sOut*b; zt=zr(ue)-0.02; }
+      cortadas.push({u,ua,ub,zt,zb:zt-h,b,h,cl,ic:CLc.ic}); }); }
+  const corta=(a,b)=>{ if(!TI.plat) return [a,b]; cortadas.forEach(x=>{ const lo=Math.min(x.ua,x.ub), hi=Math.max(x.ua,x.ub); if(Math.abs(lo-a)<0.4) a=Math.max(a,hi-0.05); if(Math.abs(hi-b)<0.4) b=Math.min(b,lo+0.05); }); return [a,b]; };
+  // telhado cortado: o trecho todo (com beiral) ou, com platibanda no contorno real, só dentro do caixote (entrando 5 cm na calha)
+  (TI.poly?naLinha(TI.poly,q,c):[[u0,u1]]).map(([a,b])=>corta(a,b)).forEach(([a,b])=>{ const pr=[]; for(let n=0;n<=120;n++){ const u=a+(b-a)*n/120; pr.push([u,Y(zr(u))]); }
     const sp=simp(pr); PL(D,sp,.5,"TELHADO"); PL(D,sp.map(([u,y])=>[u,y-et]),.25,"TELHADO");
     L(D,sp[0][0],sp[0][1],sp[0][0],sp[0][1]-et,.25,"TELHADO"); L(D,sp[sp.length-1][0],sp[sp.length-1][1],sp[sp.length-1][0],sp[sp.length-1][1]-et,.25,"TELHADO"); });
+  cortadas.forEach(({ua,ub,zt,zb,b,h,cl,ic})=>{ PL(D,[[ua,Y(zt)],[ua,Y(zb)],[ub,Y(zb)],[ub,Y(zt)]],.45,"TELHADO");
+      if(!TI.plat) L(D,ub,Y(zt),ub+(ub-ua)*0.15,Y(zt+0.03),.3,"TELHADO");   // aba externa
+      const sg=(ub>ua)?1:-1, um=(ua+ub)/2, ux=um+sg*0.6, zl=TI.plat?(TI.topoPlat||zt)+0.30:zb-0.25;   // com platibanda o rótulo vai acima do topo dela, para dentro
+      L(D,um,Y(TI.plat?zt:zb),ux,Y(zl),.13,"COTAS"); TX(D,ux+sg*1*k,Y(zl),`CALHA ${cl.nome} ${f(b*100,0)}x${f(h*100,0)} cm`,1.4,{a:sg>0?"s":"e",l:"COTAS"});
+      TX(D,ux+sg*1*k,Y(zl)+2.4*k,`i=${f(ic*100,1)}% · AP Ø${Math.max(75,cl.dia)}`,1.2,{a:sg>0?"s":"e",l:"COTAS"}); });
   // nomes dos ambientes
   // nome do ambiente e, logo abaixo, o nível do piso dele
   salas.forEach(({r,u0:a,u1:b})=>{ if(b-a<0.4) return; TX(D,(a+b)/2,Y(r.nv)-7.2*k,r.n.toUpperCase(),1.9,{b:true}); nivelInt(D,(a+b)/2,Y(r.nv),fNv(r.nv)); });
@@ -2605,6 +2620,10 @@ function desenhoBeiral(G,k){
     nota(xin+0.25,zt(xin+0.25)+0.03,xin+0.25,zt(xin+0.25)+0.45,`TELHA ${String(S.tel.telha).toUpperCase()}`);
     if(E.cb){ nota(xe-0.35,zc(xe-0.35)+hc+0.01,xe+0.55,zc(xe-0.35)+0.42,`RIPA 1,5x5 cm (galga ${f(E.galga*100,0)} cm)`); nota(xe-0.15,zc(xe-0.15)+hc/2,xe+0.55,zc(xe-0.15)+0.20,"CAIBRO 5x6 cm a cada 50 cm"); }
     else nota(xe-0.15,zc(xe-0.15)+hc/2,xe+0.55,zc(xe-0.15)+0.20,"TERÇA 6x16 cm");
+    { const CLb=calhasBeiral(G,TI); if(CLb){ const cw=CLb.bMax, ch=CLb.hMax, xa=xe+0.025, zt0=zc(xe)+hc-0.02, zb0=zt0-ch;   // calha de beiral presa na testeira, a telha entra 5 cm nela
+      PL(D,[[xa,Y(zt0)],[xa,Y(zb0)],[xa+cw,Y(zb0)],[xa+cw,Y(zt0+0.03)],[xa+cw+0.02,Y(zt0+0.04)]],.45,"TELHADO");
+      cotaH(D,xa,xa+cw,Y(zb0)+5*k,Y(zb0),f(cw*100,0)); cotaV(D,Y(zt0),Y(zb0),xa+cw+5*k,xa+cw,f(ch*100,0));
+      nota(xa+cw*0.6,zb0+0.03,xa+cw+0.45,zb0-0.25,`CALHA DE BEIRAL ${f(cw*100,0)}x${f(ch*100,0)} cm (caimento ${f(CLb.ic*100,1)}%)`); } }
     nota(xe+0.012,zc(xe)-0.05,xe+0.55,zc(xe)-0.10,"TESTEIRA 2,5x15 cm");
     nota(x0,top+ef/2,x0-0.5,top-0.25,"FRECHAL 6x12 cm");
     if(hv>0) nota(-t/2,pd-hv/2,0.55,pd-hv-0.05,`CINTA ${f(t*100,0)}x${f(hv*100,0)} cm`);
