@@ -102,13 +102,14 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
   <header class="top">
     <div>
       <h1>Projeto Arquitetônico</h1>
-      <div class="sub">Planta baixa com áreas e cotas · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Memorial descritivo · Orçamento estimado · Cortes AA e BB · Cobertura · Fachadas · Situação · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
+      <div class="sub">Planta baixa com áreas e cotas · Demolir e construir · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Memorial descritivo · Orçamento estimado · Cortes AA e BB · Cobertura · Fachadas · Situação · Banheiro · Quadro de esquadrias · <b id="versao"></b></div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
 
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="planta" aria-selected="true">Planta</button>
+    <button role="tab" data-tab="ref" aria-selected="false">Reforma</button>
     <button role="tab" data-tab="lay" aria-selected="false">Layout</button>
     <button role="tab" data-tab="ele" aria-selected="false">Elétrica</button>
     <button role="tab" data-tab="hid" aria-selected="false">Hidrossanitário</button>
@@ -202,6 +203,18 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <div class="form"><label>Frente da casa<select id="frente"><option value="baixo">Embaixo na planta</option><option value="cima">Em cima na planta</option><option value="esq">À esquerda na planta</option><option value="dir">À direita na planta</option></select></label></div>
     </div>
     <div id="fachadas"></div>
+  </section>
+
+  <!-- REFORMA -->
+  <section id="tab-ref" hidden>
+    <div class="sheet">
+      <h2>Planta de demolir e construir</h2>
+      <p class="cap">Para reforma: marque cada parede como <b>existente</b> (cinza), <b>a demolir</b> (tracejada) ou <b>a construir</b> (cheia). Toque na parede no desenho para trocar, ou use as tabelas. Portas e janelas: <b>retirar</b> (o vão é fechado com alvenaria) ou <b>nova</b> (o vão é aberto na parede existente). As outras plantas, cortes, layout e orçamento mostram a situação final, sem o que for demolido.</p>
+      <div class="draw" id="refDes"></div>
+      <div class="chips" id="refChips"></div>
+    </div>
+    <div class="sheet"><h2>Paredes</h2><div class="tbl"><table id="tabRefW"></table></div>
+      <h3>Portas e janelas</h3><div class="tbl"><table id="tabRefA"></table></div><ol class="notes" id="refNotas" style="margin-top:12px"></ol></div>
   </section>
 
   <!-- LAYOUT -->
@@ -406,7 +419,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 2.8 · orçamento estimado";
+const VERSAO="versão 2.9 · demolir e construir";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -521,10 +534,10 @@ function pontoTexto(P){
    faces das paredes; os contornos internos fechados são os ambientes, com
    a área exata (retângulo, trapézio, chanfro, L...).
    ====================================================================== */
-function geom(){
+function geom(todas=false){
   const t=Math.max(0.05,num(S.esp)), h=t/2;
   const walls=[];
-  S.walls.forEach((w0,i)=>{
+  S.walls.forEach((w0,i)=>{ if(!todas&&w0.st==="d") return;
     const w={x1:num(w0.x1),y1:num(w0.y1),x2:num(w0.x2),y2:num(w0.y2),i};
     const dx=w.x2-w.x1, dy=w.y2-w.y1; w.L=Math.hypot(dx,dy); if(w.L<0.01) return;
     w.ux=dx/w.L; w.uy=dy/w.L; w.hz=Math.abs(dy)<1e-6; w.vt=Math.abs(dx)<1e-6; w.nX=-w.uy; w.nY=w.ux;
@@ -550,21 +563,21 @@ function geom(){
     w.poly=[w.cA[0],w.cB[0],w.cB[1],w.cA[1]];
   });
   const abs=[];
-  S.ab.forEach((a,k)=>{
+  S.ab.forEach((a,k)=>{ if(!todas&&a.st==="d") return;
     const w=walls.find(x=>x.i===Math.round(num(a.w))); if(!w) return;
     const l=Math.max(0.1,num(a.l)), d=Math.max(0,num(a.d));
     const p0=[w.x1+w.ux*d,w.y1+w.uy*d], p1=[w.x1+w.ux*(d+l),w.y1+w.uy*(d+l)];
     abs.push({a,k,w,d,l,p0,p1,nX:w.nX,nY:w.nY,tipo:["Porta","Janela","Vão"].includes(a.t)?a.t:"Porta",fora:d+l>w.L+0.001});
   });
-  const G={t,h,walls,orto,incl,abs,rooms:[],areaC:0,pecas:[],contPar:[],contExt:[]};
+  const G={t,h,walls,orto,incl,abs,rooms:[],areaC:0,pecas:[],pecasW:[],contPar:[],contExt:[]};
   if(!walls.length){ G.vazio=true; G.bb={x0:0,y0:0,x1:1,y1:1}; G.compAt=()=>({ext:true}); G.row=()=>[]; G.roomRuns=()=>[]; return G; }
   // pedaços de parede entre os vãos (o que aparece hachurado na planta)
   walls.forEach(w=>{
     const P=(s,sg)=>[w.x1+w.ux*s+w.nX*h*sg,w.y1+w.uy*s+w.nY*h*sg];
     const vs=juntar(abs.filter(g=>g.w===w).map(g=>[Math.max(0,g.d),Math.min(w.L,g.d+g.l)]).filter(v=>v[1]-v[0]>1e-6));
     let sL=w.cA[0], sR=w.cA[1], pos=0;
-    vs.forEach(([a,b])=>{ if(a>pos+1e-6) G.pecas.push([sL,P(a,1),P(a,-1),sR]); sL=P(b,1); sR=P(b,-1); pos=b; });
-    if(w.L>pos+1e-6) G.pecas.push([sL,w.cB[0],w.cB[1],sR]);
+    vs.forEach(([a,b])=>{ if(a>pos+1e-6){ G.pecas.push([sL,P(a,1),P(a,-1),sR]); G.pecasW.push(w.i); } sL=P(b,1); sR=P(b,-1); pos=b; });
+    if(w.L>pos+1e-6){ G.pecas.push([sL,w.cB[0],w.cB[1],sR]); G.pecasW.push(w.i); }
   });
   const todos=walls.flatMap(w=>w.poly);
   const bb=G.bb={x0:Math.min(...todos.map(p=>p[0])),y0:Math.min(...todos.map(p=>p[1])),x1:Math.max(...todos.map(p=>p[0])),y1:Math.max(...todos.map(p=>p[1]))};
@@ -1582,6 +1595,7 @@ function memorial(){
   sec("2. OBJETIVO",[`Este memorial descreve os materiais e os serviços para a construção de ${com?"edificação comercial":"residência unifamiliar"} térrea, em complemento às pranchas do projeto arquitetônico. Em caso de dúvida, prevalecem as cotas do projeto e as normas da ABNT.`]);
   sec("3. DESCRIÇÃO DA EDIFICAÇÃO",[`A edificação tem ${G.rooms.length} ambientes: ${lista(G.rooms.map(r=>`${r.n} (${f(r.area)} m²)`))}.`,`Pé-direito de ${f(num(S.pd))} m. Piso interno a ${f(num(S.piso))} m acima do terreno. Recuos: frontal ${f(Tr.rec.frente)} m, laterais ${f(Tr.rec.esq)} m e ${f(Tr.rec.dir)} m, fundos ${f(Tr.rec.fundo)} m.`]);
   sec("4. SERVIÇOS PRELIMINARES",[`Limpeza do terreno com retirada de entulho e vegetação. Locação da obra com gabarito de madeira, conferindo esquadro e níveis. Instalações provisórias de água e energia, e placa da obra conforme o CREA.`]);
+  if(temReforma()){ const q=quantReforma(geom(true)); S1[S1.length-1].ps.push(`Reforma: demolir ${f(q.dem)} m² de alvenaria${q.nRet?` e retirar ${q.nRet} esquadria(s)`:""}, com remoção do entulho (${f(q.entulho,1)} m³) em caçamba; construir ${f(q.con)} m² de alvenaria nova, conforme a planta de demolir e construir. Confirmar antes que as paredes a demolir não são estruturais.`); }
   sec("5. FUNDAÇÃO E ESTRUTURA",[`Fundação conforme projeto estrutural, com impermeabilização das vigas baldrame (cinta) com emulsão asfáltica antes de subir a alvenaria.`,
     S.viga.on!=="não"?`Vigas e cintas de concreto armado no topo das paredes, seção ${f(G.t*100,0)} x ${f(num(S.viga.h)*100,0)} cm, e vergas e contravergas em todas as portas e janelas, passando 30 cm de cada lado.`:`Vergas e contravergas de concreto armado em todas as portas e janelas, passando 30 cm de cada lado.`,
     num(S.laje)>0?`Laje com ${f(num(S.laje)*100,0)} cm de espessura, conforme projeto estrutural.`:""]);
@@ -1636,9 +1650,52 @@ function buildMemorialPDF(M){
   out+=`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF\n`;
   return to1252(out); }
 
+/* ---------------- Planta de demolir e construir (reforma) ---------------- */
+const ST_PAR=[["e","Existente (manter)"],["d","A demolir"],["c","A construir"]], ST_AB=[["e","Existente"],["d","Retirar e fechar o vão"],["c","Nova (abrir o vão)"]];
+const stW=i=>(S.walls[i]&&S.walls[i].st)||"e", stA=a=>(a&&a.st)||"e";
+const temReforma=()=>S.walls.some(w=>w.st==="d"||w.st==="c")||S.ab.some(a=>a.st==="d"||a.st==="c");
+function quantReforma(G2){ const pd=num(S.pd), t=G2.t, alt=g=>g.tipo==="Janela"?num(g.a.a):num(g.a.a)||2.10;
+  const q={dem:0,con:0,Ld:0,Lc:0,fechar:0,abrir:0,nFe:0,nAb:0,nRet:0};
+  G2.walls.forEach(w=>{ const st=stW(w.i), ab=G2.abs.filter(g=>g.w===w&&stA(g.a)!=="d").reduce((s,g)=>s+g.l*alt(g),0), A=Math.max(0,w.L*pd-ab);
+    if(st==="d"){ q.dem+=A; q.Ld+=w.L; } else if(st==="c"){ q.con+=A; q.Lc+=w.L; } });
+  G2.abs.forEach(g=>{ const st=stA(g.a), A=g.l*alt(g); if(stW(g.w.i)==="d") return;
+    if(st==="d"){ q.fechar+=A; q.con+=A; q.nFe++; q.nRet+=g.tipo!=="Vão"?1:0; } else if(st==="c"&&stW(g.w.i)==="e"){ q.abrir+=A; q.dem+=A; q.nAb++; } });
+  q.nRet+=G2.abs.filter(g=>stW(g.w.i)==="d"&&g.tipo!=="Vão").length;
+  q.entulho=q.dem*t*1.3; return q; }
+function desenhoReforma(G2,k,G,leg=true){
+  const D=Dw(k), h=G2.h, bb=G2.bb;
+  if(G2.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
+  const pe=G2.pecas.map((P,j)=>({P,st:stW(G2.pecasW[j])}));
+  // vãos: fechar = alvenaria nova no lugar da esquadria; abrir = alvenaria existente que sai
+  const vaoPoly=g=>{ const w=g.w, ln=(s,n)=>[w.x1+w.ux*s+g.nX*n,w.y1+w.uy*s+g.nY*n]; return [ln(g.d,h),ln(g.d+g.l,h),ln(g.d+g.l,-h),ln(g.d,-h)]; };
+  const fechar=G2.abs.filter(g=>stA(g.a)==="d"&&stW(g.w.i)!=="d").map(vaoPoly), abrir=G2.abs.filter(g=>stA(g.a)==="c"&&stW(g.w.i)==="e").map(vaoPoly);
+  const tracejaDem=(P)=>{ PG(D,P,"FUNDO"); PL(D,[...P,P[0]],.3,"DEMOLIR",true);
+    // hachura em diagonal ao longo da peça
+    const [a,b,c,d]=P, L0=Math.hypot(b[0]-a[0],b[1]-a[1]), n=Math.max(1,Math.floor(L0/0.18));
+    for(let i=1;i<n;i++){ const s=i/n, p=[a[0]+(b[0]-a[0])*s,a[1]+(b[1]-a[1])*s], s2=Math.min(1,s+0.08), q=[d[0]+(c[0]-d[0])*s2,d[1]+(c[1]-d[1])*s2]; L(D,...p,...q,.13,"DEMOLIR"); } };
+  pe.filter(x=>x.st==="e").forEach(x=>PG(D,x.P,"HACHURA"));
+  pe.filter(x=>x.st==="c").forEach(x=>PG(D,x.P,"CONSTRUIR")); fechar.forEach(P=>PG(D,P,"CONSTRUIR"));
+  contornoUniao([...pe.filter(x=>x.st!=="d").map(x=>x.P),...fechar]).forEach(s=>L(D,s[0][0],s[0][1],s[1][0],s[1][1],.5,"PAREDE"));
+  pe.filter(x=>x.st==="d").forEach(x=>tracejaDem(x.P)); abrir.forEach(P=>tracejaDem(P));
+  desenhaAberturas(D,G2,G2.abs.filter(g=>stA(g.a)!=="d"&&stW(g.w.i)!=="d"));
+  // rótulos dos vãos alterados
+  G2.abs.forEach(g=>{ const st=stA(g.a); if(st==="e"||stW(g.w.i)==="d") return; const w=g.w, m=[w.x1+w.ux*(g.d+g.l/2)-g.nX*(h+5.5*k)*g.lado,w.y1+w.uy*(g.d+g.l/2)-g.nY*(h+5.5*k)*g.lado];
+    TX(D,...m,st==="d"?"FECHAR":"ABRIR",1.4,{b:true,l:st==="d"?"CONSTRUIR":"DEMOLIR"}); });
+  (G||geom()).rooms.forEach(r=>TX(D,r.cx,r.cy,r.n.toUpperCase(),2,{b:true}));
+  cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
+  if(leg){ const x0=bb.x1+14*k; let y=bb.y0; TX(D,x0,y,"LEGENDA",2,{a:"s",b:true}); y+=6*k;
+    const sw=(st,txt)=>{ const P=[[x0,y-1.5*k],[x0+6*k,y-1.5*k],[x0+6*k,y+1.5*k],[x0,y+1.5*k]];
+      if(st==="e"){ PG(D,P,"HACHURA"); PL(D,[...P,P[0]],.4,"PAREDE"); } else if(st==="c"){ PG(D,P,"CONSTRUIR"); PL(D,[...P,P[0]],.4,"PAREDE"); } else tracejaDem([P[0],P[1],P[2],P[3]]);
+      TX(D,x0+8*k,y-0.5*k,txt,1.6,{a:"s"}); y+=6.5*k; };
+    sw("e","Alvenaria existente (manter)"); sw("d","A demolir"); sw("c","A construir"); }
+  return D; }
+const notasReforma=q=>[`Demolição: ${f(q.dem)} m² de alvenaria (${f(q.Ld)} m de parede${q.nAb?` e ${q.nAb} vão(s) a abrir`:""}).`,`Construção: ${f(q.con)} m² de alvenaria (${f(q.Lc)} m de parede${q.nFe?` e ${q.nFe} vão(s) a fechar`:""}).`,
+  q.nRet?`Retirar ${q.nRet} esquadria(s) existente(s).`:"",`Entulho estimado: ${f(q.entulho,1)} m³ (com empolamento de 30%).`,
+  `Antes de demolir, confirmar que a parede não é estrutural; escorar vigas e lajes quando necessário.`,`Ao abrir vão em parede existente, executar verga e contraverga.`].filter(Boolean);
+
 /* ---------------- Orçamento estimado ---------------- */
 // preços de referência (R$, material + mão de obra): o usuário ajusta na tabela (SINAPI / fornecedor local)
-const PRECO0={limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
+const PRECO0={demolicao:35,retirada:60,entulho:90,limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
   telha_Cerâmica:55,telha_Concreto:60,telha_Fibrocimento:40,telha_Metálica:75,cumeeira:35,calha:90,
   porta:850,janela:650,box:900,contrapiso:45,piso_porc60:120,piso_porc80:150,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
   forro_pvc:75,forro_gesso:90,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,pt_agua:220,pt_esgoto:180,caixa:350,reservatorio:900,
@@ -1662,10 +1719,12 @@ function orcamento(){
   const etapa=n=>{ et={n,itens:[]}; E.push(et); };
   const it=(desc,un,q,k)=>{ if(!(q>0)) return; const pu=preco(k); et.itens.push({desc,un,q,k,pu,tot:q*pu}); };
   etapa("SERVIÇOS PRELIMINARES"); it("Limpeza do terreno","m²",Math.min(Tr.area,G.areaC*2+40),"limpeza"); it("Locação da obra (gabarito)","m²",G.areaC,"locacao");
-  etapa("FUNDAÇÃO E ESTRUTURA"); it("Fundação e viga baldrame (por metro de parede)","m",Lpar,"fundacao");
-  if(S.viga.on!=="não") it(`Viga/cinta superior ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm`,"m",Lpar,"cinta");
+  const REF=temReforma(), QR=REF?quantReforma(geom(true)):null, Lnova=REF?QR.Lc:Lpar;
+  if(REF){ etapa("DEMOLIÇÕES"); it("Demolição de alvenaria","m²",QR.dem,"demolicao"); it("Retirada de esquadrias","un",QR.nRet,"retirada"); it("Remoção de entulho (caçamba)","m³",QR.entulho,"entulho"); }
+  etapa("FUNDAÇÃO E ESTRUTURA"); it("Fundação e viga baldrame (por metro de parede)","m",Lnova,"fundacao");
+  if(S.viga.on!=="não") it(`Viga/cinta superior ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm`,"m",Lnova,"cinta");
   if(num(S.laje)>0) it("Laje pré-moldada com capeamento","m²",G.areaC,"laje");
-  etapa("ALVENARIA E REVESTIMENTOS"); it(`Alvenaria de bloco cerâmico (e = ${f(G.t*100,0)} cm)`,"m²",alv,"alvenaria"); it("Chapisco, emboço e reboco (2 faces)","m²",2*alv,"reboco"); it("Revestimento cerâmico de parede","m²",cer,"ceramica");
+  etapa("ALVENARIA E REVESTIMENTOS"); it(`Alvenaria de bloco cerâmico (e = ${f(G.t*100,0)} cm)`,"m²",REF?QR.con:alv,"alvenaria"); it("Chapisco, emboço e reboco (2 faces)","m²",2*(REF?QR.con:alv),"reboco"); it("Revestimento cerâmico de parede","m²",cer,"ceramica");
   etapa("COBERTURA"); it("Estrutura de madeira do telhado","m²",TI.areaInc,"madeiramento"); it(`Telha ${String(S.tel.telha).toLowerCase()}`,"m²",TI.areaInc,`telha_${S.tel.telha}`); it("Cumeeira","m",TI.Lcum,"cumeeira");
   if(TI.plat) it("Calha e rufo galvanizados","m",perExt,"calha");
   etapa("ESQUADRIAS");
@@ -1889,7 +1948,7 @@ function extensao(D){
   return {x0,y0,x1,y1};
 }
 const n2=v=>(Math.round(v*100)/100).toString();
-const COR={LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)",MOBILIAC:"var(--line)",ELETRICA:"var(--accent)",AGUA:"var(--accent)",ESGOTO:"var(--soil)",FORRO:"var(--muted)",PISO:"var(--muted)",SOLEIRA:"var(--ink)"};
+const COR={LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)",MOBILIAC:"var(--line)",ELETRICA:"var(--accent)",AGUA:"var(--accent)",ESGOTO:"var(--soil)",FORRO:"var(--muted)",PISO:"var(--muted)",SOLEIRA:"var(--ink)",CONSTRUIR:"var(--bad)",DEMOLIR:"var(--warn)"};
 function primsSVG(D,map,k){
   let s="";
   D.p.forEach(p=>{ const cor=COR[p.l]||"var(--ink)";
@@ -1945,7 +2004,7 @@ function render(){
   const w=[];
   if(G.vazio) w.push(["warn","Cadastre as paredes ou importe a planta na aba Dados."]);
   G.abs.filter(g=>g.fora).forEach(g=>w.push(["bad",`${g.cod||g.tipo} na parede ${g.w.i+1} passa do fim da parede (${f(g.d+g.l)} m de ${f(g.w.L)} m).`]));
-  S.ab.forEach((a,i)=>{ if(!G.walls.some(x=>x.i===Math.round(num(a.w)))) w.push(["warn",`A abertura ${i+1} (${esc(a.t)}) está numa parede que não existe mais.`]); });
+  S.ab.forEach((a,i)=>{ if(a.st==="d"||(S.walls[Math.round(num(a.w))]||{}).st==="d") return; if(!G.walls.some(x=>x.i===Math.round(num(a.w)))) w.push(["warn",`A abertura ${i+1} (${esc(a.t)}) está numa parede que não existe mais.`]); });
   if(!G.vazio&&!G.retangular&&S.tel.plat!=="sim") w.push(["warn","A casa não é um retângulo: o telhado com beiral é calculado sobre o retângulo que envolve a casa. Com platibanda (telhado embutido) ele acompanha o contorno real. Confira a cobertura."]);
   if(S.viga.on!=="não") G.abs.filter(g=>g.tipo!=="Vão"&&num(g.a.a)+(g.tipo==="Janela"?num(g.a.p):0)>num(S.pd)-num(S.viga.h)+1e-6).forEach(g=>w.push(["warn",`${g.cod} (parede ${g.w.i+1}) termina a ${f(num(g.a.a)+(g.tipo==="Janela"?num(g.a.p):0))} m, acima do fundo da viga (${f(num(S.pd)-num(S.viga.h))} m).`]));
   if(!G.vazio&&!G.rooms.length) w.push(["warn","Nenhum ambiente fechado encontrado. Confira se as paredes se encontram nas pontas."]);
@@ -1978,6 +2037,11 @@ function render(){
         `<div class="sheet"><h2>${esc(r.n)} · planta ampliada</h2><div class="draw" style="max-width:520px">${svgDe(desenhoBanheiro(G,r,kb))}</div>
         <div class="grid2" style="margin-top:12px">${["A","B","C","D"].map(l=>`<div><h3 style="margin-top:0">Vista ${l}</h3><div class="draw">${svgDe(vistaBanheiro(G,r,kb,l))}</div></div>`).join("")}</div>
         <ol class="notes" style="margin-top:12px">${notasBanho().map(t=>`<li>${esc(t)}</li>`).join("")}</ol></div>`).join(""); }
+  { const G2=geom(true), q=quantReforma(G2), ref=temReforma(); $("refDes").innerHTML=svgDe(desenhoReforma(G2,k,G),"ref");
+    $("refChips").innerHTML=G2.vazio?"":(ref?[`Demolir ${f(q.dem)} m²`,`Construir ${f(q.con)} m²`,`Entulho ${f(q.entulho,1)} m³`,q.nRet?`${q.nRet} esquadria(s) a retirar`:""]:["Nada marcado: obra nova (tudo existente)"]).filter(Boolean).map(t=>`<span class="chip">${esc(t)}</span>`).join("");
+    $("tabRefW").innerHTML=`<tr><th>Parede</th><th class="n">Comp. (m)</th><th>Situação</th></tr>`+G2.walls.map(w=>`<tr><td><b>${w.i+1}</b></td><td class="n">${f(w.L)}</td><td><select data-rw="${w.i}" aria-label="Situação da parede ${w.i+1}">${ST_PAR.map(([v,t])=>`<option value="${v}"${stW(w.i)===v?" selected":""}>${t}</option>`).join("")}</select></td></tr>`).join("");
+    $("tabRefA").innerHTML=`<tr><th>Esquadria</th><th>Parede</th><th class="n">L x H (m)</th><th>Situação</th></tr>`+(G2.abs.length?G2.abs.map(g=>`<tr><td><b>${esc(g.a.n||g.tipo)}</b> <span style="color:var(--muted)">${esc(g.tipo)}</span></td><td>${g.w.i+1}${stW(g.w.i)==="d"?" (demolida)":""}</td><td class="n">${f(g.l)} x ${f(num(g.a.a)||2.1)}</td><td><select data-ra="${g.k}" aria-label="Situação da esquadria"${stW(g.w.i)==="d"?" disabled":""}>${ST_AB.map(([v,t])=>`<option value="${v}"${stA(g.a)===v?" selected":""}>${t}</option>`).join("")}</select></td></tr>`).join(""):`<tr><td colspan="4" style="color:var(--muted)">Sem portas ou janelas.</td></tr>`);
+    $("refNotas").innerHTML=ref?notasReforma(q).map(t=>`<li>${esc(t)}</li>`).join(""):""; }
   { const LM=layoutMoveis(G); $("lay").innerHTML=svgDe(desenhoLayout(G,k,LM));
     const EL=pontosEletricos(G,LM); $("ele").innerHTML=svgDe(desenhoEletrica(G,k,LM,EL));
     const HD=redeHidro(G,LM); $("hid").innerHTML=svgDe(desenhoHidro(G,k,LM,HD));
@@ -2095,10 +2159,11 @@ $("roofTypes").addEventListener("click",e=>{ const b=e.target.closest("[data-tip
 ["A","B"].forEach(q=>{ const set=v=>{ S["c"+q]=num(v); later(); }; $("c"+q+"r").addEventListener("input",e=>{ $("c"+q+"n").value=e.target.value; set(e.target.value); }); $("c"+q+"n").addEventListener("change",e=>set(e.target.value)); });
 
 function renderWalls(){
-  $("wtab").innerHTML=`<tr><th>Nº</th><th>x1</th><th>y1</th><th>x2</th><th>y2</th><th class="n">m</th><th></th></tr>`+S.walls.map((w,i)=>
-    `<tr><td class="n" style="font-size:12px">${i+1}</td>${["x1","y1","x2","y2"].map(c=>`<td><input type="number" step="0.05" data-i="${i}" data-c="${c}" value="${w[c]}" aria-label="Parede ${i+1} ${c}"></td>`).join("")}<td class="n" style="font-size:12px;color:var(--muted)">${f(Math.hypot(num(w.x2)-num(w.x1),num(w.y2)-num(w.y1)))}</td><td><button class="btn x" data-del="${i}" aria-label="Remover parede ${i+1}">×</button></td></tr>`).join("");
+  $("wtab").innerHTML=`<tr><th>Nº</th><th>x1</th><th>y1</th><th>x2</th><th>y2</th><th class="n">m</th><th>Situação</th><th></th></tr>`+S.walls.map((w,i)=>
+    `<tr><td class="n" style="font-size:12px">${i+1}</td>${["x1","y1","x2","y2"].map(c=>`<td><input type="number" step="0.05" data-i="${i}" data-c="${c}" value="${w[c]}" aria-label="Parede ${i+1} ${c}"></td>`).join("")}<td class="n" style="font-size:12px;color:var(--muted)">${f(Math.hypot(num(w.x2)-num(w.x1),num(w.y2)-num(w.y1)))}</td><td><select data-i="${i}" data-c="st" aria-label="Situação da parede ${i+1}" style="width:auto">${ST_PAR.map(([v,t])=>`<option value="${v}"${(w.st||"e")===v?" selected":""}>${t}</option>`).join("")}</select></td><td><button class="btn x" data-del="${i}" aria-label="Remover parede ${i+1}">×</button></td></tr>`).join("");
 }
-$("wtab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null)return; S.walls[i][c]=num(e.target.value); later();});
+$("wtab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||c==="st")return; S.walls[i][c]=num(e.target.value); later();});
+$("wtab").addEventListener("change",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||c!=="st")return; S.walls[i].st=e.target.value; render();});
 $("wtab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; const i=+d; S.walls.splice(i,1);
   S.ab=S.ab.filter(a=>Math.round(num(a.w))!==i).map(a=>Math.round(num(a.w))>i?{...a,w:Math.round(num(a.w))-1}:a); renderWalls(); renderAb(); render();});
 $("addW").onclick=()=>{S.walls.push({x1:0,y1:0,x2:1,y2:0}); renderWalls(); render(); const ins=$("wtab").querySelectorAll(`input[data-i="${S.walls.length-1}"]`); if(ins[0]) ins[0].focus();};
@@ -2143,6 +2208,16 @@ $("orcTab").addEventListener("change",e=>{ const k=e.target.dataset.pk; if(!k) r
 $("orcReset").onclick=()=>{ S.orc.p={}; save(); renderOrc(); $("orcMsg").textContent="Preços de referência restaurados."; };
 $("orcPdf").onclick=async()=>{ const msg=$("orcMsg"); try{ const st=await saveFile(`${slug()}-orcamento.pdf`,buildOrcPDF(orcamento()),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":"PDF enviado."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar o PDF agora."; } };
 $("orcCsv").onclick=async()=>{ const msg=$("orcMsg"); try{ const st=await saveFile(`${slug()}-orcamento.csv`,to1252(csvOrc(orcamento()).replace(/^\uFEFF/,"")),"text/csv"); msg.textContent=st==="saved"?"Planilha salva.":"Planilha enviada."; }catch(e){ msg.textContent=e&&e.code==="declined"?"Download cancelado.":"Não foi possível gerar a planilha agora."; } };
+$("tabRefW").addEventListener("change",e=>{ const i=e.target.dataset.rw; if(i==null) return; S.walls[+i].st=e.target.value; renderWalls(); render(); });
+$("tabRefA").addEventListener("change",e=>{ const i=e.target.dataset.ra; if(i==null) return; S.ab[+i].st=e.target.value; render(); });
+// toque na planta de reforma: troca a situação da parede (existente → demolir → construir) ou da esquadria
+$("refDes").addEventListener("click",ev=>{ const svg=$("refDes").querySelector("svg"), v=VIEW.ref; if(!svg||!v) return;
+  const r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal, x=v.e.x0+((ev.clientX-r.left)/r.width*vb.width-v.pad)*v.k, y=v.e.y0+((ev.clientY-r.top)/r.height*vb.height-v.pad)*v.k;
+  const G2=geom(true); if(G2.vazio) return; const tol=G2.h+Math.max(0.12,v.k*3), prox={e:"d",d:"c",c:"e"};
+  let ba=null; G2.abs.forEach(g=>{ const {s,dd}=projParede(g.w,x,y); if(dd<=tol&&s>=g.d-0.05&&s<=g.d+g.l+0.05&&stW(g.w.i)!=="d"){ if(!ba||dd<ba.dd) ba={g,dd}; } });
+  if(ba){ const a=S.ab[ba.g.k]; a.st=prox[stA(a)]; render(); return; }
+  let bw=null; G2.walls.forEach(w=>{ const {s,dd}=projParede(w,x,y); if(dd<=tol&&s>=-0.05&&s<=w.L+0.05){ if(!bw||dd<bw.dd) bw={w,dd}; } });
+  if(bw){ S.walls[bw.w.i].st=prox[stW(bw.w.i)]; renderWalls(); render(); } });
 $("tabPiso").addEventListener("change",e=>{ const i=e.target.dataset.pt; if(i==null||!GG) return; labDe(GG.rooms[+i]).pt=e.target.value; render(); });
 $("tabForro").addEventListener("change",e=>{ const i=e.target.dataset.ft; if(i==null||!GG) return; labDe(GG.rooms[+i]).ft=e.target.value; render(); });
 $("tabForro").addEventListener("change",e=>{ const i=e.target.dataset.hf; if(i==null||!GG) return; const v=e.target.value.trim(); labDe(GG.rooms[+i]).hf=v===""?null:num(v); render(); });
@@ -2150,7 +2225,7 @@ $("layAmb").addEventListener("change",e=>{ const i=e.target.dataset.lay; if(i==n
 $("layAmb").addEventListener("click",e=>{ const b=e.target.closest("[data-var]"); if(!b||!GG) return; const lb=labDe(GG.rooms[+b.dataset.var]); lb.mv=Math.round(num(lb.mv))+1; render(); });
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
-  ["planta","lay","ele","hid","for","pis","mem","orc","cortes","cob","fach","sit","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
+  ["planta","ref","lay","ele","hid","for","pis","mem","orc","cortes","cob","fach","sit","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
   if(b.dataset.tab==="mem") renderMemorial();
   if(b.dataset.tab==="orc") renderOrc();
 });
@@ -2194,6 +2269,7 @@ function pranchas(fmt){
   const area={x0:ml+6,y0:mo+5,x1:W-mo-6,y1:H-mo-ch-5}, aw=area.x1-area.x0, ah=area.y1-area.y0;
   const side={x0:ml+6,y0:H-mo-ch+2,x1:W-mo-cw-6,y1:H-mo-3};
   const pl=encaixar(k=>desenhoPlanta(G,k,false),aw,ah-TT);
+  const G2=geom(true), QR=quantReforma(G2), rf=temReforma()?encaixar(k=>desenhoReforma(G2,k,G),aw,ah-TT):null;
   const LM=layoutMoveis(G), temMob=LM.some(R=>R.pos.length||R.banho||R.carro), la=temMob?encaixar(k=>desenhoLayout(G,k,LM),aw,ah-TT):null;
   const EL=pontosEletricos(G,LM), el=G.rooms.length?encaixar(k=>desenhoEletrica(G,k,LM,EL),aw,ah-TT):null;
   const HD=redeHidro(G,LM), hi=HD.salas.length?encaixar(k=>desenhoHidro(G,k,LM,HD),aw,ah-TT):null;
@@ -2211,6 +2287,7 @@ function pranchas(fmt){
   let fa=null; for(const s0 of ESCALAS){ const k=s0/1000, ds=FA.map(([l])=>{ const D=desenhoFachada(G,k,l), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k}; }); fa=ds; if(ds.every(d=>d.w<=bw2&&d.h<=bh2-TT)) break; }
   const folhas=[
     {n:"01/05",conteudo:"PLANTA BAIXA, QUADRO DE ÁREAS E DE ESQUADRIAS",escala:`1:${pl.s}`,itens:[{d:pl,titulo:"PLANTA BAIXA",box:[area.x0,area.y0,aw,ah]}],lado:"quadros"},
+    ...(rf?[{n:"",conteudo:"PLANTA DE DEMOLIR E CONSTRUIR",escala:`1:${rf.s}`,itens:[{d:rf,titulo:"PLANTA DE DEMOLIR E CONSTRUIR",box:[area.x0,area.y0,aw,ah]}],lado:"reforma",QR}]:[]),
     ...(la?[{n:"",conteudo:"PLANTA DE LAYOUT",escala:`1:${la.s}`,itens:[{d:la,titulo:"PLANTA DE LAYOUT",box:[area.x0,area.y0,aw,ah]}],lado:"layout",LM}]:[]),
     ...(el?[{n:"",conteudo:"PLANTA DE PONTOS ELÉTRICOS",escala:`1:${el.s}`,itens:[{d:el,titulo:"PLANTA DE PONTOS ELÉTRICOS",box:[area.x0,area.y0,aw,ah]}],lado:"eletrica",EL}]:[]),
     ...(hi?[{n:"",conteudo:"PLANTA HIDROSSANITÁRIA",escala:`1:${hi.s}`,itens:[{d:hi,titulo:"PLANTA HIDROSSANITÁRIA",box:[area.x0,area.y0,aw,ah]}],lado:"hidro",HD}]:[]),
@@ -2229,6 +2306,7 @@ function pranchas(fmt){
 }
 function textosLado(P,lado,fl){
   const {G,Q,TI}=P, pd=num(S.pd);
+  if(lado==="reforma") return [{t:"QUANTIDADES",cols:[["SERVIÇO",0],["QTD.",1]],rows:[["Alvenaria a demolir",`${f(fl.QR.dem)} m²`],["Alvenaria a construir",`${f(fl.QR.con)} m²`],["Vãos a fechar",String(fl.QR.nFe)],["Vãos a abrir",String(fl.QR.nAb)],["Esquadrias a retirar",String(fl.QR.nRet)],["Entulho",`${f(fl.QR.entulho,1)} m³`]]},{t:"NOTAS",linhas:notasReforma(fl.QR)}];
   if(lado==="piso") return [{t:"QUADRO DE PISOS",pc:[0.28,0.42,0.15,0.15],cols:[["AMBIENTE",0],["PISO",0],["ÁREA",1],["RODAPÉ",1]],rows:fl.PI.map(F=>[F.r.n,infoPiso(F.pt)[1],f(F.area),F.rod?f(F.rod):"-"])},{t:"QUANTITATIVO E NOTAS",linhas:notasPiso(fl.PI,fl.SO)}];
   if(lado==="forro") return [{t:"QUADRO DE FORROS",pc:[0.30,0.42,0.13,0.15],cols:[["AMBIENTE",0],["FORRO",0],["H (m)",1],["ÁREA",1]],rows:fl.FO.map(F=>[F.r.n,nomeForro(F.ft),F.ft==="sem"?"-":f(F.h),f(F.area)])},{t:"QUANTITATIVO E NOTAS",linhas:notasForro(fl.FO)}];
   if(lado==="hidro"){ const H=fl.HD; return [{t:"QUADRO DE PONTOS",pc:[0.24,0.38,0.12,0.12,0.14],cols:[["AMBIENTE",0],["APARELHO",0],["AF",1],["ALT.",1],["ESG.",1]],rows:H.ap.map(a=>[a.r.n,a.nome,`Ø${a.dAf}`,a.h,a.dEs?`Ø${a.dEs}`:"ralo"])},{t:"NOTAS",linhas:notasHidro(H)}]; }
@@ -2250,7 +2328,7 @@ function textosLado(P,lado,fl){
 }
 
 /* ---------------- DXF ---------------- */
-const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],MOBILIA:[30,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[5,"CONTINUOUS"],ESGOTO:[32,"CONTINUOUS"],FORRO:[8,"CONTINUOUS"],PISO:[9,"CONTINUOUS"],SOLEIRA:[2,"CONTINUOUS"],GERAL:[7,"CONTINUOUS"]};
+const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],MOBILIA:[30,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[5,"CONTINUOUS"],ESGOTO:[32,"CONTINUOUS"],FORRO:[8,"CONTINUOUS"],PISO:[9,"CONTINUOUS"],SOLEIRA:[2,"CONTINUOUS"],CONSTRUIR:[1,"CONTINUOUS"],DEMOLIR:[40,"DASHED"],GERAL:[7,"CONTINUOUS"]};
 function dxfEnc(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?"); }
 function buildDXF(){
   const P=pranchas(S.fmt||"A3"), o=[], p=(c,v)=>o.push(String(c),String(v)), n=v=>(+v).toFixed(4);
@@ -2300,7 +2378,7 @@ document.querySelectorAll("[data-dxfcopy]").forEach(b=>b.onclick=async()=>{
 });
 
 /* ---------------- PDF (escrito à mão, sem bibliotecas) ---------------- */
-const PDFCOR={LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25],AGUA:[0,.3],ESGOTO:[.25,.5],FORRO:[.3,.15],PISO:[.45,.1],SOLEIRA:[0,.25]};
+const PDFCOR={LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25],AGUA:[0,.3],ESGOTO:[.25,.5],FORRO:[.3,.15],PISO:[.45,.1],SOLEIRA:[0,.25],CONSTRUIR:[.15,.3],DEMOLIR:[0,.3]};
 function pdfTxt(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?").replace(/[\\()]/g,m=>"\\"+m); }
 function buildPDF(fmt){
   const P=pranchas(fmt), {W,H,mo,ml,cw,ch,TT,side}=P; const n=v=>(+v).toFixed(3); let c=[]; const pages=[];
