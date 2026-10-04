@@ -13,6 +13,7 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   demanda, entrada, DR, DPS, quadro com reserva, diagrama unifilar e material elétrico.
 - 5.2: imóvel comercial com 2+ salas: um quadro e medidor por sala (banheiro vai para a sala de onde se entra).
 - 5.3: símbolos elétricos menores (65 %).
+- 5.8: vários projetos no aparelho (aba Dados: trocar, duplicar, renomear, excluir, baixar/abrir .json); modelo "Salas comerciais Av. Paraná" (do PDF WALISSON_PALMEIRA_REV_2: 2 salas + banheiro, fachada chanfrada, platibanda caindo para a frente, pluvial para a Guarani); verificação contra goteira e umidade na aba Cobertura. Lote 277 ainda pelas medidas do mapa (o prédio não cabe na frente de 11,14): esperar o DWG da situação.
 - 5.7: calha cortada nos cortes AA/BB (platibanda e beiral) e calha de beiral no detalhe do beiral.
 - 5.6: escolha da rua de saída da água pluvial (a mais baixa do terreno; lote 277: Rua Guarani); campos de texto ap.beiral, ap.dest, ele.rede e ele.qdSala passaram a gravar certo.
 - 5.5: águas pluviais (calha da platibanda ou do beiral, condutores AP, caixas de areia, rede enterrada pelo anel do esgoto, saída sob a calçada até a sarjeta ou galeria).
