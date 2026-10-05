@@ -98,6 +98,8 @@ h3{font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.06em;
 svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink)}   /* mesma letra do PDF: o lugar dos textos é medido com ela */
 @media (max-width:520px){h1{font-size:24px}.stamp{text-align:left}.roofs button{font-size:12px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:700px){.sub .feat{display:none}}
+.comece{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--sheet);border-radius:6px;padding:10px 14px;margin:0 0 12px}.comece ol{margin:6px 0 8px 18px;padding:0}.comece li{margin:3px 0;font-size:13.5px}
 </style>
 </head>
 <body>
@@ -105,7 +107,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
   <header class="top">
     <div>
       <h1>Projeto Arquitetônico</h1>
-      <div class="sub">Planta baixa com áreas e cotas · Demolir e construir · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Revestimento de parede · Paginação da fachada · Memorial descritivo · Orçamento estimado · Cortes AA e BB · Cobertura · Fachadas · Situação · Escada · Banheiro · Quadro de esquadrias · Águas pluviais · Pintura · Estrutural · Diagrama unifilar · <b id="versao"></b></div>
+      <div class="sub"><span class="feat">Planta baixa com áreas e cotas · Demolir e construir · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Revestimento de parede · Paginação da fachada · Memorial descritivo · Orçamento estimado · Cortes AA e BB · Cobertura · Fachadas · Situação · Escada · Banheiro · Quadro de esquadrias · Águas pluviais · Pintura · Estrutural · Diagrama unifilar · Perspectivas · </span><b id="versao"></b></div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
@@ -137,6 +139,12 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
 
   <!-- PLANTA -->
   <section id="tab-planta">
+    <div class="comece" id="comece" hidden><b>Como começar</b><ol>
+      <li>Na aba <b>Dados</b>, comece pelo modelo da casa ou das salas, ou anexe a sua planta (DXF, PDF do CAD ou maquete do SketchUp).</li>
+      <li>Aqui na <b>Planta</b>, toque numa parede para colocar porta ou janela e num ambiente para dar o nome.</li>
+      <li>Passe pelas abas: cada uma (elétrica, hidrossanitário, cobertura, fachadas...) vira uma prancha.</li>
+      <li>Escolha o tamanho da folha e toque em <b>Baixar PDF das pranchas</b> ou <b>Baixar DXF</b> para o AutoCAD.</li></ol>
+      <button class="btn" id="comeceOk" type="button">Entendi</button></div>
     <div class="sheet">
       <h2>Planta baixa</h2>
       <p class="cap">Toque numa <b>parede</b> para colocar porta, janela ou vão naquele ponto. Toque num <b>ambiente</b> para dar o nome. Toque numa porta ou janela para editar. Os números azuis das paredes só aparecem aqui, não saem na prancha.</p>
@@ -146,7 +154,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <div id="warnings"></div>
       <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option><option>A0</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Desenhos por folha<select id="agrupar" style="width:auto"><option value="auto">Automático (A0 até 9, A1 até 6, A2 até 4)</option><option value="não">Um por folha</option><option value="2">Até 2 por folha</option><option value="4">Até 4 por folha</option><option value="6">Até 6 por folha</option><option value="9">Até 9 por folha</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><span class="toast" id="pdfMsg" role="status"></span></div>
       <div class="row"><button class="btn pri" data-dxf>Baixar DXF para o AutoCAD</button><button class="btn" data-dxfcopy>Copiar DXF</button><span class="toast" data-dxfmsg role="status"></span></div>
-      <p class="cap" style="margin-top:8px">O PDF sai com 6 pranchas e carimbo: 01 planta baixa com quadros, 02 cortes AA e BB, 03 cobertura, 04 fachadas, 05 situação, detalhe de cada banheiro e quadro/detalhe das esquadrias. O DXF tem os mesmos desenhos em escala real (metros), cada elemento no seu layer. Dentro do Claude o DXF vem compactado (.zip).</p>
+      <p class="cap" style="margin-top:8px">O PDF sai com todas as pranchas do projeto, com carimbo: planta baixa e quadros, cortes, cobertura e estrutura do telhado, fachadas, situação, elétrica, hidrossanitário e águas pluviais, estrutura, detalhes (banheiro, portas, esquadrias) e perspectivas. Em A0, A1 e A2 os desenhos da mesma disciplina vão juntos em menos folhas. O DXF tem os mesmos desenhos em escala real (metros), cada elemento no seu layer.</p>
     </div>
     <div class="grid2">
       <div class="sheet"><h2>Quadro de áreas</h2><div class="tbl"><table id="tabAreas"></table></div></div>
@@ -661,7 +669,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.27 · layers do DXF: paredes verdes e cotas cinza escuro";
+const VERSAO="versão 5.28 · revisão para o lançamento", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -720,7 +728,7 @@ function modeloSalas(){ const o=defaults();
     pts:[[4.132, 7.942], [15.268, 7.942], [9.877, -12.678], [-3.613, -8.425], [0.869, 5.561]]});   // cantos do lote tirados do DXF da situação (mesmas coordenadas da planta)
   // telhado escondido por platibanda, caindo da frente (Av. principal) para o fundo
   o.pd=3.50;   // pé-direito das salas comerciais
-  o.tel=Object.assign(clone(TEL0),{tipo:1,dir:"cima",telha:"Fibrocimento",inc:15,plat:"sim",cbMin:40,chMin:6,hPlat:5.00,estr:"vigota",lt:"3.66",ev:"1"});   // platibanda até 5,00 m   // uma água caindo da Av. principal para o fundo, calha de 35x20 no fundo
+  o.tel=Object.assign(clone(TEL0),{tipo:1,dir:"lado1",telha:"Fibrocimento",inc:15,plat:"sim",cbMin:40,chMin:6,hPlat:5.00,estr:"vigota",lt:"3.66",ev:"1"});   // platibanda até 5,00 m   // uma água caindo da Av. principal para o fundo, calha de 35x20 no fundo
   o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua lateral (o terreno cai para ela)
   return o; }
 // estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
@@ -2777,7 +2785,7 @@ function buildMemorialPDF(M){
     s.ps.forEach(p=>wrap(p,3.1,W-2*mx).forEach((l,i,arr)=>{ precisa(5); text(mx,y,3.1,l); y+=4.6; if(i===arr.length-1) y+=1.4; })); y+=3; });
   precisa(40); y+=6; text(mx,y,3.1,`${S.local||""}${S.local?", ":""}${S.data||today}.`); y+=22;
   c.push(`0.25 w ${n(mx)} ${n(H-y)} m ${n(mx+80)} ${n(H-y)} l S`); y+=5; text(mx,y,3.2,S.rtNome||"",true); y+=4.8; text(mx,y,3,S.crea||"");
-  pages.forEach((pc,i)=>{ c=pc; text(W/2-6,H-10,2.6,`${i+1}/${pages.length}`); text(mx,H-10,2,`Gerado em ${agora().txt} · ${VERSAO}`); });
+  pages.forEach((pc,i)=>{ c=pc; text(W/2-6,H-10,2.6,`${i+1}/${pages.length}`); text(mx,H-10,2,`Gerado em ${agora().txt} · ${VERSAO_N}`); });
   const objs=["<< /Type /Catalog /Pages 2 0 R >>",`<< /Type /Pages /Kids [${pages.map((_,i)=>`${5+2*i} 0 R`).join(" ")}] /Count ${pages.length} >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>","<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"];
   pages.forEach((pc,i)=>{ const content=pc.join("\n");
@@ -3114,7 +3122,7 @@ const notasReforma=q=>[`Demolição: ${f(q.dem)} m² de alvenaria (${f(q.Ld)} m 
 // preços de referência (R$, material + mão de obra): o usuário ajusta na tabela (SINAPI / fornecedor local)
 const PRECO0={fach_porc:180,fach_cer:120,fach_pedra:160,fach_tijolinho:140,fach_ripado:260,fach_acm:420,demolicao:35,retirada:60,entulho:90,limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
   telha_Cerâmica:55,telha_Concreto:60,telha_Fibrocimento:40,telha_Metálica:75,cumeeira:35,calha:90,condutor:45,rufo:40,
-  porta:850,janela:650,box:900,contrapiso:45,pint_teto:22,pint_esq:38,piso_arm:70,regulariz:30,piso_car:115,piso_cam:165,piso_porc60:120,piso_porc80:150,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
+  porta:850,porta_vidro:950,vigota:32,caibro:14,janela:650,box:900,contrapiso:45,pint_teto:22,pint_esq:38,piso_arm:70,regulariz:30,piso_car:115,piso_cam:165,piso_porc60:120,piso_porc80:150,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
   forro_pvc:75,forro_gesso:90,forro_drywall:110,parede_dw:150,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,aterr:180,pt_agua:220,pt_esgoto:180,tubo_ap:55,cx_areia:280,caixa:350,reservatorio:900,fossa:6500,
   vaso:750,lavatorio:350,chuveiro:250,pia:650,tanque:450,pint_int:28,pint_ext:32,limpfinal:8};
 const preco=k=>{ const v=S.orc&&S.orc.p&&S.orc.p[k]; return v!=null&&v!==""&&isFinite(+v)?+v:(PRECO0[k]??0); };
@@ -3140,12 +3148,12 @@ function orcamento(){
   if(num(S.laje)>0) it("Laje pré-moldada com capeamento","m²",G.areaC,"laje");
   etapa("ALVENARIA E REVESTIMENTOS"); { const rb=Math.max(0,num(S.reb)), tj=Math.max(5,G.t*100-2*rb), aA=REF?QR.con:alv; it(`Alvenaria de tijolo cerâmico em pé (e = ${f(tj,0)} cm)`,"m²",aA,"alvenaria"); it(`Chapisco e reboco e = ${f(rb,1)} cm, 2 faces (${f(2*aA*rb/100,2)} m³ de argamassa)`,"m²",2*aA,"reboco");
     if(DW.area>0) it(`Parede de gesso acartonado (drywall) 95 mm: ${DW.placas} placas ST, ${DW.mont} montantes 70 mm, ${f(DW.guia)} m de guia, ${DW.fita} m de fita`,"m²",DW.area,"parede_dw"); } it(`Revestimento cerâmico de parede${cerTxt?` (${cerTxt.toLowerCase()})`:""} com 10% de perda`,"m²",cer*1.1,"ceramica");
-  etapa("COBERTURA"); it("Estrutura de madeira do telhado","m²",TI.areaInc,"madeiramento"); it(`Telha ${String(S.tel.telha).toLowerCase()}`,"m²",TI.areaInc,`telha_${S.tel.telha}`); it("Cumeeira","m",TI.Lcum,"cumeeira");
+  etapa("COBERTURA"); { const ETo=G.vazio?null:estruturaTelhado(G); if(ETo&&ETo.VG){ it(`Vigotas pré-moldadas de concreto (${ETo.vigotas.length} peças)`,"m",ETo.Lv,"vigota"); it("Caibros 5x7 de madeira tratada","m",ETo.Lt,"caibro"); } else it("Estrutura de madeira do telhado","m²",TI.areaInc,"madeiramento"); } it(`Telha ${String(S.tel.telha).toLowerCase()}`,"m²",TI.areaInc,`telha_${S.tel.telha}`); it("Cumeeira","m",TI.Lcum,"cumeeira");
   if(TI.plat){ const CLo=calhasPlat(G,TI); it(CLo?`Calha galvanizada ${f(CLo.bMax*100,0)}x${f(CLo.hMax*100,0)} cm`:"Calha e rufo galvanizados","m",CLo?CLo.Ltot:perExt,"calha"); if(CLo) it("Rufo e contra-rufo galvanizados na platibanda","m",perExt,"rufo");
     if(CLo) it(`Condutores de água pluvial (${CLo.lista.map(c=>`${c.nC}xØ${c.dia}`).join(", ")}) com ralo hemisférico`,"m",CLo.nAP*(num(S.pd)+Math.max(0,num(S.laje))+0.5),"condutor"); }
   else { const CLb=calhasBeiral(G,TI); if(CLb){ it(`Calha de beiral galvanizada ${f(CLb.bMax*100,0)}x${f(CLb.hMax*100,0)} cm`,"m",CLb.Ltot,"calha"); it(`Condutores de água pluvial (${CLb.lista.map(c=>`${c.nC}xØ${Math.max(75,c.dia)}`).join(", ")})`,"m",CLb.nAP*(num(S.pd)+0.5),"condutor"); } }
   etapa("ESQUADRIAS");
-  Q.filter(q=>q.tipo==="Porta").forEach(q=>it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)}`,"un",q.q,"porta"));
+  Q.filter(q=>q.tipo==="Porta").forEach(q=>/vidro|alum/i.test(q.mat)?it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)} (${q.q} un)`,"m²",q.l*q.a*q.q,"porta_vidro"):it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)}`,"un",q.q,"porta"));
   Q.filter(q=>q.tipo==="Janela").forEach(q=>it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)} (${q.q} un)`,"m²",q.l*q.a*q.q,"janela"));
   it("Box de vidro temperado","un",LM.filter(R=>R.banho&&R.banho.box).length,"box");
   etapa("PISOS"); { const BPo=basePiso(G); if(BPo){ const I0=BPo.int, V0=BPo.vei;
@@ -3194,7 +3202,7 @@ function buildOrcPDF(O){
   if(O.totCub){ y+=2; text(mx,y,2.7,`Comparação pelo CUB: ${money(O.cub)}/m² x ${f(O.areaC)} m² = ${money(O.totCub)}.`); y+=5; }
   y+=3; ["Orçamento estimado a partir dos quantitativos do projeto, com preços de referência (material e mão de obra) que devem ser conferidos","com a tabela SINAPI do mês e com fornecedores locais. Não inclui projetos complementares, taxas, terreno nem muro."].forEach(t=>{ precisa(5); text(mx,y,2.5,t); y+=4; });
   precisa(30); y+=16; ln(mx,y,mx+75,y,.25); y+=4.5; text(mx,y,3,S.rtNome||"",true); y+=4.2; text(mx,y,2.7,S.crea||"");
-  pages.forEach((pc,i)=>{ c=pc; text(W/2,H-9,2.5,`${i+1}/${pages.length}`,false,1); text(mx,H-9,2,`Gerado em ${agora().txt} · ${VERSAO}`); });
+  pages.forEach((pc,i)=>{ c=pc; text(W/2,H-9,2.5,`${i+1}/${pages.length}`,false,1); text(mx,H-9,2,`Gerado em ${agora().txt} · ${VERSAO_N}`); });
   const objs=["<< /Type /Catalog /Pages 2 0 R >>",`<< /Type /Pages /Kids [${pages.map((_,i)=>`${5+2*i} 0 R`).join(" ")}] /Count ${pages.length} >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>","<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"];
   pages.forEach((pc,i)=>{ const content=pc.join("\n");
@@ -3975,7 +3983,9 @@ function verificaTelhado(G){ if(G.vazio) return []; const TI=infoTelhado(G), T=S
   if(TI.plat){ const CL=calhasPlat(G,TI);
     if(CL) CL.lista.forEach(c=>{ const m=[(c.seg[0]+c.seg[2])/2,(c.seg[1]+c.seg[3])/2], pr=perto(m);
       if(pr&&!rua(pr.i)&&pr.d<0.8) add(false,`Calha ${c.nome} encostada na parede da divisa com ${nomeL(pr.i)}: risco de umidade na parede e no vizinho. Prefira o caimento do telhado para o lado da rua; se ficar assim, impermeabilize a calha com manta asfáltica, faça o ladrão para dentro do lote e suba o contra-rufo 30 cm.`);
-      else add(true,`Calha ${c.nome} (${f(c.b*100,0)}x${f(c.h*100,0)} cm) do lado ${pr&&rua(pr.i)?`da ${nomeL(pr.i)}`:"de dentro do lote"}, longe das divisas.`); });
+      else { const Vf=(VISTA[S.frente]||VISTA.baixo).V, cx=(G.bb.x0+G.bb.x1)/2, cy=(G.bb.y0+G.bb.y1)/2, hv=Math.abs(Vf[0])*(G.bb.x1-G.bb.x0)/2+Math.abs(Vf[1])*(G.bb.y1-G.bb.y0)/2, pv=(m[0]-cx)*Vf[0]+(m[1]-cy)*Vf[1];
+        const ondeC=pv<-hv*0.4?"no fundo da construção":pv>hv*0.4?"na frente da construção":"na lateral da construção";
+        add(true,`Calha ${c.nome} (${f(c.b*100,0)}x${f(c.h*100,0)} cm) ${pr&&rua(pr.i)&&pr.d<2?`do lado da ${nomeL(pr.i)}`:ondeC}${pr&&!rua(pr.i)?`, a ${f(pr.d,1)} m da divisa com ${nomeL(pr.i)}`:""}, longe das divisas.`); } });
     { const fol=(TI.topoPlat||0)-TI.zmax; add(fol>=0.10,fol>=0.10?`Platibanda com topo em ${f(TI.topoPlat)} m, ${f(fol,2)} m acima do ponto mais alto do telhado, com rufo no topo, contra-rufo na face de dentro e ladrão Ø50 em cada calha.`:`Platibanda com topo em ${f(TI.topoPlat)} m não esconde o telhado (ponto mais alto em ${f(TI.zmax)} m): suba a platibanda para ${f(Math.ceil((TI.zmax+0.15)*20)/20)} m, diminua a inclinação até o mínimo da telha ou baixe o pé-direito.`); } }
   else { const R=TI.R, ed={cima:[[R.x0,R.y0],[R.x1,R.y0]],baixo:[[R.x0,R.y1],[R.x1,R.y1]],esq:[[R.x0,R.y0],[R.x0,R.y1]],dir:[[R.x1,R.y0],[R.x1,R.y1]]}, calha=S.ap.beiral!=="não";
     TI.bordas.forEach(e=>{ const [a,b]=ed[e]; [0.1,0.5,0.9].map(t=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]).some(p=>{ const fora=!pontoDentro(p,TL), pr=perto(p); if(!pr) return false;
@@ -4794,7 +4804,7 @@ function buildPDF(fmt){
     text(cx+3,yl[3]+2.2,lab,"RESPONSÁVEL TÉCNICO"); text(cx+3,yl[3]+6.6,2.4,S.rtNome||"",true); text(cx+3,yl[3]+11,ts,S.crea||"");
     lw(.2); line(cx+105*q,yl[3]+9.5,cx+cw-5,yl[3]+9.5); text(cx+105*q+(cw-5-105*q)/2,yl[3]+12,lab,"assinatura",false,1);
     const bx=[0,45,90,135].map(v=>v*q); bx.slice(1).forEach(x=>line(cx+x,yl[4],cx+x,cy+ch));
-    text(ml+2,H-mo-1.6,1.5,`Gerado em ${agora().txt} · ${VERSAO}`);
+    text(ml+2,H-mo-1.6,1.5,`Gerado em ${agora().txt} · ${VERSAO_N}`);
     [["ESCALA",fl.escala],["DATA",S.data||""],["FORMATO",fmt],["PRANCHA",fl.n]].forEach(([a,b],i)=>{ text(cx+bx[i]+3,yl[4]+2.2,lab,a); text(cx+bx[i]+3,yl[4]+6,ts,b,true); });
   };
   const desenho=(it)=>{
@@ -5253,6 +5263,8 @@ $("impApply").onclick=()=>{ if(!IMP) return;
   loadForm(); render(); $("impRes").hidden=true; impMsg("Planta aplicada. Veja a aba Planta: dê nome aos ambientes e coloque as janelas tocando nas paredes."); };
 
 $("versao").textContent=VERSAO;
+try{ if(!localStorage.getItem("arq-comece-ok")) $("comece").hidden=false; }catch(e){ $("comece").hidden=false; }
+$("comeceOk").onclick=()=>{ $("comece").hidden=true; try{ localStorage.setItem("arq-comece-ok","1"); }catch(e){} };
 loadForm(); render();
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
