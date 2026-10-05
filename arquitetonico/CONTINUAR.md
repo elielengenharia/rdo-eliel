@@ -27,6 +27,12 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   Nenhum texto sai da extensão do desenho (extTexto, a mesma conta de extensao), e a prancha mede o desenho de novo depois de desencavalar.
   Nome de ambiente usa a largura real da letra e diminui se não couber nem uma linha. Detalhe das portas escolhe as colunas que dão a
   maior escala (no A4 cabe). Teste: 4 modelos x A4..A0 com 0 textos encavalados (só o A4 da hidro de casa pequena fica em 1:500 por causa do lote).
+- 5.18 (DXF WALISSON_PALMEIRA_rev03): modelo "Salas comerciais Av. Paraná" refeito pela planta ajustada no lote: frente na Av. Paraná
+  (P 3,00 e P 4,00 de correr, janela 1,20x2,00 peitoril 0,60), parede no chanfro, jardim na esquina com janela 1,20 da sala 1, banheiro
+  (2,74 m², porta 0,70) encostado na Rua Guarani, divisória inclinada; salas 27,40 e 48,22 m² (DXF 48,19), NV +0,10.
+  Lote pelos cantos do DXF: terr.pts (mesmas coordenadas da planta, um canto por lado; vale enquanto as medidas dos lados batem, lotePts()).
+  Banheiro girado (nenhuma parede no eixo): retUtil procura o retângulo útil alinhado com cada parede (r.fr = giro), layoutBanheiro trabalha
+  no sistema dele, lbMundo/rodaPrims levam louças para a planta, desenhoBanheiroGirado faz o detalhe na posição da obra.
 - 5.17: fachadas: folha de porta ou janela vista muito de lado (parede inclinada, menos de 2,2 mm no papel) fica só com o contorno; "FIXA" só aparece com folha de 5 mm ou mais.
 - 5.14: modelo das salas com pé-direito 3,50 m e platibanda até 5,00 m (campo novo "Altura final da platibanda"), telhado em uma água caindo da Av. Paraná para o fundo, calha do fundo 35x20 (campos novos de largura/altura mínima da calha na aba Cobertura).
 - 5.13: formato A0 (1189 x 841), até 9 desenhos por folha; fachadas, paginação, fundação e vistas do banheiro também agrupam. Salas: A0 6 folhas, A1 9.
@@ -47,9 +53,7 @@ Revisão geral: abrir todas as abas (casa padrão, salas comerciais, casa com ge
 procurar NaN/undefined, gerar PDF A4/A3/A2/A1 e DXF, conferir textos fora da folha e sobrepostos.
 
 ## A fazer depois
-- Planta de situação definitiva do lote 277 quando chegar o DXF da situação
-  (salvar o DWG como DXF). Lote: frente Av. Paraná 11,14; 243 21,31; 290 14,15;
-  Rua Guarani 14,69; chanfro 4,04; área 259,17 m². Construção encostada no 243 e na avenida.
+- Importar a situação direto do DXF pela aba Dados (hoje os cantos do lote 277 foram passados à mão para terr.pts).
 - Banheiro com mais de uma parede inclinada ainda fica sem louças (só retangular ou 1 inclinada).
 - Drywall: o desenho usa a espessura geral das paredes (só o orçamento usa 9,5 cm).
 - Elétrica: limites mono/bi/trifásico são de referência; conferir com a norma da Equatorial Pará.
