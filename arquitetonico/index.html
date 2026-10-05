@@ -661,7 +661,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.25 · chanfro da esquina sem virar rua, tela com a letra do PDF e corte sem riscar texto";
+const VERSAO="versão 5.26 · app sem travar com o telhado alinhado com a divisa";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -919,7 +919,12 @@ function esquadrias(G){
 /* ---------------- Telhado: 1, 2, 3 ou 4 águas sobre o retângulo da casa ---------------- */
 const LADOS=["cima","baixo","esq","dir"];
 // lados do lote (desenhado pelas medidas do mapa) que vão da frente para o fundo: o telhado de uma água pode cair paralelo a eles
-function ladosCaimento(G){ if(G.vazio||S.terr.forma!=="pol") return []; let TL; try{ TL=terreno(G).lote; }catch(e){ return []; } if(!TL||TL.length<3) return [];
+// terreno() chama infoTelhado(), que chama esta função: a trava evita a volta sem fim (o desenho do lote não depende do telhado)
+let _lcOcup=false; const _lcMem=new WeakMap();
+function ladosCaimento(G){ if(G.vazio||S.terr.forma!=="pol") return []; if(_lcOcup) return [];
+  const ch=JSON.stringify([S.terr,S.frente]), m=_lcMem.get(G); if(m&&m.ch===ch) return m.out;
+  _lcOcup=true; let out; try{ out=ladosCaimento0(G); }finally{ _lcOcup=false; } _lcMem.set(G,{ch,out}); return out; }
+function ladosCaimento0(G){ let TL; try{ TL=terreno(G).lote; }catch(e){ return []; } if(!TL||TL.length<3) return [];
   const VF={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente]||[0,1], n=TL.length, out=[];
   TL.forEach((a,i)=>{ const b=TL[(i+1)%n], L0=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L0<2) return; let d=[(b[0]-a[0])/L0,(b[1]-a[1])/L0]; const c=d[0]*VF[0]+d[1]*VF[1]; if(Math.abs(c)<0.7) return;   // só os lados que vão mesmo da frente para o fundo (chanfro de esquina fica de fora)
     if(c>0) d=[-d[0],-d[1]];   // água descendo da frente para o fundo
