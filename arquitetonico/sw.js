@@ -1,7 +1,7 @@
 // Projeto Arquitetônico — funciona sem internet.
 // Com internet, a página e os arquivos do app são sempre conferidos no servidor
 // (cache: "no-cache"), para a versão nova aparecer na hora.
-const CACHE = "arquitetonico-v2";
+const CACHE = "arquitetonico-v3";
 const ARQUIVOS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARQUIVOS.map(u => new Request(u, {cache: "reload"}))))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });

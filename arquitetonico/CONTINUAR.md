@@ -15,6 +15,17 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
 - 5.3: símbolos elétricos menores (65 %).
 - 5.15: nomes de ambiente fora de todos os ambientes ou empilhados no mesmo ponto vão sozinhos para os ambientes sem nome (banheiro no menor, os outros da esquerda para a direita) e o ponto é gravado.
 - 5.16: aba Perspectivas. Quatro vistas (frontal pelos dois lados, posterior, aérea) da maquete gerada pela planta (paredes, vergas, peitoris, vãos, platibanda, telhado) ou da maquete anexada (.dae do SketchUp com cores e arestas, .obj, .stl; .skp não abre no navegador, avisa para exportar COLLADA). Maquete guardada por projeto em arq-maquete-v1:<projeto>. Prancha PERSPECTIVAS (sem escala) no PDF e no DXF (camada PERSP), agrupada com banheiro/portas/esquadrias. Funções: maquete3dApp, vista3d (painter + z-buffer para faces e arestas), desenhoPersp, perspFolha, renderPersp. Primitivas g/l aceitam rgb. Renderização (render3d): imagem calculada pixel a pixel com sol e sombra (mapa de sombra), céu em degradê, gramado com névoa, vidro com reflexo do céu, ondas da telha e caixilhos; sai em JPEG no PDF (/XObject DCTDecode, primitiva "img" com .vet para o DXF), cache em CACHE_R. Opções: estilo renderizada/traço, cor das paredes, da platibanda e dos caixilhos, tipo de vidro, botão Baixar imagem (JPG 2400 px). Vidro do .dae: material transparente ou com nome vidro/glass. O sol de cada vista ilumina a fachada principal.
+- 5.18: perspectivas: paredes de fora sobem até a telha (oitão do telhado de 2 águas e parede alta do de 1 água, antes ficava vazado),
+  vergas acima das janelas também sobem; telhado feito por águas exatas (corte de orelhas + recorte por água), com testeira e forro do beiral;
+  arestas só nos cantos de verdade (sem emendas de peças no meio da fachada); vistas na altura do olho com câmera nivelada
+  (verticais retas, perspectiva de 2 pontos) e mais céu; sombra sem listras (normal offset no mapa de sombra); arestas escondidas
+  com tolerância absoluta (não vazam através do telhado); estilo traço pintado na ordem tirada do z-buffer (1/z) em vez de ordenar por
+  profundidade média, chão sempre primeiro, telha só vista de cima e forro só de baixo.
+  Textos: função desencavala(D) roda em toda prancha (fim de pranchas()) e na tela (svgDe). Rótulos das camadas MOVEIS (tubos, vigas,
+  eixos, códigos...) procuram o lugar livre mais perto (linha de chamada se forem longe); números de cota (mv:"c") deslizam na linha
+  ou trocam de lado; notas de detalhe (mv:"n") sobem/descem levando a linha de chamada; nomes de ambiente (mv:"r") só andam um pouco.
+  Nome de ambiente usa a largura real da letra e diminui se não couber nem uma linha. Detalhe das portas escolhe as colunas que dão a
+  maior escala (no A4 cabe). Teste: 4 modelos x A4..A0 com 0 textos encavalados (só o A4 da hidro de casa pequena fica em 1:500 por causa do lote).
 - 5.17: fachadas: folha de porta ou janela vista muito de lado (parede inclinada, menos de 2,2 mm no papel) fica só com o contorno; "FIXA" só aparece com folha de 5 mm ou mais.
 - 5.14: modelo das salas com pé-direito 3,50 m e platibanda até 5,00 m (campo novo "Altura final da platibanda"), telhado em uma água caindo da Av. Paraná para o fundo, calha do fundo 35x20 (campos novos de largura/altura mínima da calha na aba Cobertura).
 - 5.13: formato A0 (1189 x 841), até 9 desenhos por folha; fachadas, paginação, fundação e vistas do banheiro também agrupam. Salas: A0 6 folhas, A1 9.
