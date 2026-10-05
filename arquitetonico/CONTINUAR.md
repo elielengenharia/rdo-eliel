@@ -37,6 +37,11 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   direção) e o total; cotas internas de cada ambiente (faces e portas; ambiente retangular só nas paredes com vão). Locação virou
   estrutural: "LOCAÇÃO DOS EIXOS DOS PILARES" (desenhoLocPilares) com o eixo de cada pilar, cotas acumuladas X/Y a partir do P0 e
   quadro de coordenadas (quebra em colunas); sem estrutura volta a locação pelas paredes.
+- 5.20: telhado de uma água com platibanda pode cair paralelo a um lado do lote que vai da frente para o fundo (opções novas na
+  Direção da aba Cobertura, com o nome do lado: "Caimento para o fundo, alinhado com a divisa do Lote 243"). ladosCaimento(G) lista
+  os lados (lote pelas medidas do mapa, |cos| >= 0,7 com a frente, chanfro fica de fora); infoTelhado ganha a borda "rot" (dist linear
+  smax - p·d, TI.rot, TI.dist), usada pela estrutura (terças perpendiculares ao caimento), perspectiva (dB.rot) e calhas. Sem platibanda
+  cai para o lado reto mais próximo. Salas Av. Paraná: uma calha só, na parede do fundo (antes saía outra na divisa do 243).
 - 5.19: fossa: campos novos na aba Hidrossanitário: tanque séptico retangular ou redondo (cilíndrico, NBR 7229: Ø >= 1,10 m e
   Ø <= 2h), filtro anaeróbio opcional (sem filtro o tanque liga direto no sumidouro) e diâmetro do sumidouro (automático ou fixo
   1,00 a 2,50 m; com diâmetro fixo só aumenta o número de sumidouros se passar de 3 m de altura útil). Vale para a planta, o detalhe,

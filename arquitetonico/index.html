@@ -654,7 +654,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.19 · fossa: tanque redondo, filtro opcional e diâmetro do sumidouro";
+const VERSAO="versão 5.20 · telhado de uma água alinhado com a divisa do lote";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -911,6 +911,14 @@ function esquadrias(G){
 
 /* ---------------- Telhado: 1, 2, 3 ou 4 águas sobre o retângulo da casa ---------------- */
 const LADOS=["cima","baixo","esq","dir"];
+// lados do lote (desenhado pelas medidas do mapa) que vão da frente para o fundo: o telhado de uma água pode cair paralelo a eles
+function ladosCaimento(G){ if(G.vazio||S.terr.forma!=="pol") return []; let TL; try{ TL=terreno(G).lote; }catch(e){ return []; } if(!TL||TL.length<3) return [];
+  const VF={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente]||[0,1], n=TL.length, out=[];
+  TL.forEach((a,i)=>{ const b=TL[(i+1)%n], L0=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L0<2) return; let d=[(b[0]-a[0])/L0,(b[1]-a[1])/L0]; const c=d[0]*VF[0]+d[1]*VF[1]; if(Math.abs(c)<0.7) return;   // só os lados que vão mesmo da frente para o fundo (chanfro de esquina fica de fora)
+    if(c>0) d=[-d[0],-d[1]];   // água descendo da frente para o fundo
+    const ld=(S.terr.lados||[])[i]||{}, nm=String(ld.c||"").trim()||`lado ${i+1}`, rua=ehRuaLado(ld);
+    const ld0=String(ld.c||"").trim(); out.push({v:`lado${i}`,i,d,txt:`Caimento para o fundo, alinhado com ${!ld0?`o lado ${i+1} do lote`:rua?"a "+nm:"a divisa do "+nm}`}); });
+  return out; }
 function dirPadrao(tipo,G){ const bb=G.bb; return tipo===1?"baixo":tipo===2?((bb.x1-bb.x0)>=(bb.y1-bb.y0)?"h":"v"):tipo===3?"esq":""; }
 function infoTelhado(G){
   const T=S.tel, i=Math.max(0,num(T.inc))/100, t=G.t, bb=G.bb, pd=num(S.pd), lj=num(S.laje);
@@ -918,16 +926,21 @@ function infoTelhado(G){
   const R=plat?{x0:bb.x0+t,y0:bb.y0+t,x1:bb.x1-t,y1:bb.y1-t}:{x0:bb.x0-b,y0:bb.y0-b,x1:bb.x1+b,y1:bb.y1+b};
   const tipo=Math.min(4,Math.max(1,Math.round(num(T.tipo))||2)), dir=T.dir;
   let bordas;
-  if(tipo===1) bordas=[LADOS.includes(dir)?dir:"baixo"];
+  // uma água alinhada com um lado do lote (só com platibanda; com beiral o telhado segue o retângulo da casa e cai para o lado mais próximo)
+  const LC=tipo===1&&/^lado\d+$/.test(String(dir||""))?ladosCaimento(G).find(o=>o.v===dir):null;
+  let rot=null;
+  if(tipo===1) bordas=[LC&&plat?"rot":LC?(Math.abs(LC.d[1])>=Math.abs(LC.d[0])?(LC.d[1]<0?"cima":"baixo"):(LC.d[0]<0?"esq":"dir")):LADOS.includes(dir)?dir:"baixo"];
   else if(tipo===2) bordas=dir==="v"?["esq","dir"]:["cima","baixo"];
   else if(tipo===3) bordas=LADOS.filter(l=>l!==(LADOS.includes(dir)?dir:"esq"));
   else bordas=LADOS.slice();
   const H0=pd+lj-(plat?0:i*b);
   const dist={cima:(x,y)=>y-R.y0,baixo:(x,y)=>R.y1-y,esq:(x,y)=>x-R.x0,dir:(x,y)=>R.x1-x};
-  const z=(x,y)=>H0+i*Math.max(0,Math.min(...bordas.map(e=>dist[e](x,y))));
   // com platibanda, o telhado fica só dentro do caixote: contorno real (chanfro, L...) recuado da espessura da parede
   const casa=(G.casas||[]).reduce((m,P)=>!m||Math.abs(areaS(P))>Math.abs(areaS(m))?P:m,null);
   const poly=plat&&casa&&!G.retangular?recuar(casa,t):null, dentroT=(x,y)=>!poly||pip(poly,x,y);
+  if(bordas[0]==="rot"){ const d=LC.d, cand=poly||[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1]], smax=Math.max(...cand.map(p=>p[0]*d[0]+p[1]*d[1]));
+    rot={d,smax,a:-d[0],b:-d[1],c:smax,nome:LC.txt}; dist.rot=(x,y)=>smax-(x*d[0]+y*d[1]); }
+  const z=(x,y)=>H0+i*Math.max(0,Math.min(...bordas.map(e=>dist[e](x,y))));
   let zmax=H0; for(let a=0;a<=60;a++) for(let c=0;c<=60;c++){ const x=R.x0+(R.x1-R.x0)*a/60, y=R.y0+(R.y1-R.y0)*c/60; if(dentroT(x,y)) zmax=Math.max(zmax,z(x,y)); }
   if(poly) poly.forEach(([x,y])=>zmax=Math.max(zmax,z(x,y)));
   const W=R.x1-R.x0, D=R.y1-R.y0, xm=(R.x0+R.x1)/2, ym=(R.y0+R.y1)/2;
@@ -945,6 +958,8 @@ function infoTelhado(G){
   }
   // setas de caimento: no meio de cada beiral, apontando para ele
   const centro={cima:[xm,R.y0],baixo:[xm,R.y1],esq:[R.x0,ym],dir:[R.x1,ym]}, normal={cima:[0,1],baixo:[0,-1],esq:[1,0],dir:[-1,0]};
+  if(rot){ const cx0=poly?poly.reduce((s0,p)=>s0+p[0],0)/poly.length:xm, cy0=poly?poly.reduce((s0,p)=>s0+p[1],0)/poly.length:ym, k0=rot.smax-(cx0*rot.d[0]+cy0*rot.d[1]);
+    centro.rot=[cx0+rot.d[0]*k0,cy0+rot.d[1]*k0]; normal.rot=[-rot.d[0],-rot.d[1]]; }
   const setas=bordas.map(e=>{ const [cx,cy]=centro[e], [nx,ny]=normal[e], mx=Math.max(W,D), st=mx/400; let d=0;
     while(d<mx){ const x=cx+nx*(d+st), y=cy+ny*(d+st); if(x<R.x0-1e-9||x>R.x1+1e-9||y<R.y0-1e-9||y>R.y1+1e-9) break;
       const outros=bordas.filter(o=>o!==e).map(o=>dist[o](x,y)); if(outros.length&&Math.min(...outros)<d+st-1e-9) break; d+=st; }
@@ -966,7 +981,7 @@ function infoTelhado(G){
   const areaProj=poly?Math.abs(areaS(poly)):W*D, areaInc=areaProj*Math.sqrt(1+i*i);
   const topoPlat=plat?(num(T.hPlat)>0?num(T.hPlat):Math.ceil((zmax+0.15)*20-1e-6)/20):null;   // altura final da platibanda escolhida, ou 15 cm acima do ponto mais alto do telhado
   const NOMES={1:"uma água",2:"duas águas",3:"três águas",4:"quatro águas"};
-  return {T,i,plat,b,R,tipo,bordas,H0,z,zmax,cum:cumF,esp:espF,setas:setasF,calhas,poly,dentroT,Lcum,Lesp,areaProj,areaInc,topoPlat,nome:NOMES[tipo],W,D};
+  return {T,i,plat,b,R,tipo,bordas,rot,dist,H0,z,zmax,cum:cumF,esp:espF,setas:setasF,calhas,poly,dentroT,Lcum,Lesp,areaProj,areaInc,topoPlat,nome:NOMES[tipo],W,D};
 }
 
 /* ======================================================================
@@ -2751,12 +2766,14 @@ function buildMemorialPDF(M){
 const ESTR={"Cerâmica":{vt:1.50,galga:0.35,cb:true},"Concreto":{vt:1.50,galga:0.32,cb:true},"Fibrocimento":{vt:1.69,galga:0,cb:false},"Metálica":{vt:1.80,galga:0,cb:false}};
 function estruturaTelhado(G){
   const TI=infoTelhado(G), R=TI.R, t=G.t, E=ESTR[S.tel.telha]||ESTR["Cerâmica"];
-  const dist={cima:(x,y)=>y-R.y0,baixo:(x,y)=>R.y1-y,esq:(x,y)=>x-R.x0,dir:(x,y)=>R.x1-x};
+  const dist=TI.dist;
   const dono=(x,y)=>{ let m=1e9; TI.bordas.forEach(e=>m=Math.min(m,dist[e](x,y))); return TI.bordas.filter(e=>dist[e](x,y)<=m+1e-6); };
   const dentro=(x,y)=>x>=R.x0-1e-9&&x<=R.x1+1e-9&&y>=R.y0-1e-9&&y<=R.y1+1e-9&&TI.dentroT(x,y);
   // trechos de uma reta (p0 + s·u, s de 0 a L) em que vale o teste
   const trechos=(p0,u,L0,ok)=>{ const out=[]; let a=null; const st=0.03; for(let s=0;s<=L0+1e-9;s+=st){ const p=[p0[0]+u[0]*s,p0[1]+u[1]*s], v=ok(p); if(v&&a===null) a=s; if((!v||s+st>L0+1e-9)&&a!==null){ const b=v?s:s-st; if(b-a>0.05) out.push([p0[0]+u[0]*a,p0[1]+u[1]*a,p0[0]+u[0]*b,p0[1]+u[1]*b]); a=null; } } return out; };
   const geo={cima:{o:d=>[R.x0,R.y0+d],u:[1,0],L:R.x1-R.x0,n:[0,1]},baixo:{o:d=>[R.x0,R.y1-d],u:[1,0],L:R.x1-R.x0,n:[0,-1]},esq:{o:d=>[R.x0+d,R.y0],u:[0,1],L:R.y1-R.y0,n:[1,0]},dir:{o:d=>[R.x1-d,R.y0],u:[0,1],L:R.y1-R.y0,n:[-1,0]}};
+  if(TI.rot){ const d=TI.rot.d, u=[-d[1],d[0]], n=[-d[0],-d[1]], base=[d[0]*TI.rot.smax,d[1]*TI.rot.smax], ts=[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1]].map(p=>(p[0]-base[0])*u[0]+(p[1]-base[1])*u[1]), t0=Math.min(...ts), t1=Math.max(...ts);
+    geo.rot={o:dd=>[base[0]+u[0]*t0+n[0]*dd,base[1]+u[1]*t0+n[1]*dd],u,L:t1-t0,n}; }
   const tercas=[], caibros=[];
   TI.bordas.forEach(e=>{ const g=geo[e];
     let Dm=0; for(let a=0;a<=40;a++) for(let c=0;c<=40;c++){ const x=R.x0+(R.x1-R.x0)*a/40, y=R.y0+(R.y1-R.y0)*c/40; if(dentro(x,y)&&dono(x,y).includes(e)) Dm=Math.max(Dm,dist[e](x,y)); }
@@ -3714,7 +3731,7 @@ function maquete3dApp(G){ if(G.vazio) return null; const tris=[], cols=[], mat=[
   const naExt=(a,b)=>{ const m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; return G.contExt.some(s0=>dSeg(m,s0)<0.02); };
   const topoExt=TI.plat?(TI.topoPlat||pd+lj):pd+lj, zP=pd+lj, sobe=!TI.plat, R=TI.R;
   // distância de um ponto a cada beiral (linear em x,y); o telhado é z = H0 + i·min(distâncias)
-  const dB={cima:[0,1,-R.y0],baixo:[0,-1,R.y1],esq:[1,0,-R.x0],dir:[-1,0,R.x1]}, dv=(e,x,y)=>dB[e][0]*x+dB[e][1]*y+dB[e][2];
+  const dB={cima:[0,1,-R.y0],baixo:[0,-1,R.y1],esq:[1,0,-R.x0],dir:[-1,0,R.x1],...(TI.rot?{rot:[TI.rot.a,TI.rot.b,TI.rot.c]}:{})}, dv=(e,x,y)=>dB[e][0]*x+dB[e][1]*y+dB[e][2];
   // pontos do segmento onde o telhado dobra (cumeeira, espigão): a parede e as bordas seguem a telha sem degrau
   const quebras=(a,b)=>{ const ts=[0,1], B=TI.bordas; if(sobe) for(let i=0;i<B.length;i++) for(let j=i+1;j<B.length;j++){ const fa=dv(B[i],a[0],a[1])-dv(B[j],a[0],a[1]), fb=dv(B[i],b[0],b[1])-dv(B[j],b[0],b[1]); if(fa*fb<0) ts.push(fa/(fa-fb)); }
     return [...new Set(ts.map(t=>Math.round(t*1e6)/1e6))].sort((p,q)=>p-q); };
@@ -4038,7 +4055,7 @@ function render(){
   // cobertura
   $("roofTypes").innerHTML=[1,2,3,4].map(tp=>`<button type="button" data-tipo="${tp}" aria-pressed="${TI.tipo===tp}">${iconeTelhado(tp)}${tp} ${tp===1?"água":"águas"}</button>`).join("");
   $("telCheck").innerHTML=verificaTelhado(G).map(x=>`<div class="alert ${x.ok?"ok":"warn"}">${x.ok?"OK: ":"Atenção: "}${esc(x.t)}</div>`).join("");
-  const ds=DIRS[TI.tipo]; $("tel.dir").innerHTML=ds.map(([v,t])=>`<option value="${v}"${v===(S.tel.dir||"")?" selected":""}>${t}</option>`).join("");
+  const ds=[...DIRS[TI.tipo],...(TI.tipo===1&&TI.plat?ladosCaimento(G).map(o=>[o.v,o.txt]):[])]; $("tel.dir").innerHTML=ds.map(([v,t])=>`<option value="${v}"${v===(S.tel.dir||"")?" selected":""}>${t}</option>`).join("");
   $("lblDir").hidden=TI.tipo===4; $("lblBeiral").hidden=TI.plat; document.querySelectorAll("[data-soplat]").forEach(e=>e.hidden=!TI.plat);
   $("cob").innerHTML=svgDe(desenhoCobertura(G,k));
   if(!G.vazio){ const ET=estruturaTelhado(G); $("estr").innerHTML=svgDe(desenhoEstrutura(G,k,ET)); $("detBeiral").innerHTML=svgDe(desenhoBeiral(G,0.012));
