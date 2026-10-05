@@ -37,6 +37,8 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   direção) e o total; cotas internas de cada ambiente (faces e portas; ambiente retangular só nas paredes com vão). Locação virou
   estrutural: "LOCAÇÃO DOS EIXOS DOS PILARES" (desenhoLocPilares) com o eixo de cada pilar, cotas acumuladas X/Y a partir do P0 e
   quadro de coordenadas (quebra em colunas); sem estrutura volta a locação pelas paredes.
+- 5.22: fossa: campos novos na aba Hidrossanitário: diâmetro do tanque redondo (1,10 a 2,50 m; a profundidade útil sai do volume, no mínimo D/2, aviso se passar do máximo da NBR 7229), largura do tanque retangular (0,80 a 2,00 m; aviso se o comprimento passar de 4x a largura), distância entre tanque, filtro e sumidouro (padrão 1,50 m da NBR 7229; 0,50 a 3,00 m, aviso abaixo de 1,50) e afastamento da casa e das divisas (1,50 a 3,00 m). dimFossa devolve gap, afast, gapU e av (avisos); posFossa separa o espaçamento entre as unidades (gap) do afastamento (afast); no passeio usa 0,50 m, a não ser que a distância tenha sido escolhida.
+- 5.21: modelo das salas sem o nome do cliente e sem o endereço do lote (Avenida principal, Rua lateral, Vizinho 1 e 2).
 - 5.20: telhado de uma água com platibanda pode cair paralelo a um lado do lote que vai da frente para o fundo (opções novas na
   Direção da aba Cobertura, com o nome do lado: "Caimento para o fundo, alinhado com a divisa do Vizinho 1"). ladosCaimento(G) lista
   os lados (lote pelas medidas do mapa, |cos| >= 0,7 com a frente, chanfro fica de fora); infoTelhado ganha a borda "rot" (dist linear

@@ -281,8 +281,12 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <div class="form wide">
         <label>Destino do esgoto<select id="fossa.on"><option value="não">Rede pública</option><option value="sim">Fossa séptica + sumidouro</option></select></label>
         <label>Tanque séptico<select id="fossa.tanque"><option value="ret">Retangular</option><option value="cil">Redondo (cilíndrico)</option></select></label>
+        <label>Diâmetro do tanque redondo<select id="fossa.dt"><option value="auto">Automático</option><option value="1.1">1,10 m</option><option value="1.2">1,20 m</option><option value="1.4">1,40 m</option><option value="1.5">1,50 m</option><option value="1.6">1,60 m</option><option value="1.8">1,80 m</option><option value="2">2,00 m</option><option value="2.2">2,20 m</option><option value="2.5">2,50 m</option></select></label>
+        <label>Largura do tanque retangular<select id="fossa.wt"><option value="auto">Automática</option><option value="0.8">0,80 m</option><option value="1">1,00 m</option><option value="1.2">1,20 m</option><option value="1.5">1,50 m</option><option value="1.8">1,80 m</option><option value="2">2,00 m</option></select></label>
         <label>Filtro anaeróbio<select id="fossa.filtro"><option value="sim">Com filtro</option><option value="não">Sem filtro (tanque direto no sumidouro)</option></select></label>
         <label>Diâmetro do sumidouro<select id="fossa.ds"><option value="auto">Automático</option><option value="1">1,00 m</option><option value="1.2">1,20 m</option><option value="1.5">1,50 m</option><option value="2">2,00 m</option><option value="2.5">2,50 m</option></select></label>
+        <label>Distância entre tanque, filtro e sumidouro<select id="fossa.gap"><option value="auto">1,50 m (NBR 7229)</option><option value="0.5">0,50 m</option><option value="0.8">0,80 m</option><option value="1">1,00 m</option><option value="1.2">1,20 m</option><option value="2">2,00 m</option><option value="2.5">2,50 m</option><option value="3">3,00 m</option></select></label>
+        <label>Afastamento da casa e das divisas<select id="fossa.afast"><option value="auto">1,50 m (NBR 7229)</option><option value="2">2,00 m</option><option value="2.5">2,50 m</option><option value="3">3,00 m</option></select></label>
         <label>Local do conjunto<select id="fossa.local"><option value="lote">Dentro do lote</option></select></label>
         <label>Limpeza do tanque a cada<select id="fossa.lim"><option value="1">1 ano</option><option value="2">2 anos</option><option value="3">3 anos</option><option value="4">4 anos</option><option value="5">5 anos</option></select></label>
         <label>Coeficiente de infiltração do solo (L/m²·dia)<input type="number" step="5" id="fossa.ci"></label>
@@ -654,7 +658,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.21 · modelo das salas sem dados do cliente";
+const VERSAO="versão 5.22 · fossa: medida do tanque e distâncias à escolha";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -693,7 +697,7 @@ function defaults(){
   return {
     obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
-    pd:2.80, laje:0.10, reb:2.5, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, base:{int:"simples",arm:"tela",veic:"carro",ext:0}, pint:{corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"}, persp:{fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"}, memo:{obs:""}, orc:{bdi:20,cub:"",p:{}}, revp:{int:"latex",ext:"textura"}, fpag:[{},{},{},{}], esc:{on:"não",h:"",larg:0.90,tipo:"reta"}, fossa:{on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto"}, ap:{beiral:"sim",dest:"sarjeta",i:1,rua:"frente"}, estr:{fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"}, estS:{vmax:3.0,prof:1.2,cinta:"sim"}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+    pd:2.80, laje:0.10, reb:2.5, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, base:{int:"simples",arm:"tela",veic:"carro",ext:0}, pint:{corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"}, persp:{fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"}, memo:{obs:""}, orc:{bdi:20,cub:"",p:{}}, revp:{int:"latex",ext:"textura"}, fpag:[{},{},{},{}], esc:{on:"não",h:"",larg:0.90,tipo:"reta"}, fossa:{on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto"}, ap:{beiral:"sim",dest:"sarjeta",i:1,rua:"frente"}, estr:{fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"}, estS:{vmax:3.0,prof:1.2,cinta:"sim"}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
 }
 let S;
@@ -717,7 +721,7 @@ function modeloSalas(){ const o=defaults();
   o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua lateral (o terreno cai para ela)
   return o; }
 // estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
-function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto"},o.fossa||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim"},o.estS||{}); }catch(e){ S=defaults(); } return S; }
+function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto"},o.fossa||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim"},o.estS||{}); }catch(e){ S=defaults(); } return S; }
 let _o0=null; try{ _o0=JSON.parse(localStorage.getItem("arq-casa-v1")); }catch(e){} S=estadoDe(_o0||{});
 /* vários projetos no mesmo aparelho: a lista fica em arq-projetos-v1; o aberto continua em arq-casa-v1 */
 const PJ_KEY="arq-projetos-v1";
@@ -2248,11 +2252,15 @@ function dimFossa(HD){ const F=S.fossa||{}, N=Math.max(1,HD.pessoas), com=!!HD.c
   const lim=Math.min(5,Math.max(1,Math.round(num(F.lim))||1)), K=[57,97,137,177,217][lim-1];
   const V=Math.max(1250,1000+N*(C*T+K*Lf)), Vm=V/1000, hmin=Vm<=6?1.2:Vm<=10?1.5:1.8, hmax=hmin+1.0;
   // tanque prismático retangular: largura >= 0,80 m e comprimento de 2 a 4 vezes a largura
-  let h=hmin, W=Math.max(0.8,up5(Math.sqrt(Vm/(2*h)))), Lt=Math.max(2*W,up5(Vm/(W*h))); while(Lt>4*W&&h<hmax){ h=Math.min(hmax,h+0.1); Lt=Math.max(2*W,up5(Vm/(W*h))); }
+  const av=[], wtF=num(F.wt)>0?Math.max(0.8,num(F.wt)):0, dtF=num(F.dt)>0?Math.max(1.1,num(F.dt)):0;
+  let h=hmin, W=wtF||Math.max(0.8,up5(Math.sqrt(Vm/(2*h)))), Lt=Math.max(2*W,up5(Vm/(W*h))); while(Lt>4*W&&h<hmax){ h=Math.min(hmax,h+0.1); Lt=Math.max(2*W,up5(Vm/(W*h))); }
   h=up5(Math.max(hmin,Vm/(W*Lt)));
+  if(wtF&&F.tanque!=="cil"&&Lt>4*W+1e-9) av.push(`Tanque retangular com ${f(W)} m de largura fica com ${f(Lt)} m de comprimento, mais de 4 vezes a largura (NBR 7229): escolha uma largura maior.`);
   // tanque cilíndrico (NBR 7229): diâmetro >= 1,10 m e não maior que 2 vezes a profundidade útil
-  const cil=F.tanque==="cil"; if(cil){ h=hmin; let Dt=Math.max(1.1,up5(Math.sqrt(4*Vm/(Math.PI*h)))); while(Dt>2*h&&h<hmax){ h=Math.min(hmax,h+0.1); Dt=Math.max(1.1,up5(Math.sqrt(4*Vm/(Math.PI*h)))); }
-    h=up5(Math.max(hmin,Vm/(Math.PI*Dt*Dt/4))); W=Dt; Lt=Dt; }
+  const cil=F.tanque==="cil"; if(cil){ h=hmin; let Dt;
+    if(dtF){ Dt=dtF; h=up5(Math.max(hmin,Vm/(Math.PI*Dt*Dt/4),Dt/2)); if(h>hmax+1e-9) av.push(`Com ${f(Dt)} m de diâmetro o tanque precisa de ${f(h)} m de profundidade útil, acima do máximo de ${f(hmax)} m da NBR 7229 para ${f(Vm,2)} m³: escolha um diâmetro maior.`); }
+    else { Dt=Math.max(1.1,up5(Math.sqrt(4*Vm/(Math.PI*h)))); while(Dt>2*h&&h<hmax){ h=Math.min(hmax,h+0.1); Dt=Math.max(1.1,up5(Math.sqrt(4*Vm/(Math.PI*h)))); } h=up5(Math.max(hmin,Vm/(Math.PI*Dt*Dt/4))); }
+    W=Dt; Lt=Dt; }
   const fil=F.filtro!=="não";
   // filtro anaeróbio (esgoto acima de 25 °C)
   const Tf=[0.92,0.83,0.75,0.67,0.58,0.5,0.5][fx<0?6:fx], Vf=fil?Math.max(1000,1.6*N*C*Tf):0, Df=fil?Math.max(0.95,up5(Math.sqrt(4*(Vf/1000)/1.2/Math.PI))):0;
@@ -2261,7 +2269,9 @@ function dimFossa(HD){ const F=S.fossa||{}, N=Math.max(1,HD.pessoas), com=!!HD.c
   const dsF=num(F.ds)>0?num(F.ds):0;   // diâmetro escolhido: mais unidades só se passar de 3 m de altura útil
   if(dsF){ Ds=dsF; for(;;){ const a=Ai/ns, hh=(a-Math.PI*Ds*Ds/4)/(Math.PI*Ds); if(hh<=3||ns>=6){ hs=Math.max(1.0,up5(hh)); break; } ns++; } }
   else for(;;){ const a=Ai/ns; const ok=[1.2,1.5,2.0,2.5].find(d=>(a-Math.PI*d*d/4)/(Math.PI*d)<=3); if(ok){ Ds=ok; hs=Math.max(1.0,up5((a-Math.PI*ok*ok/4)/(Math.PI*ok))); break; } ns++; if(ns>6){ Ds=2.5; hs=3; break; } }
-  return {N,C,Lf,Q,T,lim,K,V,h,W,L:Lt,cil,fil,Tf,Vf,Df,ci,Ai,ns,Ds,hs,com,e:0.15,afast:1.5}; }
+  const gap=num(F.gap)>0?num(F.gap):1.5, afast=num(F.afast)>0?Math.max(1.5,num(F.afast)):1.5, gapU=num(F.gap)>0;
+  if(gap<1.5-1e-9) av.push(`Distância de ${f(gap)} m entre tanque, filtro e sumidouro: a NBR 7229 pede 1,50 m entre o tanque e o sumidouro. Use só se o solo e a prefeitura permitirem.`);
+  return {N,C,Lf,Q,T,lim,K,V,h,W,L:Lt,cil,fil,Tf,Vf,Df,ci,Ai,ns,Ds,hs,com,e:0.15,afast,gap,gapU,av}; }
 let _fossaCache=null;
 // passeios (calçadas) dos lados do lote que dão para rua: faixa entre o alinhamento e o meio-fio
 function passeios(G){ if(G.vazio) return []; const T=terreno(G), L0=T.lote, n=L0.length, cal=Math.max(0,num(S.terr.calcada)); if(cal<0.6) return [];
@@ -2273,8 +2283,8 @@ function passeios(G){ if(G.vazio) return []; const T=terreno(G), L0=T.lote, n=L0
   return out; }
 const noPasseio=(p,PS,m=0.05)=>PS.some(q=>{ const dx=p[0]-q.a[0], dy=p[1]-q.a[1], s0=dx*q.u[0]+dy*q.u[1], t0=dx*q.n[0]+dy*q.n[1]; return t0>=m&&t0<=q.cal-m&&s0>=-q.cal&&s0<=q.L+q.cal; });
 function fossaSeptica(G,HD){ return HD&&HD.fossa||null; }
-function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, gap=FS.afast, loc=String((S.fossa||{}).local||"lote");
-  const key=JSON.stringify([TL,G.contExt,FS.L,FS.W,FS.cil,FS.fil,FS.Df,FS.Ds,FS.ns,alvo,loc,S.terr.calcada]); if(_fossaCache&&_fossaCache.key===key) return _fossaCache.pos;
+function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, gap=FS.gap, afa=FS.afast, loc=String((S.fossa||{}).local||"lote");
+  const key=JSON.stringify([TL,G.contExt,FS.L,FS.W,FS.cil,FS.fil,FS.Df,FS.Ds,FS.ns,alvo,loc,S.terr.calcada,gap,afa]); if(_fossaCache&&_fossaCache.key===key) return _fossaCache.pos;
   if(loc!=="lote"){ const pos=fossaNoPasseio(G,FS,alvo,+loc-1); _fossaCache={key,pos}; return pos; }
   const segs=[...TL.map((a,i)=>({a,b:TL[(i+1)%nT],lote:1}))], dS=(p,s0)=>distSeg(p,{x1:s0.a[0],y1:s0.a[1],x2:s0.b[0],y2:s0.b[1]});
   const casas=G.casas||[], walls=G.contExt.map(s0=>({a:[s0[0],s0[1]],b:[s0[2],s0[3]]}));
@@ -2291,12 +2301,12 @@ function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, ga
       [...(FS.fil?[[cf,rf]]:[]),...cs.map(c=>[c,rs])].forEach(([c,r])=>{ for(let i=0;i<12;i++){ const an=i*Math.PI/6; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } });
       const cl=Math.min(...pts.map(folga));
       const ent=[ct[0]-ax[0]*Lo/2,ct[1]-ax[1]*Lo/2], dd=Math.hypot(ent[0]-alvo[0],ent[1]-alvo[1]);
-      const sc=cl>=gap-1e-9?dd:1e6-cl*1000+dd;
+      const sc=cl>=afa-1e-9?dd:1e6-cl*1000+dd;
       if(!best||sc<best.sc) best={sc,cl,ct,cf,cs,ax,pr,ent}; } }
-  const pos={pos:best,cabe:!!best&&best.cl>=gap-1e-9}; _fossaCache={key,pos}; return pos; }
+  const pos={pos:best,cabe:!!best&&best.cl>=afa-1e-9}; _fossaCache={key,pos}; return pos; }
 // conjunto em fila no passeio da rua escolhida, paralelo ao meio-fio, começando o mais perto da caixa final
 function fossaNoPasseio(G,FS,alvo,i){ const PS=passeios(G), q=PS.find(p=>p.i===i)||PS[0]; if(!q) return {pos:null,cabe:false,passeio:true,motivo:"Nenhum lado do lote marcado como rua (ou passeio com menos de 0,60 m)."};
-  const e=FS.e, Lo=FS.L+2*e, Wo=FS.W+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, gap=0.50, t0=q.cal/2, walls=G.contExt.map(s0=>({x1:s0[0],y1:s0[1],x2:s0[2],y2:s0[3]})), casas=G.casas||[];
+  const e=FS.e, Lo=FS.L+2*e, Wo=FS.W+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, gap=FS.gapU?FS.gap:0.50, t0=q.cal/2, walls=G.contExt.map(s0=>({x1:s0[0],y1:s0[1],x2:s0[2],y2:s0[3]})), casas=G.casas||[];
   const larg=Math.max(Wo,FS.fil?2*rf:0,2*rs); let best=null;
   for(const sg of [1,-1]){ const ax=[q.u[0]*sg,q.u[1]*sg], pr=q.n;
     for(let s0=-q.cal;s0<=q.L+q.cal;s0+=0.25){ const base=[q.a[0]+q.u[0]*s0+q.n[0]*t0,q.a[1]+q.u[1]*s0+q.n[1]*t0], ct=[base[0]+ax[0]*Lo/2,base[1]+ax[1]*Lo/2];
@@ -2330,7 +2340,7 @@ function desenhaFossaPlanta(D,G,FS,HD){ const k=D.k, P=FS.pos; if(!P) return;
   let prev=FS.fil?[cf[0]+ax[0]*(FS.Df/2+0.15),cf[1]+ax[1]*(FS.Df/2+0.15)]:sT; cs.forEach(c=>{ const e1=[c[0]-ax[0]*(FS.Ds/2+0.15),c[1]-ax[1]*(FS.Ds/2+0.15)]; L(D,...prev,...e1,.5,"ESGOTO"); setaFluxo(D,prev,e1,"ESGOTO"); prev=[c[0]+ax[0]*(FS.Ds/2+0.15),c[1]+ax[1]*(FS.Ds/2+0.15)]; });
   rotuloLinha(D,sT,eF,"Ø100","ESGOTO"); }
 // detalhe: planta do conjunto e corte longitudinal
-function desenhoFossa(k,FS){ const D=Dw(k), e=FS.e, g=FS.afast, Lo=FS.L+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, Y=z=>-z;
+function desenhoFossa(k,FS){ const D=Dw(k), e=FS.e, g=FS.gap, Lo=FS.L+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, Y=z=>-z;
   const xT0=0, xT1=Lo, xF=FS.fil?xT1+g+rf:xT1, xS=[]; { let x=FS.fil?xF+rf+g+rs:xT1+g+rs; for(let i=0;i<FS.ns;i++){ xS.push(x); x+=2*rs+g; } } const xEnd=xS[xS.length-1]+rs;
   const cir=(c,r,w,l="ESGOTO",dash)=>{ const pts=[]; for(let i=0;i<=36;i++){ const an=i/36*2*Math.PI; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } PL(D,pts,w,l,dash); };
   const box=(x0,y0,x1,y1,w,l="ESGOTO")=>PL(D,[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]],w,l);
@@ -2345,7 +2355,7 @@ function desenhoFossa(k,FS){ const D=Dw(k), e=FS.e, g=FS.afast, Lo=FS.L+2*e, rf=
   if(FS.cil) cotaH(D,xT0+e,xT1-e,yP+FS.W/2+e+5*k,yP+FS.W/2+e,`Ø${f(FS.L)}`);
   else { cotaH(D,xT0+e,xT1-e,yP+FS.W/2+e+5*k,yP+FS.W/2+e,f(FS.L)); cotaV(D,yP-FS.W/2,yP+FS.W/2,xT0-5*k,xT0,f(FS.W)); }
   if(FS.fil) cotaH(D,xF-FS.Df/2,xF+FS.Df/2,yP+rf+5*k,yP+rf,`Ø${f(FS.Df)}`); xS.forEach(x=>cotaH(D,x-FS.Ds/2,x+FS.Ds/2,yP+rs+5*k,yP+rs,`Ø${f(FS.Ds)}`));
-  cotaH(D,xT1,FS.fil?xF-rf:xS[0]-rs,yP+Math.max(FS.W/2+e,FS.fil?rf:rs)+11*k,yP,`${f(g)} (mín.)`);
+  cotaH(D,xT1,FS.fil?xF-rf:xS[0]-rs,yP+Math.max(FS.W/2+e,FS.fil?rf:rs)+11*k,yP,`${f(g)}${FS.gapU?"":" (mín.)"}`);
   // corte (embaixo): terreno no nível 0
   L(D,-1.2,Y(0),xEnd+1.0,Y(0),.45,"TERRENO");
   const hT=FS.h, liv=0.30, tl=0.10;   // tanque
@@ -2377,13 +2387,13 @@ function desenhoFossa(k,FS){ const D=Dw(k), e=FS.e, g=FS.afast, Lo=FS.L+2*e, rf=
   if(FS.fil) L(D,xF+rf,Y(zF0+hF),xS[0]-FS.Ds/2-e,Y(zF0+hF-0.02),.5,"ESGOTO"); else L(D,xT1,Y(zN),xS[0]-FS.Ds/2-e,Y(zN-0.02),.5,"ESGOTO");
   TX(D,-1.0,Y(0)-4*k,"CORTE LONGITUDINAL",1.8,{b:true,a:"s"}); TX(D,xEnd/2,Y(-0.4-FS.hs-0.5)+5*k,"Tubos de PVC Ø100 com declividade mínima de 1%. Medidas internas em metros.",1.3,{l:"COTAS"});
   return D; }
-const linhasFossa=FS=>[["Contribuintes (N)",`${FS.N} ${FS.com?"pessoas (escritório)":"pessoas"}`],["Contribuição (C)",`${FS.C} L/pessoa·dia`],["Contribuição diária",`${f(FS.Q,0)} L/dia`],["Tempo de detenção (T)",`${f(FS.T)} dia`],["Taxa de lodo (K) · lodo fresco (Lf)",`${FS.K} · ${f(FS.Lf,1)}`],
+const linhasFossa=FS=>[["Distância entre as unidades",`${f(FS.gap)} m`],["Afastamento da construção e divisas",FS.passeio?"no passeio":`${f(FS.afast)} m`],["Contribuintes (N)",`${FS.N} ${FS.com?"pessoas (escritório)":"pessoas"}`],["Contribuição (C)",`${FS.C} L/pessoa·dia`],["Contribuição diária",`${f(FS.Q,0)} L/dia`],["Tempo de detenção (T)",`${f(FS.T)} dia`],["Taxa de lodo (K) · lodo fresco (Lf)",`${FS.K} · ${f(FS.Lf,1)}`],
   ["Tanque séptico: volume útil",`${f(FS.V,0)} L`],FS.cil?["Tanque cilíndrico: diâmetro x h útil",`Ø${f(FS.L)} x ${f(FS.h)} m`]:["Tanque: largura x comprimento x h útil",`${f(FS.W)} x ${f(FS.L)} x ${f(FS.h)} m`],...(FS.fil?[["Filtro anaeróbio: volume útil",`${f(FS.Vf,0)} L`],["Filtro: diâmetro x leito",`Ø${f(FS.Df)} x 1,20 m`]]:[]),
   ["Sumidouro: área de infiltração",`${f(FS.Ai)} m²`],["Sumidouro: diâmetro x h útil",`${FS.ns>1?FS.ns+" x ":""}Ø${f(FS.Ds)} x ${f(FS.hs)} m`]];
 const notasFossa=FS=>[`Tanque séptico (NBR 7229): V = 1000 + N (C·T + K·Lf) = 1000 + ${FS.N} (${FS.C}×${f(FS.T)} + ${FS.K}×${f(FS.Lf,1)}) = ${f(FS.V,0)} L; limpeza a cada ${FS.lim} ano${FS.lim>1?"s":""}.${FS.cil?` Tanque cilíndrico: diâmetro mínimo 1,10 m e não maior que 2 vezes a profundidade útil.`:""}`,
   FS.fil?`Filtro anaeróbio (NBR 13969): Vu = 1,6 N C T = 1,6 × ${FS.N} × ${FS.C} × ${f(FS.Tf)} = ${f(FS.Vf,0)} L; leito de brita nº 4 com 1,20 m sobre fundo falso perfurado.`:`Sem filtro anaeróbio: o efluente do tanque séptico vai direto para o sumidouro. Confirmar com a prefeitura/órgão ambiental se o pós-tratamento é exigido no local.`,
   `Sumidouro: área de infiltração = ${f(FS.Q,0)} L/dia ÷ ${f(FS.ci,0)} L/m²·dia = ${f(FS.Ai)} m² (${FS.ns} un). Confirmar o coeficiente com teste de percolação (NBR 7229, anexo A).`,
-  FS.passeio?`Conjunto no passeio da ${FS.rua}, com autorização da prefeitura; tampas niveladas com a calçada e resistentes a tráfego de pedestres. Manter 15 m de poços e o fundo do sumidouro 1,50 m acima do lençol freático.`:`Afastamento mínimo de 1,50 m de construções, divisas, entre as unidades e do ramal de água; 15 m de poços. Fundo do sumidouro a pelo menos 1,50 m acima do lençol freático.`,
+  FS.passeio?`Conjunto no passeio da ${FS.rua}, com autorização da prefeitura; tampas niveladas com a calçada e resistentes a tráfego de pedestres. Manter 15 m de poços e o fundo do sumidouro 1,50 m acima do lençol freático.`:`Afastamento de ${f(FS.afast)} m de construções e divisas (mínimo 1,50 m), ${f(FS.gap)} m entre as unidades${FS.gap<1.5-1e-9?" (abaixo do 1,50 m da NBR 7229 entre tanque e sumidouro)":""} e 1,50 m do ramal de água; 15 m de poços. Fundo do sumidouro a pelo menos 1,50 m acima do lençol freático.`,
   `Tampas de inspeção de concreto 60x60 sobre cada unidade; tubos de entrada e saída com T de PVC Ø100.`];
 
 
@@ -4127,6 +4137,7 @@ function render(){
     $("hidAvisos").innerHTML=HD.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join("");
     $("tabHid").innerHTML=`<tr><th>Ambiente</th><th>Aparelho</th><th class="n">Água fria</th><th class="n">Altura</th><th class="n">Esgoto</th></tr>`+(HD.ap.length?HD.ap.map(a=>`<tr><td>${esc(a.r.n)}</td><td>${esc(a.nome)}</td><td class="n">Ø${a.dAf}</td><td class="n">${a.h} m</td><td class="n">${a.dEs?`Ø${a.dEs}`:"pelo ralo"}</td></tr>`).join(""):`<tr><td colspan="5" style="color:var(--muted)">Sem pontos.</td></tr>`);
     $("hidNotas").innerHTML=notasHidro(HD).map(t=>`<li>${esc(t)}</li>`).join("");
+    $("fossa.dt").closest("label").hidden=S.fossa.tanque!=="cil"; $("fossa.wt").closest("label").hidden=S.fossa.tanque==="cil";
     { const sl=$("fossa.local"), PSs=passeios(G); sl.innerHTML=`<option value="lote">Dentro do lote (1,50 m de afastamento)</option>`+PSs.map(q=>`<option value="${q.i+1}">No passeio da ${esc(q.nome)}</option>`).join("");
       if(![...sl.options].some(o=>o.value===String(S.fossa.local))) S.fossa.local="lote"; sl.value=String(S.fossa.local);
       const sa=$("ap.rua"); sa.innerHTML=`<option value="frente">A rua da frente</option>`+PSs.map(q=>`<option value="${q.i+1}">${esc(q.nome)}</option>`).join("");
@@ -4135,7 +4146,8 @@ function render(){
       if(FS){ $("fossaDes").innerHTML=svgDe(desenhoFossa(0.05,FS)); $("tabFossa").innerHTML=`<tr><th>Item</th><th class="n">Valor</th></tr>`+linhasFossa(FS).map(r=>`<tr><td>${esc(r[0])}</td><td class="n">${esc(r[1])}</td></tr>`).join("");
         $("fossaNotas").innerHTML=notasFossa(FS).map(t=>`<li>${esc(t)}</li>`).join("");
         $("fossaAvisos").innerHTML=FS.passeio?(FS.pos?`<div class="alert warn">Conjunto no passeio da ${esc(FS.rua)}: precisa de autorização da prefeitura/concessionária. A NBR 7229 recomenda 1,50 m de afastamento de construções; aqui ele fica junto da parede.${FS.estreito?` O passeio (${f(num(S.terr.calcada))} m) é mais estreito que o conjunto: confira a largura da calçada.`:""}${FS.cabe?"":" Parte do conjunto sai do passeio."}</div>`:`<div class="alert bad">${esc(FS.motivo||"Não achei lugar no passeio.")}</div>`)
-          :FS.cabe?"":`<div class="alert bad">O conjunto não cabe no lote com 1,50 m de afastamento da construção e das divisas (folga máxima encontrada ${f(FS.pos?FS.pos.cl:0)} m). Ele foi colocado no melhor lugar possível; avalie outra solução (unidades mais compactas, tanque e filtro conjugados, vala de infiltração) com a concessionária/prefeitura.</div>`; } }
+          :FS.cabe?"":`<div class="alert bad">O conjunto não cabe no lote com ${f(FS.afast)} m de afastamento da construção e das divisas (folga máxima encontrada ${f(FS.pos?FS.pos.cl:0)} m). Ele foi colocado no melhor lugar possível; avalie outra solução (unidades mais compactas, tanque e filtro conjugados, vala de infiltração) com a concessionária/prefeitura.</div>`;
+        if(FS.av&&FS.av.length) $("fossaAvisos").innerHTML+=FS.av.map(t0=>`<div class="alert warn">${esc(t0)}</div>`).join(""); } }
     const nT=t=>EL.pts.filter(q=>q.t===t).length;
     $("eleChips").innerHTML=G.vazio?"":[`${nT("luz")} pontos de luz`,`${nT("int")} interruptores`,`${nT("tug")} tomadas (TUG)`,`${nT("tue")} TUE`,`${EL.C.length} circuitos`,`Potência instalada ${f(EL.tot/1000)} kVA`].map(t=>`<span class="chip">${t}</span>`).join("");
     $("eleAvisos").innerHTML=EL.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join("");
@@ -4287,8 +4299,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
   const tb=$("ladosTab"), foco=document.activeElement&&tb.contains(document.activeElement)?[document.activeElement.dataset.li,document.activeElement.dataset.lc]:null;
