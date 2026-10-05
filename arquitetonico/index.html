@@ -546,8 +546,8 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <div id="sitAvisos"></div>
     </div>
     <div class="sheet">
-      <h2>Planta de locação da obra</h2>
-      <p class="cap">Eixos de todas as paredes com cotas acumuladas a partir do ponto P0 (canto da frente com a divisa esquerda, olhando da rua), gabarito a 1,20 m da obra e as pontas das paredes chanfradas. É o que o mestre de obras marca no gabarito.</p>
+      <h2>Planta de locação (eixos dos pilares)</h2>
+      <p class="cap">Eixo de cada pilar com as cotas acumuladas a partir do ponto P0 (canto da frente com a divisa esquerda, olhando da rua): X ao longo do alinhamento e Y para dentro do lote, gabarito a 1,20 m da obra. Faz parte do projeto estrutural; sem estrutura, mostra os eixos das paredes.</p>
       <div class="draw" id="locDes"></div>
       <div class="tbl"><table id="tabLoc"></table></div><ol class="notes" id="locNotas" style="margin-top:12px"></ol>
     </div>
@@ -1003,7 +1003,7 @@ function desencavala(D){ if(!D||D._dc) return D; D._dc=1; const k=D.k, T=D.p.fil
   ord.forEach(({q,m})=>{ const B0=caixa(q,q.x,q.y); if(m==="f"||custo(B0)<=1e-9){ feitos.push(B0); return; }
     const st=2*B0.hh, cand=[];
     if(m==="n"){ for(const b of [1,2,3,4]) for(const sg of [1,-1]) cand.push([B0.n[0]*st*b*sg,B0.n[1]*st*b*sg]); }   // nota com linha de chamada: sobe ou desce, a linha acompanha
-    else if(m==="c"){ for(const a of [0.55,1.1,1.7]) for(const sg of [1,-1]) cand.push([B0.d[0]*B0.w*a*sg,B0.d[1]*B0.w*a*sg]); for(const b of [1,2]) for(const sg of [-1,1]) cand.push([B0.n[0]*st*b*sg,B0.n[1]*st*b*sg]); }
+    else if(m==="c"){ for(const a of [0.55,1.1,1.7,2.4]) for(const sg of [1,-1]) cand.push([B0.d[0]*B0.w*a*sg,B0.d[1]*B0.w*a*sg]); for(const b of [1,2,3]) for(const sg of [-1,1]){ cand.push([B0.n[0]*st*b*sg,B0.n[1]*st*b*sg]); for(const a of [0.6,-0.6]) cand.push([B0.n[0]*st*b*sg+B0.d[0]*B0.w*a,B0.n[1]*st*b*sg+B0.d[1]*B0.w*a]); } }
     else for(const r of m==="r"?[0.6,1,1.5]:[1,1.6,2.3,3.2,4.4]) for(let j=0;j<12;j++){   // nome de ambiente só anda um pouco
  const a=j*Math.PI/6, ca=Math.cos(a), sa=Math.sin(a), du=ca*(B0.w/2+B0.hh)*r*0.9, dn=sa*st*r; cand.push([B0.d[0]*du+B0.n[0]*dn,B0.d[1]*du+B0.n[1]*dn]); }
     let best=null; const f0=fora(q,q.x,q.y); cand.forEach(([ox,oy])=>{ if(fora(q,q.x+ox,q.y+oy)>f0+1e-9) return; const B=caixa(q,q.x+ox,q.y+oy), o=custo(B), dist=Math.hypot(ox,oy), c=o*100+corta(B)*(m==="c"?0.2:1)*st+dist*0.6; if(!best||c<best.c) best={c,o,ox,oy,B,dist}; });
@@ -1048,6 +1048,13 @@ function cotaAlinhada(D,p,q,sg,nX,nY,txt){ const k=D.k, dx=q[0]-p[0], dy=q[1]-p[
   [[p,a],[q,b]].forEach(([s0,e])=>{ L(D,s0[0]+nx*k,s0[1]+ny*k,e[0]+nx*1.5*k,e[1]+ny*1.5*k,.13,"COTAS"); const tx=(ux+nx)*0.65*k, ty=(uy+ny)*0.65*k; L(D,e[0]-tx,e[1]-ty,e[0]+tx,e[1]+ty,.35,"COTAS"); });
   let ang=Math.atan2(dy,dx)*180/Math.PI; if(ang>=90) ang-=180; if(ang<-90) ang+=180;
   TX(D,(a[0]+b[0])/2+nx*1.6*k,(a[1]+b[1])/2+ny*1.6*k,txt,1.8,{l:"COTAS",rot:ang,mv:"c"}); }
+// cadeia de cotas ao longo de uma parede (qualquer direção): a = ponto da face, u = direção, n = lado da cota, ts = distâncias desde a, o = afastamento em mm
+function cadeiaAlinhada(D,a,u,n,ts,o){ const k=D.k, P=(t,d)=>[a[0]+u[0]*t+n[0]*d*k,a[1]+u[1]*t+n[1]*d*k]; if(ts.length<2) return;
+  L(D,...P(ts[0],o),...P(ts[ts.length-1],o),.18,"COTAS");
+  ts.forEach(t=>{ L(D,...P(t,1),...P(t,o+1.5),.13,"COTAS"); const q=P(t,o), tx=(u[0]+n[0])*0.65*k, ty=(u[1]+n[1])*0.65*k; L(D,q[0]-tx,q[1]-ty,q[0]+tx,q[1]+ty,.35,"COTAS"); });
+  let ang=Math.atan2(u[1],u[0])*180/Math.PI; if(ang>=90) ang-=180; if(ang<-90) ang+=180; let alt=0;
+  for(let i=0;i+1<ts.length;i++){ const d=ts[i+1]-ts[i]; if(d<0.005) continue; const txt=f(d), curto=d/k<largTexto(txt)*1.8*1.39+1.5; if(curto) alt=alt===1?2:1;
+    TX(D,...P((ts[i]+ts[i+1])/2,o+(curto&&alt===2?4.2:1.6)),txt,1.8,{l:"COTAS",rot:ang,mv:"c"}); } }
 function nivelInt(D,x,y,txt){ const k=D.k; L(D,x-3*k,y,x+3*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.1*k,y-1.9*k],[x+1.1*k,y-1.9*k]],"COTAS"); TX(D,x,y-3.4*k,txt,1.7,{l:"COTAS"}); }
 function nivel(D,x,y,txt,abaixo){ const k=D.k, sg=abaixo?-1:1; L(D,x-2*k,y,x+12*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.2*k,y-sg*2*k],[x+1.2*k,y-sg*2*k]],"COTAS"); TX(D,x+2*k,y-sg*2.6*k,txt,1.8,{a:"s",l:"COTAS"}); }
 
@@ -1096,10 +1103,22 @@ function desenhoPlanta(G,k,ajuda){
   G.pecas.forEach(P=>PG(D,P,"HACHURA"));
   G.contPar.forEach(s=>L(D,...s,.5,"PAREDE"));
   marcaDrywall(D,G);
-  // parede inclinada (chanfro): cota alinhada pela face de fora
-  G.incl.forEach(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, o=h+0.12, Cp=G.compAt(mx+w.nX*o,my+w.nY*o), sg=(!Cp||Cp.ext)?1:-1;
-    if((mx-bb.x0<0.8||my-bb.y0<0.8)&&Math.hypot(w.x2-w.x1,w.y2-w.y1)<2.5) return;   // parede curta junto das cadeias: a medida já está nelas
-    const a=sg>0?w.cA[0]:w.cA[1], b=sg>0?w.cB[0]:w.cB[1]; cotaAlinhada(D,a,b,sg,w.nX,w.nY,f(Math.hypot(b[0]-a[0],b[1]-a[1]))); });
+  // cotas de cada parede de fora pela face externa: trechos de parede e vãos (portas e janelas) e o total
+  const lado=(w,sg)=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, o=h+0.12, C=G.compAt(mx+w.nX*o*sg,my+w.nY*o*sg); return !C||C.ext; };
+  G.walls.forEach(w=>{ const sg=lado(w,1)&&!lado(w,-1)?1:lado(w,-1)&&!lado(w,1)?-1:0; if(!sg) return;   // só paredes com um lado para fora
+    const a=sg>0?w.cA[0]:w.cA[1], b=sg>0?w.cB[0]:w.cB[1], u=[w.ux,w.uy], n=[w.nX*sg,w.nY*sg], Lf=(b[0]-a[0])*u[0]+(b[1]-a[1])*u[1], d0=(w.x1-a[0])*u[0]+(w.y1-a[1])*u[1];
+    if(Lf<0.3) return;
+    const vs=G.abs.filter(g=>g.w===w).flatMap(g=>[d0+g.d,d0+g.d+g.l]).filter(t=>t>0.005&&t<Lf-0.005), ts=uniq([0,...vs,Lf]).sort((p,q)=>p-q);
+    const cima=w.hz&&Math.abs(Math.min(a[1],b[1])-bb.y0)<0.02&&n[1]<0, esq=w.vt&&Math.abs(Math.min(a[0],b[0])-bb.x0)<0.02&&n[0]<0, nasCadeias=cima||esq;   // em cima e à esquerda as cadeias gerais já dão o total
+    if(vs.length) cadeiaAlinhada(D,a,u,n,ts,nasCadeias?4.2:5);
+    if(!nasCadeias){ if(!vs.length&&!w.hz&&!w.vt&&(((w.x1+w.x2)/2-bb.x0<0.8)||((w.y1+w.y2)/2-bb.y0<0.8))&&Lf<2.5) return;   // parede curta junto das cadeias
+      cadeiaAlinhada(D,a,u,n,[0,Lf],vs.length?11:5); } });
+  // cotas internas de cada ambiente (faces das paredes e portas), por dentro
+  G.rooms.forEach(r=>{ if(r.area<3.5) return; const P=r.poly, m=P.length;
+    P.forEach((a,i)=>{ const b=P[(i+1)%m], Lr=Math.hypot(b[0]-a[0],b[1]-a[1]); if(Lr<1.0) return; const u=[(b[0]-a[0])/Lr,(b[1]-a[1])/Lr]; let n=[-u[1],u[0]]; const mm=[(a[0]+b[0])/2+n[0]*0.05,(a[1]+b[1])/2+n[1]*0.05]; if(!pip(P,mm[0],mm[1])) n=[-n[0],-n[1]];
+      const vs=G.abs.flatMap(g=>{ const c=[(g.p0[0]+g.p1[0])/2,(g.p0[1]+g.p1[1])/2], dn=Math.abs((c[0]-a[0])*n[0]+(c[1]-a[1])*n[1]); if(Math.abs(dn-h)>0.05) return []; const t0=(g.p0[0]-a[0])*u[0]+(g.p0[1]-a[1])*u[1], t1=(g.p1[0]-a[0])*u[0]+(g.p1[1]-a[1])*u[1]; return [t0,t1]; }).filter(t=>t>0.005&&t<Lr-0.005);
+      if(r.ret&&!vs.length) return;   // ambiente retangular: as medidas já estão no rótulo (L x C); cota interna só onde tem porta ou janela
+      cadeiaAlinhada(D,a,u,n,uniq([0,...vs,Lr]).sort((p,q)=>p-q),3); }); });
   desenhaAberturas(D,G,G.abs);
   // ambientes
   G.rooms.forEach(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; const x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy;
@@ -1113,10 +1132,10 @@ function desenhoPlanta(G,k,ajuda){
   cadeiaV(D,fy,bb.x0-9*k,bb.x0); cotaV(D,bb.y0,bb.y1,bb.x0-16*k,bb.x0-9*k,f(bb.y1-bb.y0));
   // linhas de corte
   const cA=posCorte(G,"A"), cB=posCorte(G,"B"), r=2.6*k;
-  L(D,bb.x0-22*k,cA,bb.x1+7*k,cA,.35,"CORTE",true);
-  [[bb.x0-22*k-r,cA],[bb.x1+7*k+r,cA]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"A",2.2,{b:true,l:"CORTE"}); PG(D,[[x-1.2*k,y-r-0.4*k],[x+1.2*k,y-r-0.4*k],[x,y-r-2.6*k]],"CORTE"); });
-  L(D,cB,bb.y0-22*k,cB,bb.y1+7*k,.35,"CORTE",true);
-  [[cB,bb.y0-22*k-r],[cB,bb.y1+7*k+r]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"B",2.2,{b:true,l:"CORTE"}); PG(D,[[x+r+0.4*k,y-1.2*k],[x+r+0.4*k,y+1.2*k],[x+r+2.6*k,y]],"CORTE"); });
+  L(D,bb.x0-22*k,cA,bb.x1+19*k,cA,.35,"CORTE",true);
+  [[bb.x0-22*k-r,cA],[bb.x1+19*k+r,cA]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"A",2.2,{b:true,l:"CORTE"}); PG(D,[[x-1.2*k,y-r-0.4*k],[x+1.2*k,y-r-0.4*k],[x,y-r-2.6*k]],"CORTE"); });
+  L(D,cB,bb.y0-22*k,cB,bb.y1+19*k,.35,"CORTE",true);
+  [[cB,bb.y0-22*k-r],[cB,bb.y1+19*k+r]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"B",2.2,{b:true,l:"CORTE"}); PG(D,[[x+r+0.4*k,y-1.2*k],[x+r+0.4*k,y+1.2*k],[x+r+2.6*k,y]],"CORTE"); });
   if(ajuda) G.walls.forEach(w=>TX(D,(w.x1+w.x2)/2,(w.y1+w.y2)/2,String(w.i+1),1.7,{b:true,l:"AJUDA"}));
   return D;
 }
@@ -3416,10 +3435,14 @@ function locacao(G){ if(G.vazio) return null; const T=terreno(G), P0=T.lote[0], 
   const ey=ordY.map((y,i)=>({o:"h",c:y,d:Math.abs(y-P0[1]),ref:frenteVert?"divisa esquerda":rf,nome:frenteVert?LET[i]||"?":String(i+1)}));
   const dF=p=>T.F1-(p[0]*T.V[0]+p[1]*T.V[1]), dR=p=>(p[0]*T.Rt[0]+p[1]*T.Rt[1])-T.R0;
   const incl=G.incl.map((w,i)=>({i:w.i,a:[w.x1,w.y1],b:[w.x2,w.y2],fa:dF([w.x1,w.y1]),ra:dR([w.x1,w.y1]),fb:dF([w.x2,w.y2]),rb:dR([w.x2,w.y2])}));
-  return {T,P0,gab,eixos:[...ex,...ey],incl}; }
+  // eixos dos pilares (estrutural): X ao longo do alinhamento a partir do P0, Y do alinhamento para dentro do lote
+  const sis0=(S.estr||{}).sis||"auto", sis=sis0==="auto"?(num(S.laje)>0.04?"conv":"simples"):sis0, ES=sis==="nenhum"?null:estrutural(G,sis==="simples");
+  const X0=P0[0]*T.Rt[0]+P0[1]*T.Rt[1], Y0=P0[0]*T.V[0]+P0[1]*T.V[1];
+  const pil=ES&&ES.pil.length?ES.pil.map(q=>({nome:q.nome,c:q.c,u:q.u,X:q.c[0]*T.Rt[0]+q.c[1]*T.Rt[1]-X0,Y:Y0-(q.c[0]*T.V[0]+q.c[1]*T.V[1])})):null;
+  return {T,P0,gab,eixos:[...ex,...ey],incl,pil,ES}; }
 function desenhoLocacao(G,k,LC){
   const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
-  LC=LC||locacao(G); const {T,P0,gab}=LC, bb=G.bb, g={x0:bb.x0-gab,y0:bb.y0-gab,x1:bb.x1+gab,y1:bb.y1+gab};
+  LC=LC||locacao(G); if(LC.pil) return desenhoLocPilares(G,k,LC,D); const {T,P0,gab}=LC, bb=G.bb, g={x0:bb.x0-gab,y0:bb.y0-gab,x1:bb.x1+gab,y1:bb.y1+gab};
   // só o trecho do lote em volta da obra e do P0 (o resto do terreno fica na planta de situação)
   const W={x0:Math.min(P0[0],g.x0)-0.8,x1:Math.max(P0[0],g.x1)+0.8,y0:Math.min(P0[1],g.y0)-0.8,y1:Math.max(P0[1],g.y1)+0.8};
   const clip=([xa,ya,xb,yb])=>{ let t0=0,t1=1; const dx=xb-xa, dy=yb-ya; for(const [pp,qq] of [[-dx,xa-W.x0],[dx,W.x1-xa],[-dy,ya-W.y0],[dy,W.y1-ya]]){ if(Math.abs(pp)<1e-12){ if(qq<0) return null; continue; } const rr=qq/pp; if(pp<0) t0=Math.max(t0,rr); else t1=Math.min(t1,rr); } return t0<t1?[xa+dx*t0,ya+dy*t0,xa+dx*t1,ya+dy*t1]:null; };
@@ -3453,6 +3476,45 @@ function desenhoLocacao(G,k,LC){
   { const c=T.P(T.F1,(T.R0+T.R1)/2), m=[Math.min(Math.max(c[0],W.x0+2),W.x1-2),Math.min(Math.max(c[1],W.y0+2),W.y1-2)], o=[T.V[0]*(14*k),T.V[1]*(14*k)], pa=[m[0]+o[0]+(T.V[0]?0:0),m[1]+o[1]];
     TX(D,T.V[0]?c[0]+o[0]:m[0],T.V[1]?c[1]+o[1]:m[1],"ALINHAMENTO (FRENTE) · "+String(S.terr.rua||"RUA").toUpperCase(),1.8,{b:true,l:"COTAS",mv:"l",rot:(()=>{ const a=Math.atan2(T.Rt[1],T.Rt[0])*180/Math.PI; return a>=89.99?a-180:a<-90.01?a+180:a; })()}); }
   return D; }
+// locação pelos eixos de cada pilar: linhas de eixo, cotas acumuladas a partir do P0 nas duas direções e quadro de coordenadas
+function desenhoLocPilares(G,k,LC,D){ const {T,P0,gab}=LC, bb=G.bb, Rt=T.Rt, V=T.V, g={x0:bb.x0-gab,y0:bb.y0-gab,x1:bb.x1+gab,y1:bb.y1+gab};
+  const W={x0:Math.min(P0[0],g.x0)-0.8,x1:Math.max(P0[0],g.x1)+0.8,y0:Math.min(P0[1],g.y0)-0.8,y1:Math.max(P0[1],g.y1)+0.8};
+  const clip=([xa,ya,xb,yb])=>{ let t0=0,t1=1; const dx=xb-xa, dy=yb-ya; for(const [pp,qq] of [[-dx,xa-W.x0],[dx,W.x1-xa],[-dy,ya-W.y0],[dy,W.y1-ya]]){ if(Math.abs(pp)<1e-12){ if(qq<0) return null; continue; } const rr=qq/pp; if(pp<0) t0=Math.max(t0,rr); else t1=Math.min(t1,rr); } return t0<t1?[xa+dx*t0,ya+dy*t0,xa+dx*t1,ya+dy*t1]:null; };
+  T.lote.forEach((a,i)=>{ const b=T.lote[(i+1)%T.lote.length], q=clip([a[0],a[1],b[0],b[1]]); if(q) L(D,...q,.5,"LOTE"); });
+  (G.casas||[]).forEach(Pc=>PG(D,Pc,"HACHURA")); G.contExt.forEach(s0=>L(D,...s0,.35,"PAREDE")); G.pecas.forEach(Pp=>PL(D,[...Pp,Pp[0]],.1,"PAREDE"));
+  PL(D,[[g.x0,g.y0],[g.x1,g.y0],[g.x1,g.y1],[g.x0,g.y1],[g.x0,g.y0]],.35,"EIXO",true);
+  TX(D,(g.x0+g.x1)/2,g.y0-2*k,"GABARITO (tábuas a 1,20 m da obra)",1.6,{l:"EIXO",b:true});
+  // ponto no papel a partir de (X, Y) do P0
+  const PT=(X,Y)=>[P0[0]+Rt[0]*X-V[0]*Y,P0[1]+Rt[1]*X-V[1]*Y], cs=[[g.x0,g.y0],[g.x1,g.y0],[g.x1,g.y1],[g.x0,g.y1]];
+  const Xs=cs.map(p=>(p[0]-P0[0])*Rt[0]+(p[1]-P0[1])*Rt[1]), Ys=cs.map(p=>-((p[0]-P0[0])*V[0]+(p[1]-P0[1])*V[1]));
+  const Xmin=Math.min(0,...Xs), Ymax=Math.max(...Ys), Ymin=Math.min(0,...Ys);
+  const yX=Ymin-(6*k), xY=Xmin-(6*k);   // linha das cotas X (do lado do alinhamento) e das cotas Y (do lado esquerdo)
+  const uni=v=>{ const a=[...v].sort((p,q)=>p-q), o=[]; a.forEach(x=>{ if(!o.length||x-o[o.length-1]>0.02) o.push(x); }); return o; };
+  const xu=uni(LC.pil.map(q=>q.X)), yu=uni(LC.pil.map(q=>q.Y));
+  // eixos de cada pilar até as linhas de cota
+  xu.forEach(X=>{ const yTop=Math.max(...LC.pil.filter(q=>Math.abs(q.X-X)<=0.02).map(q=>q.Y)); L(D,...PT(X,yX),...PT(X,yTop+0.3),.13,"EIXO",true); });
+  yu.forEach(Y=>{ const xR=Math.max(...LC.pil.filter(q=>Math.abs(q.Y-Y)<=0.02).map(q=>q.X)); L(D,...PT(xY,Y),...PT(xR+0.3,Y),.13,"EIXO",true); });
+  // pilares e nomes
+  const b=(LC.ES&&LC.ES.b)||0.15;
+  LC.pil.forEach(q=>{ const u=q.u&&Math.hypot(...q.u)>0.5?q.u:Rt, n=[-u[1],u[0]], c=q.c, a=b/2; PG(D,[[c[0]-u[0]*a-n[0]*a,c[1]-u[1]*a-n[1]*a],[c[0]+u[0]*a-n[0]*a,c[1]+u[1]*a-n[1]*a],[c[0]+u[0]*a+n[0]*a,c[1]+u[1]*a+n[1]*a],[c[0]-u[0]*a+n[0]*a,c[1]-u[1]*a+n[1]*a]],"VIGA");
+    TX(D,c[0]+1.6*k,c[1]-1.8*k,q.nome,1.5,{a:"s",b:true,l:"EIXO"}); });
+  // cotas acumuladas a partir do P0
+  const tick=p=>L(D,p[0]-0.8*k,p[1]+0.8*k,p[0]+0.8*k,p[1]-0.8*k,.3,"COTAS");
+  { const a=PT(Math.min(0,...xu),yX), e=PT(Math.max(0,...xu),yX); L(D,...a,...e,.18,"COTAS"); tick(PT(0,yX)); L(D,...P0,...PT(0,yX),.13,"COTAS");
+    const ang=Math.atan2(V[1],V[0])*180/Math.PI, rot=ang>90?ang-180:ang<=-90?ang+180:ang;
+    xu.forEach(X=>{ const p=PT(X,yX); tick(p); const t=PT(X,yX-2.6*k); TX(D,t[0]-Rt[0]*1.1*k,t[1]-Rt[1]*1.1*k,f(X),1.5,{rot,a:"s",l:"COTAS",mv:"c"}); }); }
+  { const a=PT(xY,Math.min(0,...yu)), e=PT(xY,Math.max(0,...yu)); L(D,...a,...e,.18,"COTAS"); tick(PT(xY,0)); L(D,...P0,...PT(xY,0),.13,"COTAS");
+    const ang=Math.atan2(Rt[1],Rt[0])*180/Math.PI, rot=ang>90?ang-180:ang<=-90?ang+180:ang;
+    yu.forEach(Y=>{ const p=PT(xY,Y); tick(p); const t=PT(xY-1.2*k,Y+1.1*k); TX(D,...t,f(Y),1.5,{rot,a:"e",l:"COTAS",mv:"c"}); }); }
+  TX(D,...PT(Math.max(...xu)+3*k,yX-2.6*k),"X (m)",1.6,{a:"s",b:true,l:"COTAS"}); TX(D,...PT(xY-1.2*k,Math.max(...yu)+3*k),"Y (m)",1.6,{a:"e",b:true,l:"COTAS"});
+  // P0
+  CI(D,P0[0],P0[1],1.4*k,.4,"EIXO"); L(D,P0[0]-2.4*k,P0[1],P0[0]+2.4*k,P0[1],.25,"EIXO"); L(D,P0[0],P0[1]-2.4*k,P0[0],P0[1]+2.4*k,.25,"EIXO");
+  TX(D,P0[0]+3*k,P0[1]+4*k,"P0 (0,00 ; 0,00)",2,{b:true,a:"s",l:"EIXO",mv:"l"});
+  return D; }
+const notasLocPil=LC=>[`P0 = canto do alinhamento (frente) com a divisa esquerda, olhando da rua. X ao longo do alinhamento (para a direita), Y do alinhamento para dentro do lote; valor negativo fica antes do P0.`,
+  `Marcar no gabarito (tábuas a ${f(LC.gab)} m da obra, niveladas) os eixos X e Y de cada pilar com prego e linha de náilon; o centro do pilar fica no cruzamento das duas linhas.`,
+  `Conferir as distâncias entre pilares vizinhos pelas cotas da planta de coluninhas e as diagonais do contorno antes de abrir as brocas.`,
+  `RN ±0,00 = piso acabado, ${f(num(S.piso))} m acima do terreno.`];
 const notasLocacao=LC=>[`P0 = canto do alinhamento (frente) com a divisa esquerda, olhando da rua. Medidas dos eixos a partir dele.`,LC.T.incl?`Frente inclinada (acompanha o chanfro): as medidas "a partir do P0" correm ao longo da divisa esquerda; valor negativo fica antes do P0.`:"",
   `Gabarito de tábuas a ${f(LC.gab)} m da obra, nivelado; marcar os eixos com prego e linha de náilon.`,
   `Conferir o esquadro pelo 3-4-5 (ou diagonais iguais) e o nível com mangueira; RN ±0,00 = piso acabado, ${f(num(S.piso))} m acima do terreno.`,
@@ -3970,7 +4032,10 @@ function render(){
     $("estrNotas").innerHTML=notasTelhado(ET).map(t=>`<li>${esc(t)}</li>`).join(""); }
   $("capCob").textContent=`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}, inclinação ${f(num(S.tel.inc),0)}%${TI.plat?", escondido por platibanda":`, beiral de ${f(TI.b)} m`}. Altura máxima ${f(TI.plat?TI.topoPlat:TI.zmax)} m acima do piso.`;
   $("cobChips").innerHTML=G.vazio?"":[`Área do telhado ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²)`,TI.Lcum?`Cumeeira ${f(TI.Lcum)} m`:"",TI.Lesp?`Espigões ${f(TI.Lesp)} m`:"",`Cumeeira a ${f(TI.zmax)} m`].filter(Boolean).map(t=>`<span class="chip">${t}</span>`).join("");
-  if(!G.vazio){ const LC=locacao(G); $("locDes").innerHTML=svgDe(desenhoLocacao(G,kTela(G)*1.15,LC));
+  if(!G.vazio&&locacao(G).pil){ const LC=locacao(G); $("locDes").innerHTML=svgDe(desenhoLocacao(G,kTela(G)*1.15,LC));   // pelos eixos dos pilares
+    $("tabLoc").innerHTML=`<tr><th>Pilar</th><th class="n">X (m)</th><th class="n">Y (m)</th></tr>`+LC.pil.map(q=>`<tr><td><b>${q.nome}</b></td><td class="n">${f(q.X)}</td><td class="n">${f(q.Y)}</td></tr>`).join("");
+    $("locNotas").innerHTML=notasLocPil(LC).map(t=>`<li>${esc(t)}</li>`).join(""); }
+  else if(!G.vazio){ const LC=locacao(G); $("locDes").innerHTML=svgDe(desenhoLocacao(G,kTela(G)*1.15,LC));
     $("tabLoc").innerHTML=`<tr><th>Eixo</th><th>Medido a partir de</th><th class="n">Distância (m)</th></tr>`+LC.eixos.slice().sort((p,q)=>p.nome.localeCompare(q.nome,"pt",{numeric:true})).map(e=>`<tr><td><b>${e.nome}</b></td><td>${e.ref}</td><td class="n">${f(e.d,3)}</td></tr>`).join("")+
       LC.incl.map((w,j)=>`<tr><td><b>C${j+1}</b></td><td>parede chanfrada ${w.i+1}: ponta a / ponta b (${LC.T.incl?"a partir do P0 ao longo da divisa":"do alinhamento"}; da divisa esq.)</td><td class="n">${f(w.fa,3)}; ${f(w.ra,3)} / ${f(w.fb,3)}; ${f(w.rb,3)}</td></tr>`).join("");
     $("locNotas").innerHTML=notasLocacao(LC).map(t=>`<li>${esc(t)}</li>`).join(""); }
@@ -4396,7 +4461,7 @@ const ESCALAS=[20,25,50,75,100,125,150,200,250,500,750,1000,1500,2000];
 function encaixar(gerar,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=s/1000, D=gerar(k), e=extensao(D), w=(e.x1-e.x0)/k, h=(e.y1-e.y0)/k; ult={D,s,k,e,w,h,gen:gerar}; if(w<=bw&&h<=bh) return ult; } return ult; }
 const naEscala=(gerar,s)=>{ const k=s/1000, D=gerar(k), e=extensao(D); return {D,s,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:gerar}; };
 /* pranchas agrupadas: junta desenhos da mesma disciplina numa folha (A0 até 9, A1 até 6, A2 até 4) */
-const GRUPOS=[/PLANTA BAIXA|DEMOLIR|LAYOUT|CORTES|FACHADAS|COBERTURA|SITUAÇÃO|PAGINAÇÃO|LOCAÇÃO DA OBRA/,/FORMA|COLUNINHAS|PILARES|ESTRUTURA E DETALHES DO TELHADO|ESCADA/,/ELÉTRIC|UNIFILAR|HIDROSS|PLUVIA|FOSSA/,/PINTURA|FORRO|PISO|REVESTIMENTO/,/BANHEIRO|PORTAS|ESQUADRIAS|PERSPECTIVA/];
+const GRUPOS=[/PLANTA BAIXA|DEMOLIR|LAYOUT|CORTES|FACHADAS|COBERTURA|SITUAÇÃO|PAGINAÇÃO/,/FORMA|COLUNINHAS|PILARES|LOCAÇÃO|ESTRUTURA E DETALHES DO TELHADO|ESCADA/,/ELÉTRIC|UNIFILAR|HIDROSS|PLUVIA|FOSSA/,/PINTURA|FORRO|PISO|REVESTIMENTO/,/BANHEIRO|PORTAS|ESQUADRIAS|PERSPECTIVA/];
 const grupoFolha=fl=>{ const i=GRUPOS.findIndex(r=>r.test(fl.conteudo)); return i<0?GRUPOS.length:i; };
 function agruparFolhas(folhas,cap,area,TT){ const aw=area.x1-area.x0, ah=area.y1-area.y0, out=[];
   const ordem=folhas.map((fl,i)=>({fl,i,g:grupoFolha(fl)})).sort((a,b)=>a.g-b.g||a.i-b.i);
@@ -4480,7 +4545,7 @@ function pranchas(fmt){
     ...(efo?[{n:"",conteudo:ES.simples?"PLANTA DE COLUNINHAS E CINTA":"PLANTA DE FORMA (ESTRUTURA)",escala:`1:${efo.s}`,itens:[{d:efo,titulo:ES.simples?"PLANTA DE COLUNINHAS E CINTA":"PLANTA DE FORMA",box:[area.x0,area.y0,aw,ah]}],lado:ES.simples?"formaS":"forma",ES}]:[]),
     ...(efu?[{n:"",conteudo:ES.simples?"LOCAÇÃO DAS COLUNINHAS E FUNDAÇÃO":"LOCAÇÃO DE PILARES E FUNDAÇÃO",escala:`1:${efu.s} / 1:${edf.s}`,itens:[{d:efu,titulo:ES.simples?"LOCAÇÃO DAS COLUNINHAS E FUNDAÇÃO":"LOCAÇÃO DE PILARES E FUNDAÇÃO",box:[area.x0,area.y0,aw*0.68,ah]},{d:edf,titulo:ES.simples?"SEÇÕES":ES.fund==="sapata"?"DETALHE TÍPICO DA SAPATA":"DETALHE TÍPICO DO BLOCO",box:[area.x0+aw*0.68+8,area.y0,aw*0.32-8,ah]}],lado:"fundacao",ES}]:[]),
     ...(eP?[{n:"",conteudo:"DETALHE DA ESCADA",escala:`1:${eP.s} / 1:${eC.s}`,itens:[{d:eP,titulo:"PLANTA DA ESCADA",box:[area.x0,area.y0,aw*0.42,ah]},{d:eC,titulo:"CORTE DA ESCADA",box:[area.x0+aw*0.42+8,area.y0,aw*0.58-8,ah]}],lado:"escada",EC}]:[]),
-    ...(lo?[{n:"",conteudo:"PLANTA DE LOCAÇÃO DA OBRA",escala:`1:${lo.s}`,itens:[{d:lo,titulo:"PLANTA DE LOCAÇÃO DA OBRA",box:[area.x0,area.y0,aw,ah]}],lado:"locacao",LC}]:[]),
+    ...(lo?[{n:"",conteudo:LC.pil?"PLANTA DE LOCAÇÃO DOS EIXOS DOS PILARES":"PLANTA DE LOCAÇÃO DA OBRA",escala:`1:${lo.s}`,itens:[{d:lo,titulo:LC.pil?"LOCAÇÃO DOS EIXOS DOS PILARES":"PLANTA DE LOCAÇÃO DA OBRA",box:[area.x0,area.y0,aw,ah]}],lado:"locacao",LC}]:[]),
     ...bans.map(b=>({n:"",conteudo:`DETALHE DO ${b.r.n.toUpperCase()}`,escala:`1:${b.pl.s} / 1:${b.vs[0].s}`,itens:[{d:b.pl,titulo:`PLANTA - ${b.r.n.toUpperCase()}`,box:[area.x0,area.y0,b.bwP,ah]},
       ...b.vs.map((d,i)=>({d,titulo:`VISTA ${"ABCD"[i]}`,box:[area.x0+b.bwP+8+(i%2)*(b.bwV+6),area.y0+Math.floor(i/2)*(b.bhV+6),b.bwV,b.bhV]}))],lado:"banho"})),
     ...(QP.length?[{n:"",conteudo:"DETALHE DAS PORTAS",escala:`1:${dp[0].s}`,itens:dp.map((d,i)=>({d,titulo:`DETALHE ${QP[i].cod}`,box:[area.x0+(i%cP)*(bwP2+6),area.y0+Math.floor(i/cP)*(bhP+6),bwP2,bhP]})),lado:"portas"}]:[]),
@@ -4497,6 +4562,8 @@ function textosLado(P,lado,fl){
   const {G,Q,TI}=P, pd=num(S.pd);
   if(lado==="persp") return [{t:"NOTAS",linhas:[PERSP.M&&S.persp.fonte!=="app"?`Perspectivas geradas da maquete ${PERSP.nome}.`:"Perspectivas geradas da planta: paredes, vãos, platibanda e telhado do projeto.","Desenhos ilustrativos, sem escala. Valem as medidas das plantas, cortes e fachadas.","Cores e materiais finais conforme o projeto de fachada e o memorial."]}];
   if(lado==="escada"){ const E=fl.EC; return [{t:"DIMENSIONAMENTO",cols:[["ITEM",0],["VALOR",1]],rows:[["Altura a vencer",`${f(E.H)} m`],["Degraus",String(E.n)],["Espelho",`${f(E.e*100,1)} cm`],["Piso",`${f(E.p*100,0)} cm`],["Blondel (2e + p)",`${f(E.bl*100,1)} cm`],["Largura útil",`${f(E.B)} m`]]},{t:"NOTAS",linhas:notasEscada(E)}]; }
+  if(lado==="locacao"&&fl.LC.pil){ const LC=fl.LC; const rows=LC.pil.map(q=>[q.nome,f(q.X),f(q.Y)]), por=12, bl=[]; for(let i=0;i<rows.length;i+=por) bl.push({t:i?"QUADRO DE LOCAÇÃO (CONT.)":"QUADRO DE LOCAÇÃO DOS PILARES",cols:[["PILAR",0],["X (m)",1],["Y (m)",1]],pc:[0.34,0.33,0.33],rows:rows.slice(i,i+por)});   // muitos pilares: o quadro continua na coluna do lado
+    return [...bl,{t:"NOTAS",linhas:notasLocPil(LC)}]; }
   if(lado==="locacao"){ const LC=fl.LC; return [{t:"QUADRO DE LOCAÇÃO",cols:[["EIXO",0],["MEDIDO DE",0],["DIST. (m)",1]],pc:[0.16,0.56,0.28],rows:[...LC.eixos.slice().sort((p,q)=>p.nome.localeCompare(q.nome,"pt",{numeric:true})).map(e=>[e.nome,e.ref,f(e.d,3)]),...LC.incl.flatMap((w,j)=>[[`C${j+1}a`,"alinhamento; divisa esq.",`${f(w.fa,2)}; ${f(w.ra,2)}`],[`C${j+1}b`,"alinhamento; divisa esq.",`${f(w.fb,2)}; ${f(w.rb,2)}`]])]},{t:"NOTAS",linhas:notasLocacao(LC)}]; }
   if(lado==="portas") return [{t:"QUADRO DE PORTAS",cols:[["CÓD.",0],["FOLHA E FECHADURA",0],["FOLHA",1],["VÃO OSSO",1],["ABRE",1],["QTD",1]],rows:Q.filter(q=>q.tipo==="Porta").map(q=>[q.cod,`${nomeFolha(q.fol)} · ${q.mod==="correr4"?"kit correr 4F":q.mod==="correr"?"kit correr":q.ext?"cilindro":q.ban?"banheiro":"interna"}`,`${f(q.l)}x${f(q.a)}`,`${f(q.l+0.10)}x${f(q.a+0.05)}`,ehCorrer(q.mod)?"correr":"giro",String(q.q)])},
     {t:"NOTAS",linhas:["Medidas da folha; vão em osso = folha + 10 cm na largura e + 5 cm na altura (batente e folga para espuma).","Batente na largura da parede, fixado com espuma expansiva ou parafuso e bucha; guarnição de 5 cm nos dois lados.","Maçaneta a 1,05 m do piso acabado; 3 dobradiças por folha.","Portas de banheiro e área molhada: madeira resistente à umidade ou com selador e verniz."]}];
