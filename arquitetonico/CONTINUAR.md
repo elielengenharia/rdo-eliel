@@ -37,6 +37,10 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   direção) e o total; cotas internas de cada ambiente (faces e portas; ambiente retangular só nas paredes com vão). Locação virou
   estrutural: "LOCAÇÃO DOS EIXOS DOS PILARES" (desenhoLocPilares) com o eixo de cada pilar, cotas acumuladas X/Y a partir do P0 e
   quadro de coordenadas (quebra em colunas); sem estrutura volta a locação pelas paredes.
+- 5.19: fossa: campos novos na aba Hidrossanitário: tanque séptico retangular ou redondo (cilíndrico, NBR 7229: Ø >= 1,10 m e
+  Ø <= 2h), filtro anaeróbio opcional (sem filtro o tanque liga direto no sumidouro) e diâmetro do sumidouro (automático ou fixo
+  1,00 a 2,50 m; com diâmetro fixo só aumenta o número de sumidouros se passar de 3 m de altura útil). Vale para a planta, o detalhe,
+  a tabela, as notas e o orçamento. Salas Av. Paraná com tanque redondo, sem filtro e sumidouro Ø1,00: TS Ø1,35 h=1,20 e SM Ø1,00 h=2,70 no fundo.
 - 5.17: fachadas: folha de porta ou janela vista muito de lado (parede inclinada, menos de 2,2 mm no papel) fica só com o contorno; "FIXA" só aparece com folha de 5 mm ou mais.
 - 5.14: modelo das salas com pé-direito 3,50 m e platibanda até 5,00 m (campo novo "Altura final da platibanda"), telhado em uma água caindo da Av. Paraná para o fundo, calha do fundo 35x20 (campos novos de largura/altura mínima da calha na aba Cobertura).
 - 5.13: formato A0 (1189 x 841), até 9 desenhos por folha; fachadas, paginação, fundação e vistas do banheiro também agrupam. Salas: A0 6 folhas, A1 9.
