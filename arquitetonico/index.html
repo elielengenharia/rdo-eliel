@@ -203,7 +203,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
         <label data-soplat>Caimento da calha (%)<input type="number" step="0.1" id="tel.icalha" placeholder="0,5"></label>
         <label data-soplat>Altura final da platibanda (m)<input type="number" step="0.05" id="tel.hPlat" placeholder="automática"></label>
         <label>Calha: largura mínima (cm)<input type="number" step="5" id="tel.cbMin" placeholder="25"></label>
-        <label>Calha: altura mínima (cm)<input type="number" step="5" id="tel.chMin" placeholder="15"></label>
+        <label>Calha: profundidade (cm)<input type="number" step="1" id="tel.chMin" placeholder="automática"></label>
         <label id="lblBeiral">Beiral (m)<input type="number" step="0.05" id="tel.beiral"></label>
       </div>
       <h3 style="margin-top:12px">Verificação contra goteira e umidade</h3><div id="telCheck"></div>
@@ -661,7 +661,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.23 · telhado com vigotas e caibros (telha 3,66 m)";
+const VERSAO="versão 5.24 · 1º caibro paralelo à parede da calha e calha 40x6";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -720,7 +720,7 @@ function modeloSalas(){ const o=defaults();
     pts:[[4.132, 7.942], [15.268, 7.942], [9.877, -12.678], [-3.613, -8.425], [0.869, 5.561]]});   // cantos do lote tirados do DXF da situação (mesmas coordenadas da planta)
   // telhado escondido por platibanda, caindo da frente (Av. principal) para o fundo
   o.pd=3.50;   // pé-direito das salas comerciais
-  o.tel=Object.assign(clone(TEL0),{tipo:1,dir:"cima",telha:"Fibrocimento",inc:15,plat:"sim",cbMin:35,chMin:20,hPlat:5.00,estr:"vigota",lt:"3.66",ev:"1"});   // platibanda até 5,00 m   // uma água caindo da Av. principal para o fundo, calha de 35x20 no fundo
+  o.tel=Object.assign(clone(TEL0),{tipo:1,dir:"cima",telha:"Fibrocimento",inc:15,plat:"sim",cbMin:40,chMin:6,hPlat:5.00,estr:"vigota",lt:"3.66",ev:"1"});   // platibanda até 5,00 m   // uma água caindo da Av. principal para o fundo, calha de 35x20 no fundo
   o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua lateral (o terreno cai para ela)
   return o; }
 // estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
@@ -2789,17 +2789,26 @@ function estruturaTelhado(G){
     geo.rot={o:dd=>[base[0]+u[0]*t0+n[0]*dd,base[1]+u[1]*t0+n[1]*dd],u,L:t1-t0,n}; }
   const tercas=[], caibros=[], vigotas=[], fibro=/Fibrocimento|Metálica/.test(S.tel.telha), vig=fibro&&S.tel.estr==="vigota"&&TI.tipo===1;
   const fi0=Math.sqrt(1+TI.i*TI.i), lt=num(S.tel.lt)||3.66, rec=num(S.tel.inc)>=15?0.14:0.20, le=lt-rec, nV=Math.max(1,Math.ceil(le/E.vt-1e-9)), ec=le/nV;   // caibros: cada emenda da telha cai num caibro
-  let VG=null;
+  let VG=null, VG1=null;
   if(vig){ const e=TI.bordas[0], g=geo[e], CL=calhasPlat(G,TI), bc=TI.plat?(CL?CL.bMax:Math.max(0.15,(num(S.tel.cbMin)||25)/100)):0;
     let Dm=0; for(let a=0;a<=40;a++) for(let c=0;c<=40;c++){ const x=R.x0+(R.x1-R.x0)*a/40, y=R.y0+(R.y1-R.y0)*c/40; if(dentro(x,y)) Dm=Math.max(Dm,dist[e](x,y)); }
     // primeiro caibro logo depois da calha (no lado baixo), os outros subindo a cada emenda da telha
-    const d0=bc+0.05, ds=[]; for(let d=d0;d<Dm-0.02;d+=ec/fi0) ds.push(d); if(Dm-0.05-ds[ds.length-1]>0.15) ds.push(Dm-0.05);
+    // parede da calha (lado baixo): se ela sai do esquadro, o 1º caibro fica paralelo a ela, afastado a largura da calha
+    let d0=bc+0.05, p1=null; const de=p=>dist[e](...p);
+    if(TI.poly&&CL&&CL.lista.length){ const P=TI.poly, n0=P.length; let mel=null;
+      for(let i=0;i<n0;i++){ const a=P[i], b2=P[(i+1)%n0], Lw=Math.hypot(b2[0]-a[0],b2[1]-a[1]); if(Lw<2) continue; const dm=(de(a)+de(b2))/2; if(Math.max(de(a),de(b2))>1.5) continue; if(!mel||dm<mel.dm) mel={a,b:b2,Lw,dm}; }
+      if(mel){ const u2=[(mel.b[0]-mel.a[0])/mel.Lw,(mel.b[1]-mel.a[1])/mel.Lw]; let nn=[-u2[1],u2[0]]; const mx=(mel.a[0]+mel.b[0])/2, my=(mel.a[1]+mel.b[1])/2; if(!dentro(mx+nn[0]*0.3,my+nn[1]*0.3)) nn=[-nn[0],-nn[1]];
+        const o=bc, q0=[mel.a[0]+nn[0]*o-u2[0]*2,mel.a[1]+nn[1]*o-u2[1]*2]; p1=trechos(q0,u2,mel.Lw+4,p=>dentro(...p));
+        if(p1.length){ const dd=p1.flatMap(s0=>[de([s0[0],s0[1]]),de([s0[2],s0[3]])]); d0=Math.min(...dd); VG1={dlo:d0,dhi:Math.max(...dd),fora:Math.max(...dd)-Math.min(...dd)>0.02,L:p1.reduce((a0,s0)=>a0+Math.hypot(s0[2]-s0[0],s0[3]-s0[1]),0)}; } else p1=null; } }
+    const ds=[]; if(p1){ p1.forEach(sg=>tercas.push({s:sg,tipo:"caibro",e,par:1})); let d=Math.max(d0+ec/fi0,VG1.dhi+0.30); for(;d<Dm-0.02;d+=ec/fi0) ds.push(d); }
+    else for(let d=d0;d<Dm-0.02;d+=ec/fi0) ds.push(d);
+    if(ds.length&&Dm-0.05-ds[ds.length-1]>0.15) ds.push(Dm-0.05);
     ds.forEach((d,j)=>trechos(g.o(d),g.u,g.L,p=>dentro(...p)).forEach(sg=>tercas.push({s:sg,tipo:"caibro",e})));
     const ev=Math.max(0.3,num(S.tel.ev)||1), nv=Math.max(1,Math.ceil((g.L-0.10)/ev-1e-9)), evR=(g.L-0.10)/nv;
     for(let j=0;j<=nv;j++){ const sV=0.05+j*evR, p0=[g.o(0)[0]+g.u[0]*sV,g.o(0)[1]+g.u[1]*sV]; trechos(p0,g.n,Dm+0.02,p=>dentro(...p)).forEach(q=>vigotas.push({s:q,e})); }
     // telhas: da calha até o alto, cada fiada avança o comprimento menos o recobrimento
     const Linc=(Dm-(d0-0.10))*fi0, nF=Linc<=lt?1:1+Math.ceil((Linc-lt)/le-1e-9), ult=nF===1?Linc:Linc-lt-(nF-2)*le+rec, nL=Math.ceil(g.L/1.05-1e-9);
-    VG={bc,d0,ec,ev:evR,nF,ult,nL,nT:nF*nL,lt,rec,Linc}; }
+    VG={bc,d0,ec,ev:evR,nF,ult,nL,nT:nF*nL,lt,rec,Linc,p1:VG1,hc:CL?CL.hMax:0}; }
   if(!vig) TI.bordas.forEach(e=>{ const g=geo[e];
     let Dm=0; for(let a=0;a<=40;a++) for(let c=0;c<=40;c++){ const x=R.x0+(R.x1-R.x0)*a/40, y=R.y0+(R.y1-R.y0)*c/40; if(dentro(x,y)&&dono(x,y).includes(e)) Dm=Math.max(Dm,dist[e](x,y)); }
     const d0=TI.plat?0.05:TI.b+t/2, dTop=TI.tipo===1?Dm-(TI.plat?0.05:TI.b+t/2):Dm, n=Math.max(1,Math.ceil((dTop-d0)/E.vt-1e-9)), esp=(dTop-d0)/n;
@@ -2823,8 +2832,9 @@ function desenhoEstrutura(G,k,ET){
   const fr=ET.tercas.find(x=>x.tipo==="frechal"), te=ET.tercas.find(x=>x.tipo==="terca");
   if(ET.VG){ const rotT=(s0,txt,off,t)=>{ const [x1,y1,x2,y2]=s0, ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI, a=ang>=90?ang-180:ang<-90?ang+180:ang; TX(D,x1+(x2-x1)*t,y1+(y2-y1)*t-off*k,txt,1.5,{l:"ESTRUT",rot:a,b:true}); };
     const cs=ET.tercas.filter(x=>x.tipo==="caibro"), lg=a=>a.reduce((m,x)=>len(x.s)>len(m.s)?x:m,a[0]), len=q=>Math.hypot(q[2]-q[0],q[3]-q[1]);
-    const c1=cs.filter(x=>Math.abs(x.s[1]-cs[0].s[1])<1e-6||x===cs[0]); if(cs[0]) rotT(lg(c1).s,`1º CAIBRO 5x7 (APÓS A CALHA DE ${f(ET.VG.bc*100,0)} cm)`,1.6,0.55);
-    const c2=cs.find(x=>x!==cs[0]&&len(x.s)>len(cs[0].s)*0.8)||cs[1]; if(c2) rotT(c2.s,`CAIBRO 5x7 c/ ${f(ET.VG.ec)} m NA RAMPA (EMENDA DA TELHA)`,1.6,0.6);
+    const c1=cs.filter(x=>Math.abs(x.s[1]-cs[0].s[1])<1e-6||x===cs[0]); if(cs[0]) rotT(lg(cs[0].par?cs.filter(x=>x.par):c1).s,`1º CAIBRO 5x7 ${ET.VG.p1&&ET.VG.p1.fora?"PARALELO À PAREDE, ":""}${f(ET.VG.bc*100,0)} cm DA PAREDE (CALHA ${f(ET.VG.bc*100,0)}x${f(ET.VG.hc*100,0)})`,1.6,0.55);
+    const c2x=cs.find(x=>!x.par&&len(x.s)>3); if(c2x&&cs[0].par){ rotT(c2x.s,`CAIBRO 5x7 c/ ${f(ET.VG.ec)} m NA RAMPA (EMENDA DA TELHA)`,1.6,0.6); }
+    const c2=cs[0]&&cs[0].par?null:cs.find(x=>x!==cs[0]&&len(x.s)>len(cs[0].s)*0.8)||cs[1]; if(c2) rotT(c2.s,`CAIBRO 5x7 c/ ${f(ET.VG.ec)} m NA RAMPA (EMENDA DA TELHA)`,1.6,0.6);
     if(ET.vigotas.length){ const v=ET.vigotas[Math.floor(ET.vigotas.length*0.7)].s; rotT(v,`VIGOTA PRÉ-MOLDADA c/ ${f(ET.VG.ev)} m`,2.4,0.5); } }
   if(fr) rot(fr.s,"FRECHAL 6x12",2); if(te) rot(te.s,"TERÇA 6x16",2); if(TI.cum[0]) rot(TI.cum[0],"TERÇA DE CUMEEIRA 6x16",2.4);
   if(ET.caibros.length){ const c=ET.caibros[Math.floor(ET.caibros.length/3)].s; rot(c,ET.E.cb?"CAIBRO 5x6 c/ 50 cm":"",1.6); }
@@ -2905,7 +2915,7 @@ function desenhoCumeeira(G,k){
   return D; }
 const notasTelhado=ET=>[`Telha ${String(S.tel.telha).toLowerCase()}, inclinação ${f(num(S.tel.inc),0)}%, ${ET.TI.nome}${ET.TI.plat?", com platibanda, rufo e calha":`, beiral de ${f(ET.TI.b)} m`}.`,
   ...(ET.VG?[`Vigotas pré-moldadas de concreto a cada ${f(ET.VG.ev)} m no sentido do caimento${ET.TI.rot?` (${ET.TI.rot.nome.replace(/^Caimento para o fundo, /,"")})`:""}, apoiadas nas paredes baixa e alta (conferir vão com o fabricante).`,
-    `Caibros 5x7 atravessados: o 1º logo após a calha de ${f(ET.VG.bc*100,0)} cm, os outros a cada ${f(ET.VG.ec)} m na rampa (cada emenda da telha sobre um caibro, recobrimento ${f(ET.VG.rec*100,0)} cm).`,
+    `Caibros 5x7 atravessados: o 1º ${ET.VG.p1&&ET.VG.p1.fora?"paralelo à parede da calha (fora do esquadro), ":""}a ${f(ET.VG.bc*100,0)} cm da parede para a calha de ${f(ET.VG.bc*100,0)}x${f(ET.VG.hc*100,0)} cm caber entre a parede e o caibro; os outros a cada ${f(ET.VG.ec)} m na rampa (cada emenda da telha sobre um caibro, recobrimento ${f(ET.VG.rec*100,0)} cm).`,
     `Telhas de ${f(ET.VG.lt)} m: ${ET.VG.nF} fiada${ET.VG.nF>1?"s":""}${ET.VG.nF>1?`, a última cortada com ${f(ET.VG.ult)} m`:""}; ${ET.VG.nL} por fiada, ${ET.VG.nT} telhas, fixadas nos caibros com parafuso e arruela de vedação.`]
   :[`Terças 6x16 cm a cada ${f(ET.E.vt)} m no máximo (em nível), apoiadas nas paredes e em pontaletes sobre as paredes internas; frechal 6x12 cm sobre a cinta.`]),
   ...(ET.VG?[]:[ET.E.cb?`Caibros 5x6 cm a cada 50 cm e ripas 1,5x5 cm com galga de ${f(ET.E.galga*100,0)} cm (conferir com a telha comprada).`:`Telhas fixadas direto nas terças com parafusos e vedação, conforme o fabricante.`]),
@@ -3731,8 +3741,9 @@ function calhasDe(TI,segs){ const T=S.tel, I=num(T.chuva)>0?num(T.chuva):160, ic
   for(let x=R.x0+st/2;x<R.x1;x+=st) for(let y=R.y0+st/2;y<R.y1;y+=st){ if(!TI.dentroT(x,y)) continue; let bi=0, bd=1e9; segs.forEach((s0,j)=>{ const dd=distSeg([x,y],{x1:s0[0],y1:s0[1],x2:s0[2],y2:s0[3]}); if(dd<bd){ bd=dd; bi=j; } }); ap[bi]+=st*st; }
   const lista=segs.map((s0,j)=>{ const L0=Math.hypot(s0[2]-s0[0],s0[3]-s0[1]), A=ap[j]*(1+TI.i/2), Q=I*A/60;
     let nC=Math.max(1,Math.ceil(L0/12-1e-9)); let dia=[75,100,150].find(dm=>Q/nC<=CAP_AP[dm]); while(!dia){ nC++; dia=[75,100,150].find(dm=>Q/nC<=CAP_AP[dm]); }
-    const Qs=Q/nC, cap=b0=>{ const y=b0/4, Am=b0*y, Rh=Am/(b0+2*y); return 60000*Am*Math.pow(Rh,2/3)*Math.sqrt(ic)/nM; };
-    const bQ=[0.15,0.20,0.25,0.30,0.35,0.40,0.50,0.60].find(b0=>cap(b0)>=Qs)||0.60, bMin=Math.max(0.15,(num(T.cbMin)||25)/100), hMin=Math.max(0.10,(num(T.chMin)||15)/100), b=Math.max(bMin,bQ), h=Math.max(hMin,Math.ceil(b/2*20-1e-9)/20);   // mínimo prático 25x15 (ou o escolhido) para limpeza e não transbordar
+    const hF=num(T.chMin)>0?Math.max(0.05,num(T.chMin)/100):0;   // profundidade escolhida: a água ocupa no máximo 2/3 dela
+    const Qs=Q/nC, cap=b0=>{ const y=hF?Math.min(b0/4,hF*2/3):b0/4, Am=b0*y, Rh=Am/(b0+2*y); return 60000*Am*Math.pow(Rh,2/3)*Math.sqrt(ic)/nM; };
+    const bQ=[0.15,0.20,0.25,0.30,0.35,0.40,0.50,0.60].find(b0=>cap(b0)>=Qs)||0.60, bMin=Math.max(0.15,(num(T.cbMin)||25)/100), hMin=0.15, b=Math.max(bMin,bQ), h=hF||Math.max(hMin,Math.ceil(b/2*20-1e-9)/20);   // mínimo prático 25x15 (ou o escolhido) para limpeza e não transbordar
     const pos=nC===1?[[s0[2],s0[3]]]:Array.from({length:nC},(_,m)=>[s0[0]+(s0[2]-s0[0])*m/(nC-1),s0[1]+(s0[3]-s0[1])*m/(nC-1)]);
     return {nome:`CH${j+1}`,seg:s0,L:L0,Aproj:ap[j],A,Q,nC,dia,b,h,bQ,Qs,Qcap:cap(b),pos}; });
   const bMax=Math.max(...lista.map(c=>c.b)), hMax=Math.max(...lista.map(c=>c.h));
