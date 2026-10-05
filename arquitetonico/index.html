@@ -697,6 +697,7 @@ let S;
 // modelo: duas salas comerciais e banheiro na Av. Paraná (lote 277, esquina com a Rua Guarani), fachada chanfrada com duas portas de correr
 function modeloSalas(){ const o=defaults();
   o.obra="Salas comerciais - Av. Paraná"; o.local="Lote 277 - Av. Paraná x Rua Guarani"; o.uso="comercial"; o.frente="baixo";
+  o.fmt="A0";   // pranchas em A0 (até 9 desenhos por folha)
   o.laje=0;   // sem laje: telhado de fibrocimento sobre a cinta, escondido pela platibanda, e forro de PVC (estrutura simples com coluninhas)
   // paredes, vãos e ambientes do DXF WALISSON_PALMEIRA_rev03 (planta baixa ajustada no lote): frente na Av. Paraná, parede no chanfro, jardim na esquina e banheiro encostado na Rua Guarani
   const W=[[4.156,7.867,15.171,7.867],[4.156,7.867,2.607,6.736],[2.607,6.736,1.524,2.597],[2.119,4.872,0.818,5.154],[0.818,5.154,0.097,2.906],[0.097,2.906,13.138,0.088],[13.138,0.088,15.171,7.867],[6.377,1.549,8.029,7.867]];
