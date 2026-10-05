@@ -3267,7 +3267,8 @@ function ruasDoLote(D,pts,lados,o={}){
     });
     [0,1].forEach(e=>{ const E=ends[e]; if(!E||!E.th) return; const p0=X(i,0,E.kk,W); if(p0) seg(p0,longe(p0,e),.5); });
     if(o.alin) [0,1].forEach(e=>{ if(ends[e]) return; const pt=e?s.b:s.a; L(D,...pt,...longe(pt,e),.5,"LOTE"); });
-    const m=[(s.a[0]+s.b[0])/2,(s.a[1]+s.b[1])/2]; if(s.L>4) TX(D,m[0]+s.n[0]*(cal+rua/2),m[1]+s.n[1]*(cal+rua/2),s.c.toUpperCase(),o.hr||2.6,{b:true,rot:rotA(s.u)}); });
+    const m=[(s.a[0]+s.b[0])/2,(s.a[1]+s.b[1])/2]; if(s.L>4){ const t=s.c.toUpperCase(), h0=o.hr||2.6, hc=Math.max(1.6,Math.min(h0,s.L/k/(largTexto(t,true)*1.39*1.1)));   // rua curta (chanfro): letra menor; se ainda encostar em outra rua, o nome anda pela rua
+      TX(D,m[0]+s.n[0]*(cal+rua/2),m[1]+s.n[1]*(cal+rua/2),t,hc,{b:true,rot:rotA(s.u),mv:"l"}); } });
   sd.forEach((s,i)=>{ const m=[(s.a[0]+s.b[0])/2,(s.a[1]+s.b[1])/2];
     if(!s.rua&&s.c) TX(D,m[0]+s.n[0]*3.2*k,m[1]+s.n[1]*3.2*k,s.c.toUpperCase(),1.8,{l:"COTAS",rot:rotA(s.u)});
     // medida do lado, por dentro
