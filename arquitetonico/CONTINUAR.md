@@ -23,7 +23,8 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   profundidade média, chão sempre primeiro, telha só vista de cima e forro só de baixo.
   Textos: função desencavala(D) roda em toda prancha (fim de pranchas()) e na tela (svgDe). Rótulos das camadas MOVEIS (tubos, vigas,
   eixos, códigos...) procuram o lugar livre mais perto (linha de chamada se forem longe); números de cota (mv:"c") deslizam na linha
-  ou trocam de lado; notas de detalhe (mv:"n") sobem/descem levando a linha de chamada; nomes de ambiente (mv:"r") só andam um pouco.
+  ou trocam de lado; notas de detalhe (mv:"n") sobem/descem levando só as linhas de chamada delas (ch, gravadas pela nota); nomes de ambiente (mv:"r") só andam um pouco.
+  Nenhum texto sai da extensão do desenho (extTexto, a mesma conta de extensao), e a prancha mede o desenho de novo depois de desencavalar.
   Nome de ambiente usa a largura real da letra e diminui se não couber nem uma linha. Detalhe das portas escolhe as colunas que dão a
   maior escala (no A4 cabe). Teste: 4 modelos x A4..A0 com 0 textos encavalados (só o A4 da hidro de casa pequena fica em 1:500 por causa do lote).
 - 5.17: fachadas: folha de porta ou janela vista muito de lado (parede inclinada, menos de 2,2 mm no papel) fica só com o contorno; "FIXA" só aparece com folha de 5 mm ou mais.

@@ -974,7 +974,7 @@ const PG=(D,pts,l="HACHURA")=>D.p.push({t:"g",pts,l});
 const PL=(D,pts,w=.25,l="GERAL",d=false)=>{ for(let i=0;i+1<pts.length;i++) L(D,pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1],w,l,d); };
 const AR=(D,cx,cy,x1,y1,x2,y2,w=.18,l="ESQUADRIA")=>D.p.push({t:"a",cx,cy,x1,y1,x2,y2,r:Math.hypot(x1-cx,y1-cy),w,l});
 const CI=(D,cx,cy,r,w=.25,l="GERAL")=>D.p.push({t:"c",cx,cy,r,w,l});
-const TX=(D,x,y,txt,h=2,o={})=>D.p.push({t:"t",x,y,txt:String(txt),h,a:o.a||"m",rot:o.rot||0,b:!!o.b,l:o.l||"TEXTO",...(o.mv?{mv:o.mv}:{})});
+const TX=(D,x,y,txt,h=2,o={})=>D.p.push({t:"t",x,y,txt:String(txt),h,a:o.a||"m",rot:o.rot||0,b:!!o.b,l:o.l||"TEXTO",...(o.mv?{mv:o.mv}:{}),...(o.ch?{ch:o.ch}:{})});
 /* textos encavalados: os rótulos (tubos, vigas, eixos, códigos) e os números das cotas saem de cima dos outros textos.
    Cada texto vira uma caixa no papel; os fixos (nomes dos ambientes, tabelas, legendas) ficam, os outros procuram o lugar livre mais perto. */
 const MOVEIS=new Set(["ESGOTO","AGUA","PLUVIAL","VIGA","EIXO","ESQUADRIA","ELETRICA","FORRO","TELHADO","ESTRUT","FUNDACAO","LAJE","PISO","SOLEIRA","REVEST","CORTE"]);
@@ -993,6 +993,8 @@ function desencavala(D){ if(!D||D._dc) return D; D._dc=1; const k=D.k, T=D.p.fil
       const [a0,a1]=proj(B.P,B.n), [b0,b1]=proj(B.P,B.d), c=[(l.x1+l.x2)/2,(l.y1+l.y2)/2]; let t0=0,t1=1; const dx=l.x2-l.x1, dy=l.y2-l.y1;
       for(const [ax,lo,hi] of [[B.n,a0,a1],[B.d,b0,b1]]){ const p0=l.x1*ax[0]+l.y1*ax[1], dp=dx*ax[0]+dy*ax[1]; if(Math.abs(dp)<1e-12){ if(p0<lo||p0>hi){ t0=1; t1=0; } continue; } let u=(lo-p0)/dp, v=(hi-p0)/dp; if(u>v) [u,v]=[v,u]; t0=Math.max(t0,u); t1=Math.min(t1,v); }
       if(t1>t0+1e-9) n++; } return n; };
+  // o texto não sai da extensão do desenho (a prancha já reservou a caixa com ela)
+  const E0=extensao(D), fora=(q,x,y)=>{ const [a,b,c,d]=extTexto(q,x,y,k); return Math.max(0,E0.x0-a)+Math.max(0,c-E0.x1)+Math.max(0,E0.y0-b)+Math.max(0,d-E0.y1); };
   const ord=T.map((q,i)=>({q,i,m:modo(q)})).sort((a,b)=>pr[a.m]-pr[b.m]||a.i-b.i), feitos=[];
   const custo=(B)=>{ let o=0; for(const F of feitos){ const v=sobre(B,F); if(v>0) o+=v+0.5*k; } return o; };
   ord.forEach(({q,m})=>{ const B0=caixa(q,q.x,q.y); if(m==="f"||custo(B0)<=1e-9){ feitos.push(B0); return; }
@@ -1001,10 +1003,10 @@ function desencavala(D){ if(!D||D._dc) return D; D._dc=1; const k=D.k, T=D.p.fil
     else if(m==="c"){ for(const a of [0.55,1.1,1.7]) for(const sg of [1,-1]) cand.push([B0.d[0]*B0.w*a*sg,B0.d[1]*B0.w*a*sg]); for(const b of [1,2]) for(const sg of [-1,1]) cand.push([B0.n[0]*st*b*sg,B0.n[1]*st*b*sg]); }
     else for(const r of m==="r"?[0.6,1,1.5]:[1,1.6,2.3,3.2,4.4]) for(let j=0;j<12;j++){   // nome de ambiente só anda um pouco
  const a=j*Math.PI/6, ca=Math.cos(a), sa=Math.sin(a), du=ca*(B0.w/2+B0.hh)*r*0.9, dn=sa*st*r; cand.push([B0.d[0]*du+B0.n[0]*dn,B0.d[1]*du+B0.n[1]*dn]); }
-    let best=null; cand.forEach(([ox,oy])=>{ const B=caixa(q,q.x+ox,q.y+oy), o=custo(B), dist=Math.hypot(ox,oy), c=o*100+corta(B)*(m==="c"?0.2:1)*st+dist*0.6; if(!best||c<best.c) best={c,o,ox,oy,B,dist}; });
+    let best=null; const f0=fora(q,q.x,q.y); cand.forEach(([ox,oy])=>{ if(fora(q,q.x+ox,q.y+oy)>f0+1e-9) return; const B=caixa(q,q.x+ox,q.y+oy), o=custo(B), dist=Math.hypot(ox,oy), c=o*100+corta(B)*(m==="c"?0.2:1)*st+dist*0.6; if(!best||c<best.c) best={c,o,ox,oy,B,dist}; });
     if(best&&best.o<custo(B0)*0.6){ const x0=q.x, y0=q.y; q.x+=best.ox; q.y+=best.oy; feitos.push(best.B);
-      if(m==="n") D.p.forEach(l=>{ if(l.t!=="l"||l.l!==q.l) return; if(Math.hypot(l.x1-x0,l.y1-y0)<2.6*k){ l.x1+=best.ox; l.y1+=best.oy; } if(Math.hypot(l.x2-x0,l.y2-y0)<2.6*k){ l.x2+=best.ox; l.y2+=best.oy; } });
-      if(m==="l"&&best.dist>st*2.6){ const B=best.B, c=[(B.x0+B.x1)/2,(B.y0+B.y1)/2], pts=B.P, near=pts.concat(pts.map((p,i)=>[(p[0]+pts[(i+1)%4][0])/2,(p[1]+pts[(i+1)%4][1])/2])).reduce((a,p)=>Math.hypot(p[0]-x0,p[1]-y0)<Math.hypot(a[0]-x0,a[1]-y0)?p:a);
+      if(m==="n") (q.ch||[]).forEach(l=>{ if(l.t!=="l") return; if(Math.hypot(l.x1-x0,l.y1-y0)<2.6*k){ l.x1+=best.ox; l.y1+=best.oy; } if(Math.hypot(l.x2-x0,l.y2-y0)<2.6*k){ l.x2+=best.ox; l.y2+=best.oy; } });
+      if(m==="l"&&best.dist>st*2.6){ const B=best.B, c=[(B.x0+B.x1)/2,(B.y0+B.y1)/2], pts=B.P, near=pts.concat(pts.map((p,i)=>[(p[0]+pts[(i+1)%4][0])/2,(p[1]+pts[(i+1)%4][1])/2])).reduce((a,p)=>Math.hypot(p[0]-x0,p[1]-y0)<Math.hypot(a[0]-x0,a[1]-y0)?p:a).map((v,j)=>Math.min(Math.max(v,j?E0.y0:E0.x0),j?E0.y1:E0.x1));
         D.p.push({t:"l",x1:x0,y1:y0,x2:near[0],y2:near[1],w:.13,l:q.l,d:false}); } }   // linha de chamada quando o rótulo foi para longe
     else feitos.push(B0); });
   return D; }
@@ -1293,7 +1295,7 @@ function desenhoPortaDet(q,k,G){
   else if(cor){ PL(D,[[X(-0.25),Z(e2+0.015)],[X(0.55),Z(e2+0.015)],[X(0.55),Z(e2+0.05)],[X(-0.25),Z(e2+0.05)],[X(-0.25),Z(e2+0.015)]],.3,"ESQUADRIA");
     TX(D,X(-0.05),Z(e2+0.05)+7*k,"FOLHA CORRE POR FORA (TRILHO EM CIMA)",1.3,{l:"COTAS"}); }
   else { PL(D,[[X(bt-0.012),Z(e2-0.04)],[X(0.45),Z(e2-0.04)],[X(0.45),Z(e2-0.005)],[X(bt-0.012),Z(e2-0.005)]],.3,"ESQUADRIA"); }
-  const nota=(x,y,tx,ty,txt)=>{ L(D,x,y,tx,ty,.13,"COTAS"); TX(D,tx+1.2*k,ty,txt,1.3,{a:"s",l:"COTAS",mv:"n"}); };
+  const nota=(x,y,tx,ty,txt)=>{ const n0=D.p.length; L(D,x,y,tx,ty,.13,"COTAS"); TX(D,tx+1.2*k,ty,txt,1.3,{a:"s",l:"COTAS",mv:"n",ch:D.p.slice(n0)}); };
   nota(X(bt/2),Z(0),X(0.5),Z(-e2-0.06),`BATENTE ${f(t*100,0)} cm`);
   nota(X(-gu/2),Z(-e2-0.006),X(0.5),Z(-e2-0.12),"GUARNIÇÃO 5 cm");
   nota(X(0.35),Z(cor?e2+0.03:e2-0.02),X(0.5),Z(e2+0.12),cor?"FOLHA DE CORRER":"FOLHA 3,5 cm");
@@ -2699,7 +2701,7 @@ function desenhoEstrutura(G,k,ET){
 function desenhoBeiral(G,k){
   const D=Dw(k), TI=infoTelhado(G), E=ESTR[S.tel.telha]||ESTR["Cerâmica"], t=G.t, i=TI.i, pd=num(S.pd), lj=Math.max(0,num(S.laje)), hv=S.viga.on!=="não"?num(S.viga.h):0, Y=z=>-z, fi=Math.sqrt(1+i*i);
   const R2=(x0,z0,x1,z1,l)=>PG(D,[[x0,Y(z0)],[x1,Y(z0)],[x1,Y(z1)],[x0,Y(z1)]],l), C2=(x0,z0,x1,z1,w=.3,l="PAREDE")=>PL(D,[[x0,Y(z0)],[x1,Y(z0)],[x1,Y(z1)],[x0,Y(z1)],[x0,Y(z0)]],w,l);
-  const nota=(x,z,tx,tz,txt)=>{ L(D,x,Y(z),tx,Y(tz),.13,"COTAS"); L(D,tx,Y(tz),tx+(tx>x?1:-1)*1.5*k,Y(tz),.13,"COTAS"); TX(D,tx+(tx>x?2*k:-2*k),Y(tz),txt,1.6,{a:tx>x?"s":"e",l:"COTAS",mv:"n"}); };
+  const nota=(x,z,tx,tz,txt)=>{ const n0=D.p.length; L(D,x,Y(z),tx,Y(tz),.13,"COTAS"); L(D,tx,Y(tz),tx+(tx>x?1:-1)*1.5*k,Y(tz),.13,"COTAS"); TX(D,tx+(tx>x?2*k:-2*k),Y(tz),txt,1.6,{a:tx>x?"s":"e",l:"COTAS",mv:"n",ch:D.p.slice(n0)}); };
   const zb=pd-0.60, xin=-1.10;
   // parede, viga/cinta e laje
   R2(-t,zb,0,pd-hv,"HACHURA"); C2(-t,zb,0,pd-hv,.4);
@@ -2753,7 +2755,7 @@ function desenhoBeiral(G,k){
   return D; }
 function desenhoCumeeira(G,k){
   const D=Dw(k), TI=infoTelhado(G), E=ESTR[S.tel.telha]||ESTR["Cerâmica"], i=TI.i, fi=Math.sqrt(1+i*i), Y=z=>-z, w=0.9, z0=0;
-  const nota=(x,z,tx,tz,txt)=>{ L(D,x,Y(z),tx,Y(tz),.13,"COTAS"); TX(D,tx+(tx>x?1:-1)*1.5*k,Y(tz),txt,1.6,{a:tx>x?"s":"e",l:"COTAS",mv:"n"}); };
+  const nota=(x,z,tx,tz,txt)=>{ const n0=D.p.length; L(D,x,Y(z),tx,Y(tz),.13,"COTAS"); TX(D,tx+(tx>x?1:-1)*1.5*k,Y(tz),txt,1.6,{a:tx>x?"s":"e",l:"COTAS",mv:"n",ch:D.p.slice(n0)}); };
   // terça de cumeeira (seção 6x16) e as duas águas
   PG(D,[[-0.03,Y(z0-0.16)],[0.03,Y(z0-0.16)],[0.03,Y(z0)],[-0.03,Y(z0)]],"FUNDO"); PL(D,[[-0.03,Y(z0-0.16)],[0.03,Y(z0-0.16)],[0.03,Y(z0)],[-0.03,Y(z0)],[-0.03,Y(z0-0.16)]],.3,"ESTRUT");
   L(D,-0.03,Y(z0-0.16),0.03,Y(z0),.13,"ESTRUT"); L(D,-0.03,Y(z0),0.03,Y(z0-0.16),.13,"ESTRUT");
@@ -3799,6 +3801,9 @@ function desenhoCobertura(G,k){
 }
 
 /* ---------------- Extensão e SVG ---------------- */
+// caixa que a extensão do desenho conta para um texto em (x,y)
+function extTexto(p,x,y,k){ const w=p.txt.length*p.h*0.78*k, hh=p.h*1.2*k, dx=p.a==="s"?[0,w]:p.a==="e"?[-w,0]:[-w/2,w/2];
+  return p.rot?[x-hh/2,y-dx[1],x+hh/2,y-dx[0]]:[x+dx[0],y-hh/2,x+dx[1],y+hh/2]; }
 function extensao(D){
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; const ad=(x,y)=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}; const k=D.k;
   D.p.forEach(p=>{
@@ -3806,8 +3811,7 @@ function extensao(D){
     else if(p.t==="a"){ ad(p.x1,p.y1); ad(p.x2,p.y2); const mx=(p.x1+p.x2)/2-p.cx, my=(p.y1+p.y2)/2-p.cy, m=Math.hypot(mx,my)||1; ad(p.cx+mx/m*p.r,p.cy+my/m*p.r); }
     else if(p.t==="c"){ad(p.cx-p.r,p.cy-p.r);ad(p.cx+p.r,p.cy+p.r);}
     else if(p.t==="img"){ad(p.x0,p.y0);ad(p.x1,p.y1);}
-    else if(p.t==="t"){ const w=p.txt.length*p.h*0.78*k, hh=p.h*1.2*k; const dx=p.a==="s"?[0,w]:p.a==="e"?[-w,0]:[-w/2,w/2];
-      if(p.rot){ ad(p.x-hh/2,p.y-dx[1]); ad(p.x+hh/2,p.y-dx[0]); } else { ad(p.x+dx[0],p.y-hh/2); ad(p.x+dx[1],p.y+hh/2); } }
+    else if(p.t==="t"){ const [a,b,c,d]=extTexto(p,p.x,p.y,k); ad(a,b); ad(c,d); }
   });
   if(x0>x1) return {x0:0,y0:0,x1:1,y1:1};
   return {x0,y0,x1,y1};
@@ -4424,7 +4428,7 @@ function pranchas(fmt){
   const cap=S.agrupar==="não"?1:["2","4","6","9"].includes(S.agrupar)?+S.agrupar:({A0:9,A1:6,A2:4}[fmt]||1);
   const fls=cap>1?agruparFolhas(folhas,cap,area,TT):folhas;
   fls.forEach((fl,i)=>fl.n=`${String(i+1).padStart(2,"0")}/${String(fls.length).padStart(2,"0")}`);
-  fls.forEach(fl=>fl.itens.forEach(it=>it.d&&desencavala(it.d.D)));   // tira os textos de cima uns dos outros (PDF e DXF)
+  fls.forEach(fl=>fl.itens.forEach(it=>{ if(!it.d||!it.d.D||!it.d.k) return; desencavala(it.d.D); const e=extensao(it.d.D); Object.assign(it.d,{e,w:(e.x1-e.x0)/it.d.k,h:(e.y1-e.y0)/it.d.k}); }));   // tira os textos de cima uns dos outros (PDF e DXF) e mede de novo
   return {W,H,mo,ml,cw,ch,TT,area,side,G,Q,TI,folhas:fls};
 }
 function textosLado(P,lado,fl){
