@@ -95,7 +95,7 @@ h3{font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.06em;
 .panel{border:1px solid var(--accent);border-radius:4px;padding:12px;margin-top:10px;background:var(--paper)}
 .panel h4{margin:0 0 8px;font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
 /* SVG */
-svg text{font-family:var(--f-mono);fill:var(--ink)}
+svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink)}   /* mesma letra do PDF: o lugar dos textos é medido com ela */
 @media (max-width:520px){h1{font-size:24px}.stamp{text-align:left}.roofs button{font-size:12px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -654,7 +654,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.21 · modelo das salas sem dados do cliente";
+const VERSAO="versão 5.22 · chanfro da esquina sem virar rua, tela com a letra do PDF e corte sem riscar texto";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1030,6 +1030,16 @@ function desencavala(D){ if(!D||D._dc) return D; D._dc=1; const k=D.k, T=D.p.fil
       if(m==="l"&&best.dist>st*2.6){ const B=best.B, c=[(B.x0+B.x1)/2,(B.y0+B.y1)/2], pts=B.P, near=pts.concat(pts.map((p,i)=>[(p[0]+pts[(i+1)%4][0])/2,(p[1]+pts[(i+1)%4][1])/2])).reduce((a,p)=>Math.hypot(p[0]-x0,p[1]-y0)<Math.hypot(a[0]-x0,a[1]-y0)?p:a).map((v,j)=>Math.min(Math.max(v,j?E0.y0:E0.x0),j?E0.y1:E0.x1));
         D.p.push({t:"l",x1:x0,y1:y0,x2:near[0],y2:near[1],w:.13,l:q.l,d:false}); } }   // linha de chamada quando o rótulo foi para longe
     else feitos.push(B0); });
+  // linha de corte (traço e ponto) não risca texto: abre um vão onde passa por cima dele
+  const TB=T.filter(q=>q.l!=="CORTE").map(q=>caixa(q,q.x,q.y)), novas=[];
+  D.p=D.p.filter(l=>{ if(l.t!=="l"||l.l!=="CORTE"||!l.d) return true; const dx=l.x2-l.x1, dy=l.y2-l.y1, vaos=[];
+    TB.forEach(B=>{ if(Math.max(l.x1,l.x2)<B.x0||Math.min(l.x1,l.x2)>B.x1||Math.max(l.y1,l.y2)<B.y0||Math.min(l.y1,l.y2)>B.y1) return; let t0=0,t1=1;
+      for(const ax of [B.n,B.d]){ const [lo,hi]=proj(B.P,ax), p0=l.x1*ax[0]+l.y1*ax[1], dp=dx*ax[0]+dy*ax[1]; if(Math.abs(dp)<1e-12){ if(p0<lo||p0>hi){ t0=1; t1=0; } continue; } let u=(lo-p0)/dp, v=(hi-p0)/dp; if(u>v) [u,v]=[v,u]; t0=Math.max(t0,u); t1=Math.min(t1,v); }
+      if(t1>t0+1e-9){ const mg=k/(Math.hypot(dx,dy)||1); vaos.push([t0-mg,t1+mg]); } });   // 1 mm de folga em cada lado do texto
+    if(!vaos.length) return true; vaos.sort((a,b)=>a[0]-b[0]); let t=0;
+    vaos.forEach(([a,b])=>{ if(a>t+1e-6) novas.push({...l,x1:l.x1+dx*t,y1:l.y1+dy*t,x2:l.x1+dx*a,y2:l.y1+dy*a}); t=Math.max(t,b); });
+    if(t<1-1e-6) novas.push({...l,x1:l.x1+dx*t,y1:l.y1+dy*t,x2:l.x2,y2:l.y2}); return false; });
+  D.p.push(...novas);
   return D; }
 function seta(D,x0,y0,x1,y1,l="TELHADO"){ const k=D.k, d=Math.hypot(x1-x0,y1-y0)||1, ux=(x1-x0)/d, uy=(y1-y0)/d, s=1.6*k;
   L(D,x0,y0,x1,y1,.25,l); PG(D,[[x1,y1],[x1-ux*s*1.8-uy*s*0.6,y1-uy*s*1.8+ux*s*0.6],[x1-ux*s*1.8+uy*s*0.6,y1-uy*s*1.8-ux*s*0.6]],l); }
@@ -3360,7 +3370,9 @@ function ruasDoLote(D,pts,lados,o={}){
   const rotA=u=>{ let a=Math.atan2(u[1],u[0])*180/Math.PI; if(a>=89.99) a-=180; if(a<-90.01) a+=180; return a; };
   // encontro de duas ruas (com ou sem chanfro entre elas): uma passa direto e a outra termina nela (em T)
   const W=2*cal+rua, LN=(i,d)=>[[sd[i].a[0]+sd[i].n[0]*d,sd[i].a[1]+sd[i].n[1]*d],sd[i].u], X=(i,d,kk,dk)=>{ const [p,u]=LN(i,d), [q,v]=LN(kk,dk); return cruza(p,u,q,v); };
-  const nomeada=i=>sd[i].rua&&sd[i].c.trim()!=="";
+  // chanfro da esquina: lado de rua curto (ou chamado "chanfro") entre dois lados de rua; as duas ruas se encontram nele, ele não vira rua
+  const chanfro=i=>sd[i].rua&&sd[(i+n-1)%n].rua&&sd[(i+1)%n].rua&&(sd[i].L<6||/chanfro/i.test(sd[i].c));
+  const nomeada=i=>sd[i].rua&&sd[i].c.trim()!==""&&!chanfro(i);
   const viz=(i,dir)=>{ for(let st=1;st<n;st++){ const kk=(i+dir*st+n*st)%n; if(nomeada(kk)) return kk; if(!sd[kk].rua) return -1; } return -1; };
   const passa=(i,kk)=>{ const pz=Math.round(num(S.terr.ruaPassa))-1; if(pz===i||pz===kk) return pz===i; if(i===0||kk===0) return i===0; return sd[i].L>=sd[kk].L; };
   sd.forEach((s,i)=>{ if(!nomeada(i)) return;

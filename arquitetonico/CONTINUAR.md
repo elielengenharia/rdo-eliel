@@ -9,6 +9,7 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   planta de situação, parede de tijolo 10 cm + reboco 2,5 cm.
 - 4.8 / 4.9: calha da platibanda (NBR 10844) e base do piso de concreto (tela, macrofibra, fibra de aço).
 - 5.0: etapa de pintura (aba Pintura, cores por ambiente, material em latas/galões/baldes, prancha).
+- 5.22: situação/implantação/quadra: lado de rua curto (< 6 m) ou chamado "chanfro" entre duas ruas é o chanfro da esquina, não vira rua própria (as duas ruas se encontram nele). Desenho na tela com a letra do PDF (Helvetica/Arial), a mesma usada para medir os textos. Linha de corte (traço e ponto) abre um vão onde passa sobre um texto (desencavala).
 - 5.1: instalações elétricas: eletrodutos traçados, fiação por trecho, queda de tensão (4 % / 5 %),
   demanda, entrada, DR, DPS, quadro com reserva, diagrama unifilar e material elétrico.
 - 5.2: imóvel comercial com 2+ salas: um quadro e medidor por sala (banheiro vai para a sala de onde se entra).
