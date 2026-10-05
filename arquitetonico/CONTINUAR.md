@@ -27,9 +27,9 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   Nenhum texto sai da extensão do desenho (extTexto, a mesma conta de extensao), e a prancha mede o desenho de novo depois de desencavalar.
   Nome de ambiente usa a largura real da letra e diminui se não couber nem uma linha. Detalhe das portas escolhe as colunas que dão a
   maior escala (no A4 cabe). Teste: 4 modelos x A4..A0 com 0 textos encavalados (só o A4 da hidro de casa pequena fica em 1:500 por causa do lote).
-- 5.18 (DXF WALISSON_PALMEIRA_rev03): modelo "Salas comerciais Av. Paraná" refeito pela planta ajustada no lote: frente na Av. Paraná
+- 5.18 (DXF rev03): modelo "Salas comerciais Av. principal" refeito pela planta ajustada no lote: frente na Av. principal
   (P 3,00 e P 4,00 de correr, janela 1,20x2,00 peitoril 0,60), parede no chanfro, jardim na esquina com janela 1,20 da sala 1, banheiro
-  (2,74 m², porta 0,70) encostado na Rua Guarani, divisória inclinada; salas 27,40 e 48,22 m² (DXF 48,19), NV +0,10.
+  (2,74 m², porta 0,70) encostado na Rua lateral, divisória inclinada; salas 27,40 e 48,22 m² (DXF 48,19), NV +0,10.
   Lote pelos cantos do DXF: terr.pts (mesmas coordenadas da planta, um canto por lado; vale enquanto as medidas dos lados batem, lotePts()).
   Banheiro girado (nenhuma parede no eixo): retUtil procura o retângulo útil alinhado com cada parede (r.fr = giro), layoutBanheiro trabalha
   no sistema dele, lbMundo/rodaPrims levam louças para a planta, desenhoBanheiroGirado faz o detalhe na posição da obra.
@@ -38,24 +38,24 @@ Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
   estrutural: "LOCAÇÃO DOS EIXOS DOS PILARES" (desenhoLocPilares) com o eixo de cada pilar, cotas acumuladas X/Y a partir do P0 e
   quadro de coordenadas (quebra em colunas); sem estrutura volta a locação pelas paredes.
 - 5.20: telhado de uma água com platibanda pode cair paralelo a um lado do lote que vai da frente para o fundo (opções novas na
-  Direção da aba Cobertura, com o nome do lado: "Caimento para o fundo, alinhado com a divisa do Lote 243"). ladosCaimento(G) lista
+  Direção da aba Cobertura, com o nome do lado: "Caimento para o fundo, alinhado com a divisa do Vizinho 1"). ladosCaimento(G) lista
   os lados (lote pelas medidas do mapa, |cos| >= 0,7 com a frente, chanfro fica de fora); infoTelhado ganha a borda "rot" (dist linear
   smax - p·d, TI.rot, TI.dist), usada pela estrutura (terças perpendiculares ao caimento), perspectiva (dB.rot) e calhas. Sem platibanda
-  cai para o lado reto mais próximo. Salas Av. Paraná: uma calha só, na parede do fundo (antes saía outra na divisa do 243).
+  cai para o lado reto mais próximo. Salas Av. principal: uma calha só, na parede do fundo (antes saía outra na divisa do 243).
 - 5.19: fossa: campos novos na aba Hidrossanitário: tanque séptico retangular ou redondo (cilíndrico, NBR 7229: Ø >= 1,10 m e
   Ø <= 2h), filtro anaeróbio opcional (sem filtro o tanque liga direto no sumidouro) e diâmetro do sumidouro (automático ou fixo
   1,00 a 2,50 m; com diâmetro fixo só aumenta o número de sumidouros se passar de 3 m de altura útil). Vale para a planta, o detalhe,
-  a tabela, as notas e o orçamento. Salas Av. Paraná com tanque redondo, sem filtro e sumidouro Ø1,00: TS Ø1,35 h=1,20 e SM Ø1,00 h=2,70 no fundo.
+  a tabela, as notas e o orçamento. Salas Av. principal com tanque redondo, sem filtro e sumidouro Ø1,00: TS Ø1,35 h=1,20 e SM Ø1,00 h=2,70 no fundo.
 - 5.17: fachadas: folha de porta ou janela vista muito de lado (parede inclinada, menos de 2,2 mm no papel) fica só com o contorno; "FIXA" só aparece com folha de 5 mm ou mais.
-- 5.14: modelo das salas com pé-direito 3,50 m e platibanda até 5,00 m (campo novo "Altura final da platibanda"), telhado em uma água caindo da Av. Paraná para o fundo, calha do fundo 35x20 (campos novos de largura/altura mínima da calha na aba Cobertura).
+- 5.14: modelo das salas com pé-direito 3,50 m e platibanda até 5,00 m (campo novo "Altura final da platibanda"), telhado em uma água caindo da Av. principal para o fundo, calha do fundo 35x20 (campos novos de largura/altura mínima da calha na aba Cobertura).
 - 5.13: formato A0 (1189 x 841), até 9 desenhos por folha; fachadas, paginação, fundação e vistas do banheiro também agrupam. Salas: A0 6 folhas, A1 9.
 - 5.12: pranchas agrupadas: no A1 até 6 desenhos por folha e no A2 até 4, por disciplina (arquitetura, estrutura, instalações, acabamentos, detalhes), plantas na mesma escala, tabelas juntas na faixa de baixo; opção "Desenhos por folha" ao lado do formato. Salas: A1 24→9-10 folhas, A2 24→13.
 - 5.11: cotas da planta sem os cantos do chanfro na cadeia de cima/esquerda (sala 1 = 6,00), sem cota inclinada curta junto das cadeias; texto dos ambientes num tamanho só (nome 2,0 · área 1,6 · NV 1,4) em todas as plantas; ambiente pequeno mostra só as linhas que cabem.
 - 5.10: nome, área e nível dos ambientes diminuem para caber dentro do ambiente (planta baixa, pluvial, hidro, reforma), desviando do giro das portas.
 - 5.9: revisão das 24 pranchas das salas: modelo sem laje (estrutura simples), portas da fachada em alumínio e vidro temperado (folha "vidro temperado 10 mm", contramarco), detalhe do piso sem a parte de veículo quando não há garagem, notas dos cortes sem laje.
-- 5.8: vários projetos no aparelho (aba Dados: trocar, duplicar, renomear, excluir, baixar/abrir .json); modelo "Salas comerciais Av. Paraná" (do PDF WALISSON_PALMEIRA_REV_2: 2 salas + banheiro, fachada chanfrada, platibanda caindo para a frente, pluvial para a Guarani); verificação contra goteira e umidade na aba Cobertura. Lote 277 ainda pelas medidas do mapa (o prédio não cabe na frente de 11,14): esperar o DWG da situação.
+- 5.8: vários projetos no aparelho (aba Dados: trocar, duplicar, renomear, excluir, baixar/abrir .json); modelo "Salas comerciais Av. principal" (do PDF planta do cliente: 2 salas + banheiro, fachada chanfrada, platibanda caindo para a frente, pluvial para a Guarani); verificação contra goteira e umidade na aba Cobertura. Lote de esquina ainda pelas medidas do mapa (o prédio não cabe na frente de 11,14): esperar o DWG da situação.
 - 5.7: calha cortada nos cortes AA/BB (platibanda e beiral) e calha de beiral no detalhe do beiral.
-- 5.6: escolha da rua de saída da água pluvial (a mais baixa do terreno; lote 277: Rua Guarani); campos de texto ap.beiral, ap.dest, ele.rede e ele.qdSala passaram a gravar certo.
+- 5.6: escolha da rua de saída da água pluvial (a mais baixa do terreno; lote de esquina: Rua lateral); campos de texto ap.beiral, ap.dest, ele.rede e ele.qdSala passaram a gravar certo.
 - 5.5: águas pluviais (calha da platibanda ou do beiral, condutores AP, caixas de areia, rede enterrada pelo anel do esgoto, saída sob a calçada até a sarjeta ou galeria).
 - 5.4: revisão geral: tabelas do PDF não invadem a coluna do lado, títulos dos desenhos cabem na
   caixa (A4 com 4 desenhos), detalhe da porta de correr sem texto saindo da folha.
@@ -66,7 +66,7 @@ Revisão geral: abrir todas as abas (casa padrão, salas comerciais, casa com ge
 procurar NaN/undefined, gerar PDF A4/A3/A2/A1 e DXF, conferir textos fora da folha e sobrepostos.
 
 ## A fazer depois
-- Importar a situação direto do DXF pela aba Dados (hoje os cantos do lote 277 foram passados à mão para terr.pts).
+- Importar a situação direto do DXF pela aba Dados (hoje os cantos do lote de esquina foram passados à mão para terr.pts).
 - Banheiro com mais de uma parede inclinada ainda fica sem louças (só retangular ou 1 inclinada).
 - Drywall: o desenho usa a espessura geral das paredes (só o orçamento usa 9,5 cm).
 - Elétrica: limites mono/bi/trifásico são de referência; conferir com a norma da Equatorial Pará.
