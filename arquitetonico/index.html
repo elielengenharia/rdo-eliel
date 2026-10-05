@@ -194,6 +194,9 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <div class="form">
         <label id="lblDir">Direção<select id="tel.dir"></select></label>
         <label>Telha<select id="tel.telha"><option>Cerâmica</option><option>Concreto</option><option>Fibrocimento</option><option>Metálica</option></select></label>
+        <label data-sofibro>Estrutura<select id="tel.estr"><option value="madeira">Terças de madeira</option><option value="vigota">Vigotas e caibros</option></select></label>
+        <label data-sofibro>Comprimento da telha<select id="tel.lt"><option value="1.83">1,83 m</option><option value="2.13">2,13 m</option><option value="2.44">2,44 m</option><option value="3.05">3,05 m</option><option value="3.66">3,66 m</option></select></label>
+        <label data-sovig>Vigotas a cada<select id="tel.ev"><option value="0.5">0,50 m</option><option value="0.6">0,60 m</option><option value="0.8">0,80 m</option><option value="1">1,00 m</option><option value="1.2">1,20 m</option></select></label>
         <label>Inclinação (%)<input type="number" step="1" id="tel.inc"></label>
         <label>Platibanda<select id="tel.plat"><option value="não">Não (com beiral)</option><option value="sim">Sim (telhado escondido)</option></select></label>
         <label data-soplat>Chuva de projeto (mm/h)<input type="number" step="5" id="tel.chuva" placeholder="160"></label>
@@ -658,7 +661,7 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.22 · fossa: medida do tanque e distâncias à escolha";
+const VERSAO="versão 5.23 · telhado com vigotas e caibros (telha 3,66 m)";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -690,7 +693,7 @@ const AB42=[
   {n:"Banho",t:"Janela",w:2,d:2.8,l:0.60,a:0.60,p:1.50}
 ];
 const TERR0={testada:12,prof:25,recFrente:4,recEsq:2.5,calcada:2,rua:"Rua projetada",lote:"",quadra:"",confEsq:"Lote vizinho",confDir:"Lote vizinho",confFundo:"Lote vizinho",norte:0,esquina:"não",rua2:"",chanfro:"não",dEsq:0,ladoRef:"esq",ruaE:"",ruaD:"",ruaF:"",qFrente:0,qProf:0,forma:"ret",lados:[],areaMapa:0,ruaPassa:0,alinha:1,encA:1,recA:4,encB:0,recB:2.5};
-const TEL0={tipo:2,dir:"h",telha:"Cerâmica",inc:30,beiral:0.60,plat:"não"};
+const TEL0={tipo:2,dir:"h",telha:"Cerâmica",inc:30,beiral:0.60,plat:"não",estr:"madeira",lt:"3.66",ev:"1"};
 const INC_TELHA={"Cerâmica":30,"Concreto":30,"Fibrocimento":15,"Metálica":10};
 const ABDEF={Porta:{l:0.80,a:2.10,p:0},Janela:{l:1.20,a:1.00,p:1.10},"Vão":{l:1.00,a:2.10,p:0}};
 function defaults(){
@@ -717,7 +720,7 @@ function modeloSalas(){ const o=defaults();
     pts:[[4.132, 7.942], [15.268, 7.942], [9.877, -12.678], [-3.613, -8.425], [0.869, 5.561]]});   // cantos do lote tirados do DXF da situação (mesmas coordenadas da planta)
   // telhado escondido por platibanda, caindo da frente (Av. principal) para o fundo
   o.pd=3.50;   // pé-direito das salas comerciais
-  o.tel=Object.assign(clone(TEL0),{tipo:1,dir:"cima",telha:"Fibrocimento",inc:15,plat:"sim",cbMin:35,chMin:20,hPlat:5.00});   // platibanda até 5,00 m   // uma água caindo da Av. principal para o fundo, calha de 35x20 no fundo
+  o.tel=Object.assign(clone(TEL0),{tipo:1,dir:"cima",telha:"Fibrocimento",inc:15,plat:"sim",cbMin:35,chMin:20,hPlat:5.00,estr:"vigota",lt:"3.66",ev:"1"});   // platibanda até 5,00 m   // uma água caindo da Av. principal para o fundo, calha de 35x20 no fundo
   o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua lateral (o terreno cai para ela)
   return o; }
 // estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
@@ -2784,27 +2787,45 @@ function estruturaTelhado(G){
   const geo={cima:{o:d=>[R.x0,R.y0+d],u:[1,0],L:R.x1-R.x0,n:[0,1]},baixo:{o:d=>[R.x0,R.y1-d],u:[1,0],L:R.x1-R.x0,n:[0,-1]},esq:{o:d=>[R.x0+d,R.y0],u:[0,1],L:R.y1-R.y0,n:[1,0]},dir:{o:d=>[R.x1-d,R.y0],u:[0,1],L:R.y1-R.y0,n:[-1,0]}};
   if(TI.rot){ const d=TI.rot.d, u=[-d[1],d[0]], n=[-d[0],-d[1]], base=[d[0]*TI.rot.smax,d[1]*TI.rot.smax], ts=[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1]].map(p=>(p[0]-base[0])*u[0]+(p[1]-base[1])*u[1]), t0=Math.min(...ts), t1=Math.max(...ts);
     geo.rot={o:dd=>[base[0]+u[0]*t0+n[0]*dd,base[1]+u[1]*t0+n[1]*dd],u,L:t1-t0,n}; }
-  const tercas=[], caibros=[];
-  TI.bordas.forEach(e=>{ const g=geo[e];
+  const tercas=[], caibros=[], vigotas=[], fibro=/Fibrocimento|Metálica/.test(S.tel.telha), vig=fibro&&S.tel.estr==="vigota"&&TI.tipo===1;
+  const fi0=Math.sqrt(1+TI.i*TI.i), lt=num(S.tel.lt)||3.66, rec=num(S.tel.inc)>=15?0.14:0.20, le=lt-rec, nV=Math.max(1,Math.ceil(le/E.vt-1e-9)), ec=le/nV;   // caibros: cada emenda da telha cai num caibro
+  let VG=null;
+  if(vig){ const e=TI.bordas[0], g=geo[e], CL=calhasPlat(G,TI), bc=TI.plat?(CL?CL.bMax:Math.max(0.15,(num(S.tel.cbMin)||25)/100)):0;
+    let Dm=0; for(let a=0;a<=40;a++) for(let c=0;c<=40;c++){ const x=R.x0+(R.x1-R.x0)*a/40, y=R.y0+(R.y1-R.y0)*c/40; if(dentro(x,y)) Dm=Math.max(Dm,dist[e](x,y)); }
+    // primeiro caibro logo depois da calha (no lado baixo), os outros subindo a cada emenda da telha
+    const d0=bc+0.05, ds=[]; for(let d=d0;d<Dm-0.02;d+=ec/fi0) ds.push(d); if(Dm-0.05-ds[ds.length-1]>0.15) ds.push(Dm-0.05);
+    ds.forEach((d,j)=>trechos(g.o(d),g.u,g.L,p=>dentro(...p)).forEach(sg=>tercas.push({s:sg,tipo:"caibro",e})));
+    const ev=Math.max(0.3,num(S.tel.ev)||1), nv=Math.max(1,Math.ceil((g.L-0.10)/ev-1e-9)), evR=(g.L-0.10)/nv;
+    for(let j=0;j<=nv;j++){ const sV=0.05+j*evR, p0=[g.o(0)[0]+g.u[0]*sV,g.o(0)[1]+g.u[1]*sV]; trechos(p0,g.n,Dm+0.02,p=>dentro(...p)).forEach(q=>vigotas.push({s:q,e})); }
+    // telhas: da calha até o alto, cada fiada avança o comprimento menos o recobrimento
+    const Linc=(Dm-(d0-0.10))*fi0, nF=Linc<=lt?1:1+Math.ceil((Linc-lt)/le-1e-9), ult=nF===1?Linc:Linc-lt-(nF-2)*le+rec, nL=Math.ceil(g.L/1.05-1e-9);
+    VG={bc,d0,ec,ev:evR,nF,ult,nL,nT:nF*nL,lt,rec,Linc}; }
+  if(!vig) TI.bordas.forEach(e=>{ const g=geo[e];
     let Dm=0; for(let a=0;a<=40;a++) for(let c=0;c<=40;c++){ const x=R.x0+(R.x1-R.x0)*a/40, y=R.y0+(R.y1-R.y0)*c/40; if(dentro(x,y)&&dono(x,y).includes(e)) Dm=Math.max(Dm,dist[e](x,y)); }
     const d0=TI.plat?0.05:TI.b+t/2, dTop=TI.tipo===1?Dm-(TI.plat?0.05:TI.b+t/2):Dm, n=Math.max(1,Math.ceil((dTop-d0)/E.vt-1e-9)), esp=(dTop-d0)/n;
     for(let j=0;j<=n;j++){ const d=d0+j*esp, top=j===n&&TI.tipo>1; if(top) continue;   // a cumeeira já é desenhada
       trechos(g.o(d),g.u,g.L,p=>dentro(...p)&&dono(...p).includes(e)).forEach(s=>tercas.push({s,tipo:j===0?"frechal":"terca",e})); }
     if(E.cb) for(let s=0.25;s<g.L-0.05;s+=0.50){ const p0=[g.o(0)[0]+g.u[0]*s,g.o(0)[1]+g.u[1]*s]; trechos(p0,g.n,Dm+0.02,p=>dentro(...p)&&dono(...p).includes(e)).forEach(q=>caibros.push({s:q,e})); } });
   const len=s=>Math.hypot(s[2]-s[0],s[3]-s[1]), fi=Math.sqrt(1+TI.i*TI.i);
-  const Lt=tercas.reduce((a,x)=>a+len(x.s),0)+TI.Lcum, Lc=caibros.reduce((a,x)=>a+len(x.s),0)*fi, Lr=E.cb?TI.areaInc/E.galga:0;
-  return {TI,E,tercas,caibros,Lt,Lc,Lr,vao:TI.bordas.length?null:null}; }
+  const Lt=tercas.reduce((a,x)=>a+len(x.s),0)+TI.Lcum, Lc=caibros.reduce((a,x)=>a+len(x.s),0)*fi, Lr=E.cb?TI.areaInc/E.galga:0, Lv=vigotas.reduce((a,x)=>a+len(x.s),0)*fi;
+  return {TI,E,tercas,caibros,vigotas,VG,Lt,Lc,Lr,Lv,vao:TI.bordas.length?null:null}; }
 function desenhoEstrutura(G,k,ET){
   const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
   ET=ET||estruturaTelhado(G); const TI=ET.TI, R=TI.R;
   G.contPar.forEach(s=>L(D,...s,.18,"PROJECAO",true));
   if(TI.poly) PL(D,[...TI.poly,TI.poly[0]],.35,"PAREDE"); else PL(D,[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1],[R.x0,R.y0]],.4,TI.plat?"PAREDE":"TELHADO");
   ET.caibros.forEach(c=>L(D,...c.s,.13,"ESTRUT"));
+  ET.vigotas.forEach(c=>{ const [x1,y1,x2,y2]=c.s, n=[-(y2-y1),x2-x1], l=Math.hypot(...n)||1, o=0.05; L(D,x1+n[0]/l*o,y1+n[1]/l*o,x2+n[0]/l*o,y2+n[1]/l*o,.25,"ESTRUT",true); L(D,x1-n[0]/l*o,y1-n[1]/l*o,x2-n[0]/l*o,y2-n[1]/l*o,.25,"ESTRUT",true); });
   ET.tercas.forEach(c=>{ const [x1,y1,x2,y2]=c.s, n=[-(y2-y1),x2-x1], l=Math.hypot(...n)||1, o=0.03; L(D,x1+n[0]/l*o,y1+n[1]/l*o,x2+n[0]/l*o,y2+n[1]/l*o,.3,"ESTRUT"); L(D,x1-n[0]/l*o,y1-n[1]/l*o,x2-n[0]/l*o,y2-n[1]/l*o,.3,"ESTRUT"); });
   TI.cum.forEach(s=>{ L(D,...s,.6,"ESTRUT"); }); TI.esp.forEach(s=>L(D,...s,.4,"ESTRUT"));
   // rótulos
   const rot=(s,txt,off)=>{ const [x1,y1,x2,y2]=s, ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI, a=ang>=90?ang-180:ang<-90?ang+180:ang; TX(D,x1+(x2-x1)*0.3,y1+(y2-y1)*0.3-off*k,txt,1.5,{l:"ESTRUT",rot:a,b:true}); };
   const fr=ET.tercas.find(x=>x.tipo==="frechal"), te=ET.tercas.find(x=>x.tipo==="terca");
+  if(ET.VG){ const rotT=(s0,txt,off,t)=>{ const [x1,y1,x2,y2]=s0, ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI, a=ang>=90?ang-180:ang<-90?ang+180:ang; TX(D,x1+(x2-x1)*t,y1+(y2-y1)*t-off*k,txt,1.5,{l:"ESTRUT",rot:a,b:true}); };
+    const cs=ET.tercas.filter(x=>x.tipo==="caibro"), lg=a=>a.reduce((m,x)=>len(x.s)>len(m.s)?x:m,a[0]), len=q=>Math.hypot(q[2]-q[0],q[3]-q[1]);
+    const c1=cs.filter(x=>Math.abs(x.s[1]-cs[0].s[1])<1e-6||x===cs[0]); if(cs[0]) rotT(lg(c1).s,`1º CAIBRO 5x7 (APÓS A CALHA DE ${f(ET.VG.bc*100,0)} cm)`,1.6,0.55);
+    const c2=cs.find(x=>x!==cs[0]&&len(x.s)>len(cs[0].s)*0.8)||cs[1]; if(c2) rotT(c2.s,`CAIBRO 5x7 c/ ${f(ET.VG.ec)} m NA RAMPA (EMENDA DA TELHA)`,1.6,0.6);
+    if(ET.vigotas.length){ const v=ET.vigotas[Math.floor(ET.vigotas.length*0.7)].s; rotT(v,`VIGOTA PRÉ-MOLDADA c/ ${f(ET.VG.ev)} m`,2.4,0.5); } }
   if(fr) rot(fr.s,"FRECHAL 6x12",2); if(te) rot(te.s,"TERÇA 6x16",2); if(TI.cum[0]) rot(TI.cum[0],"TERÇA DE CUMEEIRA 6x16",2.4);
   if(ET.caibros.length){ const c=ET.caibros[Math.floor(ET.caibros.length/3)].s; rot(c,ET.E.cb?"CAIBRO 5x6 c/ 50 cm":"",1.6); }
   TI.setas.forEach(s=>{ seta(D,s.x0,s.y0,s.x1,s.y1,"COTAS"); });
@@ -2883,9 +2904,12 @@ function desenhoCumeeira(G,k){
   if(E.cb) nota(-0.5,-i*0.5+hc/2,-0.75,-i*0.5-0.25,"CAIBRO 5x6 cm");
   return D; }
 const notasTelhado=ET=>[`Telha ${String(S.tel.telha).toLowerCase()}, inclinação ${f(num(S.tel.inc),0)}%, ${ET.TI.nome}${ET.TI.plat?", com platibanda, rufo e calha":`, beiral de ${f(ET.TI.b)} m`}.`,
-  `Terças 6x16 cm a cada ${f(ET.E.vt)} m no máximo (em nível), apoiadas nas paredes e em pontaletes sobre as paredes internas; frechal 6x12 cm sobre a cinta.`,
-  ET.E.cb?`Caibros 5x6 cm a cada 50 cm e ripas 1,5x5 cm com galga de ${f(ET.E.galga*100,0)} cm (conferir com a telha comprada).`:`Telhas fixadas direto nas terças com parafusos e vedação, conforme o fabricante.`,
-  `Madeira tratada (autoclave) de lei. Quantidade: terças ${f(ET.Lt)} m${ET.E.cb?`, caibros ${f(ET.Lc)} m, ripas ${f(ET.Lr)} m`:""} (sem perdas).`];
+  ...(ET.VG?[`Vigotas pré-moldadas de concreto a cada ${f(ET.VG.ev)} m no sentido do caimento${ET.TI.rot?` (${ET.TI.rot.nome.replace(/^Caimento para o fundo, /,"")})`:""}, apoiadas nas paredes baixa e alta (conferir vão com o fabricante).`,
+    `Caibros 5x7 atravessados: o 1º logo após a calha de ${f(ET.VG.bc*100,0)} cm, os outros a cada ${f(ET.VG.ec)} m na rampa (cada emenda da telha sobre um caibro, recobrimento ${f(ET.VG.rec*100,0)} cm).`,
+    `Telhas de ${f(ET.VG.lt)} m: ${ET.VG.nF} fiada${ET.VG.nF>1?"s":""}${ET.VG.nF>1?`, a última cortada com ${f(ET.VG.ult)} m`:""}; ${ET.VG.nL} por fiada, ${ET.VG.nT} telhas, fixadas nos caibros com parafuso e arruela de vedação.`]
+  :[`Terças 6x16 cm a cada ${f(ET.E.vt)} m no máximo (em nível), apoiadas nas paredes e em pontaletes sobre as paredes internas; frechal 6x12 cm sobre a cinta.`]),
+  ...(ET.VG?[]:[ET.E.cb?`Caibros 5x6 cm a cada 50 cm e ripas 1,5x5 cm com galga de ${f(ET.E.galga*100,0)} cm (conferir com a telha comprada).`:`Telhas fixadas direto nas terças com parafusos e vedação, conforme o fabricante.`]),
+  ET.VG?`Caibros de madeira tratada (autoclave): ${f(ET.Lt)} m; vigotas: ${ET.vigotas.length} peças, ${f(ET.Lv)} m (sem perdas).`:`Madeira tratada (autoclave) de lei. Quantidade: terças ${f(ET.Lt)} m${ET.E.cb?`, caibros ${f(ET.Lc)} m, ripas ${f(ET.Lr)} m`:""} (sem perdas).`];
 
 /* ---------------- Paginação das fachadas ---------------- */
 const MATF=[["textura","Textura acrílica"],["latex","Pintura acrílica"],["porc","Porcelanato 60x120"],["cer","Cerâmica 30x60"],["pedra","Pedra filete"],["tijolinho","Tijolinho aparente"],["ripado","Ripado de madeira"],["acm","ACM (painel de alumínio)"]];
@@ -4066,11 +4090,11 @@ function render(){
   $("roofTypes").innerHTML=[1,2,3,4].map(tp=>`<button type="button" data-tipo="${tp}" aria-pressed="${TI.tipo===tp}">${iconeTelhado(tp)}${tp} ${tp===1?"água":"águas"}</button>`).join("");
   $("telCheck").innerHTML=verificaTelhado(G).map(x=>`<div class="alert ${x.ok?"ok":"warn"}">${x.ok?"OK: ":"Atenção: "}${esc(x.t)}</div>`).join("");
   const ds=[...DIRS[TI.tipo],...(TI.tipo===1&&TI.plat?ladosCaimento(G).map(o=>[o.v,o.txt]):[])]; $("tel.dir").innerHTML=ds.map(([v,t])=>`<option value="${v}"${v===(S.tel.dir||"")?" selected":""}>${t}</option>`).join("");
-  $("lblDir").hidden=TI.tipo===4; $("lblBeiral").hidden=TI.plat; document.querySelectorAll("[data-soplat]").forEach(e=>e.hidden=!TI.plat);
+  $("lblDir").hidden=TI.tipo===4; $("lblBeiral").hidden=TI.plat; document.querySelectorAll("[data-soplat]").forEach(e=>e.hidden=!TI.plat); { const fb=/Fibrocimento|Metálica/.test(S.tel.telha)&&TI.tipo===1; document.querySelectorAll("[data-sofibro]").forEach(e=>e.hidden=!fb); document.querySelectorAll("[data-sovig]").forEach(e=>e.hidden=!(fb&&S.tel.estr==="vigota")); }
   $("cob").innerHTML=svgDe(desenhoCobertura(G,k));
   if(!G.vazio){ const ET=estruturaTelhado(G); $("estr").innerHTML=svgDe(desenhoEstrutura(G,k,ET)); $("detBeiral").innerHTML=svgDe(desenhoBeiral(G,0.012));
     $("detCum").innerHTML=TI.tipo>1&&!TI.plat?svgDe(desenhoCumeeira(G,0.012)):`<p class="cap">${TI.tipo===1?"Telhado de uma água não tem cumeeira.":"Com platibanda a cumeeira fica escondida; mesmo detalhe do telhado aparente."}</p>${TI.tipo>1?svgDe(desenhoCumeeira(G,0.012)):""}`;
-    $("estrChips").innerHTML=[`Terças ${f(ET.Lt)} m`,ET.E.cb?`Caibros ${f(ET.Lc)} m`:"",ET.E.cb?`Ripas ${f(ET.Lr)} m`:""].filter(Boolean).map(t=>`<span class="chip">${t}</span>`).join("");
+    $("estrChips").innerHTML=[ET.VG?`Caibros ${f(ET.Lt)} m`:`Terças ${f(ET.Lt)} m`,ET.VG?`Vigotas ${f(ET.Lv)} m (${ET.vigotas.length} un)`:"",ET.VG?`Telhas ${ET.VG.nT} un`:"",ET.E.cb?`Caibros ${f(ET.Lc)} m`:"",ET.E.cb?`Ripas ${f(ET.Lr)} m`:""].filter(Boolean).map(t=>`<span class="chip">${t}</span>`).join("");
     $("estrNotas").innerHTML=notasTelhado(ET).map(t=>`<li>${esc(t)}</li>`).join(""); }
   $("capCob").textContent=`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}, inclinação ${f(num(S.tel.inc),0)}%${TI.plat?", escondido por platibanda":`, beiral de ${f(TI.b)} m`}. Altura máxima ${f(TI.plat?TI.topoPlat:TI.zmax)} m acima do piso.`;
   $("cobChips").innerHTML=G.vazio?"":[`Área do telhado ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²)`,TI.Lcum?`Cumeeira ${f(TI.Lcum)} m`:"",TI.Lesp?`Espigões ${f(TI.Lesp)} m`:"",`Cumeeira a ${f(TI.zmax)} m`].filter(Boolean).map(t=>`<span class="chip">${t}</span>`).join("");
@@ -4299,8 +4323,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
   const tb=$("ladosTab"), foco=document.activeElement&&tb.contains(document.activeElement)?[document.activeElement.dataset.li,document.activeElement.dataset.lc]:null;
@@ -4611,7 +4635,7 @@ function textosLado(P,lado,fl){
   if(lado==="locacao"){ const LC=fl.LC; return [{t:"QUADRO DE LOCAÇÃO",cols:[["EIXO",0],["MEDIDO DE",0],["DIST. (m)",1]],pc:[0.16,0.56,0.28],rows:[...LC.eixos.slice().sort((p,q)=>p.nome.localeCompare(q.nome,"pt",{numeric:true})).map(e=>[e.nome,e.ref,f(e.d,3)]),...LC.incl.flatMap((w,j)=>[[`C${j+1}a`,"alinhamento; divisa esq.",`${f(w.fa,2)}; ${f(w.ra,2)}`],[`C${j+1}b`,"alinhamento; divisa esq.",`${f(w.fb,2)}; ${f(w.rb,2)}`]])]},{t:"NOTAS",linhas:notasLocacao(LC)}]; }
   if(lado==="portas") return [{t:"QUADRO DE PORTAS",cols:[["CÓD.",0],["FOLHA E FECHADURA",0],["FOLHA",1],["VÃO OSSO",1],["ABRE",1],["QTD",1]],rows:Q.filter(q=>q.tipo==="Porta").map(q=>[q.cod,`${nomeFolha(q.fol)} · ${q.mod==="correr4"?"kit correr 4F":q.mod==="correr"?"kit correr":q.ext?"cilindro":q.ban?"banheiro":"interna"}`,`${f(q.l)}x${f(q.a)}`,`${f(q.l+0.10)}x${f(q.a+0.05)}`,ehCorrer(q.mod)?"correr":"giro",String(q.q)])},
     {t:"NOTAS",linhas:["Medidas da folha; vão em osso = folha + 10 cm na largura e + 5 cm na altura (batente e folga para espuma).","Batente na largura da parede, fixado com espuma expansiva ou parafuso e bucha; guarnição de 5 cm nos dois lados.","Maçaneta a 1,05 m do piso acabado; 3 dobradiças por folha.","Portas de banheiro e área molhada: madeira resistente à umidade ou com selador e verniz."]}];
-  if(lado==="estrutura"){ const E=fl.ET; return [{t:"QUANTITATIVO DE MADEIRA",cols:[["PEÇA",0],["METROS",1]],rows:[["Terças e cumeeira 6x16",f(E.Lt)],...(E.E.cb?[["Caibros 5x6",f(E.Lc)],["Ripas 1,5x5",f(E.Lr)]]:[]),["Área de telhado (m²)",f(E.TI.areaInc)]]},{t:"NOTAS",linhas:notasTelhado(E)}]; }
+  if(lado==="estrutura"){ const E=fl.ET; return [{t:"QUANTITATIVO DE MADEIRA",cols:[["PEÇA",0],["METROS",1]],rows:[...(E.VG?[["Caibros 5x7",f(E.Lt)],[`Vigotas (${E.vigotas.length} un)`,f(E.Lv)],[`Telhas ${f(E.VG.lt)} m`,`${E.VG.nT} un`]]:[["Terças e cumeeira 6x16",f(E.Lt)]]),...(E.E.cb?[["Caibros 5x6",f(E.Lc)],["Ripas 1,5x5",f(E.Lr)]]:[]),["Área de telhado (m²)",f(E.TI.areaInc)]]},{t:"NOTAS",linhas:notasTelhado(E)}]; }
   if(lado==="pagina"){ const AF=areasFachadas(G), qf=quantFachadas(AF); return [{t:"QUADRO DE MATERIAIS DAS FACHADAS",pc:[0.24,0.40,0.18,0.18],cols:[["FACHADA",0],["MATERIAL",0],["ÁREA m²",1],["COMPRA",1]],rows:AF.flatMap(F=>Object.entries(F.m).map(([m,a])=>[F.titulo.replace("FACHADA ","").toLowerCase(),nomeMatF(m),f(a),["textura","latex"].includes(m)?"-":f(a*1.1)]))},
     {t:"TOTAIS E NOTAS",linhas:[...Object.entries(qf).map(([m,a])=>`${nomeMatF(m)}: ${f(a)} m²`+(["textura","latex"].includes(m)?".":` (comprar ${f(a*1.1)} m² com 10% de perda).`)),`Áreas descontando portas e janelas. Juntas alinhadas entre as fachadas.`,`Paginação a partir do terreno; ajustar a primeira fiada na obra.`]}]; }
   if(lado==="revp") return [{t:"QUADRO DE REVESTIMENTOS",pc:[0.24,0.30,0.14,0.16,0.16],cols:[["AMBIENTE",0],["REVESTIMENTO",0],["ALTURA",1],["REV. m²",1],["PINT. m²",1]],rows:fl.RV.map(x=>[x.r.n,x.cer>0?nomeRevp(x.rt)+(x.re==="pia"?" (pia)":""):"-",x.cer>0?(x.h>=x.H-1e-6?"teto":f(x.h)):"-",x.cer?f(x.cer):"-",x.pint?f(x.pint):"-"])},{t:"QUANTITATIVO E NOTAS",linhas:notasRevp(fl.RV,fachadaRev(P.G))}];
