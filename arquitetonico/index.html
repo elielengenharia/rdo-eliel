@@ -661,7 +661,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.26 · app sem travar com o telhado alinhado com a divisa";
+const VERSAO="versão 5.27 · layers do DXF: paredes verdes e cotas cinza escuro";
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -4713,7 +4713,8 @@ function textosLado(P,lado,fl){
 }
 
 /* ---------------- DXF ---------------- */
-const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[7,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[3,"CONTINUOUS"],TEXTO:[2,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[6,"CONTINUOUS"],MOBILIA:[30,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[5,"CONTINUOUS"],PLUVIAL:[4,"CONTINUOUS"],PERSP:[8,"CONTINUOUS"],ESGOTO:[32,"CONTINUOUS"],FORRO:[8,"CONTINUOUS"],PISO:[9,"CONTINUOUS"],SOLEIRA:[2,"CONTINUOUS"],REVEST:[5,"CONTINUOUS"],PAGINA:[8,"CONTINUOUS"],ESTRUT:[33,"CONTINUOUS"],VIGA:[3,"CONTINUOUS"],FUNDACAO:[8,"DASHED"],LAJE:[150,"CONTINUOUS"],ESCADA:[7,"CONTINUOUS"],EIXO:[1,"DASHED"],CONSTRUIR:[1,"CONTINUOUS"],DEMOLIR:[40,"DASHED"],GERAL:[7,"CONTINUOUS"]};
+// cores das layers no AutoCAD (ACI): paredes verdes (3), cotas cinza escuro (8), textos, títulos e mobília na cor natural (7)
+const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[3,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[8,"CONTINUOUS"],TEXTO:[7,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[7,"CONTINUOUS"],MOBILIA:[7,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[5,"CONTINUOUS"],PLUVIAL:[4,"CONTINUOUS"],PERSP:[8,"CONTINUOUS"],ESGOTO:[32,"CONTINUOUS"],FORRO:[8,"CONTINUOUS"],PISO:[9,"CONTINUOUS"],SOLEIRA:[2,"CONTINUOUS"],REVEST:[5,"CONTINUOUS"],PAGINA:[8,"CONTINUOUS"],ESTRUT:[33,"CONTINUOUS"],VIGA:[4,"CONTINUOUS"],FUNDACAO:[8,"DASHED"],LAJE:[150,"CONTINUOUS"],ESCADA:[7,"CONTINUOUS"],EIXO:[1,"DASHED"],CONSTRUIR:[1,"CONTINUOUS"],DEMOLIR:[40,"DASHED"],GERAL:[7,"CONTINUOUS"]};
 function dxfEnc(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?"); }
 function buildDXF(){
   const P=pranchas(S.fmt||"A3"), o=[], p=(c,v)=>o.push(String(c),String(v)), n=v=>(+v).toFixed(4);
