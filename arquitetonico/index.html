@@ -152,7 +152,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <div id="selPanel" class="panel" hidden></div>
       <div class="chips" id="planChips"></div>
       <div id="warnings"></div>
-      <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option><option>A0</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Desenhos por folha<select id="agrupar" style="width:auto"><option value="auto">Automático (A0 até 9, A1 até 6, A2 até 4)</option><option value="não">Um por folha</option><option value="2">Até 2 por folha</option><option value="4">Até 4 por folha</option><option value="6">Até 6 por folha</option><option value="9">Até 9 por folha</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><span class="toast" id="pdfMsg" role="status"></span></div>
+      <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option><option>A0</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Desenhos por folha<select id="agrupar" style="width:auto"><option value="auto">Automático (A0 até 9, A1 até 6, A2 até 4)</option><option value="não">Um por folha</option><option value="2">Até 2 por folha</option><option value="4">Até 4 por folha</option><option value="6">Até 6 por folha</option><option value="9">Até 9 por folha</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Cotas gerais (em cima e à esquerda)<select id="cotGer" style="width:auto"><option value="sim">Mostrar</option><option value="não">Não mostrar</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><span class="toast" id="pdfMsg" role="status"></span></div>
       <div class="row"><button class="btn pri" data-dxf>Baixar DXF para o AutoCAD</button><button class="btn" data-dxfcopy>Copiar DXF</button><span class="toast" data-dxfmsg role="status"></span></div>
       <p class="cap" style="margin-top:8px">O PDF sai com todas as pranchas do projeto, com carimbo: planta baixa e quadros, cortes, cobertura e estrutura do telhado, fachadas, situação, elétrica, hidrossanitário e águas pluviais, estrutura, detalhes (banheiro, portas, esquadrias) e perspectivas. Em A0, A1 e A2 os desenhos da mesma disciplina vão juntos em menos folhas. O DXF tem os mesmos desenhos em escala real (metros), cada elemento no seu layer.</p>
     </div>
@@ -672,7 +672,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.32 · nome e área de cada ambiente no meio, letra menor", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.33 · opção para tirar as cotas gerais da planta", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1182,7 +1182,7 @@ function rotuloAmb(D,r,ls,x,y,obs=[]){ const k=D.k, P=paraDentro(r.poly,0.05)||r
   const u=best.u, v=[-u[1],u[0]], ang=Math.atan2(u[1],u[0])*180/Math.PI; let dd=-alt(best.L0)/2;
   best.L0.forEach(l=>{ const hh=l.h*1.45*k, cc=dd+hh/2; TX(D,best.p[0]+v[0]*cc,best.p[1]+v[1]*cc,l.t,l.h,{b:!!l.b,l:l.l||"TEXTO",mv:best.solto?"r":"f",...(Math.abs(ang)>0.5?{rot:ang}:{})}); dd+=hh; }); }   // fica no meio: os outros textos é que desviam dele
 function desenhoPlanta(G,k,ajuda){
-  const D=Dw(k), h=G.h, bb=G.bb;
+  const D=Dw(k), h=G.h, bb=G.bb, cg=S.cotGer!=="não";   // cg: cotas gerais em cima e à esquerda (opção da aba Planta)
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
   G.pecas.forEach(P=>PG(D,P,"HACHURA"));
   G.contPar.forEach(s=>L(D,...s,.5,"PAREDE"));
@@ -1193,9 +1193,9 @@ function desenhoPlanta(G,k,ajuda){
     const a=sg>0?w.cA[0]:w.cA[1], b=sg>0?w.cB[0]:w.cB[1], u=[w.ux,w.uy], n=[w.nX*sg,w.nY*sg], Lf=(b[0]-a[0])*u[0]+(b[1]-a[1])*u[1], d0=(w.x1-a[0])*u[0]+(w.y1-a[1])*u[1];
     if(Lf<0.3) return;
     const vs=G.abs.filter(g=>g.w===w).flatMap(g=>[d0+g.d,d0+g.d+g.l]).filter(t=>t>0.005&&t<Lf-0.005), ts=uniq([0,...vs,Lf]).sort((p,q)=>p-q);
-    const cima=w.hz&&Math.abs(Math.min(a[1],b[1])-bb.y0)<0.02&&n[1]<0, esq=w.vt&&Math.abs(Math.min(a[0],b[0])-bb.x0)<0.02&&n[0]<0, nasCadeias=cima||esq;   // em cima e à esquerda as cadeias gerais já dão o total
+    const cima=w.hz&&Math.abs(Math.min(a[1],b[1])-bb.y0)<0.02&&n[1]<0, esq=w.vt&&Math.abs(Math.min(a[0],b[0])-bb.x0)<0.02&&n[0]<0, nasCadeias=cg&&(cima||esq);   // em cima e à esquerda as cadeias gerais já dão o total (sem elas, a parede ganha o total dela)
     if(vs.length) cadeiaAlinhada(D,a,u,n,ts,nasCadeias?4.2:5);
-    if(!nasCadeias){ if(!vs.length&&!w.hz&&!w.vt&&(((w.x1+w.x2)/2-bb.x0<0.8)||((w.y1+w.y2)/2-bb.y0<0.8))&&Lf<2.5) return;   // parede curta junto das cadeias
+    if(!nasCadeias){ if(cg&&!vs.length&&!w.hz&&!w.vt&&(((w.x1+w.x2)/2-bb.x0<0.8)||((w.y1+w.y2)/2-bb.y0<0.8))&&Lf<2.5) return;   // parede curta junto das cadeias
       cadeiaAlinhada(D,a,u,n,[0,Lf],vs.length?11:5); } });
   // cotas internas de cada ambiente (faces das paredes e portas), por dentro
   G.rooms.forEach(r=>{ if(r.area<3.5) return; const P=r.poly, m=P.length;
@@ -1212,8 +1212,8 @@ function desenhoPlanta(G,k,ajuda){
   const fora=G.incl.flatMap(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, Cp=G.compAt(mx+w.nX*(h+0.12),my+w.nY*(h+0.12)); return (!Cp||Cp.ext)?[w.cA[0],w.cB[0]]:[w.cA[1],w.cB[1]]; });
   const foraX=fora.filter(p=>p[1]-bb.y0<0.35), foraY=fora.filter(p=>p[0]-bb.x0<0.35);
   const fx=uniq([bb.x0,bb.x1,...foraX.map(p=>p[0]),...G.orto.filter(w=>w.vt).flatMap(w=>[w.x1-h,w.x1+h])]), fy=uniq([bb.y0,bb.y1,...foraY.map(p=>p[1]),...G.orto.filter(w=>w.hz).flatMap(w=>[w.y1-h,w.y1+h])]);
-  cadeiaH(D,fx,bb.y0-9*k,bb.y0); cotaH(D,bb.x0,bb.x1,bb.y0-16*k,bb.y0-9*k,f(bb.x1-bb.x0));
-  cadeiaV(D,fy,bb.x0-9*k,bb.x0); cotaV(D,bb.y0,bb.y1,bb.x0-16*k,bb.x0-9*k,f(bb.y1-bb.y0));
+  if(cg){ cadeiaH(D,fx,bb.y0-9*k,bb.y0); cotaH(D,bb.x0,bb.x1,bb.y0-16*k,bb.y0-9*k,f(bb.x1-bb.x0));
+    cadeiaV(D,fy,bb.x0-9*k,bb.x0); cotaV(D,bb.y0,bb.y1,bb.x0-16*k,bb.x0-9*k,f(bb.y1-bb.y0)); }
   // linhas de corte
   const cA=posCorte(G,"A"), cB=posCorte(G,"B"), r=2.6*k;
   L(D,bb.x0-22*k,cA,bb.x1+19*k,cA,.35,"CORTE",true);
@@ -4418,7 +4418,7 @@ $("ladosTab").addEventListener("click",e=>{ const b=e.target.closest("[data-ldel
 $("ladoAdd").onclick=()=>{ S.terr.lados.push({m:0,c:"",rua:"não"}); $("ladosTab").innerHTML=""; render(); };
 { const tbP=$("tabPint"), labDeIdx=i=>{ const k=+i; return k>=0?S.rooms[k]:null; };
   tbP.addEventListener("input",e=>{ const el=e.target, L0=labDeIdx(el.dataset.pc??el.dataset.pt??el.dataset.pp); if(!L0) return; if(el.dataset.pc!=null) L0.cp=el.value; else if(el.dataset.pt!=null) L0.ct=el.value; else if(el.dataset.pp!=null){ L0.rp=el.value; render(); return; } later(); }); }
-function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; $("agrupar").value=S.agrupar||"auto"; renderWalls(); renderRooms(); renderAb(); }
+function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; $("agrupar").value=S.agrupar||"auto"; $("cotGer").value=S.cotGer==="não"?"não":"sim"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
   el.addEventListener(el.tagName==="SELECT"?"change":"input",()=>{ const v=TEXTOS.includes(id)?el.value:num(el.value); setv(id,v);
@@ -4426,6 +4426,7 @@ FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
     if(el.tagName==="SELECT") render(); else later(); }); });
 $("fmt").onchange=()=>{ S.fmt=$("fmt").value; save(); };
 $("agrupar").onchange=()=>{ S.agrupar=$("agrupar").value; save(); };
+$("cotGer").onchange=()=>{ S.cotGer=$("cotGer").value; save(); render(); };   // cotas gerais da planta (cadeias de cima e da esquerda)
 $("roofTypes").addEventListener("click",e=>{ const b=e.target.closest("[data-tipo]"); if(!b) return; const tp=+b.dataset.tipo; S.tel.tipo=tp; S.tel.dir=dirPadrao(tp,GG||geom()); render(); });
 ["A","B"].forEach(q=>{ const set=v=>{ S["c"+q]=num(v); later(); }; $("c"+q+"r").addEventListener("input",e=>{ $("c"+q+"n").value=e.target.value; set(e.target.value); }); $("c"+q+"n").addEventListener("change",e=>set(e.target.value)); });
 
