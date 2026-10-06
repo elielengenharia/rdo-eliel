@@ -672,7 +672,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.31 · carimbo com espaço para aprovação e nome fantasia Eliel Engenharia", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.32 · nome e área de cada ambiente no meio, letra menor", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1151,18 +1151,36 @@ function marcaDrywall(D,G){ const k=D.k; G.walls.filter(w=>w.dw).forEach(w=>{ L(
 // rótulo do ambiente que cabe dentro dele: diminui o texto (até 42%) e procura um lugar livre perto do ponto pedido
 // rótulo do ambiente no tamanho padrão (igual em todos): procura um lugar livre dentro do ambiente, fora do giro das portas;
 // se não couber, aceita encostar na porta e, em último caso, tira as linhas de baixo (o nível e a área estão no quadro de áreas)
-function rotuloAmb(D,r,ls,x,y,obs=[]){ const k=D.k, P=paraDentro(r.poly,0.06)||r.poly, alt=L0=>L0.reduce((s0,l)=>s0+l.h*1.45,0)*k, larg=L0=>Math.max(...L0.map(l=>largTexto(l.t,l.b)*l.h*1.39))*k+0.04+2*k;   // 1 mm de folga de cada lado
+// ponto mais "no meio" do ambiente: o mais longe de todas as paredes (funciona em L, trapézio e ambiente girado)
+function meioAmb(P){ const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys), n=P.length;
+  const dist=(x,y)=>{ if(!pip(P,x,y)) return -1; let m=1e9; for(let i=0;i<n;i++){ const a=P[i], b=P[(i+1)%n]; m=Math.min(m,distSeg([x,y],{x1:a[0],y1:a[1],x2:b[0],y2:b[1]})); } return m; };
+  let best=[(x0+x1)/2,(y0+y1)/2], bd=dist(...best), st=Math.max(x1-x0,y1-y0)/24;
+  for(let i=0;i<=24;i++) for(let j=0;j<=24;j++){ const x=x0+(x1-x0)*i/24, y=y0+(y1-y0)*j/24, d=dist(x,y); if(d>bd){ bd=d; best=[x,y]; } }
+  for(let it=0;it<5;it++){ const c=best.slice(); for(let i=-3;i<=3;i++) for(let j=-3;j<=3;j++){ const x=c[0]+i*st/3, y=c[1]+j*st/3, d=dist(x,y); if(d>bd){ bd=d; best=[x,y]; } } st/=3; }
+  // entre os pontos quase tão longe das paredes quanto o melhor, fica o mais perto do centro de área (texto centrado no ambiente)
+  let A=0, cx=0, cy=0; for(let i=0;i<n;i++){ const a=P[i], b=P[(i+1)%n], c0=a[0]*b[1]-b[0]*a[1]; A+=c0; cx+=(a[0]+b[0])*c0; cy+=(a[1]+b[1])*c0; } if(Math.abs(A)>1e-9){ cx/=3*A; cy/=3*A; const dc=dist(cx,cy); if(dc>=bd*0.8) return [cx,cy]; }
+  return best; }
+// nome, área, nível e medidas do ambiente: centrados no meio do ambiente, letra menor quando não cabe, em pé ou inclinado se o ambiente for estreito
+function rotuloAmb(D,r,ls,x,y,obs=[]){ const k=D.k, P=paraDentro(r.poly,0.05)||r.poly, c=meioAmb(P);
+  // giro das portas já desenhado: o texto não passa por cima do arco
+  const arcos=D.p.filter(q=>q.t==="a"&&q.r>0.3).map(q=>{ const m=[(q.x1+q.x2)/2-q.cx,(q.y1+q.y2)/2-q.cy], l=Math.hypot(...m)||1; return [[q.cx,q.cy],[q.x1,q.y1],[q.cx+m[0]/l*q.r,q.cy+m[1]/l*q.r],[q.x2,q.y2]]; }); obs=obs.concat(arcos);
+  let lg=null; P.forEach((a,i)=>{ const b=P[(i+1)%P.length], l0=Math.hypot(b[0]-a[0],b[1]-a[1]); if(!lg||l0>lg.l) lg={l:l0,u:[(b[0]-a[0])/l0,(b[1]-a[1])/l0]}; });
+  let uL=lg?lg.u:[1,0]; if(uL[0]<-1e-9||(Math.abs(uL[0])<1e-9&&uL[1]>0)) uL=[-uL[0],-uL[1]]; const angL=Math.atan2(uL[1],uL[0])*180/Math.PI;
+  const dirs=[[1,0],...(Math.abs(angL)>8?[uL]:[])];
+  const alt=L0=>L0.reduce((s0,l)=>s0+l.h*1.45,0)*k, larg=L0=>Math.max(...L0.map(l=>largTexto(l.t,l.b)*l.h*1.39))*k+1.2*k;
+  const caixa=(p,u,w,h)=>{ const v=[-u[1],u[0]]; return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([a,b])=>[p[0]+u[0]*a*w/2+v[0]*b*h/2,p[1]+u[1]*a*w/2+v[1]*b*h/2]); };
+  const cabe=(Q,ob)=>{ const pts=Q.concat(Q.map((q,i)=>[(q[0]+Q[(i+1)%4][0])/2,(q[1]+Q[(i+1)%4][1])/2])); return pts.every(p=>pip(P,p[0],p[1]))&&!ob.some(z=>sobrepoe(Q,z)); };
+  const tenta=(L0,ob)=>{ const w=larg(L0), h=alt(L0); for(const u of dirs){ if(cabe(caixa(c,u,w,h),ob)) return {p:c,u};
+      for(const d of [0.25*h,0.5*h,0.8*h,1.2*h,0.15,0.25,0.35,0.5,0.65,0.8]) for(let a=0;a<16;a++){ const t=a*Math.PI/8, p=[c[0]+Math.cos(t)*d,c[1]+Math.sin(t)*d]; if(cabe(caixa(p,u,w,h),ob)) return {p,u}; } } return null; };   // perto do meio, desviando do giro das portas
+  const esc=(L0,z)=>L0.map(l=>({...l,h:l.h*z}));
   let best=null;
-  for(const ob of [obs,[]]) for(let n=ls.length;n>=Math.min(2,ls.length)&&!best;n--){ const L0=ls.slice(0,n), pos=lugarRotulo({...r,poly:P},ob,x,y,larg(L0),alt(L0)); if(pos) best={pos,L0}; }
-  // ambiente estreito e comprido: o nome acompanha o comprimento do ambiente (em pé ou inclinado) em vez de passar por cima da porta
-  if(!best){ let lg=null; P.forEach((a,i)=>{ const b=P[(i+1)%P.length], l0=Math.hypot(b[0]-a[0],b[1]-a[1]); if(!lg||l0>lg.l) lg={l:l0,u:[(b[0]-a[0])/l0,(b[1]-a[1])/l0]}; });
-    let u=lg.u; if(u[0]<-1e-9||(Math.abs(u[0])<1e-9&&u[1]>0)) u=[-u[0],-u[1]]; const ang=Math.atan2(u[1],u[0])*180/Math.PI, v=[-u[1],u[0]];
-    if(Math.abs(ang)>15) for(let n=ls.length;n>=1&&!best;n--){ const L0=ls.slice(0,n), pos=lugarRotuloRot({...r,poly:P},obs,x,y,larg(L0),alt(L0),u); if(pos) best={pos,L0,u,v,ang}; }
-    if(best){ const [x0,y0]=best.pos; let dd=-alt(best.L0)/2; best.L0.forEach(l=>{ const hh=l.h*1.45*k, c=dd+hh/2; TX(D,x0+v[0]*c,y0+v[1]*c,l.t,l.h,{b:!!l.b,l:l.l||"TEXTO",rot:ang,mv:"r"}); dd+=hh; }); return; } }
-  if(!best) for(const ob of [obs,[]]){ const L0=ls.slice(0,1), pos=lugarRotulo({...r,poly:P},ob,x,y,larg(L0),alt(L0)); if(pos){ best={pos,L0}; break; } }
-  if(!best) for(const fz of [0.85,0.72,0.6]){ const L0=ls.slice(0,1).map(l=>({...l,h:l.h*fz})), pos=lugarRotulo({...r,poly:P},[],x,y,larg(L0),alt(L0)); if(pos){ best={pos,L0}; break; } }   // ambiente pequeno na escala da folha: letra menor em vez de passar para o vizinho
-  const L0=best?best.L0:ls.slice(0,1), [x0,y0]=best?best.pos:[x,y]; let yy=y0-alt(L0)/2;
-  L0.forEach(l=>{ const hh=l.h*1.45*k; TX(D,x0,yy+hh/2,l.t,l.h,{b:!!l.b,l:l.l||"TEXTO",mv:"r"}); yy+=hh; }); }
+  // primeiro mantém tudo e diminui um pouco; depois só nome e área; por último só o nome, até a metade do tamanho
+  // nome e área sempre juntos: primeiro tudo, depois só nome e área (letra até a metade), desviando das portas; se não couber de jeito nenhum, só o nome
+  const n2=Math.min(2,ls.length), fase1=[], fase2=[]; [1,0.9,0.8].forEach(z=>{ for(let n=ls.length;n>n2;n--) fase1.push([n,z]); }); [1,0.9,0.8,0.7,0.6,0.5].forEach(z=>fase1.push([n2,z])); [0.7,0.6,0.5].forEach(z=>fase2.push([1,z]));
+  for(const planos of [fase1,fase2]){ for(const ob of [obs,arcos,[]]){ for(const [n,z] of planos){ const L0=esc(ls.slice(0,n),z), t=tenta(L0,ob); if(t){ best={...t,L0}; break; } } if(best) break; } if(best) break; }
+  if(!best) best={p:c,u:[1,0],L0:esc(ls.slice(0,1),0.5),solto:1};   // não coube: pode ser empurrado um pouco pelos textos vizinhos
+  const u=best.u, v=[-u[1],u[0]], ang=Math.atan2(u[1],u[0])*180/Math.PI; let dd=-alt(best.L0)/2;
+  best.L0.forEach(l=>{ const hh=l.h*1.45*k, cc=dd+hh/2; TX(D,best.p[0]+v[0]*cc,best.p[1]+v[1]*cc,l.t,l.h,{b:!!l.b,l:l.l||"TEXTO",mv:best.solto?"r":"f",...(Math.abs(ang)>0.5?{rot:ang}:{})}); dd+=hh; }); }   // fica no meio: os outros textos é que desviam dele
 function desenhoPlanta(G,k,ajuda){
   const D=Dw(k), h=G.h, bb=G.bb;
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
@@ -1188,7 +1206,7 @@ function desenhoPlanta(G,k,ajuda){
   desenhaAberturas(D,G,G.abs);
   // ambientes
   G.rooms.forEach(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; const x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy;
-    rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:2.0,b:true},{t:`A = ${f(r.area)} m²`,h:1.6},{t:`NV ${fNv(r.nv)}`,h:1.4,l:"COTAS"},...(r.ret?[{t:`${f(r.x1-r.x0)} x ${f(r.y1-r.y0)}`,h:1.4,l:"COTAS"}]:[])],x,y,(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })()); });   // fora do giro das portas
+    rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.6,b:true},{t:`A = ${f(r.area)} m²`,h:1.3},{t:`NV ${fNv(r.nv)}`,h:1.1,l:"COTAS"},...(r.ret?[{t:`${f(r.x1-r.x0)} x ${f(r.y1-r.y0)}`,h:1.1,l:"COTAS"}]:[])],x,y,(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })()); });   // fora do giro das portas
   // cotas: faces das paredes (em cima e à esquerda) e totais
   // paredes inclinadas: só entram na cadeia os cantos que ficam junto da borda daquele lado (o chanfro da frente não parte a cota de cima)
   const fora=G.incl.flatMap(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, Cp=G.compAt(mx+w.nX*(h+0.12),my+w.nY*(h+0.12)); return (!Cp||Cp.ext)?[w.cA[0],w.cB[0]]:[w.cA[1],w.cB[1]]; });
@@ -1790,6 +1808,7 @@ function lugarRotuloRot(r,sol,x,y,wt,ht,u){ const v=[-u[1],u[0]], livre=(px,py)=
   if(livre(x,y)) return [x,y]; const st=0.04, R=Math.max(r.x1-r.x0,r.y1-r.y0);
   for(let rr=st;rr<=R;rr+=st){ const n=Math.max(8,Math.round(2*Math.PI*rr/st)); for(let i=0;i<n;i++){ const a=i/n*2*Math.PI, px=x+rr*Math.cos(a), py=y+rr*Math.sin(a); if(livre(px,py)) return [px,py]; } } return null; }
 function lugarRotulo(r,sol,x,y,wt,ht){ const livre=(px,py)=>{ const Q=[[px-wt/2,py-ht/2],[px+wt/2,py-ht/2],[px+wt/2,py+ht/2],[px-wt/2,py+ht/2]]; return Q.every(p=>pip(r.poly,p[0],p[1]))&&!sol.some(z=>sobrepoe(Q,z)); };
+  if(r.cx!=null&&r.poly&&r.poly.length>2){ const m=meioAmb(r.poly); x=m[0]+(x-r.cx); y=m[1]+(y-r.cy); }   // parte do meio do ambiente (o centro do retângulo pode cair fora num ambiente em L ou girado)
   if(livre(x,y)) return [x,y];
   const st=0.04, R=Math.max(r.x1-r.x0,r.y1-r.y0); let melhor=null;
   for(let rr=st;rr<=R&&!melhor;rr+=st){ const n=Math.max(8,Math.round(2*Math.PI*rr/st)); for(let i=0;i<n;i++){ const a=i/n*2*Math.PI, px=x+rr*Math.cos(a), py=y+rr*Math.sin(a); if(livre(px,py)){ melhor=[px,py]; break; } } }
@@ -2262,7 +2281,7 @@ function desenhoPluvial(G,k,PV,legenda=true){ const D=Dw(k), bb=G.bb, l="PLUVIAL
   if(G.vazio||!PV){ TX(D,0,0,"Sem paredes.",3); return D; }
   G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s0=>L(D,...s0,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
   const TI=PV.TI, R=TI.R; if(TI.poly) PL(D,[...TI.poly,TI.poly[0]],.2,"PROJECAO",true); else PL(D,[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1],[R.x0,R.y0]],.2,"PROJECAO",true);
-  G.rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.6,b:true,l:"COTAS"}],r.cx,r.cy));
+  G.rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.4,b:true,l:"COTAS"}],r.cx,r.cy));
   if(PV.livre){ TX(D,(bb.x0+bb.x1)/2,bb.y1+8*k,"TELHADO SEM CALHA: ÁGUA CAI LIVRE DO BEIRAL - CALÇADA DE PROTEÇÃO COM CAIMENTO DE 2%",1.6,{b:true,l}); return D; }
   // calhas
   PV.CL.lista.forEach(c=>{ const [x0,y0,x1,y1]=c.seg, u=[(x1-x0)/(c.L||1),(y1-y0)/(c.L||1)]; L(D,x0,y0,x1,y1,.45,l);
@@ -2644,7 +2663,7 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
   G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
   LM=LM||layoutMoveis(G); HD=HD||redeHidro(G,LM);
   LM.forEach(R=>{ R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des,"MOBILIAC")); if(R.banho){ const n0=D.p.length; desenhaLoucas(D,R.r,R.banho,k,false); for(let i=n0;i<D.p.length;i++) D.p[i].l="MOBILIAC"; } });
-  LM.forEach(R=>{ const r=R.r; rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.8,b:true,l:"COTAS"}],r.cx,r.cy); });
+  LM.forEach(R=>{ const r=R.r; rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.4,b:true,l:"COTAS"}],r.cx,r.cy); });
   // esgoto
   HD.salas.forEach(sa=>{ const sd=sa.saida.p;
     sa.A.forEach(a=>{ if(!a.es) return; simbHidro(D,{t:"es",p:a.es});
@@ -3127,7 +3146,7 @@ function desenhoReforma(G2,k,G,leg=true){
   // rótulos dos vãos alterados
   G2.abs.forEach(g=>{ const st=stA(g.a); if(st==="e"||stW(g.w.i)==="d") return; const w=g.w, m=[w.x1+w.ux*(g.d+g.l/2)-g.nX*(h+5.5*k)*g.lado,w.y1+w.uy*(g.d+g.l/2)-g.nY*(h+5.5*k)*g.lado];
     TX(D,...m,st==="d"?"FECHAR":"ABRIR",1.4,{b:true,l:st==="d"?"CONSTRUIR":"DEMOLIR"}); });
-  (G||geom()).rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:2,b:true}],r.cx,r.cy));
+  (G||geom()).rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.6,b:true}],r.cx,r.cy));
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
   if(leg){ const x0=bb.x1+14*k; let y=bb.y0; TX(D,x0,y,"LEGENDA",2,{a:"s",b:true}); y+=6*k;
     const sw=(st,txt)=>{ const P=[[x0,y-1.5*k],[x0+6*k,y-1.5*k],[x0+6*k,y+1.5*k],[x0,y+1.5*k]];
