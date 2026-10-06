@@ -635,7 +635,10 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
         <label>Responsável técnico<input type="text" id="rtNome"></label>
         <label>Registro (CREA/CAU)<input type="text" id="crea"></label>
         <label>Data<input type="text" id="data"></label>
+        <label>Espaço para aprovação<select id="aprov"><option value="sim">Sim, no carimbo</option><option value="não">Não</option></select></label>
+        <label>Órgão que aprova<input type="text" id="orgao" placeholder="Prefeitura Municipal de ..."></label>
       </div>
+      <p class="cap" style="margin-top:6px">Com o espaço para aprovação, cada prancha leva acima do carimbo o quadro reservado aos órgãos competentes: carimbo e visto do órgão, processo, alvará, data de aprovação, áreas do lote e assinatura do proprietário. Vale do A3 ao A0; no A4 não cabe sem estragar o desenho.</p>
     </div>
     <div class="sheet">
       <h2>Paredes (eixos, em metros)</h2>
@@ -669,7 +672,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.30 · cotas do banheiro sem encavalar", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.31 · carimbo com espaço para aprovação e nome fantasia Eliel Engenharia", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -706,7 +709,7 @@ const INC_TELHA={"Cerâmica":30,"Concreto":30,"Fibrocimento":15,"Metálica":10};
 const ABDEF={Porta:{l:0.80,a:2.10,p:0},Janela:{l:1.20,a:1.00,p:1.10},"Vão":{l:1.00,a:2.10,p:0}};
 function defaults(){
   return {
-    obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
+    obra:"Residência térrea 42 m²", cliente:"", local:"", aprov:"sim", orgao:"", emp:"Eliel Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
     pd:2.80, laje:0.10, reb:2.5, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45"}, base:{int:"simples",arm:"tela",veic:"carro",ext:0}, pint:{corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"}, persp:{fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"}, memo:{obs:""}, orc:{bdi:20,cub:"",p:{}}, revp:{int:"latex",ext:"textura"}, fpag:[{},{},{},{}], esc:{on:"não",h:"",larg:0.90,tipo:"reta"}, fossa:{on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto"}, ap:{beiral:"sim",dest:"sarjeta",i:1,rua:"frente"}, estr:{fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"}, estS:{vmax:3.0,prof:1.2,cinta:"sim"}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
@@ -732,7 +735,7 @@ function modeloSalas(){ const o=defaults();
   o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua lateral (o terreno cai para ela)
   return o; }
 // estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
-function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto"},o.fossa||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim"},o.estS||{}); }catch(e){ S=defaults(); } return S; }
+function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); if(S.emp==="Eliel Ribeiro Engenharia") S.emp="Eliel Engenharia"; /* nome fantasia no carimbo */ S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto"},o.fossa||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim"},o.estS||{}); }catch(e){ S=defaults(); } return S; }
 let _o0=null; try{ _o0=JSON.parse(localStorage.getItem("arq-casa-v1")); }catch(e){} S=estadoDe(_o0||{});
 /* vários projetos no mesmo aparelho: a lista fica em arq-projetos-v1; o aberto continua em arq-casa-v1 */
 const PJ_KEY="arq-projetos-v1";
@@ -4379,8 +4382,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
   const tb=$("ladosTab"), foco=document.activeElement&&tb.contains(document.activeElement)?[document.activeElement.dataset.li,document.activeElement.dataset.lc]:null;
@@ -4606,9 +4609,10 @@ function encaixar2(g1,g2,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=
 const SHEETS={A4:[297,210],A3:[420,297],A2:[594,420],A1:[841,594],A0:[1189,841]};
 function pranchas(fmt){
   const [W,H]=SHEETS[fmt]||SHEETS.A3, mo=7, ml=25, cw=fmt==="A4"?118:180, ch=64, TT=11;
+  const ha=S.aprov==="não"||fmt==="A4"?0:fmt==="A3"?48:66;   // quadro de aprovação dos órgãos competentes, acima do carimbo (no A4 não cabe: a planta ficaria ilegível)
   const G=geom(), Q=esquadrias(G), TI=infoTelhado(G);
-  const area={x0:ml+6,y0:mo+5,x1:W-mo-6,y1:H-mo-ch-5}, aw=area.x1-area.x0, ah=area.y1-area.y0;
-  const side={x0:ml+6,y0:H-mo-ch+2,x1:W-mo-cw-6,y1:H-mo-3};
+  const area={x0:ml+6,y0:mo+5,x1:W-mo-6,y1:H-mo-ch-ha-5}, aw=area.x1-area.x0, ah=area.y1-area.y0;
+  const side={x0:ml+6,y0:H-mo-ch-ha+2,x1:W-mo-cw-6,y1:H-mo-3};
   const pl=encaixar(k=>desenhoPlanta(G,k,false),aw,ah-TT);
   const G2=geom(true), QR=quantReforma(G2), rf=temReforma()?encaixar(k=>desenhoReforma(G2,k,G),aw,ah-TT):null;
   const LM=layoutMoveis(G), temMob=LM.some(R=>R.pos.length||R.banho||R.carro), la=temMob?encaixar(k=>desenhoLayout(G,k,LM),aw,ah-TT):null;
@@ -4680,7 +4684,7 @@ function pranchas(fmt){
   const fls=cap>1?agruparFolhas(folhas,cap,area,TT):folhas;
   fls.forEach((fl,i)=>fl.n=`${String(i+1).padStart(2,"0")}/${String(fls.length).padStart(2,"0")}`);
   fls.forEach(fl=>fl.itens.forEach(it=>{ if(!it.d||!it.d.D||!it.d.k) return; desencavala(it.d.D); const e=extensao(it.d.D); Object.assign(it.d,{e,w:(e.x1-e.x0)/it.d.k,h:(e.y1-e.y0)/it.d.k}); }));   // tira os textos de cima uns dos outros (PDF e DXF) e mede de novo
-  return {W,H,mo,ml,cw,ch,TT,area,side,G,Q,TI,folhas:fls};
+  return {W,H,mo,ml,cw,ch,ha,TT,area,side,G,Q,TI,folhas:fls};
 }
 function textosLado(P,lado,fl){
   const {G,Q,TI}=P, pd=num(S.pd);
@@ -4796,7 +4800,7 @@ document.querySelectorAll("[data-dxfcopy]").forEach(b=>b.onclick=async()=>{
 const PDFCOR={LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25],AGUA:[0,.3],PLUVIAL:[.2,.35],PERSP:[.5,.15],ESGOTO:[.25,.5],FORRO:[.3,.15],PISO:[.45,.1],SOLEIRA:[0,.25],REVEST:[0,.4],PAGINA:[.35,.1],ESTRUT:[0,.3],VIGA:[0,.3],FUNDACAO:[.35,.25],LAJE:[.25,.2],ESCADA:[0,.3],EIXO:[0,.2],CONSTRUIR:[.15,.3],DEMOLIR:[0,.3]};
 function pdfTxt(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?").replace(/[\\()]/g,m=>"\\"+m); }
 function buildPDF(fmt){
-  const P=pranchas(fmt), {W,H,mo,ml,cw,ch,TT,side}=P; const n=v=>(+v).toFixed(3); let c=[]; const pages=[], imgs=[];
+  const P=pranchas(fmt), {W,H,mo,ml,cw,ch,ha,TT,side}=P; const TR=P.G.vazio?null:terreno(P.G); const n=v=>(+v).toFixed(3); let c=[]; const pages=[], imgs=[];
   // coordenadas: (x, y) em mm a partir do canto superior esquerdo
   const gray=(g,f)=>c.push(`${n(g)} ${f?"g":"G"}`);
   const lw=w=>c.push(`${n(w)} w`);
@@ -4824,7 +4828,24 @@ function buildPDF(fmt){
     const bx=[0,45,90,135].map(v=>v*q); bx.slice(1).forEach(x=>line(cx+x,yl[4],cx+x,cy+ch));
     text(ml+2,H-mo-1.6,1.5,`Gerado em ${agora().txt} · ${VERSAO_N}`);
     [["ESCALA",fl.escala],["DATA",S.data||""],["FORMATO",fmt],["PRANCHA",fl.n]].forEach(([a,b],i)=>{ text(cx+bx[i]+3,yl[4]+2.2,lab,a); text(cx+bx[i]+3,yl[4]+6,ts,b,true); });
+    if(ha>0) aprovacao(cx,cy-ha,cw,ha);
   };
+  // quadro reservado à aprovação dos órgãos competentes (prefeitura, bombeiros, vigilância...)
+  const aprovacao=(x0,y0,w,h)=>{ const q=w/180, s=Math.min(1,h/66), lab=1.5*Math.max(0.85,s), ts=2.0*Math.max(0.85,s);
+    gray(0); lw(.4); rect(x0,y0,w,h);
+    const rT=7*s, rO=7*s, rA=9*s, rP=11*s, rM=h-rT-rO-rA-rP, yT=y0+rT, yO=yT+rO, yM=yO+rM, yA=yM+rA; lw(.25); [yT,yO,yM,yA].forEach(y=>line(x0,y,x0+w,y));
+    gray(0,true); text(x0+w/2,y0+rT/2+0.2,2.2*Math.max(0.85,s),q>0.9?"ESPAÇO RESERVADO À APROVAÇÃO DOS ÓRGÃOS COMPETENTES":"APROVAÇÃO DOS ÓRGÃOS COMPETENTES",true,1);
+    text(x0+3,yT+rO/2+0.2,lab,"ÓRGÃO:"); text(x0+3+lab*1.39*0.52*7+1.5,yT+rO/2+0.2,ts,(S.orgao||"PREFEITURA MUNICIPAL").toUpperCase(),true);
+    // carimbo do órgão (espaço em branco) e dados da aprovação
+    const xs=x0+w*0.56; lw(.25); gray(0); line(xs,yO,xs,yM); gray(0,true); text(x0+3,yO+2,lab,"CARIMBO E VISTO DO ÓRGÃO");
+    const cam=[["PROCESSO Nº"],["ALVARÁ / LICENÇA Nº"],["APROVADO EM","____/____/________"],["ANALISTA (NOME E ASSINATURA)"]], hc=rM/cam.length;
+    cam.forEach(([t,v],i)=>{ const yy=yO+i*hc; gray(0,true); text(xs+2.5,yy+2,lab,t); if(v) text(xs+2.5,yy+hc-1.6,ts,v); else { lw(.15); gray(.35); line(xs+2.5,yy+hc-1.2,x0+w-3,yy+hc-1.2); } });
+    // áreas do lote para conferência
+    const ar=[["ÁREA DO TERRENO",TR?`${f(TR.area)} m²`:"-"],["ÁREA CONSTRUÍDA",`${f(P.G.areaC||0)} m²`],["TAXA DE OCUPAÇÃO",TR&&TR.area?`${f(100*(P.G.areaC||0)/TR.area,1)} %`:"-"]], wa=w/3;
+    ar.forEach(([t,v],i)=>{ if(i){ lw(.25); gray(0); line(x0+i*wa,yM,x0+i*wa,yA); } gray(0,true); text(x0+i*wa+2.5,yM+2,lab,t); text(x0+i*wa+2.5,yA-1.6,ts,v,true); });
+    // assinatura do proprietário
+    gray(0,true); text(x0+3,yA+2,lab,"PROPRIETÁRIO"); text(x0+3,yA+rP-1.8,ts,S.cliente||"-");
+    lw(.2); gray(0); line(x0+w*0.5,yA+rP-3.4,x0+w-5,yA+rP-3.4); gray(0,true); text(x0+w*0.5+(w*0.5-5)/2,yA+rP-1.2,lab,"assinatura",false,1); };
   const desenho=(it)=>{
     const {D,e,k,s,w,h}=it.d, [bx,by,bw,bh]=it.box;
     const ox=bx+(bw-w)/2, oy=by+TT+Math.max(0,(bh-TT-h)/2), X=x=>ox+(x-e.x0)/k, Y=y=>oy+(y-e.y0)/k;
