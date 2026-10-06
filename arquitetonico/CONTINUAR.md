@@ -4,6 +4,7 @@ App: https://elielengenharia.github.io/rdo-eliel/arquitetonico/ (arquivo único 
 Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
 
 ## No ar (main)
+- 5.31: carimbo com "ESPAÇO RESERVADO À APROVAÇÃO DOS ÓRGÃOS COMPETENTES" acima dele (aba Dados: Espaço para aprovação sim/não e Órgão que aprova): órgão, carimbo e visto, processo, alvará, data de aprovação, analista, área do terreno, área construída, taxa de ocupação e assinatura do proprietário. Altura ha em pranchas(): A3 48 mm, A2-A0 66 mm; no A4 não entra.
 - 4.7: forro e parede de drywall, estrutura convencional e simples (coluninhas prontas, broca 1,20 m),
   fossa séptica + filtro + sumidouro, caixas de esgoto na calçada, lote pelas medidas do mapa,
   planta de situação, parede de tijolo 10 cm + reboco 2,5 cm.
