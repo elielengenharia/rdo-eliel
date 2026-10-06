@@ -1,7 +1,7 @@
 {
   "name": "Projeto Arquitetônico",
   "short_name": "Arquitetônico",
-  "description": "Projeto arquitetônico completo no celular: planta, cortes, fachadas, cobertura, elétrica, hidrossanitário, estrutura, orçamento, perspectivas, PDF e DXF - Eliel Ribeiro Engenharia",
+  "description": "Projeto arquitetônico completo no celular: planta, cortes, fachadas, cobertura, elétrica, hidrossanitário, estrutura, orçamento, perspectivas, PDF e DXF - Eliel Engenharia",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

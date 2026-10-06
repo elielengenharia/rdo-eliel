@@ -365,7 +365,7 @@ const ROOMS42 = [
 ];
 function defaults(){
   return {
-    obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Ribeiro Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
+    obra:"Residência térrea 42 m²", cliente:"", local:"", emp:"Eliel Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:JSON.parse(JSON.stringify(WALLS42)), rooms:JSON.parse(JSON.stringify(ROOMS42)),
     vb:{b:15,h:20,bit:"5/16",ga:7,gb:14,est:"4.2",s:15},
     ci:{on:"sim",b:10,h:20},
@@ -738,7 +738,7 @@ function corner(){
 
 /* ---------------- Render ---------------- */
 function render(){
-  S.emp=(S.emp==null||S.emp==="Eliel Ribeiro Engenharia & Arquitetura LTDA")?"Eliel Ribeiro Engenharia":S.emp; S.rtNome=S.rtNome??"Eliel Dias Ribeiro"; S.crea=S.crea??"CREA-PA 1520297858";
+  S.emp=(S.emp==null||S.emp==="Eliel Ribeiro Engenharia & Arquitetura LTDA"||S.emp==="Eliel Ribeiro Engenharia")?"Eliel Engenharia":S.emp; S.rtNome=S.rtNome??"Eliel Dias Ribeiro"; S.crea=S.crea??"CREA-PA 1520297858";
   S.rt=`Eng. Civil ${S.rtNome} · ${S.crea}`;
   const G=geom(), Q=calc(G);
   document.getElementById("stamp").innerHTML=`<b>${esc(S.obra||"Obra")}</b>${S.cliente?" · "+esc(S.cliente):""}${S.local?"<br>"+esc(S.local):""}<br>${esc(S.rt)} · ${esc(S.data)}`;
