@@ -170,14 +170,16 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
   <section id="tab-cortes" hidden>
     <div class="sheet">
       <h2>Corte AA</h2>
-      <p class="cap">Linha de corte na horizontal da planta, olhando para cima. Arraste para o corte passar por janelas e portas. <b>Concreto cortado (viga e laje) em cinza escuro</b>, alvenaria em cinza claro; a viga do fundo aparece em vista, só com o contorno.</p>
-      <label class="slide">Posição (y, m)<input type="range" id="cAr" step="0.05"><input type="number" id="cAn" step="0.05"></label>
+      <p class="cap">Linha de corte na horizontal da planta (ou paralela a um lado do lote), olhando para cima. Arraste para o corte passar por janelas e portas. <b>Concreto cortado (viga e laje) em cinza escuro</b>, alvenaria em cinza claro; a viga do fundo aparece em vista, só com o contorno.</p>
+      <label style="font-size:13px">Direção da linha<select id="cAdir"></select></label>
+      <label class="slide">Posição (m)<input type="range" id="cAr" step="0.05"><input type="number" id="cAn" step="0.05"></label>
       <div class="draw" id="secA"></div>
     </div>
     <div class="sheet">
       <h2>Corte BB</h2>
-      <p class="cap">Linha de corte na vertical da planta, olhando para a direita.</p>
-      <label class="slide">Posição (x, m)<input type="range" id="cBr" step="0.05"><input type="number" id="cBn" step="0.05"></label>
+      <p class="cap">Linha de corte na vertical da planta (ou paralela a um lado do lote), olhando para a direita.</p>
+      <label style="font-size:13px">Direção da linha<select id="cBdir"></select></label>
+      <label class="slide">Posição (m)<input type="range" id="cBr" step="0.05"><input type="number" id="cBn" step="0.05"></label>
       <div class="draw" id="secB"></div>
     </div>
     <div class="sheet">
@@ -575,9 +577,9 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
   <section id="tab-dados" hidden>
     <div class="sheet">
       <h2>Projetos</h2>
-      <p class="cap">Cada projeto fica guardado neste aparelho: troque aqui entre eles (o que estava aberto é salvo antes). Comece um novo pelo modelo da casa ou das salas comerciais da Av. principal. Baixe o arquivo .json de vez em quando como cópia de segurança (ele também abre em outro celular ou computador).</p>
+      <p class="cap">Cada projeto fica guardado neste aparelho: troque aqui entre eles (o que estava aberto é salvo antes). Comece um novo pelo modelo da casa ou das salas comerciais da Av. Paraná. Baixe o arquivo .json de vez em quando como cópia de segurança (ele também abre em outro celular ou computador).</p>
       <div class="form"><label>Projeto aberto<select id="pjSel"></select></label></div>
-      <div class="row"><button class="btn" id="pjCasa">Novo: casa modelo 42 m²</button><button class="btn" id="pjSalas">Novo: salas comerciais Av. principal</button><button class="btn" id="pjDup">Duplicar</button><button class="btn" id="pjRen">Renomear</button><button class="btn" id="pjDel">Excluir</button></div>
+      <div class="row"><button class="btn" id="pjCasa">Novo: casa modelo 42 m²</button><button class="btn" id="pjSalas">Novo: salas comerciais Av. Paraná</button><button class="btn" id="pjDup">Duplicar</button><button class="btn" id="pjRen">Renomear</button><button class="btn" id="pjDel">Excluir</button></div>
       <div class="row"><button class="btn" id="pjBaixar">Baixar projeto (.json)</button><label class="btn" for="pjFile" style="display:inline-block">Abrir projeto (.json)</label><input type="file" id="pjFile" accept=".json,application/json" style="position:absolute;width:1px;height:1px;opacity:0"></div>
       <div class="cap" id="pjMsg"></div>
     </div>
@@ -672,7 +674,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.33 · opção para tirar as cotas gerais da planta", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.34 · cortes paralelos às divisas do lote, ruas do modelo das salas com nome", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -717,7 +719,7 @@ function defaults(){
 let S;
 // modelo: duas salas comerciais e banheiro na Av. principal (lote de esquina, esquina com a Rua lateral), fachada chanfrada com duas portas de correr
 function modeloSalas(){ const o=defaults();
-  o.obra="Salas comerciais - Av. principal"; o.local="Lote de esquina - Av. principal x Rua lateral"; o.uso="comercial"; o.frente="baixo";
+  o.obra="Salas comerciais - Av. Paraná"; o.local="Lote de esquina - Av. Paraná x Rua Guarani"; o.uso="comercial"; o.frente="baixo";
   o.fmt="A0";   // pranchas em A0 (até 9 desenhos por folha)
   o.laje=0;   // sem laje: telhado de fibrocimento sobre a cinta, escondido pela platibanda, e forro de PVC (estrutura simples com coluninhas)
   // paredes, vãos e ambientes do DXF rev03 (planta baixa ajustada no lote): frente na Av. principal, parede no chanfro, jardim na esquina e banheiro encostado na Rua lateral
@@ -725,9 +727,9 @@ function modeloSalas(){ const o=defaults();
   o.walls=W.map(([x1,y1,x2,y2])=>({x1,y1,x2,y2}));
   o.rooms=[{n:"Banheiro",x:1.182,y:3.992,nv:0.10},{n:"Sala comercial 1",x:4.732,y:4.942,nv:0.10},{n:"Sala comercial 2",x:10.332,y:4.342,nv:0.10}];
   o.ab=[{n:"Sala comercial 1",t:"Porta",w:0,d:0.273,l:3.0,a:2.1,p:0,mod:"correr4",mat:"Alumínio e vidro temperado"},{n:"Sala comercial 2",t:"Porta",w:0,d:4.964,l:4.0,a:2.1,p:0,mod:"correr4",mat:"Alumínio e vidro temperado"},{n:"Sala comercial 2",t:"Janela",w:0,d:9.468,l:1.2,a:2.0,p:0.6},{n:"Sala comercial 1",t:"Janela",w:2,d:0.313,l:1.2,a:2.0,p:0.6},{n:"Banheiro",t:"Porta",w:2,d:3.4,l:0.7,a:2.1,p:0}];
-  o.cA=null; o.cB=null;
-  o.terr=Object.assign(clone(TERR0),{forma:"pol",areaMapa:259.17,lote:"",alinha:1,encA:1,recA:0,encB:2,recB:0,calcada:2,rua:"Avenida principal",rua2:"Rua lateral",
-    lados:[{m:11.14,c:"Avenida principal",rua:"sim"},{m:21.31,c:"Lote 243",rua:"não"},{m:14.15,c:"Lote 290",rua:"não"},{m:14.69,c:"Rua lateral",rua:"sim"},{m:4.04,c:"",rua:"sim"}],
+  o.cA=null; o.cB=null; o.cAdir="lado2"; o.cBdir="lado1";   // corte A paralelo à divisa do Lote 290 (fundo), corte B paralelo à divisa do Lote 243
+  o.terr=Object.assign(clone(TERR0),{forma:"pol",areaMapa:259.17,lote:"",alinha:1,encA:1,recA:0,encB:2,recB:0,calcada:2,rua:"Avenida Paraná",rua2:"Rua Guarani",
+    lados:[{m:11.14,c:"Avenida Paraná",rua:"sim"},{m:21.31,c:"Lote 243",rua:"não"},{m:14.15,c:"Lote 290",rua:"não"},{m:14.69,c:"Rua Guarani",rua:"sim"},{m:4.04,c:"",rua:"sim"}],
     pts:[[4.132, 7.942], [15.268, 7.942], [9.877, -12.678], [-3.613, -8.425], [0.869, 5.561]]});   // cantos do lote tirados do DXF da situação (mesmas coordenadas da planta)
   // telhado escondido por platibanda, caindo da frente (Av. principal) para o fundo
   o.pd=3.50;   // pé-direito das salas comerciais
@@ -750,10 +752,10 @@ const perim=P=>P.reduce((s,p,i)=>s+Math.hypot(P[(i+1)%P.length][0]-p[0],P[(i+1)%
 const distSeg=(p,w)=>{ const dx=w.x2-w.x1, dy=w.y2-w.y1, L2=dx*dx+dy*dy; const t=L2?Math.max(0,Math.min(1,((p[0]-w.x1)*dx+(p[1]-w.y1)*dy)/L2)):0; return Math.hypot(p[0]-(w.x1+t*dx),p[1]-(w.y1+t*dy)); };
 const interLin=(P,d,Q,e)=>{ const den=d[0]*e[1]-d[1]*e[0]; if(Math.abs(den)<1e-9) return null; const t=((Q[0]-P[0])*e[1]-(Q[1]-P[1])*e[0])/den; return [P[0]+d[0]*t,P[1]+d[1]*t]; };
 // trechos de um polígono cortados por uma linha horizontal (q="A", y=c) ou vertical (q="B", x=c)
-function naLinha(P,q,c){ const us=[];
-  for(let i=0;i<P.length;i++){ const [x1,y1]=P[i],[x2,y2]=P[(i+1)%P.length];
-    if(q==="A"){ if((y1<=c&&y2>c)||(y2<=c&&y1>c)) us.push(x1+(c-y1)/(y2-y1)*(x2-x1)); }
-    else { if((x1<=c&&x2>c)||(x2<=c&&x1>c)) us.push(y1+(c-x1)/(x2-x1)*(y2-y1)); } }
+// q: "A" (linha y = c, u = x), "B" (linha x = c, u = y) ou um referencial de corte {d, n} (linha p·n = c, u = p·d)
+function naLinha(P,q,c){ const us=[], F=q&&typeof q==="object"?q:q==="A"?FR_A:FR_B, d=F.d, n=F.n;
+  for(let i=0;i<P.length;i++){ const [x1,y1]=P[i],[x2,y2]=P[(i+1)%P.length], s1=x1*n[0]+y1*n[1], s2=x2*n[0]+y2*n[1];
+    if((s1<=c&&s2>c)||(s2<=c&&s1>c)){ const t1=x1*d[0]+y1*d[1], t2=x2*d[0]+y2*d[1]; us.push(t1+(c-s1)/(s2-s1)*(t2-t1)); } }
   us.sort((a,b)=>a-b); const out=[]; for(let i=0;i+1<us.length;i+=2) if(us[i+1]-us[i]>1e-6) out.push([us[i],us[i+1]]); return out; }
 const juntar=iv=>{ const s=[...iv].sort((a,b)=>a[0]-b[0]), o=[]; s.forEach(v=>{ const l=o[o.length-1]; if(l&&v[0]<=l[1]+1e-6) l[1]=Math.max(l[1],v[1]); else o.push([...v]); }); return o; };
 // contorno da união de polígonos: cada aresta é partida nos cruzamentos e fica só o trecho com parede de um lado só
@@ -1138,11 +1140,29 @@ function desenhaAberturas(D,G,lista){ const h=G.h, k=D.k;
       L(D,...hinge,...fim,.35,"ESQUADRIA"); AR(D,...hinge,...fim,...outro,.18,"ESQUADRIA"); }
     if(g.cod){ const p=ln(sm,-g.lado*(h+2.4*k)); TX(D,p[0],p[1],g.cod,1.8,{b:true,l:"ESQUADRIA"}); }
   }); }
+const FR_A={q:"A",ax:true,d:[1,0],n:[0,1]}, FR_B={q:"B",ax:true,d:[0,1],n:[1,0]};
+// referencial da linha de corte: na horizontal (A) / vertical (B) da planta ou paralela a um lado do lote (S.cAdir / S.cBdir = "lado2"...)
+// d: direção da linha (eixo u do desenho do corte, da esquerda para a direita de quem olha); n: normal (a posição da linha é p·n)
+const _fcMem=new WeakMap();
+function frameCorte(G,q){ const A=q==="A", v=String((A?S.cAdir:S.cBdir)||"");
+  if(!/^(lado|par)\d+$/.test(v)||G.vazio) return A?FR_A:FR_B;
+  const key=q+v+JSON.stringify(S.terr), m=_fcMem.get(G)||{}; if(m[q]&&m[q].key===key) return m[q].F;
+  let F=A?FR_A:FR_B;
+  let d=null;
+  if(v.startsWith("par")){ const w=G.walls[+v.slice(3)]; if(w&&w.L>0.5) d=[w.ux,w.uy]; }   // paralela a uma parede da planta (número azul)
+  else try{ const TL=terreno(G).lote, i=+v.slice(4); if(TL&&TL.length>2&&TL[i]){ const a=TL[i], b=TL[(i+1)%TL.length], L0=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L0>0.5) d=[(b[0]-a[0])/L0,(b[1]-a[1])/L0]; } }catch(e){}
+  if(d){ if(A?d[0]<0:d[1]<0) d=[-d[0],-d[1]]; F={q,ax:false,d,n:A?[-d[1],d[0]]:[d[1],-d[0]]}; }
+  m[q]={key,F}; _fcMem.set(G,m); return F; }
+// faixa ocupada pela casa ao longo de um vetor (cantos das casas ou do retângulo envolvente)
+function faixaCasa(G,v){ const pts=(G.casas&&G.casas.length?G.casas.flat():[[G.bb.x0,G.bb.y0],[G.bb.x1,G.bb.y0],[G.bb.x1,G.bb.y1],[G.bb.x0,G.bb.y1]]).map(p=>p[0]*v[0]+p[1]*v[1]);
+  return [Math.min(...pts),Math.max(...pts)]; }
+function faixaPosCorte(G,q){ const F=frameCorte(G,q), bb=G.bb; return F.ax?(q==="A"?[bb.y0,bb.y1]:[bb.x0,bb.x1]):faixaCasa(G,F.n); }
 function posCorte(G,q){
-  const bb=G.bb, A=q==="A", lo=A?bb.y0:bb.x0, hi=A?bb.y1:bb.x1, v=A?S.cA:S.cB;
+  const A=q==="A", F=frameCorte(G,q), [lo,hi]=faixaPosCorte(G,q), v=A?S.cA:S.cB;
   let c=(v===null||v===""||v===undefined)?(lo+hi)/2:num(v); c=Math.min(hi-0.02,Math.max(lo+0.02,c));
-  const ax=G.orto.filter(w=>A?w.hz:w.vt).map(w=>A?w.y1:w.x1);
-  for(let n=0;n<8&&ax.some(a=>Math.abs(a-c)<G.h+0.02);n++) c+=G.h+0.05;   // não deixa a linha de corte em cima de uma parede
+  const ax=F.ax?G.orto.filter(w=>A?w.hz:w.vt).map(w=>A?w.y1:w.x1):G.walls.filter(w=>Math.abs(w.ux*F.n[0]+w.uy*F.n[1])<0.02).map(w=>w.x1*F.n[0]+w.y1*F.n[1]);   // paredes paralelas à linha
+  const lim=F.ax?G.h+0.02:G.h+0.45, pas=F.ax?G.h+0.05:0.25;   // linha inclinada: fica mais longe das paredes paralelas a ela (senão parece andar por dentro da parede)
+  for(let n=0;n<12&&ax.some(a=>Math.abs(a-c)<lim);n++) c+=pas;
   return Math.min(hi-0.02,c);
 }
 // divisória de gesso acartonado: eixo tracejado e rótulo (o desenho usa a espessura geral das paredes)
@@ -1216,10 +1236,18 @@ function desenhoPlanta(G,k,ajuda){
     cadeiaV(D,fy,bb.x0-9*k,bb.x0); cotaV(D,bb.y0,bb.y1,bb.x0-16*k,bb.x0-9*k,f(bb.y1-bb.y0)); }
   // linhas de corte
   const cA=posCorte(G,"A"), cB=posCorte(G,"B"), r=2.6*k;
-  L(D,bb.x0-22*k,cA,bb.x1+19*k,cA,.35,"CORTE",true);
-  [[bb.x0-22*k-r,cA],[bb.x1+19*k+r,cA]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"A",2.2,{b:true,l:"CORTE"}); PG(D,[[x-1.2*k,y-r-0.4*k],[x+1.2*k,y-r-0.4*k],[x,y-r-2.6*k]],"CORTE"); });
-  L(D,cB,bb.y0-22*k,cB,bb.y1+19*k,.35,"CORTE",true);
-  [[cB,bb.y0-22*k-r],[cB,bb.y1+19*k+r]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"B",2.2,{b:true,l:"CORTE"}); PG(D,[[x+r+0.4*k,y-1.2*k],[x+r+0.4*k,y+1.2*k],[x+r+2.6*k,y]],"CORTE"); });
+  ["A","B"].forEach(q=>{ const F=frameCorte(G,q); if(F.ax) return; const c=q==="A"?cA:cB, d=F.d, n=F.n, fv=[d[1],-d[0]], [ua,ub]=faixaCasa(G,d), P=u=>[c*n[0]+u*d[0],c*n[1]+u*d[1]];   // linha paralela a um lado do lote
+    // a linha inclinada sai da faixa das cotas (gerais e das paredes) antes da bolinha, para a letra não cair em cima de uma cota
+    const R={x0:bb.x0-25*k,x1:bb.x1+24*k,y0:bb.y0-25*k,y1:bb.y1+24*k}, o=P(0); let t0=-1e9, t1=1e9;
+    [[d[0],o[0],R.x0,R.x1],[d[1],o[1],R.y0,R.y1]].forEach(([dd,o0,lo,hi])=>{ if(Math.abs(dd)<1e-9) return; let a1=(lo-o0)/dd, b1=(hi-o0)/dd; if(a1>b1) [a1,b1]=[b1,a1]; t0=Math.max(t0,a1); t1=Math.min(t1,b1); });
+    const e0=Math.min(ua-22*k,t0>-1e8?t0:ua-22*k), e1=Math.max(ub+19*k,t1<1e8?t1:ub+19*k);
+    L(D,...P(e0),...P(e1),.35,"CORTE",true);
+    [P(e0-r),P(e1+r)].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,q,2.2,{b:true,l:"CORTE"}); const bx=x+fv[0]*(r+0.4*k), by=y+fv[1]*(r+0.4*k);   // seta: lado para onde se olha
+      PG(D,[[bx-d[0]*1.2*k,by-d[1]*1.2*k],[bx+d[0]*1.2*k,by+d[1]*1.2*k],[x+fv[0]*(r+2.6*k),y+fv[1]*(r+2.6*k)]],"CORTE"); }); });
+  if(frameCorte(G,"A").ax){ L(D,bb.x0-22*k,cA,bb.x1+19*k,cA,.35,"CORTE",true);
+  [[bb.x0-22*k-r,cA],[bb.x1+19*k+r,cA]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"A",2.2,{b:true,l:"CORTE"}); PG(D,[[x-1.2*k,y-r-0.4*k],[x+1.2*k,y-r-0.4*k],[x,y-r-2.6*k]],"CORTE"); }); }
+  if(frameCorte(G,"B").ax){ L(D,cB,bb.y0-22*k,cB,bb.y1+19*k,.35,"CORTE",true);
+  [[cB,bb.y0-22*k-r],[cB,bb.y1+19*k+r]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"B",2.2,{b:true,l:"CORTE"}); PG(D,[[x+r+0.4*k,y-1.2*k],[x+r+0.4*k,y+1.2*k],[x+r+2.6*k,y]],"CORTE"); }); }
   if(ajuda) G.walls.forEach(w=>TX(D,(w.x1+w.x2)/2,(w.y1+w.y2)/2,String(w.i+1),1.7,{b:true,l:"AJUDA"}));
   return D;
 }
@@ -1228,27 +1256,29 @@ function desenhoPlanta(G,k,ajuda){
 function desenhoCorte(G,k,q){
   const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
   const A=q==="A", c=posCorte(G,q), h=G.h, pd=num(S.pd), lj=Math.max(0,num(S.laje)), ps=Math.max(0,num(S.piso)), TI=infoTelhado(G);
-  const Y=z=>-z, zr=u=>A?TI.z(u,c):TI.z(c,u);
-  const ext=(u)=>{ const C=A?G.compAt(u,c):G.compAt(c,u); return C!==null&&(!C||C.ext); };
-  const cs=[]; G.walls.filter(w=>A?Math.abs(w.uy)>1e-6:Math.abs(w.ux)>1e-6).flatMap(w=>naLinha(w.poly,q,c).map(([a,b])=>({a,b,ws:[w]}))).sort((p,q2)=>p.a-q2.a)
+  const F=frameCorte(G,q), fd=F.d, fn=F.n, W=(u,v)=>[u*fd[0]+v*fn[0],u*fd[1]+v*fn[1]];   // ponto da planta a u na linha e v na normal
+  const Y=z=>-z, zr=u=>TI.z(...W(u,c));
+  const ext=(u)=>{ const C=G.compAt(...W(u,c)); return C!==null&&(!C||C.ext); };
+  const cs=[]; G.walls.filter(w=>Math.abs(w.ux*fn[0]+w.uy*fn[1])>1e-6).flatMap(w=>naLinha(w.poly,F,c).map(([a,b])=>({a,b,ws:[w]}))).sort((p,q2)=>p.a-q2.a)
     .forEach(x=>{ const l=cs[cs.length-1]; if(l&&x.a<=l.b+1e-6){ l.b=Math.max(l.b,x.b); l.ws.push(...x.ws); } else cs.push(x); });
   if(!cs.length){ TX(D,0,0,"A linha de corte não cruza nenhuma parede. Mude a posição.",3); return D; }
-  const runs=G.row(q,c), u0=A?TI.R.x0:TI.R.y0, u1=A?TI.R.x1:TI.R.y1;
+  const cR=[[TI.R.x0,TI.R.y0],[TI.R.x1,TI.R.y0],[TI.R.x1,TI.R.y1],[TI.R.x0,TI.R.y1]], pR=v=>cR.map(p=>p[0]*v[0]+p[1]*v[1]);
+  const runs=G.row(F,c), u0=Math.min(...pR(fd)), u1=Math.max(...pR(fd)), v0=Math.min(...pR(fn)), v1=Math.max(...pR(fn));
   const uMin=cs[0].a, uMax=cs[cs.length-1].b;
   // terreno, contrapiso e laje
   L(D,Math.min(u0,uMin)-1.2,Y(-ps),Math.max(u1,uMax)+1.2,Y(-ps),.35,"TERRENO");
-  const salas=G.roomRuns(q,c), vOn=S.viga&&S.viga.on!=="não", hv=vOn?Math.min(Math.max(0,num(S.viga.h)),pd-0.5):0, zv=pd-hv;
+  const salas=G.roomRuns(F,c), vOn=S.viga&&S.viga.on!=="não", hv=vOn?Math.min(Math.max(0,num(S.viga.h)),pd-0.5):0, zv=pd-hv;
   salas.forEach(({r,u0:a,u1:b})=>{ RF(D,a,Y(r.nv),b,Y(r.nv-0.10),"HACHURA"); L(D,a,Y(r.nv),b,Y(r.nv),.35,"PAREDE"); L(D,a,Y(r.nv-0.10),b,Y(r.nv-0.10),.18,"PAREDE"); });
   runs.forEach(([a,b])=>{ if(lj>0) hachConcreto(D,a,Y(pd+lj),b,Y(pd)); else L(D,a,Y(pd),b,Y(pd),.35,"PAREDE"); });
-  const nvAt=u=>{ const C=A?G.compAt(u,c):G.compAt(c,u); return C&&!C.ext&&C.nv!==undefined?C.nv:0; };
+  const nvAt=u=>{ const C=G.compAt(...W(u,c)); return C&&!C.ext&&C.nv!==undefined?C.nv:0; };
   const menos=(segs,z0,z1)=>segs.flatMap(([a,b])=>b<=z0||a>=z1?[[a,b]]:[[a,Math.min(b,z0)],[Math.max(a,z1),b]].filter(([p,q2])=>q2-p>1e-6));
   // paredes cortadas (com portas e janelas)
   cs.forEach(({a:ua,b:ub,ws})=>{
     const um=(ua+ub)/2, eL=ext(ua-0.03), eR=ext(ub+0.03), externa=eL||eR;
-    const bb=G.bb, naBorda=A?(Math.abs(ua-bb.x0)<0.02||Math.abs(ub-bb.x1)<0.02):(Math.abs(ua-bb.y0)<0.02||Math.abs(ub-bb.y1)<0.02);
+    const bb=G.bb, naBorda=!F.ax?(Math.abs(ua-cs[0].a)<0.02||Math.abs(ub-cs[cs.length-1].b)<0.02):A?(Math.abs(ua-bb.x0)<0.02||Math.abs(ub-bb.x1)<0.02):(Math.abs(ua-bb.y0)<0.02||Math.abs(ub-bb.y1)<0.02);
     let topo=pd; if(externa) topo=TI.plat?TI.topoPlat:naBorda?Math.max(pd+lj,zr(eL?ua:ub)):pd+lj;
     const nvL=nvAt(ua-0.03), nvR=nvAt(ub+0.03), base=externa?-ps:Math.min(0,nvL,nvR)-0.10;
-    const g=G.abs.find(g=>{ if(!ws.includes(g.w)) return false; const sc=A?(c-g.w.y1)/g.w.uy:(c-g.w.x1)/g.w.ux; return sc>=g.d-1e-6&&sc<=g.d+g.l+1e-6; });
+    const g=G.abs.find(g=>{ if(!ws.includes(g.w)) return false; const sc=(c-(g.w.x1*fn[0]+g.w.y1*fn[1]))/(g.w.ux*fn[0]+g.w.uy*fn[1]); return sc>=g.d-1e-6&&sc<=g.d+g.l+1e-6; });
     const peds=[];
     if(!g) peds.push([base,topo]);
     else if(g.tipo==="Janela"){ const p0=num(g.a.p), p1=Math.min(vOn?zv:topo,p0+(num(g.a.a)||1)); peds.push([base,p0],[p1,topo]);
@@ -1260,16 +1290,16 @@ function desenhoCorte(G,k,q){
     if(vOn&&hv>0) hachConcreto(D,ua,Y(pd),ub,Y(zv));
   });
   // telhado cortado e vista do que fica atrás
-  const N=240, sil=[], et=0.06, dT=(u,v)=>A?TI.dentroT(u,v):TI.dentroT(v,u);
+  const N=240, sil=[], et=0.06, dT=(u,v)=>TI.dentroT(...W(u,v));
   const simp=pts=>pts.filter((p,i)=>i===0||i===pts.length-1||Math.abs((pts[i+1][1]-p[1])*(p[0]-pts[i-1][0])-(p[1]-pts[i-1][1])*(pts[i+1][0]-p[0]))>1e-9);
   for(let n=0;n<=N;n++){ const u=u0+(u1-u0)*n/N; let zb=null;
-    for(let m=0;m<=40;m++){ const v=A?(TI.R.y0+(TI.R.y1-TI.R.y0)*m/40):(TI.R.x0+(TI.R.x1-TI.R.x0)*m/40); if(dT(u,v)) zb=Math.max(zb??-1e9,A?TI.z(u,v):TI.z(v,u)); }
+    for(let m=0;m<=40;m++){ const v=v0+(v1-v0)*m/40; if(dT(u,v)) zb=Math.max(zb??-1e9,TI.z(...W(u,v))); }
     if(zb!==null) sil.push([u,Y(zb)]); }
   const ss=simp(sil); if(ss.length>1) PL(D,ss,.18,"PROJECAO");   // o que se vê atrás do corte (cumeeira, águas)
   // calhas cortadas: onde a linha de corte atravessa uma calha (platibanda: junto da face de dentro; beiral: na ponta do beiral)
   const cortadas=[]; { const CLc=TI.plat?calhasPlat(G,TI):calhasBeiral(G,TI), uc=(u0+u1)/2;
-    if(CLc) CLc.lista.forEach(cl=>{ const [x0,y0,x1,y1]=cl.seg, dd=A?y1-y0:x1-x0; if(Math.abs(dd)<1e-6) return;   // calha paralela ao corte: não é cortada
-      const t=A?(c-y0)/dd:(c-x0)/dd; if(t<-0.01||t>1.01) return; const u=A?x0+(x1-x0)*t:y0+(y1-y0)*t;
+    if(CLc) CLc.lista.forEach(cl=>{ const [x0,y0,x1,y1]=cl.seg, dd=(x1-x0)*fn[0]+(y1-y0)*fn[1]; if(Math.abs(dd)<1e-6) return;   // calha paralela ao corte: não é cortada
+      const t=(c-(x0*fn[0]+y0*fn[1]))/dd; if(t<-0.01||t>1.01) return; const u=(x0+(x1-x0)*t)*fd[0]+(y0+(y1-y0)*t)*fd[1];
       if(cortadas.some(v=>Math.abs(v.u-u)<0.3)) return;
       const b=cl.b, h=cl.h, sIn=u<uc?1:-1; let ua, ub, zt;
       if(TI.plat){ const uf=u-sIn*0.25; ua=uf; ub=uf+sIn*b; zt=Math.max(pd+lj+0.02+h,zr(ub)+0.03); }   // fundo apoiado sobre a laje, junto da platibanda; a ponta do telhado descarrega dentro dela
@@ -1277,7 +1307,7 @@ function desenhoCorte(G,k,q){
       cortadas.push({u,ua,ub,zt,zb:zt-h,b,h,cl,ic:CLc.ic}); }); }
   const corta=(a,b)=>{ if(!TI.plat) return [a,b]; cortadas.forEach(x=>{ const lo=Math.min(x.ua,x.ub), hi=Math.max(x.ua,x.ub); if(Math.abs(lo-a)<0.4) a=Math.max(a,hi-0.05); if(Math.abs(hi-b)<0.4) b=Math.min(b,lo+0.05); }); return [a,b]; };
   // telhado cortado: o trecho todo (com beiral) ou, com platibanda no contorno real, só dentro do caixote (entrando 5 cm na calha)
-  (TI.poly?naLinha(TI.poly,q,c):[[u0,u1]]).map(([a,b])=>corta(a,b)).forEach(([a,b])=>{ const pr=[]; for(let n=0;n<=120;n++){ const u=a+(b-a)*n/120; pr.push([u,Y(zr(u))]); }
+  (TI.poly?naLinha(TI.poly,F,c):[[u0,u1]]).map(([a,b])=>corta(a,b)).forEach(([a,b])=>{ const pr=[]; for(let n=0;n<=120;n++){ const u=a+(b-a)*n/120; pr.push([u,Y(zr(u))]); }
     const sp=simp(pr); PL(D,sp,.5,"TELHADO"); PL(D,sp.map(([u,y])=>[u,y-et]),.25,"TELHADO");
     L(D,sp[0][0],sp[0][1],sp[0][0],sp[0][1]-et,.25,"TELHADO"); L(D,sp[sp.length-1][0],sp[sp.length-1][1],sp[sp.length-1][0],sp[sp.length-1][1]-et,.25,"TELHADO"); });
   cortadas.forEach(({ua,ub,zt,zb,b,h,cl,ic})=>{ PL(D,[[ua,Y(zt)],[ua,Y(zb)],[ub,Y(zb)],[ub,Y(zt)]],.45,"TELHADO");
@@ -4161,8 +4191,13 @@ function render(){
   $("detPortas").innerHTML=Q.filter(q=>q.tipo==="Porta").map(q=>`<div class="sheet" style="margin:0"><h2 style="font-size:16px">${q.cod}</h2><label style="font-size:13px">Folha <select data-fol="${q.cod}" style="width:auto">${FOLHAS.map(([v,t])=>`<option value="${v}"${v===q.fol?" selected":""}>${t}</option>`).join("")}</select></label><div class="draw">${svgDe(desenhoPortaDet(q,0.025,G))}</div><ul class="notes">${ferragens(q).map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")||`<p class="cap">Nenhuma porta.</p>`;
   $("detEsq").innerHTML=Q.map(q=>`<div class="sheet" style="margin:0"><h2 style="font-size:16px">${q.cod}</h2><div class="draw">${svgDe(desenhoEsquadria(q,0.04))}</div></div>`).join("");
   // cortes
-  ["A","B"].forEach(q=>{ const bb=G.bb, A=q==="A", c=posCorte(G,q), rr=$("c"+q+"r"), nn=$("c"+q+"n");
-    rr.min=n2(A?bb.y0:bb.x0); rr.max=n2(A?bb.y1:bb.x1); if(document.activeElement!==rr) rr.value=c; if(document.activeElement!==nn) nn.value=n2(c);
+  ["A","B"].forEach(q=>{ const A=q==="A", c=posCorte(G,q), rr=$("c"+q+"r"), nn=$("c"+q+"n"), [lo,hi]=faixaPosCorte(G,q);
+    { const sel=$("c"+q+"dir"), cur=String((A?S.cAdir:S.cBdir)||""); let TL=null; try{ TL=G.vazio?null:terreno(G).lote; }catch(e){}
+      const ops=[["",A?"Na horizontal da planta":"Na vertical da planta"],...(TL&&TL.length>2?TL.map((a,i)=>{ const b=TL[(i+1)%TL.length]; if(Math.hypot(b[0]-a[0],b[1]-a[1])<2) return null;
+        const ld=(S.terr.lados||[])[i]||{}, nm=String(ld.c||"").trim(); return [`lado${i}`,`Paralela ao lado ${i+1} do lote${nm?` (${ehRuaLado(ld)?nm:"divisa do "+nm})`:""}`]; }).filter(Boolean):[]),
+        ...(G.vazio?[]:G.walls.filter(w=>w.L>=1.5&&!w.hz&&!w.vt).map(w=>[`par${w.i}`,`Paralela à parede ${w.i+1} da planta (${f(w.L)} m)`]))];
+      sel.innerHTML=ops.map(([v,t])=>`<option value="${v}"${v===cur?" selected":""}>${esc(t)}</option>`).join(""); if(!ops.some(o=>o[0]===cur)) sel.value=""; }
+    rr.min=n2(lo); rr.max=n2(hi); if(document.activeElement!==rr) rr.value=c; if(document.activeElement!==nn) nn.value=n2(c);
     $("sec"+q).innerHTML=svgDe(desenhoCorte(G,k,q)); });
   // cobertura
   $("roofTypes").innerHTML=[1,2,3,4].map(tp=>`<button type="button" data-tipo="${tp}" aria-pressed="${TI.tipo===tp}">${iconeTelhado(tp)}${tp} ${tp===1?"água":"águas"}</button>`).join("");
@@ -4428,7 +4463,7 @@ $("fmt").onchange=()=>{ S.fmt=$("fmt").value; save(); };
 $("agrupar").onchange=()=>{ S.agrupar=$("agrupar").value; save(); };
 $("cotGer").onchange=()=>{ S.cotGer=$("cotGer").value; save(); render(); };   // cotas gerais da planta (cadeias de cima e da esquerda)
 $("roofTypes").addEventListener("click",e=>{ const b=e.target.closest("[data-tipo]"); if(!b) return; const tp=+b.dataset.tipo; S.tel.tipo=tp; S.tel.dir=dirPadrao(tp,GG||geom()); render(); });
-["A","B"].forEach(q=>{ const set=v=>{ S["c"+q]=num(v); later(); }; $("c"+q+"r").addEventListener("input",e=>{ $("c"+q+"n").value=e.target.value; set(e.target.value); }); $("c"+q+"n").addEventListener("change",e=>set(e.target.value)); });
+["A","B"].forEach(q=>{ const set=v=>{ S["c"+q]=num(v); later(); }; $("c"+q+"r").addEventListener("input",e=>{ $("c"+q+"n").value=e.target.value; set(e.target.value); }); $("c"+q+"n").addEventListener("change",e=>set(e.target.value)); $("c"+q+"dir").addEventListener("change",e=>{ S["c"+q+"dir"]=e.target.value; S["c"+q]=null; save(); render(); }); });   // direção da linha: muda e volta para o meio
 
 function renderWalls(){
   $("wtab").innerHTML=`<tr><th>Nº</th><th>x1</th><th>y1</th><th>x2</th><th>y2</th><th class="n">m</th><th>Situação</th><th>Material</th><th></th></tr>`+S.walls.map((w,i)=>
@@ -4468,7 +4503,7 @@ function pjNome(base){ base=String(base||"Projeto").trim()||"Projeto"; let n=bas
 function pjUsar(nome,o){ PJ.lista[PJ.atual]=S; PJ.atual=nome; S=estadoDe(JSON.parse(JSON.stringify(o))); PJ.lista[nome]=S; save(); loadForm(); render(); pjUI(); }
 $("pjSel").onchange=e=>{ const n=e.target.value; if(PJ.lista[n]&&n!==PJ.atual){ pjUsar(n,PJ.lista[n]); pjMsg(`Aberto: ${n}.`); } };
 $("pjCasa").onclick=()=>{ const n=pjNome("Casa modelo 42 m²"); pjUsar(n,defaults()); pjMsg(`Novo projeto: ${n}.`); };
-$("pjSalas").onclick=()=>{ const n=pjNome("Salas comerciais Av. principal"); pjUsar(n,modeloSalas()); pjMsg(`Novo projeto: ${n}. Confira as medidas na aba Planta.`); };
+$("pjSalas").onclick=()=>{ const n=pjNome("Salas comerciais Av. Paraná"); pjUsar(n,modeloSalas()); pjMsg(`Novo projeto: ${n}. Confira as medidas na aba Planta.`); };
 $("pjDup").onclick=()=>{ const n=pjNome(PJ.atual+" - cópia"); pjUsar(n,S); pjMsg(`Cópia criada: ${n}.`); };
 $("pjRen").onclick=()=>{ const v=prompt("Novo nome do projeto:",PJ.atual); if(!v||!v.trim()||v.trim()===PJ.atual) return; const n=pjNome(v.trim()); PJ.lista[n]=S; delete PJ.lista[PJ.atual]; PJ.atual=n; save(); pjUI(); pjMsg(`Renomeado para ${n}.`); };
 $("pjDel").onclick=()=>{ const nomes=Object.keys(PJ.lista); if(nomes.length<2){ pjMsg("Este é o único projeto: crie outro antes de excluir."); return; } if(!confirm(`Excluir o projeto "${PJ.atual}" deste aparelho? (baixe o .json antes, se quiser guardar)`)) return;
