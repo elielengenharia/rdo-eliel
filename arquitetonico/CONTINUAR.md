@@ -4,6 +4,7 @@ App: https://elielengenharia.github.io/rdo-eliel/arquitetonico/ (arquivo único 
 Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
 
 ## No ar (main)
+- 5.33: opção "Cotas gerais (em cima e à esquerda)" na aba Planta, ao lado de Prancha (S.cotGer: "sim"/"não", padrão mostrar). Com "Não mostrar" a planta baixa (tela, PDF e DXF) sai sem as cadeias retas gerais de cima e da esquerda (cadeiaH/cadeiaV + totais em desenhoPlanta) e as paredes de cima e da esquerda ganham a cota alinhada delas (nasCadeias = cg && ...). Pedido do Eliel para o modelo das salas, onde as paredes inclinadas já têm cota alinhada.
 - 5.32: rótulo dos ambientes automático: meioAmb() acha o ponto mais longe das paredes (perto do centro de área), rotuloAmb centra nome/área/NV/medidas ali, letra menor (nome 1,6 · área 1,3 · NV e medidas 1,1), desvia do giro das portas (arcos do desenho), nunca separa nome e área (diminui até 50%), em ambiente estreito acompanha a parede mais comprida; fica fixo (os outros textos desviam). lugarRotulo das outras plantas parte do meio do ambiente.
 - 5.31: carimbo com "ESPAÇO RESERVADO À APROVAÇÃO DOS ÓRGÃOS COMPETENTES" acima dele (aba Dados: Espaço para aprovação sim/não e Órgão que aprova): órgão, carimbo e visto, processo, alvará, data de aprovação, analista, área do terreno, área construída, taxa de ocupação e assinatura do proprietário. Altura ha em pranchas(): A3 48 mm, A2-A0 66 mm; no A4 não entra.
 - 4.7: forro e parede de drywall, estrutura convencional e simples (coluninhas prontas, broca 1,20 m),
