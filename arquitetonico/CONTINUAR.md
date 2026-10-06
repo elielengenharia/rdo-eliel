@@ -86,3 +86,16 @@ procurar NaN/undefined, gerar PDF A4/A3/A2/A1 e DXF, conferir textos fora da fol
 - Drywall: o desenho usa a espessura geral das paredes (só o orçamento usa 9,5 cm).
 - Elétrica: limites mono/bi/trifásico são de referência; conferir com a norma da Equatorial Pará.
 - Hidrossanitário em banheiro muito pequeno: rótulos ficam apertados.
+
+## Próximo grande passo: casa moderna (pedido do Eliel, 06/10/2026)
+O Eliel está terminando a maquete de uma casa moderna no SketchUp e vai anexar o .dae para fazer o projeto completo no app. A casa tem:
+telhado embutido em tudo, platibandas em várias alturas, volumes com alturas diferentes e viga em balanço (garagem com balanço).
+Hoje o app só tem um telhado (TI), uma altura de platibanda (tel.hPlat), um pé-direito (S.pd) e nenhum balanço; a leitura da maquete
+(lerMaquete) pega paredes, vãos, pé-direito e piso, mas não o telhado. Plano, em versões separadas:
+1. Volumes de cobertura: agrupar ambientes em blocos, cada um com pé-direito, altura de platibanda e água de telhado próprios
+   (infoTelhado por bloco; cortes, fachadas, cobertura, calhas e perspectivas lendo o bloco de cada ponto).
+2. Ler da maquete .dae a altura de cada volume (topo das paredes/platibandas por ambiente) para já preencher os blocos.
+3. Cortes e fachadas com os degraus entre volumes (platibanda alta encontrando a baixa).
+4. Balanço / marquise / viga em balanço: elemento desenhado na planta de cobertura, cortes, fachadas e perspectivas (só desenho;
+   o cálculo do balanço fica para programa estrutural — Eberick/TQS —, a "estrutura simples" do app não serve para isso).
+Pedir ao Eliel um print ou corte da maquete para ver os volumes antes de começar.
