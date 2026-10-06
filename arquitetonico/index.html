@@ -669,7 +669,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.28 · revisão geral", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.29 · modelo das salas com Lote 243 e Lote 290", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -724,7 +724,7 @@ function modeloSalas(){ const o=defaults();
   o.ab=[{n:"Sala comercial 1",t:"Porta",w:0,d:0.273,l:3.0,a:2.1,p:0,mod:"correr4",mat:"Alumínio e vidro temperado"},{n:"Sala comercial 2",t:"Porta",w:0,d:4.964,l:4.0,a:2.1,p:0,mod:"correr4",mat:"Alumínio e vidro temperado"},{n:"Sala comercial 2",t:"Janela",w:0,d:9.468,l:1.2,a:2.0,p:0.6},{n:"Sala comercial 1",t:"Janela",w:2,d:0.313,l:1.2,a:2.0,p:0.6},{n:"Banheiro",t:"Porta",w:2,d:3.4,l:0.7,a:2.1,p:0}];
   o.cA=null; o.cB=null;
   o.terr=Object.assign(clone(TERR0),{forma:"pol",areaMapa:259.17,lote:"",alinha:1,encA:1,recA:0,encB:2,recB:0,calcada:2,rua:"Avenida principal",rua2:"Rua lateral",
-    lados:[{m:11.14,c:"Avenida principal",rua:"sim"},{m:21.31,c:"Vizinho 1",rua:"não"},{m:14.15,c:"Vizinho 2",rua:"não"},{m:14.69,c:"Rua lateral",rua:"sim"},{m:4.04,c:"",rua:"sim"}],
+    lados:[{m:11.14,c:"Avenida principal",rua:"sim"},{m:21.31,c:"Lote 243",rua:"não"},{m:14.15,c:"Lote 290",rua:"não"},{m:14.69,c:"Rua lateral",rua:"sim"},{m:4.04,c:"",rua:"sim"}],
     pts:[[4.132, 7.942], [15.268, 7.942], [9.877, -12.678], [-3.613, -8.425], [0.869, 5.561]]});   // cantos do lote tirados do DXF da situação (mesmas coordenadas da planta)
   // telhado escondido por platibanda, caindo da frente (Av. principal) para o fundo
   o.pd=3.50;   // pé-direito das salas comerciais
