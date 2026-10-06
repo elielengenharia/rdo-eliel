@@ -669,7 +669,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.29 · modelo das salas com Lote 243 e Lote 290", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.30 · cotas do banheiro sem encavalar", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1068,14 +1068,19 @@ function cotaH(D,xa,xb,y,yRef,txt,alt){ const k=D.k; if(xb-xa<0.005) return; con
   L(D,xa,y,xb,y,.18,"COTAS");
   [xa,xb].forEach(x=>{ L(D,x,yRef+sg*1*k,x,y+sg*1.5*k,.13,"COTAS"); L(D,x-0.9*k,y+0.9*k,x+0.9*k,y-0.9*k,.35,"COTAS"); });
   const curto=(xb-xa)/k<(String(txt).length*1.7+1.5);
+  if(curto&&(alt===3||alt===4)){ const w=largTexto(String(txt))*1.8*1.39+1.2, x0=alt===3?xa-(w/2+1.4)*k:xb+(w/2+1.4)*k; L(D,alt===3?xa-(w+2)*k:xb,y,alt===3?xa:xb+(w+2)*k,y,.18,"COTAS"); TX(D,x0,y-1.5*k,txt,1.8,{l:"COTAS",mv:"c"}); return; }
   TX(D,(xa+xb)/2,y-(curto&&alt?(alt===2?5.2:-2.6):1.5)*k,txt,1.8,{l:"COTAS",mv:"c"}); }
 function cotaV(D,ya,yb,x,xRef,txt,alt){ const k=D.k; if(yb-ya<0.005) return; const sg=Math.sign(x-xRef)||-1;
   L(D,x,ya,x,yb,.18,"COTAS");
   [ya,yb].forEach(y=>{ L(D,xRef+sg*1*k,y,x+sg*1.5*k,y,.13,"COTAS"); L(D,x-0.9*k,y+0.9*k,x+0.9*k,y-0.9*k,.35,"COTAS"); });
   const curto=(yb-ya)/k<(String(txt).length*1.7+1.5);
+  if(curto&&(alt===3||alt===4)){ const w=largTexto(String(txt))*1.8*1.39+1.2, y0=alt===3?ya-(w/2+1.4)*k:yb+(w/2+1.4)*k; L(D,x,alt===3?ya-(w+2)*k:yb,x,alt===3?ya:yb+(w+2)*k,.18,"COTAS"); TX(D,x-1.5*k,y0,txt,1.8,{l:"COTAS",rot:-90,mv:"c"}); return; }
   TX(D,x-(curto&&alt?(alt===2?5.2:-2.6):1.5)*k,(ya+yb)/2,txt,1.8,{l:"COTAS",rot:-90,mv:"c"}); }
-function cadeiaH(D,pts,y,yRef){ let st=2; for(let i=0;i+1<pts.length;i++){ const d=pts[i+1]-pts[i]; if(d<0.005) continue; const curto=d/D.k<8.5; if(curto) st=st===1?2:1; cotaH(D,pts[i],pts[i+1],y,yRef,f(d),curto?st:0); } }
-function cadeiaV(D,pts,x,xRef){ let st=2; for(let i=0;i+1<pts.length;i++){ const d=pts[i+1]-pts[i]; if(d<0.005) continue; const curto=d/D.k<8.5; if(curto) st=st===1?2:1; cotaV(D,pts[i],pts[i+1],x,xRef,f(d),curto?st:0); } }
+// trechos curtos: o da ponta sai para fora, na continuação da linha; os do meio alternam (primeiro por fora)
+function altCadeia(D,pts){ const idx=[]; for(let i=0;i+1<pts.length;i++) if(pts[i+1]-pts[i]>=0.005) idx.push(i); const out={}; let st=1;
+  idx.forEach((i,j)=>{ const d=pts[i+1]-pts[i], curto=d/D.k<8.5; if(!curto){ out[i]=0; st=1; return; } if(j===0&&idx.length>1) out[i]=3; else if(j===idx.length-1&&idx.length>1) out[i]=4; else { st=st===1?2:1; out[i]=st; } }); return out; }
+function cadeiaH(D,pts,y,yRef){ const al=altCadeia(D,pts); for(let i=0;i+1<pts.length;i++){ const d=pts[i+1]-pts[i]; if(d<0.005) continue; cotaH(D,pts[i],pts[i+1],y,yRef,f(d),al[i]); } }
+function cadeiaV(D,pts,x,xRef){ const al=altCadeia(D,pts); for(let i=0;i+1<pts.length;i++){ const d=pts[i+1]-pts[i]; if(d<0.005) continue; cotaV(D,pts[i],pts[i+1],x,xRef,f(d),al[i]); } }
 /* hachura de concreto (pontos e triângulos), como no CAD */
 function hachConcreto(D,x0,y0,x1,y1){
   const k=D.k, a=Math.min(x0,x1), b=Math.max(x0,x1), c=Math.min(y0,y1), d=Math.max(y0,y1); if(b-a<1e-6||d-c<1e-6) return;
@@ -1097,12 +1102,17 @@ function cotaAlinhada(D,p,q,sg,nX,nY,txt){ const k=D.k, dx=q[0]-p[0], dy=q[1]-p[
   let ang=Math.atan2(dy,dx)*180/Math.PI; if(ang>=90) ang-=180; if(ang<-90) ang+=180;
   TX(D,(a[0]+b[0])/2+nx*1.6*k,(a[1]+b[1])/2+ny*1.6*k,txt,1.8,{l:"COTAS",rot:ang,mv:"c"}); }
 // cadeia de cotas ao longo de uma parede (qualquer direção): a = ponto da face, u = direção, n = lado da cota, ts = distâncias desde a, o = afastamento em mm
-function cadeiaAlinhada(D,a,u,n,ts,o){ const k=D.k, P=(t,d)=>[a[0]+u[0]*t+n[0]*d*k,a[1]+u[1]*t+n[1]*d*k]; if(ts.length<2) return;
+function cadeiaAlinhada(D,a,u,n,ts,o,dentro){ const k=D.k, P=(t,d)=>[a[0]+u[0]*t+n[0]*d*k,a[1]+u[1]*t+n[1]*d*k]; if(ts.length<2) return;
   L(D,...P(ts[0],o),...P(ts[ts.length-1],o),.18,"COTAS");
   ts.forEach(t=>{ L(D,...P(t,1),...P(t,o+1.5),.13,"COTAS"); const q=P(t,o), tx=(u[0]+n[0])*0.65*k, ty=(u[1]+n[1])*0.65*k; L(D,q[0]-tx,q[1]-ty,q[0]+tx,q[1]+ty,.35,"COTAS"); });
-  let ang=Math.atan2(u[1],u[0])*180/Math.PI; if(ang>=90) ang-=180; if(ang<-90) ang+=180; let alt=0;
-  for(let i=0;i+1<ts.length;i++){ const d=ts[i+1]-ts[i]; if(d<0.005) continue; const txt=f(d), curto=d/k<largTexto(txt)*1.8*1.39+1.5; if(curto) alt=alt===1?2:1;
-    TX(D,...P((ts[i]+ts[i+1])/2,o+(curto&&alt===2?4.2:1.6)),txt,1.8,{l:"COTAS",rot:ang,mv:"c"}); } }
+  let ang=Math.atan2(u[1],u[0])*180/Math.PI; if(ang>=90) ang-=180; if(ang<-90) ang+=180; let alt=1;
+  const idx=[]; for(let i=0;i+1<ts.length;i++) if(ts[i+1]-ts[i]>=0.005) idx.push(i);
+  idx.forEach((i,j)=>{ const d=ts[i+1]-ts[i], txt=f(d), w=largTexto(txt)*1.8*1.39, curto=d/k<w+1.5;
+    if(curto&&!dentro&&idx.length>1&&(j===0||j===idx.length-1)){ const ini=j===0, tt=ini?ts[i]-(w/2+1.6)*k:ts[i+1]+(w/2+1.6)*k; L(D,...P(ini?ts[i]-(w+2.6)*k:ts[i+1],o),...P(ini?ts[i]:ts[i+1]+(w+2.6)*k,o),.18,"COTAS"); TX(D,...P(tt,o+1.6),txt,1.8,{l:"COTAS",rot:ang,mv:"c"}); return; }
+    if(curto) alt=alt===1?2:1; else alt=1;   // trecho comprido no meio: o próximo curto volta a ir por fora
+    // cota interna curta no canto: o número anda para dentro da cadeia, para não pisar na parede do canto
+    const sh=curto&&dentro&&idx.length>1?Math.max(0,(w/2+0.8)*k-d/2)*(j===0?1:j===idx.length-1?-1:0):0;
+    TX(D,...P((ts[i]+ts[i+1])/2+sh,o+(curto&&alt===2?(dentro?6.2:4.4):1.6)),txt,1.8,{l:"COTAS",rot:ang,mv:"c"}); }); }
 function nivelInt(D,x,y,txt){ const k=D.k; L(D,x-3*k,y,x+3*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.1*k,y-1.9*k],[x+1.1*k,y-1.9*k]],"COTAS"); TX(D,x,y-3.4*k,txt,1.7,{l:"COTAS"}); }
 function nivel(D,x,y,txt,abaixo){ const k=D.k, sg=abaixo?-1:1; L(D,x-2*k,y,x+12*k,y,.18,"COTAS"); PG(D,[[x,y],[x-1.2*k,y-sg*2*k],[x+1.2*k,y-sg*2*k]],"COTAS"); TX(D,x+2*k,y-sg*2.6*k,txt,1.8,{a:"s",l:"COTAS"}); }
 
@@ -1141,6 +1151,11 @@ function marcaDrywall(D,G){ const k=D.k; G.walls.filter(w=>w.dw).forEach(w=>{ L(
 function rotuloAmb(D,r,ls,x,y,obs=[]){ const k=D.k, P=paraDentro(r.poly,0.06)||r.poly, alt=L0=>L0.reduce((s0,l)=>s0+l.h*1.45,0)*k, larg=L0=>Math.max(...L0.map(l=>largTexto(l.t,l.b)*l.h*1.39))*k+0.04+2*k;   // 1 mm de folga de cada lado
   let best=null;
   for(const ob of [obs,[]]) for(let n=ls.length;n>=Math.min(2,ls.length)&&!best;n--){ const L0=ls.slice(0,n), pos=lugarRotulo({...r,poly:P},ob,x,y,larg(L0),alt(L0)); if(pos) best={pos,L0}; }
+  // ambiente estreito e comprido: o nome acompanha o comprimento do ambiente (em pé ou inclinado) em vez de passar por cima da porta
+  if(!best){ let lg=null; P.forEach((a,i)=>{ const b=P[(i+1)%P.length], l0=Math.hypot(b[0]-a[0],b[1]-a[1]); if(!lg||l0>lg.l) lg={l:l0,u:[(b[0]-a[0])/l0,(b[1]-a[1])/l0]}; });
+    let u=lg.u; if(u[0]<-1e-9||(Math.abs(u[0])<1e-9&&u[1]>0)) u=[-u[0],-u[1]]; const ang=Math.atan2(u[1],u[0])*180/Math.PI, v=[-u[1],u[0]];
+    if(Math.abs(ang)>15) for(let n=ls.length;n>=1&&!best;n--){ const L0=ls.slice(0,n), pos=lugarRotuloRot({...r,poly:P},obs,x,y,larg(L0),alt(L0),u); if(pos) best={pos,L0,u,v,ang}; }
+    if(best){ const [x0,y0]=best.pos; let dd=-alt(best.L0)/2; best.L0.forEach(l=>{ const hh=l.h*1.45*k, c=dd+hh/2; TX(D,x0+v[0]*c,y0+v[1]*c,l.t,l.h,{b:!!l.b,l:l.l||"TEXTO",rot:ang,mv:"r"}); dd+=hh; }); return; } }
   if(!best) for(const ob of [obs,[]]){ const L0=ls.slice(0,1), pos=lugarRotulo({...r,poly:P},ob,x,y,larg(L0),alt(L0)); if(pos){ best={pos,L0}; break; } }
   if(!best) for(const fz of [0.85,0.72,0.6]){ const L0=ls.slice(0,1).map(l=>({...l,h:l.h*fz})), pos=lugarRotulo({...r,poly:P},[],x,y,larg(L0),alt(L0)); if(pos){ best={pos,L0}; break; } }   // ambiente pequeno na escala da folha: letra menor em vez de passar para o vizinho
   const L0=best?best.L0:ls.slice(0,1), [x0,y0]=best?best.pos:[x,y]; let yy=y0-alt(L0)/2;
@@ -1166,7 +1181,7 @@ function desenhoPlanta(G,k,ajuda){
     P.forEach((a,i)=>{ const b=P[(i+1)%m], Lr=Math.hypot(b[0]-a[0],b[1]-a[1]); if(Lr<1.0) return; const u=[(b[0]-a[0])/Lr,(b[1]-a[1])/Lr]; let n=[-u[1],u[0]]; const mm=[(a[0]+b[0])/2+n[0]*0.05,(a[1]+b[1])/2+n[1]*0.05]; if(!pip(P,mm[0],mm[1])) n=[-n[0],-n[1]];
       const vs=G.abs.flatMap(g=>{ const c=[(g.p0[0]+g.p1[0])/2,(g.p0[1]+g.p1[1])/2], dn=Math.abs((c[0]-a[0])*n[0]+(c[1]-a[1])*n[1]); if(Math.abs(dn-h)>0.05) return []; const t0=(g.p0[0]-a[0])*u[0]+(g.p0[1]-a[1])*u[1], t1=(g.p1[0]-a[0])*u[0]+(g.p1[1]-a[1])*u[1]; return [t0,t1]; }).filter(t=>t>0.005&&t<Lr-0.005);
       if(r.ret&&!vs.length) return;   // ambiente retangular: as medidas já estão no rótulo (L x C); cota interna só onde tem porta ou janela
-      cadeiaAlinhada(D,a,u,n,uniq([0,...vs,Lr]).sort((p,q)=>p-q),3); }); });
+      cadeiaAlinhada(D,a,u,n,uniq([0,...vs,Lr]).sort((p,q)=>p-q),3,true); }); });
   desenhaAberturas(D,G,G.abs);
   // ambientes
   G.rooms.forEach(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; const x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy;
@@ -1768,6 +1783,9 @@ function desenhaCarro(D,T){ const Lc=T.w, Wc=1.80, c=0.28, dr=(pts,w=.25)=>PL(D,
   dr([[1.15,0.18],[1.55,0.30],[1.55,Wc-0.30],[1.15,Wc-0.18],[1.15,0.18]],.18); dr([[3.25,0.25],[3.50,0.18],[3.50,Wc-0.18],[3.25,Wc-0.25],[3.25,0.25]],.18);
   dr([[1.55,0.30],[3.25,0.25]],.13); dr([[1.55,Wc-0.30],[3.25,Wc-0.25]],.13); dr([[1.20,-0.10],[1.35,-0.10],[1.35,0]],.18); dr([[1.20,Wc+0.10],[1.35,Wc+0.10],[1.35,Wc]],.18); }
 // rótulo do ambiente num lugar livre (sem cair em cima de móvel)
+function lugarRotuloRot(r,sol,x,y,wt,ht,u){ const v=[-u[1],u[0]], livre=(px,py)=>{ const Q=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([a,b])=>[px+u[0]*a*wt/2+v[0]*b*ht/2,py+u[1]*a*wt/2+v[1]*b*ht/2]); return Q.every(p=>pip(r.poly,p[0],p[1]))&&!sol.some(z=>sobrepoe(Q,z)); };
+  if(livre(x,y)) return [x,y]; const st=0.04, R=Math.max(r.x1-r.x0,r.y1-r.y0);
+  for(let rr=st;rr<=R;rr+=st){ const n=Math.max(8,Math.round(2*Math.PI*rr/st)); for(let i=0;i<n;i++){ const a=i/n*2*Math.PI, px=x+rr*Math.cos(a), py=y+rr*Math.sin(a); if(livre(px,py)) return [px,py]; } } return null; }
 function lugarRotulo(r,sol,x,y,wt,ht){ const livre=(px,py)=>{ const Q=[[px-wt/2,py-ht/2],[px+wt/2,py-ht/2],[px+wt/2,py+ht/2],[px-wt/2,py+ht/2]]; return Q.every(p=>pip(r.poly,p[0],p[1]))&&!sol.some(z=>sobrepoe(Q,z)); };
   if(livre(x,y)) return [x,y];
   const st=0.04, R=Math.max(r.x1-r.x0,r.y1-r.y0); let melhor=null;
