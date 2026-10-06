@@ -1237,8 +1237,12 @@ function desenhoPlanta(G,k,ajuda){
   // linhas de corte
   const cA=posCorte(G,"A"), cB=posCorte(G,"B"), r=2.6*k;
   ["A","B"].forEach(q=>{ const F=frameCorte(G,q); if(F.ax) return; const c=q==="A"?cA:cB, d=F.d, n=F.n, fv=[d[1],-d[0]], [ua,ub]=faixaCasa(G,d), P=u=>[c*n[0]+u*d[0],c*n[1]+u*d[1]];   // linha paralela a um lado do lote
-    L(D,...P(ua-22*k),...P(ub+19*k),.35,"CORTE",true);
-    [P(ua-22*k-r),P(ub+19*k+r)].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,q,2.2,{b:true,l:"CORTE"}); const bx=x+fv[0]*(r+0.4*k), by=y+fv[1]*(r+0.4*k);   // seta: lado para onde se olha
+    // a linha inclinada sai da faixa das cotas (gerais e das paredes) antes da bolinha, para a letra não cair em cima de uma cota
+    const R={x0:bb.x0-25*k,x1:bb.x1+24*k,y0:bb.y0-25*k,y1:bb.y1+24*k}, o=P(0); let t0=-1e9, t1=1e9;
+    [[d[0],o[0],R.x0,R.x1],[d[1],o[1],R.y0,R.y1]].forEach(([dd,o0,lo,hi])=>{ if(Math.abs(dd)<1e-9) return; let a1=(lo-o0)/dd, b1=(hi-o0)/dd; if(a1>b1) [a1,b1]=[b1,a1]; t0=Math.max(t0,a1); t1=Math.min(t1,b1); });
+    const e0=Math.min(ua-22*k,t0>-1e8?t0:ua-22*k), e1=Math.max(ub+19*k,t1<1e8?t1:ub+19*k);
+    L(D,...P(e0),...P(e1),.35,"CORTE",true);
+    [P(e0-r),P(e1+r)].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,q,2.2,{b:true,l:"CORTE"}); const bx=x+fv[0]*(r+0.4*k), by=y+fv[1]*(r+0.4*k);   // seta: lado para onde se olha
       PG(D,[[bx-d[0]*1.2*k,by-d[1]*1.2*k],[bx+d[0]*1.2*k,by+d[1]*1.2*k],[x+fv[0]*(r+2.6*k),y+fv[1]*(r+2.6*k)]],"CORTE"); }); });
   if(frameCorte(G,"A").ax){ L(D,bb.x0-22*k,cA,bb.x1+19*k,cA,.35,"CORTE",true);
   [[bb.x0-22*k-r,cA],[bb.x1+19*k+r,cA]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"A",2.2,{b:true,l:"CORTE"}); PG(D,[[x-1.2*k,y-r-0.4*k],[x+1.2*k,y-r-0.4*k],[x,y-r-2.6*k]],"CORTE"); }); }
