@@ -674,7 +674,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.34 · cortes paralelos às divisas do lote, ruas do modelo das salas com nome", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.35 · revisão geral: carimbo e memorial", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2813,7 +2813,8 @@ function memorial(){
     num(S.laje)>0?`Laje com ${f(num(S.laje)*100,0)} cm de espessura, conforme projeto estrutural.`:""]);
   { const rb=Math.max(0,num(S.reb)), tj=Math.max(5,G.t*100-2*rb); sec("6. ALVENARIA",[`Paredes em tijolo cerâmico assentado em pé, com ${f(tj,0)} cm de espessura, com argamassa de cimento, cal e areia, em prumo e esquadro; reboco de ${f(rb,1)} cm em cada face, ficando a parede acabada com ${f(G.t*100,0)} cm.`,
     ...(DWm=>DWm.area>0?[`Divisórias em gesso acartonado (drywall) de 95 mm nas paredes nº ${DWm.paredes.join(", ")} (${f(DWm.area)} m²): guias e montantes de aço galvanizado de 70 mm a cada 60 cm, uma placa ST de 12,5 mm em cada face (placa RU nas áreas molhadas), parafusadas, com juntas tratadas com fita e massa; lã de vidro opcional entre as placas para isolamento acústico. Reforço de madeira ou metálico dentro da parede onde houver armários, prateleiras ou TV.`]:[])(quantDrywall(G))]); }
-  sec("7. COBERTURA",[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}, inclinação de ${f(num(S.tel.inc),0)}%, sobre estrutura de madeira tratada (ou metálica) dimensionada para o vão.`,
+  const ETm=G.vazio?null:estruturaTelhado(G);
+  sec("7. COBERTURA",[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}${ETm&&ETm.VG?` de ${f(ETm.VG.lt)} m`:""}, inclinação de ${f(num(S.tel.inc),0)}%, ${ETm&&ETm.VG?`sobre vigotas pré-moldadas de concreto a cada ${f(ETm.VG.ev)} m no sentido do caimento e caibros 5x7 cm de madeira tratada atravessados a cada ${f(ETm.VG.ec)} m na rampa (o 1º logo depois da calha), para cada emenda da telha cair sobre um caibro.`:"sobre estrutura de madeira tratada (ou metálica) dimensionada para o vão."}`,
     TI.plat?(CLm=>`Telhado escondido por platibanda, com calha em chapa galvanizada de ${CLm?`${f(CLm.bMax*100,0)} x ${f(CLm.hMax*100,0)} cm (${f(CLm.Ltot)} m, caimento de ${f(CLm.ic*100,1)}%)`:"seção conforme projeto"}, dimensionada pela NBR 10844 para chuva de ${CLm?f(CLm.I,0):"160"} mm/h, rufo e contra-rufo, ${CLm?CLm.nAP:""} condutores verticais de PVC até a caixa de areia e ladrão Ø50 na platibanda.`)(calhasPlat(G,TI)):`Beiral de ${f(TI.b)} m em todo o contorno.`,`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`]);
   sec("8. ESQUADRIAS",[...Q.map(q=>`${q.cod}: ${q.desc}${q.tipo==="Porta"?` (folha ${nomeFolha(q.fol).toLowerCase()}; ${ferragens(q)[0].toLowerCase()})`:""}${q.tipo!=="Vão"?`, ${q.nf} ${q.nf===1?"folha":"folhas"}`:""}, ${q.mat.toLowerCase()}, ${f(q.l)} x ${f(q.a)} m${q.tipo==="Janela"?`, peitoril ${f(q.p)} m`:""} - ${q.q} ${q.q===1?"unidade":"unidades"}.`),
     Q.length?`Ferragens e fechaduras de boa qualidade; portas de madeira com batente e guarnição; janelas com vidro liso de 4 mm (box e fixas em vidro temperado).`:""]);
@@ -4652,8 +4653,10 @@ function agruparFolhas(folhas,cap,area,TT){ const aw=area.x1-area.x0, ah=area.y1
     // plantas da mesma folha numa escala só (a maior que cada uma precisa); detalhes (até 1:25) ficam na escala deles
     const fit=its.map(it=>{ if(it.zgen){ let d=null; for(const Z of [1.9,1.6,1.35,1.15,1,0.85,0.72,0.6]){ d=encaixar(it.zgen(Z),bw,bh-TT); if(d.w<=bw&&d.h<=bh-TT) break; } return d; } return encaixar(it.d.gen,bw,bh-TT); }), planta=j=>!its[j].sem&&fit[j].s>=50, comuns=fit.filter((x,j)=>planta(j)).map(x=>x.s).sort((a,b)=>a-b), sc=comuns.length?comuns[Math.floor((comuns.length-1)/2)]:null;
     const itens=its.map((it,j)=>({...it,d:planta(j)&&sc&&fit[j].s<=sc?naEscala(it.d.gen,sc):fit[j],box:[area.x0+(j%cols)*(bw+8),area.y0+Math.floor(j/cols)*(bh+6),bw,bh]}));
-    const conteudo=fs.map(fl=>fl.conteudo).join(" / "), esc=[...new Set(itens.filter(it=>!it.sem).map(it=>it.d.s))];
-    return {n:"",conteudo:conteudo.length>78?conteudo.slice(0,76)+"...":conteudo,escala:esc.length===1?`1:${esc[0]}`:esc.length?"INDICADA":"SEM ESCALA",itens,lado:"grupo",subs:fs}; };
+    // nome curto de cada desenho (sem "QUADRO DE ..." e "E ENTRADA - ..."), para o carimbo caber
+    const curto=t=>String(t).replace(/, QUADRO DE .*$/,"").replace(/ E ENTRADA( - .*)?$/,"$1").replace(/^DIAGRAMA UNIFILAR (QD\d+).*$/,"UNIFILAR $1").replace(/^PLANTA DE /,"").replace(/^DETALHE D[OAE]S? /,"DET. ");
+    const conteudo=[...new Set(fs.map(fl=>curto(fl.conteudo)))].join(" / "), esc=[...new Set(itens.filter(it=>!it.sem).map(it=>it.d.s))];
+    return {n:"",conteudo,escala:esc.length===1?`1:${esc[0]}`:esc.length?"INDICADA":"SEM ESCALA",itens,lado:"grupo",subs:fs}; };
   ordem.forEach(({fl,g})=>{ const n=fl.itens.length, ok=fl.itens.every(it=>it.d&&it.d.gen)&&n<=cap;
     if(cur&&ok&&cur.g===g&&cur.n+n<=cap){ cur.fs.push(fl); cur.n+=n; return; }
     fecha(); if(ok) cur={g,fs:[fl],n}; else out.push(fl); });
@@ -4877,7 +4880,8 @@ function buildPDF(fmt){
     line(cx+100*q,yl[0],cx+100*q,yl[1]);
     text(cx+3,yl[1]+2.2,lab,"PROPRIETÁRIO"); text(cx+3,yl[1]+6.6,ts,S.cliente||"-");
     text(cx+100*q+3,yl[1]+2.2,lab,"LOCAL"); text(cx+100*q+3,yl[1]+6.6,ts,S.local||"-");
-    text(cx+3,yl[2]+2,lab,"CONTEÚDO"); text(cx+3,yl[2]+5.6,ts,fl.conteudo);
+    text(cx+3,yl[2]+2,lab,"CONTEÚDO"); { let sz=ts, ls=wrap(fl.conteudo,sz,cw-6); if(ls.length>1){ sz=Math.min(ts,1.7); ls=wrap(fl.conteudo,sz,cw-6); } if(ls.length>2){ sz=1.45; ls=wrap(fl.conteudo,sz,cw-6); } if(ls.length>2) ls=[ls[0],ls.slice(1).join(" ").slice(0,Math.max(10,ls[1].length-3))+"..."];
+      if(ls.length===1) text(cx+3,yl[2]+5.6,sz,ls[0]); else ls.forEach((l0,i)=>text(cx+3,yl[2]+4.3+i*(sz*1.2),sz,l0)); }
     text(cx+3,yl[3]+2.2,lab,"RESPONSÁVEL TÉCNICO"); text(cx+3,yl[3]+6.6,2.4,S.rtNome||"",true); text(cx+3,yl[3]+11,ts,S.crea||"");
     lw(.2); line(cx+105*q,yl[3]+9.5,cx+cw-5,yl[3]+9.5); text(cx+105*q+(cw-5-105*q)/2,yl[3]+12,lab,"assinatura",false,1);
     const bx=[0,45,90,135].map(v=>v*q); bx.slice(1).forEach(x=>line(cx+x,yl[4],cx+x,cy+ch));
