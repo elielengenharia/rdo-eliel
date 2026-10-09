@@ -103,6 +103,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
 </style>
 </head>
 <body>
+<datalist id="matOpts"><option value="Alumínio e vidro"><option value="Alumínio e vidro temperado"><option value="Alumínio (veneziana)"><option value="Vidro temperado 8 mm (sem caixilho)"><option value="Vidro temperado 10 mm (sem caixilho)"><option value="Madeira"><option value="Madeira e vidro"><option value="Madeira (veneziana)"><option value="Ferro e vidro"><option value="Ferro (veneziana)"><option value="Aço galvanizado"><option value="PVC e vidro"></datalist>
 <div class="wrap">
   <header class="top">
     <div>
@@ -674,7 +675,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.35 · revisão geral: carimbo e memorial", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.36 · tamanho do texto por ambiente e mais materiais de esquadria", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -879,6 +880,7 @@ function geom(todas=false){
     r.labIdx=S.rooms.findIndex(q=>pip(r.poly,num(q.x),num(q.y)));
     r.n=r.labIdx>=0?String(S.rooms[r.labIdx].n||"").trim():"";
     r.nv=r.labIdx>=0?num(S.rooms[r.labIdx].nv):0;
+    r.tx=r.labIdx>=0&&num(S.rooms[r.labIdx].tx)>0?num(S.rooms[r.labIdx].tx):100;   // tamanho do texto do ambiente (%)
   });
   // nomes que ficaram fora de todos os ambientes ou empilhados no mesmo ponto (ex.: todos em 1,00 x 1,00): vão para os ambientes sem nome
   // banheiro/lavabo/WC no menor; os outros na ordem da lista, da esquerda para a direita; o ponto do nome é gravado no lugar certo
@@ -1181,7 +1183,7 @@ function meioAmb(P){ const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), x0=Math.min(...
   let A=0, cx=0, cy=0; for(let i=0;i<n;i++){ const a=P[i], b=P[(i+1)%n], c0=a[0]*b[1]-b[0]*a[1]; A+=c0; cx+=(a[0]+b[0])*c0; cy+=(a[1]+b[1])*c0; } if(Math.abs(A)>1e-9){ cx/=3*A; cy/=3*A; const dc=dist(cx,cy); if(dc>=bd*0.8) return [cx,cy]; }
   return best; }
 // nome, área, nível e medidas do ambiente: centrados no meio do ambiente, letra menor quando não cabe, em pé ou inclinado se o ambiente for estreito
-function rotuloAmb(D,r,ls,x,y,obs=[]){ const k=D.k, P=paraDentro(r.poly,0.05)||r.poly, c=meioAmb(P);
+function rotuloAmb(D,r,ls,x,y,obs=[]){ if(r.tx&&r.tx!==100) ls=ls.map(l=>({...l,h:l.h*r.tx/100})); const k=D.k, P=paraDentro(r.poly,0.05)||r.poly, c=meioAmb(P);
   // giro das portas já desenhado: o texto não passa por cima do arco
   const arcos=D.p.filter(q=>q.t==="a"&&q.r>0.3).map(q=>{ const m=[(q.x1+q.x2)/2-q.cx,(q.y1+q.y2)/2-q.cy], l=Math.hypot(...m)||1; return [[q.cx,q.cy],[q.x1,q.y1],[q.cx+m[0]/l*q.r,q.cy+m[1]/l*q.r],[q.x2,q.y2]]; }); obs=obs.concat(arcos);
   let lg=null; P.forEach((a,i)=>{ const b=P[(i+1)%P.length], l0=Math.hypot(b[0]-a[0],b[1]-a[1]); if(!lg||l0>lg.l) lg={l:l0,u:[(b[0]-a[0])/l0,(b[1]-a[1])/l0]}; });
@@ -3903,7 +3905,8 @@ function maquete3dApp(G){ if(G.vazio) return null; const tris=[], cols=[], mat=[
   // portas e janelas recuadas no vão, com os caixilhos
   G.abs.filter(g=>g.externa).forEach(g=>{ const u=[g.w.ux,g.w.uy]; let N=[g.nX,g.nY]; const mx=(g.p0[0]+g.p1[0])/2, my=(g.p0[1]+g.p1[1])/2; const fo=G.compAt(mx+N[0]*(G.h+0.12),my+N[1]*(G.h+0.12)); if(!(fo&&fo.ext)) N=[-N[0],-N[1]];
     const o=0.02, a=[g.p0[0]+N[0]*o,g.p0[1]+N[1]*o], b=[a[0]+u[0]*g.l,a[1]+u[1]*g.l], jan=g.tipo==="Janela", z0=jan?num(g.a.p):0, z1=z0+(num(g.a.a)||(jan?1:2.1));
-    const vid=jan||/vidro/i.test(String(g.a.mat||"")); quad([a[0],a[1],z0],[b[0],b[1],z0],[b[0],b[1],z1],[a[0],a[1],z1],vid?"vid":"porta");
+    const mt0=String(g.a.mat||(jan?"Alumínio":"")), vid=/vidro/i.test(mt0)||(jan&&!/madeira|ferro|a[cç]o|veneziana/i.test(mt0)), metal=/ferro|a[cç]o|alum/i.test(mt0)&&!/madeira/i.test(mt0);
+    quad([a[0],a[1],z0],[b[0],b[1],z0],[b[0],b[1],z1],[a[0],a[1],z1],vid?"vid":metal?"esq":"porta");
     const q=vid?1:0; ln([a[0],a[1],z0],[b[0],b[1],z0],q); ln([b[0],b[1],z0],[b[0],b[1],z1],q); ln([b[0],b[1],z1],[a[0],a[1],z1],q); ln([a[0],a[1],z1],[a[0],a[1],z0],q);
     const nf=Math.max(1,g.a.nf||(g.l>1.6?2:1)); for(let k0=1;k0<nf;k0++){ const t=g.l*k0/nf, p=[a[0]+u[0]*t,a[1]+u[1]*t]; ln([p[0],p[1],z0],[p[0],p[1],z1],q); } });
   // telhado: cada água é um plano (recortado pelas outras águas), dentro do caixote da platibanda ou com o beiral
@@ -4411,7 +4414,7 @@ function painelAbertura(i){
       <label>Distância do começo (m)<input type="number" step="0.05" data-c="d" value="${a.d}"></label>
       <label>Local / nome<input type="text" data-c="n" value="${esc(a.n||"")}"></label>
       <label>Modelo<select data-c="mod">${(MODELOS[a.t]||MODELOS.Porta).map(([v,t2])=>`<option value="${v}"${modPadrao(a)===v?" selected":""}>${t2}</option>`).join("")}</select></label>
-      <label>Material<input type="text" data-c="mat" value="${esc(a.mat||MATPAD[a.t]||"")}"></label>
+      <label>Material<input type="text" list="matOpts" data-c="mat" value="${esc(a.mat||MATPAD[a.t]||"")}" placeholder="escolha ou escreva"></label>
       ${a.t==="Porta"?`<label>Folha<select data-c="fol">${FOLHAS.map(([v,t2])=>`<option value="${v}"${(a.fol||(g?g.fol:"lisa"))===v?" selected":""}>${t2}</option>`).join("")}</select></label>`:""}
     </div>
     <div class="row">${a.t==="Porta"?`<button class="btn" data-tg="inv">Abrir para o outro lado</button><button class="btn" data-tg="dob">Trocar dobradiça</button>`:""}<button class="btn dng" data-del>Excluir</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
@@ -4476,9 +4479,10 @@ $("wtab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)
   S.ab=S.ab.filter(a=>Math.round(num(a.w))!==i).map(a=>Math.round(num(a.w))>i?{...a,w:Math.round(num(a.w))-1}:a); renderWalls(); renderAb(); render();});
 $("addW").onclick=()=>{S.walls.push({x1:0,y1:0,x2:1,y2:0}); renderWalls(); render(); const ins=$("wtab").querySelectorAll(`input[data-i="${S.walls.length-1}"]`); if(ins[0]) ins[0].focus();};
 function renderRooms(){
-  $("rtab").innerHTML=`<tr><th>Nome</th><th>x</th><th>y</th><th>Nível</th><th></th></tr>`+S.rooms.map((r,i)=>
-    `<tr><td><input type="text" data-i="${i}" data-c="n" value="${esc(r.n)}" aria-label="Nome do ambiente"></td><td><input type="number" step="0.1" data-i="${i}" data-c="x" value="${r.x}" aria-label="x"></td><td><input type="number" step="0.1" data-i="${i}" data-c="y" value="${r.y}" aria-label="y"></td><td><input type="number" step="0.01" data-i="${i}" data-c="nv" value="${r.nv??0}" aria-label="Nível do piso"></td><td><button class="btn x" data-del="${i}" aria-label="Remover ambiente">×</button></td></tr>`).join("");
+  $("rtab").innerHTML=`<tr><th>Nome</th><th>x</th><th>y</th><th>Nível</th><th>Texto</th><th></th></tr>`+S.rooms.map((r,i)=>
+    `<tr><td><input type="text" data-i="${i}" data-c="n" value="${esc(r.n)}" aria-label="Nome do ambiente"></td><td><input type="number" step="0.1" data-i="${i}" data-c="x" value="${r.x}" aria-label="x"></td><td><input type="number" step="0.1" data-i="${i}" data-c="y" value="${r.y}" aria-label="y"></td><td><input type="number" step="0.01" data-i="${i}" data-c="nv" value="${r.nv??0}" aria-label="Nível do piso"></td><td><select data-i="${i}" data-c="tx" aria-label="Tamanho do texto">${[100,90,80,70,60,50].map(v=>`<option value="${v}"${(num(r.tx)||100)===v?" selected":""}>${v}%</option>`).join("")}</select></td><td><button class="btn x" data-del="${i}" aria-label="Remover ambiente">×</button></td></tr>`).join("");
 }
+$("rtab").addEventListener("change",e=>{ if(e.target.dataset.c==="tx"){ S.rooms[e.target.dataset.i].tx=num(e.target.value); render(); } });
 $("rtab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null)return; S.rooms[i][c]=c==="n"?e.target.value:num(e.target.value); later();});
 $("rtab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; S.rooms.splice(+d,1); renderRooms(); render();});
 $("addR").onclick=()=>{S.rooms.push({n:"Ambiente",x:1,y:1}); renderRooms(); render();};
@@ -4489,7 +4493,7 @@ function renderAb(){
     <td><select data-i="${i}" data-c="w" aria-label="Parede">${opW.map(j=>`<option value="${j}"${Math.round(num(a.w))===j?" selected":""}>${j+1}</option>`).join("")}</select></td>
     ${["d","l","a","p"].map(c=>`<td><input type="number" step="0.05" data-i="${i}" data-c="${c}" value="${a[c]}" aria-label="${c}"${c==="p"&&a.t!=="Janela"?" disabled":""}></td>`).join("")}
     <td><select data-i="${i}" data-c="mod" aria-label="Modelo">${(MODELOS[a.t]||MODELOS.Porta).map(([v,t2])=>`<option value="${v}"${modPadrao(a)===v?" selected":""}>${t2}</option>`).join("")}</select></td>
-    <td><input type="text" data-i="${i}" data-c="mat" value="${esc(a.mat||MATPAD[a.t]||"")}" aria-label="Material"></td>
+    <td><input type="text" list="matOpts" data-i="${i}" data-c="mat" value="${esc(a.mat||MATPAD[a.t]||"")}" aria-label="Material"></td>
     <td><input type="text" data-i="${i}" data-c="n" value="${esc(a.n||"")}" aria-label="Local"></td><td><button class="btn x" data-del="${i}" aria-label="Remover abertura">×</button></td></tr>`).join("");
 }
 $("atab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||e.target.tagName==="SELECT")return; S.ab[i][c]=(c==="n"||c==="mat")?e.target.value:num(e.target.value); later();});
