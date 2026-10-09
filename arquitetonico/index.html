@@ -675,7 +675,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.36 · tamanho do texto por ambiente e mais materiais de esquadria", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.36 · texto por ambiente, materiais de esquadria e espelhar porta", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -4417,7 +4417,7 @@ function painelAbertura(i){
       <label>Material<input type="text" list="matOpts" data-c="mat" value="${esc(a.mat||MATPAD[a.t]||"")}" placeholder="escolha ou escreva"></label>
       ${a.t==="Porta"?`<label>Folha<select data-c="fol">${FOLHAS.map(([v,t2])=>`<option value="${v}"${(a.fol||(g?g.fol:"lisa"))===v?" selected":""}>${t2}</option>`).join("")}</select></label>`:""}
     </div>
-    <div class="row">${a.t==="Porta"?`<button class="btn" data-tg="inv">Abrir para o outro lado</button><button class="btn" data-tg="dob">Trocar dobradiça</button>`:""}<button class="btn dng" data-del>Excluir</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
+    <div class="row">${a.t==="Porta"?`<button class="btn" data-tg="inv">⇅ Abrir para o outro lado</button><button class="btn" data-tg="dob">⇄ Espelhar (trocar dobradiça)</button>`:""}<button class="btn dng" data-del>Excluir</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
   P.querySelectorAll("[data-c]").forEach(el=>el.addEventListener("change",()=>{ const c=el.dataset.c; a[c]=(c==="t"||c==="n"||c==="mod"||c==="mat"||c==="fol")?el.value:num(el.value);
     if(c==="t"){ const df=ABDEF[a.t]; a.a=df.a; a.p=df.p; delete a.mod; delete a.mat; } renderAb(); render(); painelAbertura(i); }));
   P.querySelectorAll("[data-tg]").forEach(b=>b.onclick=()=>{ a[b.dataset.tg]=!a[b.dataset.tg]; render(); });
@@ -4488,18 +4488,19 @@ $("rtab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)
 $("addR").onclick=()=>{S.rooms.push({n:"Ambiente",x:1,y:1}); renderRooms(); render();};
 function renderAb(){
   const opW=S.walls.map((_,i)=>i);
-  $("atab").innerHTML=`<tr><th>Tipo</th><th>Parede</th><th>Dist.</th><th>Larg.</th><th>Alt.</th><th>Peit.</th><th>Modelo</th><th>Material</th><th>Local</th><th></th></tr>`+S.ab.map((a,i)=>
+  $("atab").innerHTML=`<tr><th>Tipo</th><th>Parede</th><th>Dist.</th><th>Larg.</th><th>Alt.</th><th>Peit.</th><th>Modelo</th><th>Material</th><th>Local</th><th>Espelhar</th><th></th></tr>`+S.ab.map((a,i)=>
     `<tr><td><select data-i="${i}" data-c="t" aria-label="Tipo">${["Porta","Janela","Vão"].map(t=>`<option${a.t===t?" selected":""}>${t}</option>`).join("")}</select></td>
     <td><select data-i="${i}" data-c="w" aria-label="Parede">${opW.map(j=>`<option value="${j}"${Math.round(num(a.w))===j?" selected":""}>${j+1}</option>`).join("")}</select></td>
     ${["d","l","a","p"].map(c=>`<td><input type="number" step="0.05" data-i="${i}" data-c="${c}" value="${a[c]}" aria-label="${c}"${c==="p"&&a.t!=="Janela"?" disabled":""}></td>`).join("")}
     <td><select data-i="${i}" data-c="mod" aria-label="Modelo">${(MODELOS[a.t]||MODELOS.Porta).map(([v,t2])=>`<option value="${v}"${modPadrao(a)===v?" selected":""}>${t2}</option>`).join("")}</select></td>
     <td><input type="text" list="matOpts" data-i="${i}" data-c="mat" value="${esc(a.mat||MATPAD[a.t]||"")}" aria-label="Material"></td>
-    <td><input type="text" data-i="${i}" data-c="n" value="${esc(a.n||"")}" aria-label="Local"></td><td><button class="btn x" data-del="${i}" aria-label="Remover abertura">×</button></td></tr>`).join("");
+    <td><input type="text" data-i="${i}" data-c="n" value="${esc(a.n||"")}" aria-label="Local"></td>
+    <td style="white-space:nowrap">${a.t==="Porta"?`<button class="btn" data-esp="inv" data-i="${i}" title="Abrir para o outro lado da parede" aria-label="Abrir para o outro lado">⇅</button> <button class="btn" data-esp="dob" data-i="${i}" title="Espelhar: trocar o lado da dobradiça" aria-label="Trocar dobradiça">⇄</button>`:""}</td><td><button class="btn x" data-del="${i}" aria-label="Remover abertura">×</button></td></tr>`).join("");
 }
 $("atab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||e.target.tagName==="SELECT")return; S.ab[i][c]=(c==="n"||c==="mat")?e.target.value:num(e.target.value); later();});
 $("atab").addEventListener("change",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||e.target.tagName!=="SELECT")return;
   if(c==="t"){ S.ab[i].t=e.target.value; const df=ABDEF[S.ab[i].t]; S.ab[i].a=df.a; S.ab[i].p=df.p; delete S.ab[i].mod; delete S.ab[i].mat; renderAb(); } else if(c==="w") S.ab[i].w=+e.target.value; else S.ab[i][c]=e.target.value; render();});
-$("atab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; S.ab.splice(+d,1); renderAb(); render();});
+$("atab").addEventListener("click",e=>{const tg=e.target.dataset.esp; if(tg){ const a=S.ab[+e.target.dataset.i]; a[tg]=!a[tg]; render(); return; } const d=e.target.dataset.del; if(d==null)return; S.ab.splice(+d,1); renderAb(); render();});
 $("addA").onclick=()=>{S.ab.push({n:"",t:"Janela",w:0,d:0.5,l:1.2,a:1.0,p:1.1}); renderAb(); render();};
 /* troca de projeto */
 const pjMsg=t=>{ $("pjMsg").textContent=t; };
