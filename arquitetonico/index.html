@@ -674,7 +674,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.35 · revisão geral: carimbo e memorial", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.36 · projeto vindo do Detalhador de Fundação", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -5361,9 +5361,23 @@ $("impApply").onclick=()=>{ if(!IMP) return;
   loadForm(); render(); $("impRes").hidden=true; impMsg("Planta aplicada. Veja a aba Planta: dê nome aos ambientes e coloque as janelas tocando nas paredes."); };
 
 $("versao").textContent=VERSAO;
+/* projeto vindo do Detalhador de Fundação pelo botão "Fazer o hidrossanitário": entra como projeto novo, com fossa, aberto na aba Hidrossanitário */
+let deFundacao=null;
+try{ deFundacao=JSON.parse(localStorage.getItem("arq-de-fundacao")); localStorage.removeItem("arq-de-fundacao"); }catch(e){ deFundacao=null; }
 try{ if(!localStorage.getItem("arq-comece-ok")) $("comece").hidden=false; }catch(e){ $("comece").hidden=false; }
 $("comeceOk").onclick=()=>{ $("comece").hidden=true; try{ localStorage.setItem("arq-comece-ok","1"); }catch(e){} };
 loadForm(); render();
+if(deFundacao&&Array.isArray(deFundacao.walls)&&deFundacao.walls.length&&Date.now()-(+deFundacao.t||0)<30*60*1000){ try{
+  const o=defaults(); o.walls=deFundacao.walls; o.rooms=Array.isArray(deFundacao.rooms)?deFundacao.rooms:[]; o.ab=[]; o.cA=null; o.cB=null;
+  ["obra","cliente","local"].forEach(k=>{ if(typeof deFundacao[k]==="string") o[k]=deFundacao[k]; });
+  o.fossa=Object.assign({},o.fossa,{on:"sim"});
+  const n=pjNome(deFundacao.obra||"Projeto da fundação"); pjUsar(n,o);
+  const ab=document.querySelector('nav.tabs button[data-tab="hid"]'); if(ab) ab.click();
+  const temBanho=o.rooms.some(r=>ehBanho(r.n));
+  const av=document.createElement("div"); av.className="alert ok";
+  av.textContent=`Projeto "${n}" veio do Detalhador de Fundação, com fossa séptica e sumidouro. `+(temBanho?"Confira as louças na aba Banheiro e as peças da cozinha e lavanderia na aba Layout.":"Dê o nome de Banho ao banheiro (e Cozinha, Lavanderia) na aba Planta para o app colocar as louças e traçar a rede.")+" Portas e janelas: coloque tocando nas paredes, na aba Planta.";
+  const sec=$("tab-hid"); if(sec) sec.prepend(av);
+}catch(e){} }
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
 </body>

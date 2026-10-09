@@ -145,6 +145,12 @@ svg text{font-family:var(--f-mono);fill:var(--ink)}
       <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF da prancha</button><span class="toast" id="pdfMsg" role="status"></span></div>
       <p class="cap" style="margin-top:8px">Dentro do Claude o DXF vem compactado (.zip); no app instalado vem o .dxf direto. Contém planta, cortes e detalhes em escala real (metros), cada elemento no seu layer. No AutoCAD, abra o .dxf e salve como .dwg.</p>
     </div>
+    <div class="sheet" id="hidroBox">
+      <h2>Hidrossanitário desta casa</h2>
+      <p class="cap">O hidrossanitário é feito no app Projeto Arquitetônico: água fria, esgoto com caixas, fossa, filtro e sumidouro (NBR 7229 e 13969), lista de material e prancha. Este botão leva as paredes e os ambientes deste projeto para lá como um projeto novo, com fossa ligada, e abre na aba Hidrossanitário. Lá você dá nome ao banheiro, cozinha e lavanderia (se ainda não tiverem) e confere as louças.</p>
+      <div class="row"><button class="btn pri" id="hidroGo">Fazer o hidrossanitário</button><span class="toast" id="hidroMsg" role="status"></span></div>
+      <p class="cap" id="hidroLink" hidden style="margin-top:8px"></p>
+    </div>
   </section>
 
   <!-- DETALHES -->
@@ -1444,6 +1450,24 @@ $("impStop").onclick=()=>impCtl&&impCtl.abort();
 $("impDrop").onclick=()=>{ IMP=null; $("impRes").hidden=true; impMsg(""); };
 $("impApply").onclick=()=>{ if(!IMP) return; S.walls=IMP.walls; S.rooms=IMP.rooms||[]; if(IMP.ab&&IMP.ab.length) S.ab=IMP.ab; S.off=[];
   loadForm(); render(); $("impRes").hidden=true; impMsg("Planta aplicada. Veja a aba Planta e confira as medidas."); };
+
+/* ---------------- Levar para o hidrossanitário (app Arquitetônico) ---------------- */
+const ARQ_URL="https://elielengenharia.github.io/rdo-eliel/arquitetonico/";
+$("hidroGo").onclick=async()=>{
+  const msg=$("hidroMsg"), pacote={walls:S.walls,rooms:S.rooms,obra:S.obra,cliente:S.cliente,local:S.local};
+  const temBanho=(S.rooms||[]).some(r=>/banh|\bwc\b|lavabo|sanit/i.test(r.n||""));
+  // mesmo site (app instalado no GitHub): passa direto pelo armazenamento do aparelho
+  if(/github\.io$/i.test(location.hostname)&&/\/fundacao\/?/.test(location.pathname)){
+    try{ localStorage.setItem("arq-de-fundacao",JSON.stringify({...pacote,t:Date.now()})); }catch(e){ msg.textContent="Não consegui guardar o projeto neste aparelho."; return; }
+    location.href="../arquitetonico/";
+    return; }
+  // dentro do Claude: copia o código para colar no outro app
+  const code="FDNC1:"+btoa(unescape(encodeURIComponent(JSON.stringify(pacote))));
+  try{ await navigator.clipboard.writeText(code); msg.textContent="Código do projeto copiado."; }
+  catch(e){ $("impPaste").value=code; msg.textContent="Copie o código na caixa \"Cole aqui\" da aba Dados."; }
+  $("hidroLink").hidden=false;
+  $("hidroLink").innerHTML=`Abra o <a href="${ARQ_URL}" target="_blank" rel="noopener">Projeto Arquitetônico</a>, vá em Dados, cole o código em "Cole aqui" e toque em "Usar o que colei". Depois, na aba Hidrossanitário, escolha "Fossa séptica + sumidouro".${temBanho?"":" Dê o nome de Banho ao banheiro na aba Planta de lá."}`;
+};
 
 fillSelects(); loadForm(); render();
 </script>
