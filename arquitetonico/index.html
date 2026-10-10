@@ -674,7 +674,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.37 · projetos com o nome do cliente", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.38 · sala sem mesa quando já há jantar", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1724,7 +1724,8 @@ function listaMob(tipo,r){ const A=r.area, C=(k,alts,opc)=>({k,alts:alts.filter(
   switch(tipo){
     case "casal": return [C("cama",[pCama(1.38,2),pCama(1.38,1),pCama(1.38,0)]),C("guarda",[2.4,2.0,1.8,1.6,1.4,1.2,1.0].map(pGuarda))];
     case "solteiro": return [C("cama",[pCama(0.88,1),pCama(0.88,0)]),C("guarda",[1.8,1.6,1.4,1.2,1.0,0.8].map(pGuarda))];
-    case "sala": return [sofa(),rack(),...(A>=14?[C("jantar",[pJantar(4),pJantarParede()],true)]:[])];
+    case "sala": { const temJantar=S.rooms.some(l=>l&&l.n!==r.n&&(/jantar|copa/i.test(l.n||"")||["jantar","salacoz"].includes(l.mt)));   // a casa já tem jantar em outro ambiente: sala sem mesa
+      return [sofa(),rack(),...(A>=14&&!temJantar?[C("jantar",[pJantar(4),pJantarParede()],true)]:[])]; }
     case "salacoz": return [C("cozinha",pCozinhas()),sofa(),rack(),C("jantar",[pJantar(4),pJantarParede()],true)];
     case "cozinha": return [C("cozinha",pCozinhas()),...(A>=8?[C("jantar",[pJantar(4),pJantarParede()],true)]:[])];
     case "jantar": return [C("jantar",[A>=12?pJantar(6):null,pJantar(4),pJantarParede()])];
@@ -5378,6 +5379,10 @@ try{ deFundacao=JSON.parse(localStorage.getItem("arq-de-fundacao")); localStorag
 try{ if(!localStorage.getItem("arq-comece-ok")) $("comece").hidden=false; }catch(e){ $("comece").hidden=false; }
 $("comeceOk").onclick=()=>{ $("comece").hidden=true; try{ localStorage.setItem("arq-comece-ok","1"); }catch(e){} };
 loadForm(); render();
+/* arquivo do app entregue com um projeto dentro (<script id="projeto-inicial" type="application/json">): na 1ª abertura entra na lista e abre; depois vale o que foi salvo */
+{ const el=document.getElementById("projeto-inicial"); if(el){ try{ const o=JSON.parse(el.textContent), est=o&&o.estado?o.estado:o;
+    if(est&&Array.isArray(est.walls)){ const nome=String(o.nome||nomeCliente(est)||est.obra||"Projeto"), ch="arq-inicial-ok:"+nome; let ja=false; try{ ja=!!localStorage.getItem(ch); localStorage.setItem(ch,"1"); }catch(e){}
+      if(!ja) pjUsar(PJ.lista[nome]?pjNome(nome):nome,est); } }catch(e){} } }
 if(deFundacao&&Array.isArray(deFundacao.walls)&&deFundacao.walls.length&&Date.now()-(+deFundacao.t||0)<30*60*1000){ try{
   const o=defaults(); o.walls=deFundacao.walls; o.rooms=Array.isArray(deFundacao.rooms)?deFundacao.rooms:[]; o.ab=[]; o.cA=null; o.cB=null;
   ["obra","cliente","local"].forEach(k=>{ if(typeof deFundacao[k]==="string") o[k]=deFundacao[k]; });
