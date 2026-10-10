@@ -626,8 +626,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
     </div>
     <div class="sheet">
       <h2>Obra</h2>
-      <div class="row" style="margin:4px 0 14px"><button class="btn pri" id="novo">Novo projeto</button><span class="cap" style="margin:0">Apaga paredes, ambientes, aberturas e dados do cliente. Mantém alturas e telhado.</span></div>
-      <div class="alert warn" id="novoConf" hidden>Apagar o projeto atual? Baixe o PDF ou o DXF antes se ainda não baixou.
+      <div class="row" style="margin:4px 0 14px"><button class="btn pri" id="novo">Novo projeto</button><span class="cap" style="margin:0">Cria um projeto em branco (o aberto continua guardado em Projetos). Mantém alturas e telhado. O projeto ganha o nome do Proprietário.</span></div>
+      <div class="alert warn" id="novoConf" hidden>Começar um projeto novo? O atual fica guardado na lista de Projetos.
         <div class="row"><button class="btn pri" id="novoSim">Sim, começar novo</button><button class="btn" id="novoNao">Cancelar</button></div></div>
       <div class="form wide">
         <label>Obra<input type="text" id="obra"></label>
@@ -674,7 +674,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.36 · projeto vindo do Detalhador de Fundação", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.37 · projetos com o nome do cliente", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -4501,26 +4501,37 @@ $("addA").onclick=()=>{S.ab.push({n:"",t:"Janela",w:0,d:0.5,l:1.2,a:1.0,p:1.1});
 const pjMsg=t=>{ $("pjMsg").textContent=t; };
 function pjUI(){ $("pjSel").innerHTML=Object.keys(PJ.lista).map(n=>`<option value="${esc(n)}"${n===PJ.atual?" selected":""}>${esc(n)}</option>`).join(""); }
 function pjNome(base){ base=String(base||"Projeto").trim()||"Projeto"; let n=base, i=2; while(PJ.lista[n]) n=`${base} (${i++})`; return n; }
+// o projeto leva o nome do cliente (Proprietário); se ainda não tem cliente, fica o nome do modelo/obra.
+// Só não muda sozinho quando o Eliel renomeou à mão (S.pjManual).
+const nomeCliente=o=>String((o&&o.cliente)||"").trim().replace(/\s+/g," ");
+function pjNomeLivre(base,velho){ base=String(base||"Projeto").trim()||"Projeto"; let n=base, i=2; while(PJ.lista[n]&&n!==velho) n=`${base} (${i++})`; return n; }
+function pjRenomear(velho,novo){ if(!PJ.lista[velho]||novo===velho) return velho; const L={}; Object.keys(PJ.lista).forEach(k=>{ L[k===velho?novo:k]=PJ.lista[k]; }); PJ.lista=L; if(PJ.atual===velho) PJ.atual=novo;
+  try{ const m=localStorage.getItem("arq-maquete-v1:"+velho); if(m!=null){ localStorage.setItem("arq-maquete-v1:"+novo,m); localStorage.removeItem("arq-maquete-v1:"+velho); } }catch(e){} return novo; }
+function pjPeloCliente(){ const c=nomeCliente(S); if(!c||S.pjManual) return false; const base=PJ.atual.replace(/ \(\d+\)$/,""); if(base===c) return false; pjRenomear(PJ.atual,pjNomeLivre(c,PJ.atual)); save(); pjUI(); return true; }
 function pjUsar(nome,o){ PJ.lista[PJ.atual]=S; PJ.atual=nome; S=estadoDe(JSON.parse(JSON.stringify(o))); PJ.lista[nome]=S; save(); loadForm(); render(); pjUI(); }
 $("pjSel").onchange=e=>{ const n=e.target.value; if(PJ.lista[n]&&n!==PJ.atual){ pjUsar(n,PJ.lista[n]); pjMsg(`Aberto: ${n}.`); } };
 $("pjCasa").onclick=()=>{ const n=pjNome("Casa modelo 42 m²"); pjUsar(n,defaults()); pjMsg(`Novo projeto: ${n}.`); };
 $("pjSalas").onclick=()=>{ const n=pjNome("Salas comerciais Av. Paraná"); pjUsar(n,modeloSalas()); pjMsg(`Novo projeto: ${n}. Confira as medidas na aba Planta.`); };
-$("pjDup").onclick=()=>{ const n=pjNome(PJ.atual+" - cópia"); pjUsar(n,S); pjMsg(`Cópia criada: ${n}.`); };
-$("pjRen").onclick=()=>{ const v=prompt("Novo nome do projeto:",PJ.atual); if(!v||!v.trim()||v.trim()===PJ.atual) return; const n=pjNome(v.trim()); PJ.lista[n]=S; delete PJ.lista[PJ.atual]; PJ.atual=n; save(); pjUI(); pjMsg(`Renomeado para ${n}.`); };
+$("pjDup").onclick=()=>{ const n=pjNome((S.pjManual?"":nomeCliente(S))||PJ.atual.replace(/ \(\d+\)$/,"")+" - cópia"); pjUsar(n,S); pjMsg(`Cópia criada: ${n}.`); };
+$("pjRen").onclick=()=>{ const v=prompt("Novo nome do projeto:",PJ.atual); if(!v||!v.trim()||v.trim()===PJ.atual) return; const n=pjNomeLivre(v.trim(),PJ.atual); S.pjManual=v.trim()!==nomeCliente(S); pjRenomear(PJ.atual,n); save(); pjUI(); pjMsg(`Renomeado para ${n}.`); };
 $("pjDel").onclick=()=>{ const nomes=Object.keys(PJ.lista); if(nomes.length<2){ pjMsg("Este é o único projeto: crie outro antes de excluir."); return; } if(!confirm(`Excluir o projeto "${PJ.atual}" deste aparelho? (baixe o .json antes, se quiser guardar)`)) return;
   const velho=PJ.atual; delete PJ.lista[velho]; const n=Object.keys(PJ.lista)[0]; PJ.atual=n; S=estadoDe(JSON.parse(JSON.stringify(PJ.lista[n]))); PJ.lista[n]=S; save(); loadForm(); render(); pjUI(); pjMsg(`Excluído: ${velho}. Aberto: ${n}.`); };
 $("pjBaixar").onclick=async()=>{ try{ const txt=JSON.stringify({app:"projeto-arquitetonico",versao:1,nome:PJ.atual,estado:S}); const st=await saveFile(`${slug()}-projeto.json`,new TextEncoder().encode(txt),"application/json"); pjMsg(st==="shared"?"Arquivo pronto: salve em Arquivos ou envie.":"Projeto baixado."); }catch(e){ pjMsg(falhou(e,"o arquivo do projeto")); } };
 $("pjFile").onchange=async e=>{ const fl=e.target.files&&e.target.files[0]; if(!fl) return; try{ const o=JSON.parse(await fl.text()), est=o&&o.estado?o.estado:o; if(!est||!Array.isArray(est.walls)) throw 0;
-    const n=pjNome(o.nome||est.obra||fl.name.replace(/\.json$/i,"")); pjUsar(n,est); pjMsg(`Projeto aberto: ${n}.`); }catch(err){ pjMsg("Este arquivo não é um projeto deste app."); } e.target.value=""; };
+    const n=pjNome((est.pjManual?"":nomeCliente(est))||o.nome||est.obra||fl.name.replace(/\.json$/i,"")); pjUsar(n,est); pjMsg(`Projeto aberto: ${n}.`); }catch(err){ pjMsg("Este arquivo não é um projeto deste app."); } e.target.value=""; };
 pjUI();
+$("cliente").addEventListener("change",()=>{ if(pjPeloCliente()) pjMsg(`Projeto salvo com o nome do cliente: ${PJ.atual}.`); });
+// projetos que já têm cliente e ainda estão com nome de modelo (Salas comerciais..., Casa modelo...) passam a ter o nome do cliente
+{ let mudou=false; Object.keys(PJ.lista).forEach(k=>{ const o=PJ.lista[k], c=nomeCliente(o); if(!c||o.pjManual||k.replace(/ \(\d+\)$/,"")===c) return; pjRenomear(k,pjNomeLivre(c,k)); mudou=true; }); if(mudou){ save(); pjUI(); } }
 $("preset42").onclick=()=>{S.walls=clone(WALLS42); S.rooms=clone(ROOMS42); S.ab=clone(AB42); S.esp=0.15; S.cA=1.8; S.cB=4.5; loadForm(); render();};
 $("novo").onclick=()=>{$("novoConf").hidden=false;};
 $("novoNao").onclick=()=>{$("novoConf").hidden=true;};
-$("novoSim").onclick=()=>{
-  S.obra="Nova obra"; S.cliente=""; S.local=""; S.data=new Date().toLocaleDateString("pt-BR");
-  S.walls=[{x1:0,y1:0,x2:6,y2:0},{x1:6,y1:0,x2:6,y2:7},{x1:6,y1:7,x2:0,y2:7},{x1:0,y1:7,x2:0,y2:0}];
-  S.rooms=[]; S.ab=[]; S.cA=null; S.cB=null;
-  $("novoConf").hidden=true; loadForm(); render(); $("obra").focus();
+$("novoSim").onclick=()=>{   // cria um projeto novo; o que estava aberto continua guardado na lista
+  const o=JSON.parse(JSON.stringify(S));
+  o.obra="Nova obra"; o.cliente=""; o.local=""; o.data=new Date().toLocaleDateString("pt-BR"); delete o.pjManual;
+  o.walls=[{x1:0,y1:0,x2:6,y2:0},{x1:6,y1:0,x2:6,y2:7},{x1:6,y1:7,x2:0,y2:7},{x1:0,y1:7,x2:0,y2:0}];
+  o.rooms=[]; o.ab=[]; o.cA=null; o.cB=null;
+  const n=pjNome("Nova obra"); pjUsar(n,o); $("novoConf").hidden=true; pjMsg(`Novo projeto criado. Preencha o Proprietário: o projeto passa a ter o nome do cliente.`); $("cliente").focus();
 };
 function labDe(r){ if(r.labIdx<0){ S.rooms.push({n:"",x:+r.cx.toFixed(2),y:+r.cy.toFixed(2),nv:0}); r.labIdx=S.rooms.length-1; renderRooms(); } return S.rooms[r.labIdx]; }
 function renderMemorial(){ const M=memorial(); $("memTexto").innerHTML=`<h2 style="margin-bottom:2px">MEMORIAL DESCRITIVO</h2><p class="cap" style="margin-top:0"><b>${esc(S.obra||"")}</b></p>`+
@@ -4635,7 +4646,7 @@ function zipOne(name,data){
   const out=new Uint8Array(lh.length+sz+cd.length+22); out.set(lh,0); out.set(data,lh.length); out.set(cd,lh.length+sz); out.set(end,lh.length+sz+cd.length); return out;
 }
 const agora=()=>{ const d=new Date(), z=n=>String(n).padStart(2,"0"); return {arq:`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`, txt:`${z(d.getDate())}/${z(d.getMonth()+1)}/${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`}; };
-const slug=()=>(S.obra||"arquitetonico").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40)||"arquitetonico";
+const slug=()=>([nomeCliente(S),S.obra].filter(Boolean).join(" ")||"arquitetonico").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"arquitetonico";
 
 /* ======================================================================
    PRANCHAS: escala de cada desenho e posição na folha
@@ -5371,7 +5382,7 @@ if(deFundacao&&Array.isArray(deFundacao.walls)&&deFundacao.walls.length&&Date.no
   const o=defaults(); o.walls=deFundacao.walls; o.rooms=Array.isArray(deFundacao.rooms)?deFundacao.rooms:[]; o.ab=[]; o.cA=null; o.cB=null;
   ["obra","cliente","local"].forEach(k=>{ if(typeof deFundacao[k]==="string") o[k]=deFundacao[k]; });
   o.fossa=Object.assign({},o.fossa,{on:"sim"});
-  const n=pjNome(deFundacao.obra||"Projeto da fundação"); pjUsar(n,o);
+  const n=pjNome(nomeCliente(deFundacao)||deFundacao.obra||"Projeto da fundação"); pjUsar(n,o);
   const ab=document.querySelector('nav.tabs button[data-tab="hid"]'); if(ab) ab.click();
   const temBanho=o.rooms.some(r=>ehBanho(r.n));
   const av=document.createElement("div"); av.className="alert ok";
