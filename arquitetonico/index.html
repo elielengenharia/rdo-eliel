@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#1A2130">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Arquitetônico">
-<title>Projeto Arquitetônico</title>
+<meta name="apple-mobile-web-app-title" content="Arq. e Complementares">
+<title>Projeto Arquitetônico e Complementares</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
@@ -106,7 +106,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>Projeto Arquitetônico</h1>
+      <h1>Projeto Arquitetônico e Complementares</h1>
       <div class="sub"><span class="feat">Planta baixa com áreas e cotas · Demolir e construir · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Revestimento de parede · Paginação da fachada · Memorial descritivo · Orçamento estimado · Cortes AA e BB · Cobertura · Fachadas · Situação · Escada · Banheiro · Quadro de esquadrias · Águas pluviais · Pintura · Estrutural · Diagrama unifilar · Perspectivas · </span><b id="versao"></b></div>
     </div>
     <div class="stamp" id="stamp"></div>
@@ -689,7 +689,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.41 · louças do banheiro no lugar que o profissional escolher", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.42 · Projeto Arquitetônico e Complementares", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
