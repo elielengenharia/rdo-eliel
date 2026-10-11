@@ -93,6 +93,7 @@ h3{font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.06em;
 .slide input[type=range]{flex:1;min-width:160px}
 .slide input[type=number]{width:90px}
 .panel{border:1px solid var(--accent);border-radius:4px;padding:12px;margin-top:10px;background:var(--paper)}
+#selPanel{position:fixed;right:16px;bottom:16px;width:min(440px,calc(100vw - 32px));max-height:70vh;overflow:auto;z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:0}
 .panel h4{margin:0 0 8px;font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
 /* SVG */
 svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink)}   /* mesma letra do PDF: o lugar dos textos é medido com ela */
@@ -147,7 +148,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <button class="btn" id="comeceOk" type="button">Entendi</button></div>
     <div class="sheet">
       <h2>Planta baixa</h2>
-      <p class="cap">Toque numa <b>parede</b> para colocar porta, janela ou vão naquele ponto. Toque num <b>ambiente</b> para dar o nome. Toque numa porta ou janela para editar. Os números azuis das paredes só aparecem aqui, não saem na prancha.</p>
+      <p class="cap">Toque numa <b>parede</b> para colocar porta, janela ou vão naquele ponto. Toque num <b>ambiente</b> para dar o nome. Toque numa porta ou janela para editar; <b>toque de novo na mesma porta para girar e espelhar</b>. Os números azuis das paredes só aparecem aqui, não saem na prancha.</p>
       <div class="draw" id="plan"></div>
       <div id="selPanel" class="panel" hidden></div>
       <div class="chips" id="planChips"></div>
@@ -712,7 +713,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.54 · portas abrem para dentro dos quartos e banheiros", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.55 · toque na porta para girar e espelhar", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -4655,8 +4656,10 @@ $("plan").addEventListener("click",ev=>{
   const p=ptPlanta(ev); if(!p||!GG||GG.vazio) return; const [x,y]=p, G=GG, tol=G.h+Math.max(0.12,kTela(G)*3);
   // abertura existente?
   let best=null;
-  G.abs.forEach(g=>{ const {s,dd}=projParede(g.w,x,y); if(dd<=tol&&s>=g.d-0.1&&s<=g.d+g.l+0.1){ if(!best||dd<best.dd) best={g,dd}; } });
-  if(best){ painelAbertura(best.g.k); return; }
+  G.abs.forEach(g=>{ const {s,dd}=projParede(g.w,x,y), lado=(x-g.w.x1)*g.nX+(y-g.w.y1)*g.nY, alc=g.tipo==="Porta"?Math.min(g.l,1.2)+G.h:0;   // na parede ou em cima do giro da folha
+    const ok=s>=g.d-0.1&&s<=g.d+g.l+0.1&&(dd<=tol||(alc&&dd<=alc&&Math.sign(lado)===g.lado)); if(ok){ const sc=dd<=tol?dd:dd+1; if(!best||sc<best.dd) best={g,dd:sc}; } });
+  if(best){ const k=best.g.k; if(SELAB===k&&!$("selPanel").hidden&&S.ab[k]&&S.ab[k].t==="Porta") girarPorta(k); else { SELAB=k; painelAbertura(k); } return; }
+  SELAB=-1;
   let bw=null;
   G.walls.forEach(w=>{ const {s,dd}=projParede(w,x,y); if(dd<=tol&&s>=-0.05&&s<=w.L+0.05){ if(!bw||dd<bw.dd) bw={w,dd,s}; } });
   if(bw){ painelParede(bw.w,bw.s); return; }
@@ -4712,10 +4715,18 @@ function painelParede(w,s){
   P.querySelectorAll("[data-unir]").forEach(b=>b.onclick=()=>{ const [a,c]=b.dataset.unir.split(",").map(Number); unirParedes(a,c); renderWalls(); renderAb(); render(); painelAbertura(S.ab.length-1); });
   P.querySelector("[data-close]").onclick=()=>P.hidden=true;
 }
+let SELAB=-1;
+// toque de novo na porta: passa pelas 4 posições (dobradiça de um lado/outro x abre para um lado/outro da parede)
+function girarPorta(i){ const a=S.ab[i]; if(!a) return; const m=modPadrao(a);
+  if(ehCorrer(m)){ const st=(a.dob?1:0)+(a.inv?2:0), nx=["correr","embutir"].includes(m)?(st+1)%4:(st^2); a.dob=!!(nx&1); a.inv=!!(nx&2); }
+  else if(m==="enrolar"||m==="basculante"){ a.inv=!a.inv; }
+  else { const ordem=[[0,0],[1,0],[1,1],[0,1]], at=ordem.findIndex(([d,v])=>d===(a.dob?1:0)&&v===(a.inv?1:0)), [d,v]=ordem[(at+1)%4]; a.dob=!!d; a.inv=!!v; }
+  render(); painelAbertura(i); }
+function posPorta(a){ const ordem=[[0,0],[1,0],[1,1],[0,1]]; return ordem.findIndex(([d,v])=>d===(a.dob?1:0)&&v===(a.inv?1:0))+1; }
 function painelAbertura(i){
   const a=S.ab[i], P=$("selPanel"); if(!a){ P.hidden=true; return; } P.hidden=false;
   const g=GG.abs.find(x=>x.k===i);
-  P.innerHTML=`<h4>${esc(g&&g.cod||a.t)} · parede ${Math.round(num(a.w))+1}</h4>
+  P.innerHTML=`<h4>${esc(g&&g.cod||a.t)} · parede ${Math.round(num(a.w))+1}</h4>${a.t==="Porta"?`<p class="cap" style="margin:0 0 8px"><b>Toque de novo em cima da porta</b> para girar e espelhar (posição ${posPorta(a)} de 4). Ou use <b>Girar / espelhar</b>.</p>`:""}
     <div class="form">
       <label>Tipo<select data-c="t">${["Porta","Janela","Vão"].map(t=>`<option${a.t===t?" selected":""}>${t}</option>`).join("")}</select></label>
       <label>Largura (m)<input type="number" step="0.05" data-c="l" value="${a.l}"></label>
@@ -4727,10 +4738,11 @@ function painelAbertura(i){
       <label>Material${selMat(a.t,a.mat||(g?g.mat:matPad(a.t,false)),'data-c="mat"')}</label>
       ${a.t==="Porta"?`<label>Folha<select data-c="fol">${FOLHAS.map(([v,t2])=>`<option value="${v}"${(a.fol||(g?g.fol:"lisa"))===v?" selected":""}>${t2}</option>`).join("")}</select></label>`:""}
     </div>
-    <div class="row">${a.t==="Porta"?(m0=>ehCorrer(m0)?`<button class="btn" data-tg="inv">Folha do outro lado da parede</button>${["correr","embutir"].includes(m0)?`<button class="btn" data-tg="dob">Correr para o outro lado</button>`:""}`:["enrolar"].includes(m0)?`<button class="btn" data-tg="inv">Do outro lado da parede</button>`:`<button class="btn" data-tg="inv">Abrir para o outro lado</button><button class="btn" data-tg="dob">${m0==="pivot"?"Eixo do outro lado":"Trocar dobradiça"}</button>`)(modPadrao(a)):""}<button class="btn dng" data-del>Excluir</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
+    <div class="row">${a.t==="Porta"?`<button class="btn pri" data-girar>Girar / espelhar</button>`:""}${a.t==="Porta"?(m0=>ehCorrer(m0)?`<button class="btn" data-tg="inv">Folha do outro lado da parede</button>${["correr","embutir"].includes(m0)?`<button class="btn" data-tg="dob">Correr para o outro lado</button>`:""}`:["enrolar"].includes(m0)?`<button class="btn" data-tg="inv">Do outro lado da parede</button>`:`<button class="btn" data-tg="inv">Abrir para o outro lado</button><button class="btn" data-tg="dob">${m0==="pivot"?"Eixo do outro lado":"Trocar dobradiça"}</button>`)(modPadrao(a)):""}<button class="btn dng" data-del>Excluir</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
   P.querySelectorAll("[data-c]").forEach(el=>el.addEventListener("change",()=>{ const c=el.dataset.c; if(c==="mat"&&el.value==="__outro"){ const v=prompt("Material da esquadria:",a.mat||""); if(!v){ painelAbertura(i); return; } el.value=v; a.mat=v.trim(); renderAb(); render(); painelAbertura(i); return; } a[c]=(c==="t"||c==="n"||c==="mod"||c==="mat"||c==="fol")?el.value:num(el.value);
     if(c==="t"){ const df=ABDEF[a.t]; a.a=df.a; a.p=df.p; delete a.mod; delete a.mat; } renderAb(); render(); painelAbertura(i); }));
-  P.querySelectorAll("[data-tg]").forEach(b=>b.onclick=()=>{ a[b.dataset.tg]=!a[b.dataset.tg]; render(); });
+  P.querySelectorAll("[data-tg]").forEach(b=>b.onclick=()=>{ a[b.dataset.tg]=!a[b.dataset.tg]; render(); painelAbertura(i); });
+  const bg=P.querySelector("[data-girar]"); if(bg) bg.onclick=()=>girarPorta(i);
   P.querySelector("[data-del]").onclick=()=>{ S.ab.splice(i,1); P.hidden=true; renderAb(); render(); };
   P.querySelector("[data-close]").onclick=()=>P.hidden=true;
 }
