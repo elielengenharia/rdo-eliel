@@ -706,7 +706,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.48 · letras dos ambientes no tamanho escolhido em todas as plantas", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.49 · móvel afastado da parede, ajuste de 1 cm", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1951,7 +1951,7 @@ function zonasAmb(G,r){ const h=G.h, Z={porta:[],jan:[]};
     if(g.tipo==="Janela") Z.jan.push(ret(0,g.l,0.30));
     else { const abre=g.tipo==="Porta"&&!ehCorrer(modPadrao(g.a))&&g.lado===sg; Z.porta.push(ret(-0.05,g.l+0.05,Math.max(0.80,abre?g.l+0.05:0))); } });
   return Z; }
-const trf=(T,s,t)=>{ const ss=T.m>0?s:T.w-s; return [T.A[0]+T.u[0]*(T.s0+ss)+T.N[0]*t,T.A[1]+T.u[1]*(T.s0+ss)+T.N[1]*t]; };
+const trf=(T,s,t)=>{ const ss=T.m>0?s:T.w-s, tt=t+(T.off||0); return [T.A[0]+T.u[0]*(T.s0+ss)+T.N[0]*tt,T.A[1]+T.u[1]*(T.s0+ss)+T.N[1]*tt]; };   // T.off: peça afastada da parede
 const retW=(T,[s0,t0,s1,t1])=>[trf(T,s0,t0),trf(T,s1,t0),trf(T,s1,t1),trf(T,s0,t1)];
 function notaMob(k,c,ctx){ const pc=c.pc, T=c.T, Le=c.Le, cen=c.cen, Z=ctx.Z;
   const dP=Z.porta.length?Math.min(...Z.porta.map(z=>{ const q=centro(z); return Math.hypot(q[0]-cen[0],q[1]-cen[1]); })):3;
@@ -2008,7 +2008,7 @@ function layoutMoveis(G){
     const MM=lab&&lab.mobM; if(MM&&itens.length){ res.pos=res.pos.slice();
       itens.forEach(it=>{ if(!(it.k in MM)) return; const o=MM[it.k], i0=res.pos.findIndex(c=>c.k===it.k); if(o===null){ if(i0>=0) res.pos.splice(i0,1); return; }
         const pc=it.alts[o.ai]&&it.alts[o.ai].nome===o.nome?it.alts[o.ai]:it.alts.find(a=>a.nome===o.nome&&Math.abs(a.w-o.w)<0.005)||it.alts.find(a=>a.nome===o.nome)||it.alts[0];
-        const T={A:o.A,u:o.u,N:o.N,s0:o.s0,w:pc.w,m:o.m||1}, sol=pc.sol.map(q=>retW(T,q)), liv=pc.liv.map(q=>retW(T,q)), c={pc,T,sol,liv,cen:centro(sol.flat()),k:it.k,manual:1};
+        const T={A:o.A,u:o.u,N:o.N,s0:o.s0,w:pc.w,m:o.m||1,off:Math.max(0,num(o.off))}, sol=pc.sol.map(q=>retW(T,q)), liv=pc.liv.map(q=>retW(T,q)), c={pc,T,sol,liv,cen:centro(sol.flat()),k:it.k,manual:1};
         if(i0>=0) res.pos[i0]=c; else res.pos.push(c); res.faltou=res.faltou.filter(n=>n!==it.alts[0].nome); }); }
     res.itens=itens;
     res.pos.forEach(c=>res.sol.push(...c.sol));
@@ -2142,7 +2142,7 @@ function pontosEletricos(G,LM){
       return false; };
     // tomadas junto dos móveis
     const tug=[];
-    R.pos.forEach(c=>(c.pc.tom||[]).forEach(([s,al])=>{ const p=trf(c.T,s,0); if(livre(p,c.T.N,0.20,ZA[al])) tug.push(add({t:"tug",p,N:c.T.N,alt:al})); }));
+    R.pos.forEach(c=>(c.pc.tom||[]).forEach(([s,al])=>{ const p=trf(c.T,s,-(c.T.off||0)); if(livre(p,c.T.N,0.20,ZA[al])) tug.push(add({t:"tug",p,N:c.T.N,alt:al})); }));
     if(R.banho){ const Lv=R.banho.lav, bx=R.banho.box, cb=bx?boxCentro(R.banho):[r.cx,r.cy];
       const lado=[1,-1].map(sg=>[Lv.c[0]+Lv.a[0]*sg*(Lv.larg/2+0.12),Lv.c[1]+Lv.a[1]*sg*(Lv.larg/2+0.12)]).sort((p,q)=>Math.hypot(q[0]-cb[0],q[1]-cb[1])-Math.hypot(p[0]-cb[0],p[1]-cb[1]));
       const p=lado.find(q=>livre(q,Lv.n,0.10,1.10)); if(p) tug.push(add({t:"tug",p,N:Lv.n,alt:"m"}));
@@ -4806,11 +4806,20 @@ function layMarca(extra){ const svg=$("lay").querySelector("svg"); if(!svg||!VIE
 function layEdges(r){ const P=r.poly; return P.map((A,i)=>{ const B=P[(i+1)%P.length], Le=Math.hypot(B[0]-A[0],B[1]-A[1]), u=[(B[0]-A[0])/Le,(B[1]-A[1])/Le]; let N=[-u[1],u[0]]; const mx=(A[0]+B[0])/2, my=(A[1]+B[1])/2; if(!pip(P,mx+N[0]*0.02,my+N[1]*0.02)) N=[-N[0],-N[1]]; return {i,A,B,Le,u,N}; }).filter(e=>e.Le>=0.3); }
 function layMM(li){ const lab=S.rooms[li]; lab.mobM=lab.mobM||{}; return lab.mobM; }
 function layGrava(li,c,T,ai){ const it=(LAYLM.find(R=>R.r.labIdx===li)||{}).itens||[], item=it.find(x=>x.k===c.k), pc=c.pc, idx=ai!=null?ai:item?item.alts.indexOf(pc):-1, r3=v=>+(+v).toFixed(3);
-  layMM(li)[c.k]={ai:idx,nome:pc.nome,w:pc.w,A:[r3(T.A[0]),r3(T.A[1])],u:[r3(T.u[0]),r3(T.u[1])],N:[r3(T.N[0]),r3(T.N[1])],s0:r3(T.s0),m:T.m||1}; }
+  layMM(li)[c.k]={ai:idx,nome:pc.nome,w:pc.w,A:[r3(T.A[0]),r3(T.A[1])],u:[r3(T.u[0]),r3(T.u[1])],N:[r3(T.N[0]),r3(T.N[1])],s0:r3(T.s0),m:T.m||1,off:r3(Math.max(0,T.off||0))}; }
 // leva a peça para a parede mais perto do ponto p
 function layNaParede(R,w,p,e0){ const es=layEdges(R.r).filter(e=>e.Le>=w-1e-6); if(!es.length) return null; let best=e0||null, bd=1e9;
   if(!e0) es.forEach(e=>{ const t=Math.max(0,Math.min(e.Le,(p[0]-e.A[0])*e.u[0]+(p[1]-e.A[1])*e.u[1])), q=[e.A[0]+e.u[0]*t,e.A[1]+e.u[1]*t], d=Math.hypot(p[0]-q[0],p[1]-q[1]); if(d<bd){ bd=d; best=e; } });
   const t=(p[0]-best.A[0])*best.u[0]+(p[1]-best.A[1])*best.u[1]; return {A:best.A,u:best.u,N:best.N,s0:Math.max(0,Math.min(best.Le-w,t-w/2)),w,e:best}; }
+const profPeca=pc=>Math.max(0.3,...pc.sol.map(q=>q[3]));
+function layArrasta(R,c,cp){ const w=c.pc.w, pr=profPeca(c.pc), es=layEdges(R.r), e0=es.find(x=>Math.hypot(x.A[0]-c.T.A[0],x.A[1]-c.T.A[1])<1e-3&&Math.abs(x.u[0]-c.T.u[0])<1e-3);
+  // outra parede a menos de 25 cm do ponto: muda para ela, encostada
+  let outra=null, dm=0.25; es.forEach(e=>{ if(e===e0||e.Le<w-1e-6) return; const t=Math.max(0,Math.min(e.Le,(cp[0]-e.A[0])*e.u[0]+(cp[1]-e.A[1])*e.u[1])), q=[e.A[0]+e.u[0]*t,e.A[1]+e.u[1]*t], d=Math.hypot(cp[0]-q[0],cp[1]-q[1])-pr/2; if(d<dm){ dm=d; outra=e; } });
+  if(outra||!e0){ const T=layNaParede(R,w,cp,outra||null); if(T){ T.off=0; } return T; }
+  const t=(cp[0]-e0.A[0])*e0.u[0]+(cp[1]-e0.A[1])*e0.u[1], dN=(cp[0]-e0.A[0])*e0.N[0]+(cp[1]-e0.A[1])*e0.N[1]-pr/2;
+  let off=dN<0.06?0:Math.round(dN*100)/100;   // perto da parede: encosta
+  return {A:e0.A,u:e0.u,N:e0.N,s0:Math.max(0,Math.min(e0.Le-w,t-w/2)),w,e:e0,off}; }
+let LAYPASSO=0.05;
 function layBarra(){ const el=$("layBar"); if(!el) return; const P=LAYSEL&&layPecas().find(x=>x.li===LAYSEL.li&&(LAYSEL.k?x.k===LAYSEL.k:x.ban===LAYSEL.ban));
   const R=LAYSEL&&(LAYLM||[]).find(R=>R.r.labIdx===LAYSEL.li), lab=LAYSEL&&S.rooms[LAYSEL.li], man=lab&&((lab.mobM&&Object.keys(lab.mobM).length)||lab.lb);
   const fora=R&&R.itens?R.itens.filter(it=>!R.pos.some(c=>c.k===it.k)):[];
@@ -4818,7 +4827,10 @@ function layBarra(){ const el=$("layBar"); if(!el) return; const P=LAYSEL&&layPe
   if(LAYSEL.ban){ el.innerHTML=`<div class="row" style="gap:6px;flex-wrap:wrap"><b style="font-size:13px">${esc(R.r.n)} · ${P?esc(P.nome):""}</b><span class="cap" style="margin:0">Arraste na planta. Tamanho do box, bancada e outras opções na aba Banheiro.</span><button class="btn" data-layac="banheiro">Abrir na aba Banheiro</button>${lab.lb?`<button class="btn" data-layac="auto">Voltar ao automático</button>`:""}<button class="btn" data-layac="fechar">OK</button></div>`; return; }
   const c=P&&P.c, item=R.itens&&R.itens.find(x=>x.k===LAYSEL.k), vt=c&&Math.abs(c.T.u[0])<0.5;
   el.innerHTML=`<div class="row" style="gap:6px;flex-wrap:wrap"><b style="font-size:13px">${esc(R.r.n)} · ${c?esc(c.pc.nome):"peça retirada"}</b>
-    ${c?`<button class="btn" data-layac="menos">${vt?"▲":"◀"} 5 cm</button><button class="btn" data-layac="mais">5 cm ${vt?"▼":"▶"}</button><button class="btn" data-layac="girar">Outra parede</button><button class="btn" data-layac="espelhar">Espelhar</button>
+    ${c?`<select data-laypasso aria-label="Passo">${[[0.01,"1 cm"],[0.02,"2 cm"],[0.05,"5 cm"],[0.10,"10 cm"]].map(([v,t])=>`<option value="${v}"${Math.abs(v-LAYPASSO)<1e-6?" selected":""}>passo ${t}</option>`).join("")}</select>
+    <button class="btn" data-layac="menos">${vt?"▲":"◀"}</button><button class="btn" data-layac="mais">${vt?"▼":"▶"}</button>
+    <button class="btn" data-layac="afastar" title="Afastar da parede (corredor atrás)">Afastar da parede</button><button class="btn" data-layac="aproximar">Aproximar</button>${(c.T.off||0)>0?`<button class="btn" data-layac="encostar">Encostar na parede</button><span class="cap" style="margin:0">a ${f(c.T.off)} m da parede</span>`:""}
+    <button class="btn" data-layac="girar">Outra parede</button><button class="btn" data-layac="espelhar">Espelhar</button>
     ${item&&item.alts.length>1?`<select data-laytam aria-label="Modelo e tamanho">${item.alts.map((a,i)=>`<option value="${i}"${a===c.pc?" selected":""}>${esc(a.nome)}${a.extra?" "+esc(a.extra):""} · ${f(a.w)} m</option>`).join("")}</select>`:""}
     <button class="btn" data-layac="tirar">Tirar</button>`:""}
     ${fora.length?`<select data-laypor aria-label="Pôr peça"><option value="">Pôr peça neste ambiente...</option>${fora.map(it=>`<option value="${it.k}">${esc(it.alts[0].nome)}</option>`).join("")}</select>`:""}
@@ -4832,7 +4844,7 @@ function layBarra(){ const el=$("layBar"); if(!el) return; const P=LAYSEL&&layPe
   cont.addEventListener("pointermove",ev=>{ if(!arr||ev.pointerId!==arr.id) return; const p=layPonto(ev); if(!p) return; if(!arr.moveu&&Math.hypot(p[0]-arr.p0[0],p[1]-arr.p0[1])<0.05) return; pend=p;
     if(!arr.raf) arr.raf=requestAnimationFrame(()=>{ if(!arr) return; arr.raf=0; const h=arr.hit; arr.moveu=true;
       if(h.ban){ const X=banGeo(h.li); if(!X) return; const pl=X.u.fr?frLocal(X.u.fr,pend):pend; banAplica(h.li,X,h.ban,pl); const Lb=lbMundo(layoutBanheiro(X.G,X.u)); const Q=h.ban==="vaso"?banCont(Lb.vaso,0.38,0.65):h.ban==="lav"?banCont(Lb.lav,Lb.lav.larg,Lb.lav.prof):boxPoly(Lb); if(Q) layMarca([Q]); return; }
-      const c=h.c, cp=[pend[0]+arr.off[0],pend[1]+arr.off[1]], T=layNaParede(h.R,c.pc.w,cp); if(!T) return; T.m=c.T.m; arr.T=T; layMarca(c.pc.sol.map(q=>retW(T,q))); }); });
+      const c=h.c, cp=[pend[0]+arr.off[0],pend[1]+arr.off[1]], T=layArrasta(h.R,c,cp); if(!T) return; T.m=c.T.m; arr.T=T; layMarca(c.pc.sol.map(q=>retW(T,q))); }); });
   const fim=ev=>{ if(!arr||ev.pointerId!==arr.id) return; const a=arr; arr=null;
     if(a.moveu){ if(!a.hit.ban&&a.T) layGrava(a.hit.li,a.hit.c,a.T); save(); render(); } };
   cont.addEventListener("pointerup",fim); cont.addEventListener("pointercancel",fim);
@@ -4845,10 +4857,13 @@ function layBarra(){ const el=$("layBar"); if(!el) return; const P=LAYSEL&&layPe
     if(ac==="tirar"){ layMM(li)[c.k]=null; save(); render(); return; }
     if(ac==="espelhar") T.m=-(T.m||1);
     if(ac==="menos"||ac==="mais"){ const sg=ac==="mais"?1:-1, d=Math.abs(T.u[0])>=0.5?Math.sign(T.u[0]):Math.sign(T.u[1]), e=layEdges(P.R.r).find(x=>Math.hypot(x.A[0]-T.A[0],x.A[1]-T.A[1])<1e-3&&Math.abs(x.u[0]-T.u[0])<1e-3); const Le=e?e.Le:T.s0+T.w;
-      T.s0=Math.max(0,Math.min(Le-T.w,T.s0+sg*d*0.05)); }
-    if(ac==="girar"){ const es=layEdges(P.R.r).filter(x=>x.Le>=T.w-1e-6); const i0=es.findIndex(x=>Math.hypot(x.A[0]-T.A[0],x.A[1]-T.A[1])<1e-3&&Math.abs(x.u[0]-T.u[0])<1e-3); const e=es[(i0+1)%es.length]; if(e){ T.A=e.A; T.u=e.u; T.N=e.N; T.s0=Math.max(0,(e.Le-T.w)/2); } }
+      T.s0=Math.max(0,Math.min(Le-T.w,T.s0+sg*d*LAYPASSO)); }
+    if(ac==="afastar") T.off=Math.round(((T.off||0)+LAYPASSO)*100)/100;
+    if(ac==="aproximar") T.off=Math.max(0,Math.round(((T.off||0)-LAYPASSO)*100)/100);
+    if(ac==="encostar") T.off=0;
+    if(ac==="girar"){ const es=layEdges(P.R.r).filter(x=>x.Le>=T.w-1e-6); const i0=es.findIndex(x=>Math.hypot(x.A[0]-T.A[0],x.A[1]-T.A[1])<1e-3&&Math.abs(x.u[0]-T.u[0])<1e-3); const e=es[(i0+1)%es.length]; if(e){ T.A=e.A; T.u=e.u; T.N=e.N; T.s0=Math.max(0,(e.Le-T.w)/2); T.off=0; } }
     layGrava(li,c,T); save(); render(); });
-  bar.addEventListener("change",e=>{ if(!LAYSEL) return; const li=LAYSEL.li;
+  bar.addEventListener("change",e=>{ if(e.target.matches("[data-laypasso]")){ LAYPASSO=num(e.target.value)||0.05; return; } if(!LAYSEL) return; const li=LAYSEL.li;
     if(e.target.matches("[data-laypor]")){ const k=e.target.value; if(!k) return; const MM=layMM(li); delete MM[k]; LAYSEL={li,k}; save(); render(); return; }
     if(e.target.matches("[data-laytam]")){ const P=layPecas().find(x=>x.li===li&&x.k===LAYSEL.k); if(!P||!P.c) return; const R=P.R, item=R.itens.find(x=>x.k===P.k), ai=+e.target.value, pc=item.alts[ai];
       const e0=layEdges(R.r).find(x=>Math.hypot(x.A[0]-P.c.T.A[0],x.A[1]-P.c.T.A[1])<1e-3&&Math.abs(x.u[0]-P.c.T.u[0])<1e-3), mid=P.c.T.s0+P.c.T.w/2, T={...P.c.T,w:pc.w,s0:Math.max(0,Math.min((e0?e0.Le:pc.w)-pc.w,mid-pc.w/2))};
@@ -4881,7 +4896,7 @@ function banBarra(li){ const L=S.rooms[li]||{}, M=L.lb, sel=BANSEL[li]||"vaso", 
   return `<p class="cap" style="margin:0 0 6px">Toque numa peça na planta e arraste: ela encosta sozinha na parede. A posição vale para o layout, as vistas, a hidráulica (pontos de água e esgoto), a elétrica e o orçamento.${M?" <b>Arranjo seu (manual).</b>":" Arranjo automático."}</p>
   <div class="row" data-banbar="${li}" style="gap:6px;flex-wrap:wrap;margin:0 0 8px">
     <select data-banpeca aria-label="Peça"><option value="vaso"${sel==="vaso"?" selected":""}>Vaso</option><option value="lav"${sel==="lav"?" selected":""}>Lavatório</option><option value="box"${sel==="box"?" selected":""}>Box e chuveiro</option></select>
-    ${(()=>{ const it=M&&(sel==="box"?(M.box?chuvDoBox(M.box,(banGeo(li)||{}).u||M.box,M.chuv):null):M[sel]), vt=it&&it.n&&Math.abs(it.n[0])>0.5; return `<button class="btn" data-banacao="menos" title="5 cm">${vt?"▲":"◀"} 5 cm</button><button class="btn" data-banacao="mais" title="5 cm">5 cm ${vt?"▼":"▶"}</button>`; })()}
+    ${(()=>{ const it=M&&(sel==="box"?(M.box?chuvDoBox(M.box,(banGeo(li)||{}).u||M.box,M.chuv):null):M[sel]), vt=it&&it.n&&Math.abs(it.n[0])>0.5; return `<select data-banpasso aria-label="Passo">${[[0.01,"1 cm"],[0.02,"2 cm"],[0.05,"5 cm"],[0.10,"10 cm"]].map(([v,t])=>`<option value="${v}"${Math.abs(v-LAYPASSO)<1e-6?" selected":""}>passo ${t}</option>`).join("")}</select><button class="btn" data-banacao="menos">${vt?"▲":"◀"}</button><button class="btn" data-banacao="mais">${vt?"▼":"▶"}</button>`; })()}
     <button class="btn" data-banacao="girar">${sel==="box"?"Chuveiro na outra parede":"Outra parede"}</button>
     ${sel==="lav"?`<select data-banlarg aria-label="Largura do lavatório">${[0.4,0.45,0.5,0.6,0.8,1,1.2].map(v=>`<option value="${v}"${M&&Math.abs((M.lav.larg||0.5)-v)<0.01?" selected":""}>bancada ${f(v)} m</option>`).join("")}</select>`:""}
     ${sel==="box"?`<select data-banbox aria-label="Tamanho do box"><option value="">${M&&!M.box?"sem box":"tamanho do box"}</option>${BOX.map(v=>`<option value="${v}"${v===bx?" selected":""}>box ${v}</option>`).join("")}<option value="sem">sem box (lavabo)</option></select>`:""}
@@ -4914,7 +4929,7 @@ function banAplica(li,X,peca,p){ const M=banLb(li,X); if(!M) return; const u=X.u
     if(!arr.raf) arr.raf=requestAnimationFrame(()=>{ if(!arr) return; arr.raf=0; banAplica(arr.li,arr.X,arr.peca,pend); arr.moveu=true; banDesenha(arr.li); }); });
   const fim=ev=>{ if(!arr||ev.pointerId!==arr.id) return; const a=arr; arr=null; if(a.moveu){ save(); render(); } else { const sb=document.querySelector(`[data-banbar="${a.li}"]`); if(sb) sb.outerHTML=banBarra(a.li); } };
   cont.addEventListener("pointerup",fim); cont.addEventListener("pointercancel",fim);
-  cont.addEventListener("change",e=>{ const bar=e.target.closest("[data-banbar]"); if(!bar) return; const li=+bar.dataset.banbar, X=banGeo(li); if(!X) return;
+  cont.addEventListener("change",e=>{ if(e.target.matches("[data-banpasso]")){ LAYPASSO=num(e.target.value)||0.05; return; } const bar=e.target.closest("[data-banbar]"); if(!bar) return; const li=+bar.dataset.banbar, X=banGeo(li); if(!X) return;
     if(e.target.matches("[data-banpeca]")){ BANSEL[li]=e.target.value; render(); return; }
     const M=banLb(li,X); if(!M) return;
     if(e.target.matches("[data-banlarg]")){ const l=num(e.target.value); M.lav.larg=l; const e2=banEncosta(X.u,M.lav.c,l,banParede(X.u,M.lav.n)); M.lav.c=e2.c; }
@@ -4926,8 +4941,9 @@ function banAplica(li,X,peca,p){ const M=banLb(li,X); if(!M) return; const u=X.u
     if(ac==="auto"){ delete S.rooms[li].lb; save(); render(); return; }
     const M=banLb(li,X); if(!M) return; const u=X.u;
     if(ac==="menos"||ac==="mais"){ const sg=ac==="mais"?1:-1, dirDe=n=>Math.abs(n[1])>0.5?[1,0]:[0,1];   // setas como na tela: ◀ ▶ em parede deitada, ▲ ▼ em parede em pé
-      if(sel==="box"&&M.box){ const a=dirDe(chuvDoBox(M.box,u,M.chuv).n); M.box=banMoveBox(u,M.box,[(M.box.x0+M.box.x1)/2+a[0]*0.05*sg,(M.box.y0+M.box.y1)/2+a[1]*0.05*sg]); }
-      else if(sel!=="box"){ const it=M[sel], a=dirDe(it.n), l=sel==="vaso"?0.38:num(it.larg)||0.5, e2=banEncosta(u,[it.c[0]+a[0]*0.05*sg,it.c[1]+a[1]*0.05*sg],l,banParede(u,it.n)); M[sel]={...it,c:e2.c}; } }
+      const ps=LAYPASSO;
+      if(sel==="box"&&M.box){ const a=dirDe(chuvDoBox(M.box,u,M.chuv).n), b0=M.box, w=b0.x1-b0.x0, h=b0.y1-b0.y0, x0=Math.max(u.x0,Math.min(u.x1-w,b0.x0+a[0]*ps*sg)), y0=Math.max(u.y0,Math.min(u.y1-h,b0.y0+a[1]*ps*sg)); M.box={x0:+x0.toFixed(3),y0:+y0.toFixed(3),x1:+(x0+w).toFixed(3),y1:+(y0+h).toFixed(3)}; }
+      else if(sel!=="box"){ const it=M[sel], a=dirDe(it.n), l=sel==="vaso"?0.38:num(it.larg)||0.5, e2=banEncosta(u,[it.c[0]+a[0]*ps*sg,it.c[1]+a[1]*ps*sg],l,banParede(u,it.n)); M[sel]={...it,c:e2.c}; } }
     if(ac==="girar"){
       if(sel==="box"&&M.box){ const ok=["A","B","C","D"].filter(w=>{ const ch=chuvDoBox(M.box,u,w); return ch.lado===w; }), at=chuvDoBox(M.box,u,M.chuv).lado, i=ok.indexOf(at); M.chuv=ok[(i+1)%ok.length]||at; }
       else if(sel!=="box"){ const it=M[sel], l=sel==="vaso"?0.38:num(it.larg)||0.5, ord=["A","B","C","D"], w=ord[(ord.indexOf(banParede(u,it.n))+1)%4], e2=banEncosta(u,it.c,l,w); M[sel]={...it,c:e2.c,n:e2.n}; } }
