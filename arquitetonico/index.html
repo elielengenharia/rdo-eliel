@@ -717,7 +717,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.57 · botão para instalar no computador e no celular", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.58 · instalar levando o projeto aberto", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -6137,6 +6137,20 @@ loadForm(); render();
       let ja=null; try{ ja=localStorage.getItem(ch); localStorage.setItem(ch,String(h)); }catch(e){}
       if(ja!==String(h)){ if(PJ.lista[nome]&&ja){ const ant=pjRenomear(nome,pjNomeLivre(nome+" (versão anterior)",nome)); if(PJ.lista[ant]) PJ.lista[ant].pjManual=true; }   // o arquivo trouxe uma versão nova do projeto: a salva fica guardada com outro nome
         pjUsar(PJ.lista[nome]?pjNome(nome):nome,est); } } }catch(e){} } }
+/* projeto que veio pelo link do botão Instalar (arquivo baixado / página do Claude -> site): #importar=<json gzip em base64url> */
+async function pjPacote(){ const txt=JSON.stringify({nome:PJ.atual,estado:S}); let by=new TextEncoder().encode(txt), z="j";
+  try{ if(window.CompressionStream){ by=new Uint8Array(await new Response(new Blob([by]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer()); z="z"; } }catch(e){ by=new TextEncoder().encode(txt); z="j"; }
+  let b=""; for(let i=0;i<by.length;i+=0x8000) b+=String.fromCharCode.apply(null,by.subarray(i,i+0x8000)); return z+btoa(b).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+(async()=>{ const m=/^#importar=([jz])([A-Za-z0-9_-]+)$/.exec(location.hash||""); if(!m) return;
+  try{ const b=atob(m[2].replace(/-/g,"+").replace(/_/g,"/")), by=Uint8Array.from(b,c=>c.charCodeAt(0));
+    const txt=m[1]==="z"?await new Response(new Blob([by]).stream().pipeThrough(new DecompressionStream("gzip"))).text():new TextDecoder().decode(by);
+    const o=JSON.parse(txt), est=o&&o.estado; if(!est||!Array.isArray(est.walls)) throw 0;
+    const nome=String(o.nome||nomeCliente(est)||est.obra||"Projeto");
+    if(PJ.lista[nome]&&JSON.stringify(PJ.lista[nome])!==JSON.stringify(estadoDe(JSON.parse(JSON.stringify(est))))){ const ant=pjRenomear(nome,pjNomeLivre(nome+" (versão anterior)",nome)); if(PJ.lista[ant]) PJ.lista[ant].pjManual=true; }
+    pjUsar(nome,est);
+    const aj=document.getElementById("instAjuda"); if(aj){ aj.hidden=false; aj.innerHTML=`<b>Projeto “${esc(nome)}” aberto aqui.</b> Agora toque em <b>Instalar no computador / celular</b>: o app instalado já abre com ele. Os outros projetos deste endereço continuam na lista (aba Dados).`; }
+  }catch(e){ const aj=document.getElementById("instAjuda"); if(aj){ aj.hidden=false; aj.textContent="Não consegui trazer o projeto pelo link. Use Baixar projeto (.json) no arquivo e Abrir projeto (.json) aqui."; } }
+  try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} })();
 if(deFundacao&&Array.isArray(deFundacao.walls)&&deFundacao.walls.length&&Date.now()-(+deFundacao.t||0)<30*60*1000){ try{
   const o=defaults(); o.walls=deFundacao.walls; o.rooms=Array.isArray(deFundacao.rooms)?deFundacao.rooms:[]; o.ab=[]; o.cA=null; o.cB=null;
   ["obra","cliente","local"].forEach(k=>{ if(typeof deFundacao[k]==="string") o[k]=deFundacao[k]; });
@@ -6163,7 +6177,8 @@ if(deFundacao&&Array.isArray(deFundacao.walls)&&deFundacao.walls.length&&Date.no
   b.onclick=async()=>{
     if(pedido){ pedido.prompt(); const r=await pedido.userChoice.catch(()=>null); pedido=null; if(r&&r.outcome==="accepted") return; }
     aj.hidden=false;
-    if(arquivo) aj.innerHTML=`<b>Para instalar, abra o app pelo endereço da internet</b> (aqui ele está aberto como arquivo ou dentro de outra página, e o navegador só instala pelo endereço do site):<p style="margin:8px 0"><a class="btn pri" href="${URL_APP}" target="_blank" rel="noopener">Abrir ${URL_APP.replace("https://","")}</a></p>Lá, toque de novo em <b>Instalar no computador / celular</b>. Os projetos deste arquivo não passam sozinhos: antes, na aba Dados, toque em <b>Baixar projeto (.json)</b> e, no app instalado, em <b>Abrir projeto (.json)</b>.`+fechar;
+    let lk=URL_APP; if(arquivo){ try{ lk=URL_APP+"#importar="+await pjPacote(); }catch(e){} }
+    if(arquivo) aj.innerHTML=`<b>Para instalar, abra o app pelo endereço da internet</b> (aqui ele está aberto como arquivo ou dentro de outra página, e o navegador só instala pelo endereço do site):<p style="margin:8px 0"><a class="btn pri" href="${lk}" target="_blank" rel="noopener">Abrir no site com o projeto “${esc(PJ.atual)}”</a></p>O site abre já com este projeto. Lá, toque de novo em <b>Instalar no computador / celular</b>. Para levar outro projeto, abra ele aqui e toque em Instalar de novo.`+fechar;
     else if(ios) aj.innerHTML=`<b>No iPhone / iPad (Safari):</b> toque no botão <b>Compartilhar</b> (quadrado com a seta para cima), depois em <b>Adicionar à Tela de Início</b> e em <b>Adicionar</b>.`+fechar;
     else aj.innerHTML=`<b>Instalar:</b> no <b>computador</b> (Chrome ou Edge), clique no ícone de instalar no fim da barra de endereço (monitor com seta) ou no menu ⋮ → <b>Instalar Projeto Arquitetônico</b> / Aplicativos → Instalar este site como aplicativo. No <b>celular Android</b> (Chrome), menu ⋮ → <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.`+fechar;
     aj.scrollIntoView({block:"nearest"}); const f=aj.querySelector("[data-fecha]"); if(f) f.onclick=()=>aj.hidden=true; };
