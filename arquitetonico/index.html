@@ -693,6 +693,12 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
     <div class="sheet">
       <h2>Portas, janelas e vãos</h2>
       <p class="cap">Distância = do começo da parede (ponto x1, y1) até o início do vão, pelo eixo. Mais fácil: toque na parede na aba Planta.</p>
+      <div class="form" style="margin-bottom:8px">
+        <label>Janelas (padrão)<select id="matJan"></select></label>
+        <label>Portas de fora (padrão)<select id="matPortaExt"></select></label>
+        <label>Portas de dentro (padrão)<select id="matPortaInt"></select></label>
+      </div>
+      <div class="row" style="margin:0 0 8px"><button class="btn" id="matTodas">Usar o padrão em todas as esquadrias</button><span class="cap" style="margin:0">Cada porta ou janela também pode ter o seu material (na tabela ou tocando nela na planta).</span></div>
       <div class="tbl"><table class="wt" id="atab"></table></div>
       <div class="row"><button class="btn" id="addA">+ Abertura</button></div>
     </div>
@@ -706,7 +712,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.51 · TV na suíte e blocos em qualquer ambiente", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.52 · material das janelas e portas por opção", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -964,7 +970,14 @@ function geom(todas=false){
 
 /* ---------------- Esquadrias: modelos de abertura e material ---------------- */
 const MODELOS={Janela:[["correr","de correr"],["giro","de abrir"],["maxim-ar","maxim-ar"],["basculante","basculante"],["fixa","fixa"]],Porta:[["giro","de abrir"],["correr","de correr"],["correr4","de correr 4 folhas (2 fixas + 2 de correr)"]],"Vão":[["","livre"]]};
-const MATPAD={Janela:"Alumínio",Porta:"Madeira","Vão":"-"};
+// materiais das esquadrias (escolha em cada uma ou o padrão do projeto em Dados > Portas, janelas e vãos)
+const MATS={Janela:["Vidro temperado 8 mm","Alumínio e vidro","Madeira e vidro","Madeira (veneziana)","Ferro (metalon) e vidro","Aço (veneziana de chapa)","PVC e vidro"],
+  Porta:["Madeira","Vidro temperado 10 mm","Alumínio e vidro","Alumínio e vidro temperado","Ferro (metalon)","Aço (chapa)","PVC"]};
+const MATPAD={get Janela(){ return (S&&S.matJan)||"Vidro temperado 8 mm"; },Porta:"Madeira","Vão":"-"};
+const matPad=(t,ext)=>t==="Porta"?(ext?((S&&S.matPortaExt)||"Madeira"):((S&&S.matPortaInt)||"Madeira")):MATPAD[t]||"-";
+// select de material: as opções da lista, o valor atual (se for outro) e "Outro..." para digitar
+function selMat(t,v,attrs){ const ls=MATS[t]||[]; if(!ls.length) return `<input type="text" ${attrs} value="${esc(v||"")}">`; const op=[...ls,...(v&&!ls.includes(v)?[v]:[])];
+  return `<select ${attrs}>${op.map(m=>`<option value="${esc(m)}"${m===v?" selected":""}>${esc(m)}</option>`).join("")}<option value="__outro">Outro (digitar)...</option></select>`; }
 function modPadrao(a){ const t=["Porta","Janela","Vão"].includes(a.t)?a.t:"Porta"; if(a.mod!=null&&(MODELOS[t]||[]).some(m=>m[0]===a.mod)) return a.mod;
   return t==="Porta"?(num(a.l)>=2.4?"correr4":"giro"):t==="Janela"?((num(a.a)||1)<=0.6?"maxim-ar":"correr"):""; }
 const nomeMod=(t,m)=>t==="Vão"?"Vão livre":`${t} ${((MODELOS[t]||[]).find(v=>v[0]===m)||["",""])[1]}`.trim();
@@ -975,7 +988,7 @@ function esquadrias(G){
   const grupos=new Map(), cont={Porta:0,Janela:0,"Vão":0}, pref={Porta:"P",Janela:"J","Vão":"V"};
   [...G.abs].sort((p,q)=>["Porta","Janela","Vão"].indexOf(p.tipo)-["Porta","Janela","Vão"].indexOf(q.tipo)||p.l-q.l||num(p.a.a)-num(q.a.a)).forEach(g=>{
     const a=num(g.a.a)||ABDEF[g.tipo].a, p=g.tipo==="Janela"?num(g.a.p):0;
-    const mod=modPadrao(g.a), mat=String(g.a.mat||MATPAD[g.tipo]).trim()||MATPAD[g.tipo], nf=nFolhas(g.tipo,mod,g.l);
+    const mod=modPadrao(g.a), mat=String(g.a.mat||matPad(g.tipo,g.externa)).trim()||matPad(g.tipo,g.externa), nf=nFolhas(g.tipo,mod,g.l);
     g.mod=mod; g.nf=nf; g.mat=mat;
     const fol=g.tipo==="Porta"?(g.a.fol||folhaPadrao(g)):""; g.fol=fol;
     // porta de banheiro (fechadura com tranqueta) e porta externa (cilindro) ganham código próprio
@@ -3439,7 +3452,7 @@ const notasReforma=q=>[`Demolição: ${f(q.dem)} m² de alvenaria (${f(q.Ld)} m 
 // preços de referência (R$, material + mão de obra): o usuário ajusta na tabela (SINAPI / fornecedor local)
 const PRECO0={fach_porc:180,fach_cer:120,fach_pedra:160,fach_tijolinho:140,fach_ripado:260,fach_acm:420,demolicao:35,retirada:60,entulho:90,limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
   telha_Cerâmica:55,telha_Concreto:60,telha_Fibrocimento:40,telha_Metálica:75,telha_Termoacústica:160,cumeeira:35,calha:90,condutor:45,rufo:40,
-  porta:850,porta_vidro:950,vigota:32,caibro:14,janela:650,box:900,contrapiso:45,pint_teto:22,pint_esq:38,piso_arm:70,regulariz:30,piso_car:115,piso_cam:165,piso_porc60:120,piso_porc80:150,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
+  porta:850,porta_vidro:950,porta_fer:1200,porta_aco:1100,porta_pvc:1300,janela_vt:480,janela_mad:700,janela_fer:420,janela_aco:400,janela_pvc:850,vigota:32,caibro:14,janela:650,box:900,contrapiso:45,pint_teto:22,pint_esq:38,piso_arm:70,regulariz:30,piso_car:115,piso_cam:165,piso_porc60:120,piso_porc80:150,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
   forro_pvc:75,forro_gesso:90,forro_drywall:110,parede_dw:150,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,aterr:180,pt_agua:220,pt_esgoto:180,tubo_ap:55,cx_areia:280,caixa:350,reservatorio:900,fossa:6500,
   vaso:750,lavatorio:350,chuveiro:250,pia:650,tanque:450,pint_int:28,pint_ext:32,limpfinal:8};
 const preco=k=>{ const v=S.orc&&S.orc.p&&S.orc.p[k]; return v!=null&&v!==""&&isFinite(+v)?+v:(PRECO0[k]??0); };
@@ -3472,8 +3485,9 @@ function orcamento(){
     if(CLo) it(`Condutores de água pluvial (${CLo.lista.map(c=>`${c.nC}xØ${c.dia}`).join(", ")}) com ralo hemisférico`,"m",CLo.lista.reduce((s0,c)=>s0+c.nC*((TI.pdAt?TI.pdAt((c.seg[0]+c.seg[2])/2,(c.seg[1]+c.seg[3])/2):num(S.pd))+Math.max(0,num(S.laje))+0.5),0),"condutor"); }
   else { const CLb=calhasBeiral(G,TI); if(CLb){ it(`Calha de beiral galvanizada ${f(CLb.bMax*100,0)}x${f(CLb.hMax*100,0)} cm`,"m",CLb.Ltot,"calha"); it(`Condutores de água pluvial (${CLb.lista.map(c=>`${c.nC}xØ${Math.max(75,c.dia)}`).join(", ")})`,"m",CLb.nAP*(num(S.pd)+0.5),"condutor"); } }
   etapa("ESQUADRIAS");
-  Q.filter(q=>q.tipo==="Porta").forEach(q=>/vidro|alum/i.test(q.mat)?it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)} (${q.q} un)`,"m²",q.l*q.a*q.q,"porta_vidro"):it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)}`,"un",q.q,"porta"));
-  Q.filter(q=>q.tipo==="Janela").forEach(q=>it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)} (${q.q} un)`,"m²",q.l*q.a*q.q,"janela"));
+  const pkP=m=>/vidro|alum/i.test(m)?"porta_vidro":/ferro|metalon/i.test(m)?"porta_fer":/a[cç]o|chapa/i.test(m)?"porta_aco":/pvc/i.test(m)?"porta_pvc":"porta", pkJ=m=>/alum/i.test(m)?"janela":/temperad/i.test(m)?"janela_vt":/madeira/i.test(m)?"janela_mad":/ferro|metalon/i.test(m)?"janela_fer":/a[cç]o|chapa/i.test(m)?"janela_aco":/pvc/i.test(m)?"janela_pvc":"janela";
+  Q.filter(q=>q.tipo==="Porta").forEach(q=>pkP(q.mat)==="porta_vidro"?it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)} (${q.q} un)`,"m²",q.l*q.a*q.q,"porta_vidro"):it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)}`,"un",q.q,pkP(q.mat)));
+  Q.filter(q=>q.tipo==="Janela").forEach(q=>it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)} (${q.q} un)`,"m²",q.l*q.a*q.q,pkJ(q.mat)));
   it("Box de vidro temperado","un",LM.filter(R=>R.banho&&R.banho.box).length,"box");
   etapa("PISOS"); { const BPo=basePiso(G); if(BPo){ const I0=BPo.int, V0=BPo.vei;
       it(`Piso de concreto interno e = ${f(I0.e*100,0)} cm fck ${I0.fck} (${BASEARM[I0.arm]}), sobre brita e lona`,"m²",I0.A,I0.arm==="simples"?"contrapiso":"piso_arm"); it(`Regularização ${f(BPo.regE*100,0)} cm para porcelanato`,"m²",BPo.reg,"regulariz");
@@ -4682,11 +4696,11 @@ function painelAbertura(i){
       <label>Distância do começo (m)<input type="number" step="0.05" data-c="d" value="${a.d}"></label>
       <label>Local / nome<input type="text" data-c="n" value="${esc(a.n||"")}"></label>
       <label>Modelo<select data-c="mod">${(MODELOS[a.t]||MODELOS.Porta).map(([v,t2])=>`<option value="${v}"${modPadrao(a)===v?" selected":""}>${t2}</option>`).join("")}</select></label>
-      <label>Material<input type="text" data-c="mat" value="${esc(a.mat||MATPAD[a.t]||"")}"></label>
+      <label>Material${selMat(a.t,a.mat||(g?g.mat:matPad(a.t,false)),'data-c="mat"')}</label>
       ${a.t==="Porta"?`<label>Folha<select data-c="fol">${FOLHAS.map(([v,t2])=>`<option value="${v}"${(a.fol||(g?g.fol:"lisa"))===v?" selected":""}>${t2}</option>`).join("")}</select></label>`:""}
     </div>
     <div class="row">${a.t==="Porta"?`<button class="btn" data-tg="inv">Abrir para o outro lado</button><button class="btn" data-tg="dob">Trocar dobradiça</button>`:""}<button class="btn dng" data-del>Excluir</button><button class="btn x" data-close aria-label="Fechar">×</button></div>`;
-  P.querySelectorAll("[data-c]").forEach(el=>el.addEventListener("change",()=>{ const c=el.dataset.c; a[c]=(c==="t"||c==="n"||c==="mod"||c==="mat"||c==="fol")?el.value:num(el.value);
+  P.querySelectorAll("[data-c]").forEach(el=>el.addEventListener("change",()=>{ const c=el.dataset.c; if(c==="mat"&&el.value==="__outro"){ const v=prompt("Material da esquadria:",a.mat||""); if(!v){ painelAbertura(i); return; } el.value=v; a.mat=v.trim(); renderAb(); render(); painelAbertura(i); return; } a[c]=(c==="t"||c==="n"||c==="mod"||c==="mat"||c==="fol")?el.value:num(el.value);
     if(c==="t"){ const df=ABDEF[a.t]; a.a=df.a; a.p=df.p; delete a.mod; delete a.mat; } renderAb(); render(); painelAbertura(i); }));
   P.querySelectorAll("[data-tg]").forEach(b=>b.onclick=()=>{ a[b.dataset.tg]=!a[b.dataset.tg]; render(); });
   P.querySelector("[data-del]").onclick=()=>{ S.ab.splice(i,1); P.hidden=true; renderAb(); render(); };
@@ -4725,7 +4739,7 @@ $("ladosTab").addEventListener("click",e=>{ const b=e.target.closest("[data-ldel
 $("ladoAdd").onclick=()=>{ S.terr.lados.push({m:0,c:"",rua:"não"}); $("ladosTab").innerHTML=""; render(); };
 { const tbP=$("tabPint"), labDeIdx=i=>{ const k=+i; return k>=0?S.rooms[k]:null; };
   tbP.addEventListener("input",e=>{ const el=e.target, L0=labDeIdx(el.dataset.pc??el.dataset.pt??el.dataset.pp); if(!L0) return; if(el.dataset.pc!=null) L0.cp=el.value; else if(el.dataset.pt!=null) L0.ct=el.value; else if(el.dataset.pp!=null){ L0.rp=el.value; render(); return; } later(); }); }
-function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); document.querySelectorAll("[data-est]").forEach(el=>{ el.value=String(num(S.est[el.dataset.est])); }); $("fmt").value=S.fmt||"A3"; $("agrupar").value=S.agrupar||"auto"; $("cotGer").value=S.cotGer==="não"?"não":"sim"; renderWalls(); renderRooms(); renderAb(); }
+function loadForm(){ if(window.fillMatPad) window.fillMatPad(); FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); document.querySelectorAll("[data-est]").forEach(el=>{ el.value=String(num(S.est[el.dataset.est])); }); $("fmt").value=S.fmt||"A3"; $("agrupar").value=S.agrupar||"auto"; $("cotGer").value=S.cotGer==="não"?"não":"sim"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
   el.addEventListener(el.tagName==="SELECT"?"change":"input",()=>{ const v=TEXTOS.includes(id)?el.value:num(el.value); setv(id,v);
@@ -4761,13 +4775,18 @@ function renderAb(){
     <td><select data-i="${i}" data-c="w" aria-label="Parede">${opW.map(j=>`<option value="${j}"${Math.round(num(a.w))===j?" selected":""}>${j+1}</option>`).join("")}</select></td>
     ${["d","l","a","p"].map(c=>`<td><input type="number" step="0.05" data-i="${i}" data-c="${c}" value="${a[c]}" aria-label="${c}"${c==="p"&&a.t!=="Janela"?" disabled":""}></td>`).join("")}
     <td><select data-i="${i}" data-c="mod" aria-label="Modelo">${(MODELOS[a.t]||MODELOS.Porta).map(([v,t2])=>`<option value="${v}"${modPadrao(a)===v?" selected":""}>${t2}</option>`).join("")}</select></td>
-    <td><input type="text" data-i="${i}" data-c="mat" value="${esc(a.mat||MATPAD[a.t]||"")}" aria-label="Material"></td>
+    <td>${selMat(a.t,a.mat||(GG&&(GG.abs.find(g=>g.k===i)||{}).mat)||matPad(a.t,false),`data-i="${i}" data-c="mat" aria-label="Material"`)}</td>
     <td><input type="text" data-i="${i}" data-c="n" value="${esc(a.n||"")}" aria-label="Local"></td><td><button class="btn x" data-del="${i}" aria-label="Remover abertura">×</button></td></tr>`).join("");
 }
 $("atab").addEventListener("input",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||e.target.tagName==="SELECT")return; S.ab[i][c]=(c==="n"||c==="mat")?e.target.value:num(e.target.value); later();});
 $("atab").addEventListener("change",e=>{const i=e.target.dataset.i,c=e.target.dataset.c; if(i==null||e.target.tagName!=="SELECT")return;
+  if(c==="mat"){ let v=e.target.value; if(v==="__outro"){ v=prompt("Material da esquadria:",S.ab[i].mat||""); if(!v){ renderAb(); return; } } S.ab[i].mat=v.trim(); renderAb(); render(); return; }
   if(c==="t"){ S.ab[i].t=e.target.value; const df=ABDEF[S.ab[i].t]; S.ab[i].a=df.a; S.ab[i].p=df.p; delete S.ab[i].mod; delete S.ab[i].mat; renderAb(); } else if(c==="w") S.ab[i].w=+e.target.value; else S.ab[i][c]=e.target.value; render();});
 $("atab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; S.ab.splice(+d,1); renderAb(); render();});
+{ const fill=()=>{ [["matJan","Janela",()=>S.matJan||"Vidro temperado 8 mm"],["matPortaExt","Porta",()=>S.matPortaExt||"Madeira"],["matPortaInt","Porta",()=>S.matPortaInt||"Madeira"]].forEach(([id,t,v])=>{ const el=$(id); if(el) el.innerHTML=MATS[t].map(m=>`<option${m===v()?" selected":""}>${esc(m)}</option>`).join(""); }); };
+  fill(); window.fillMatPad=fill;
+  ["matJan","matPortaExt","matPortaInt"].forEach(id=>$(id).addEventListener("change",e=>{ S[id]=e.target.value; save(); renderAb(); render(); }));
+  $("matTodas").onclick=()=>{ if(!confirm("Tirar o material escolhido de cada porta e janela e usar o padrão do projeto em todas?")) return; S.ab.forEach(a=>{ delete a.mat; }); save(); renderAb(); render(); }; }
 $("addA").onclick=()=>{S.ab.push({n:"",t:"Janela",w:0,d:0.5,l:1.2,a:1.0,p:1.1}); renderAb(); render();};
 
 
