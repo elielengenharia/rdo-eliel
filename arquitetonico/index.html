@@ -700,7 +700,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.46 · corte pelo banheiro e corte costurado", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.47 · piso da garagem e varanda na planta baixa", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1336,7 +1336,7 @@ function desenhoPlanta(G,k,ajuda){
     G.abs.forEach(g=>{ const c=[(g.p0[0]+g.p1[0])/2,(g.p0[1]+g.p1[1])/2], dn=Math.abs((c[0]-a[0])*(-u[1])+(c[1]-a[1])*u[0]); if(Math.abs(dn-h)>0.05) return;
       const t0=(g.p0[0]-a[0])*u[0]+(g.p0[1]-a[1])*u[1], t1=(g.p1[0]-a[0])*u[0]+(g.p1[1]-a[1])*u[1], lo=Math.min(t0,t1), hi=Math.max(t0,t1); if(hi<0.005||lo>Lr-0.005) return;
       if(lo<=0.205||Lr-hi<=0.205) bonecaEm.add(g); }); }); });
-  [...G.rooms].sort((p,q)=>q.area-p.area).forEach(r=>{ if(r.area<1.5) return; const P=r.poly, m=P.length, ed=[];
+  [...G.rooms,...(G.pisos||[])].sort((p,q)=>q.area-p.area).forEach(r=>{ if(r.area<1.5) return; const P=r.poly, m=P.length, ed=[];
     P.forEach((a,i)=>{ const b=P[(i+1)%m], Lr=Math.hypot(b[0]-a[0],b[1]-a[1]); if(Lr<0.6) return; const u=[(b[0]-a[0])/Lr,(b[1]-a[1])/Lr]; let n=[-u[1],u[0]]; const mm=[(a[0]+b[0])/2+n[0]*0.05,(a[1]+b[1])/2+n[1]*0.05]; if(!pip(P,mm[0],mm[1])) n=[-n[0],-n[1]];
       const gs=G.abs.filter(g=>{ const c=[(g.p0[0]+g.p1[0])/2,(g.p0[1]+g.p1[1])/2], dn=Math.abs((c[0]-a[0])*n[0]+(c[1]-a[1])*n[1]); return Math.abs(dn-h)<=0.05; }).map(g=>{ const t0=(g.p0[0]-a[0])*u[0]+(g.p0[1]-a[1])*u[1], t1=(g.p1[0]-a[0])*u[0]+(g.p1[1]-a[1])*u[1]; return {g,t0:Math.min(t0,t1),t1:Math.max(t0,t1)}; }).filter(o=>o.t1>0.005&&o.t0<Lr-0.005);
       const soltas=gs.filter(o=>!o.g.externa&&!bonecaEm.has(o.g)&&!cotada.has(o.g));   // porta interna longe dos cantos: precisa da posição
@@ -1349,7 +1349,7 @@ function desenhoPlanta(G,k,ajuda){
       const ts=uniq([0,e.Lr,...e.soltas.flatMap(o=>[o.t0,o.t1])].filter(t=>t>=-0.001&&t<=e.Lr+0.001)).sort((p,q)=>p-q);
       cadeiaAlinhada(D,e.a,e.u,e.n,ts,3,true); }); });
   desenhaAberturas(D,G,G.abs);
-  desenhaPisosExt(D,G,{rot:true});
+  desenhaPisosExt(D,G,{pag:true});
   // números das cotas internas: o nome do ambiente desvia deles
   const obsCota=D.p.filter(q=>q.t==="t"&&q.l==="COTAS").map(q=>{ const w=largTexto(q.txt)*q.h*1.39*k/2+1.4*k, hh=q.h*0.8*k+0.8*k, a=(q.rot||0)*Math.PI/180, c=Math.cos(a), sn=Math.sin(a);
     return [[-w,-hh],[w,-hh],[w,hh],[-w,hh]].map(([x,y])=>[q.x+x*c-y*sn,q.y+x*sn+y*c]); });
@@ -1357,6 +1357,7 @@ function desenhoPlanta(G,k,ajuda){
   G.rooms.forEach(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; const x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy;
     const tN=Math.min(5,Math.max(1.2,num((S.est||{}).tNome)||2.2)), tA=Math.min(4,Math.max(1,num((S.est||{}).tArea)||1.7));
     rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:tN,b:true},{t:`A = ${f(r.area)} m²`,h:tA},{t:`NV ${fNv(r.nv)}`,h:tA*0.88,l:"COTAS"}],x,y,(()=>{ try{ return zonasAmb(G,r).porta.concat(obsCota); }catch(e){ return obsCota; } })()); });   // fora do giro das portas e dos números das cotas
+  (G.pisos||[]).forEach(r=>rotuloPisoExt(D,r,obsCota));   // garagem, varanda: nome, área, nível e piso
   // cotas: faces das paredes (em cima e à esquerda) e totais
   // paredes inclinadas: só entram na cadeia os cantos que ficam junto da borda daquele lado (o chanfro da frente não parte a cota de cima)
   const fora=G.incl.flatMap(w=>{ const mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, Cp=G.compAt(mx+w.nX*(h+0.12),my+w.nY*(h+0.12)); return (!Cp||Cp.ext)?[w.cA[0],w.cB[0]]:[w.cA[1],w.cB[1]]; });
@@ -2028,12 +2029,19 @@ function desenhaPeca(D,T,des,lay="MOBILIA"){ const w0=.18, dr={
   L:(s0,t0,s1,t1,w=w0,dd=false)=>L(D,...trf(T,s0,t0),...trf(T,s1,t1),w,lay,dd),
   C:(s,t,rr,w=w0)=>CI(D,...trf(T,s,t),rr,w,lay), T:(s,t,txt)=>TX(D,...trf(T,s,t),txt,1.3,{l:lay}) }; des(dr); }
 // pisos externos (garagem, varanda): linha do limite de piso (desnível), nome, área e nível; na garagem, o carro
+// piso de garagem e varanda: cimentado na garagem, cerâmica antiderrapante na varanda (ou o escolhido na aba Piso para aquele nome)
+function pisoExtTipo(r){ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; return lab&&lab.pt&&lab.pt!=="padrao"?lab.pt:/garag/i.test(r.n)?"cimento":"cer45"; }
+function rotuloPisoExt(D,r,obs){ const tN=Math.min(5,Math.max(1.2,num((S.est||{}).tNome)||2.2)), tA=Math.min(4,Math.max(1,num((S.est||{}).tArea)||1.7));
+  rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:tN,b:true},{t:`A = ${f(r.area)} m²`,h:tA},{t:`NV ${fNv(r.nv)}`,h:tA*0.88,l:"COTAS"},{t:`PISO ${curtoPiso[pisoExtTipo(r)]||""}`,h:tA*0.8,l:"COTAS"}],r.cx,r.cy,obs||[]); }
 function desenhaPisosExt(D,G,o={}){ const k=D.k; (G.pisos||[]).forEach(r=>{
-    (S.lims||[]).forEach(l=>{ const a=[num(l.x1),num(l.y1)], b=[num(l.x2),num(l.y2)], m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; if(!r.poly.some((p,i)=>distSeg(m,{x1:p[0],y1:p[1],x2:r.poly[(i+1)%r.poly.length][0],y2:r.poly[(i+1)%r.poly.length][1]})<0.02)) return; L(D,...a,...b,.35,"PISO"); });
+    // paginação do piso (juntas), recortada no contorno da área
+    if(o.pag){ const [, , pw, ph]=infoPiso(pisoExtTipo(r)), st=[Math.max(pw,0.3),Math.max(ph,0.3)], P=r.poly; let n0=0;
+      for(let x=r.x0+st[0];x<r.x1-0.02&&n0<400;x+=st[0],n0++) recorta([x,r.y0-0.01,x,r.y1+0.01],P).forEach(sg=>L(D,...sg,.1,"PAGINA"));
+      for(let y=r.y0+st[1];y<r.y1-0.02&&n0<800;y+=st[1],n0++) recorta([r.x0-0.01,y,r.x1+0.01,y],P).forEach(sg=>L(D,...sg,.1,"PAGINA")); }
+    (S.lims||[]).forEach(l=>{ const a=[num(l.x1),num(l.y1)], b=[num(l.x2),num(l.y2)], m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; if(!r.poly.some((p,i)=>distSeg(m,{x1:p[0],y1:p[1],x2:r.poly[(i+1)%r.poly.length][0],y2:r.poly[(i+1)%r.poly.length][1]})<0.02)) return; L(D,...a,...b,.35,"LIMPISO"); });
     let carro=null; if(o.carro&&/garag/i.test(r.n)){ const W=r.x1-r.x0, H=r.y1-r.y0, lg=W>=H, Lc=4.30, Wc=1.80, cx=!lg&&W>Wc+2.4?r.x0+0.7+Wc/2:(r.x0+r.x1)/2, cy=lg&&H>Wc+2.4?r.y0+0.7+Wc/2:(r.y0+r.y1)/2;
       const T={A:lg?[cx-Lc/2,cy-Wc/2]:[cx+Wc/2,cy-Lc/2],u:lg?[1,0]:[0,1],N:lg?[0,1]:[-1,0],s0:0,w:Lc,m:1}, Q=retW(T,[0,0,Lc,Wc]); if(Q.every(p=>pip(r.poly,p[0],p[1]))){ desenhaCarro(D,T); carro=Q; } }
-    if(o.rot){ const tN=Math.min(5,Math.max(1.2,num((S.est||{}).tNome)||2.2)), tA=Math.min(4,Math.max(1,num((S.est||{}).tArea)||1.7));
-      rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:tN,b:true},{t:`A = ${f(r.area)} m²`,h:tA},{t:`NV ${fNv(r.nv)}`,h:tA*0.88,l:"COTAS"}],r.cx,r.cy,carro?[carro]:[]); } }); }
+    if(o.rot) rotuloPisoExt(D,r,carro?[carro]:[]); }); }
 function desenhaCarro(D,T){ const Lc=T.w, Wc=1.80, c=0.28, dr=(pts,w=.25)=>PL(D,pts.map(([s,t])=>trf(T,s,t)),w,"MOBILIA");
   dr([[c,0],[Lc-c,0],[Lc,c],[Lc,Wc-c],[Lc-c,Wc],[c,Wc],[0,Wc-c],[0,c],[c,0]]);
   dr([[1.15,0.18],[1.55,0.30],[1.55,Wc-0.30],[1.15,Wc-0.18],[1.15,0.18]],.18); dr([[3.25,0.25],[3.50,0.18],[3.50,Wc-0.18],[3.25,Wc-0.25],[3.25,0.25]],.18);
@@ -4350,7 +4358,7 @@ function extensao(D){
   return {x0,y0,x1,y1};
 }
 const n2=v=>(Math.round(v*100)/100).toString();
-const COR={LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)",MOBILIAC:"var(--line)",ELETRICA:"var(--accent)",AGUA:"var(--accent)",PLUVIAL:"var(--steel)",PERSP:"var(--ink)",ESGOTO:"var(--soil)",FORRO:"var(--muted)",PISO:"var(--muted)",SOLEIRA:"var(--ink)",REVEST:"var(--accent)",PAGINA:"var(--muted)",ESTRUT:"var(--soil)",VIGA:"var(--ink)",FUNDACAO:"var(--muted)",LAJE:"var(--steel)",ESCADA:"var(--ink)",EIXO:"var(--steel)",CONSTRUIR:"var(--bad)",DEMOLIR:"var(--warn)"};
+const COR={LIMPISO:"var(--ink)",LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)",MOBILIAC:"var(--line)",ELETRICA:"var(--accent)",AGUA:"var(--accent)",PLUVIAL:"var(--steel)",PERSP:"var(--ink)",ESGOTO:"var(--soil)",FORRO:"var(--muted)",PISO:"var(--muted)",SOLEIRA:"var(--ink)",REVEST:"var(--accent)",PAGINA:"var(--muted)",ESTRUT:"var(--soil)",VIGA:"var(--ink)",FUNDACAO:"var(--muted)",LAJE:"var(--steel)",ESCADA:"var(--ink)",EIXO:"var(--steel)",CONSTRUIR:"var(--bad)",DEMOLIR:"var(--warn)"};
 function primsSVG(D,map,k){
   let s="";
   D.p.forEach(p=>{ const cor=COR[p.l]||"var(--ink)";
@@ -5240,7 +5248,7 @@ function textosLado(P,lado,fl){
 
 /* ---------------- DXF ---------------- */
 // cores das layers no AutoCAD (ACI): paredes verdes (3), cotas cinza escuro (8), textos, títulos e mobília na cor natural (7)
-const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[3,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[8,"CONTINUOUS"],TEXTO:[7,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[7,"CONTINUOUS"],MOBILIA:[7,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[5,"CONTINUOUS"],PLUVIAL:[4,"CONTINUOUS"],PERSP:[8,"CONTINUOUS"],ESGOTO:[32,"CONTINUOUS"],FORRO:[8,"CONTINUOUS"],PISO:[9,"CONTINUOUS"],SOLEIRA:[2,"CONTINUOUS"],REVEST:[5,"CONTINUOUS"],PAGINA:[8,"CONTINUOUS"],ESTRUT:[33,"CONTINUOUS"],VIGA:[4,"CONTINUOUS"],FUNDACAO:[8,"DASHED"],LAJE:[150,"CONTINUOUS"],ESCADA:[7,"CONTINUOUS"],EIXO:[1,"DASHED"],CONSTRUIR:[1,"CONTINUOUS"],DEMOLIR:[40,"DASHED"],GERAL:[7,"CONTINUOUS"]};
+const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[3,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[8,"CONTINUOUS"],TEXTO:[7,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[7,"CONTINUOUS"],MOBILIA:[7,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[5,"CONTINUOUS"],PLUVIAL:[4,"CONTINUOUS"],PERSP:[8,"CONTINUOUS"],ESGOTO:[32,"CONTINUOUS"],FORRO:[8,"CONTINUOUS"],PISO:[9,"CONTINUOUS"],LIMPISO:[8,"CONTINUOUS"],SOLEIRA:[2,"CONTINUOUS"],REVEST:[5,"CONTINUOUS"],PAGINA:[8,"CONTINUOUS"],ESTRUT:[33,"CONTINUOUS"],VIGA:[4,"CONTINUOUS"],FUNDACAO:[8,"DASHED"],LAJE:[150,"CONTINUOUS"],ESCADA:[7,"CONTINUOUS"],EIXO:[1,"DASHED"],CONSTRUIR:[1,"CONTINUOUS"],DEMOLIR:[40,"DASHED"],GERAL:[7,"CONTINUOUS"]};
 function dxfEnc(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?"); }
 function buildDXF(){
   const P=pranchas(S.fmt||"A3"), o=[], p=(c,v)=>o.push(String(c),String(v)), n=v=>(+v).toFixed(4);
@@ -5291,7 +5299,7 @@ document.querySelectorAll("[data-dxfcopy]").forEach(b=>b.onclick=async()=>{
 });
 
 /* ---------------- PDF (escrito à mão, sem bibliotecas) ---------------- */
-const PDFCOR={LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25],AGUA:[0,.3],PLUVIAL:[.2,.35],PERSP:[.5,.15],ESGOTO:[.25,.5],FORRO:[.3,.15],PISO:[.45,.1],SOLEIRA:[0,.25],REVEST:[0,.4],PAGINA:[.35,.1],ESTRUT:[0,.3],VIGA:[0,.3],FUNDACAO:[.35,.25],LAJE:[.25,.2],ESCADA:[0,.3],EIXO:[0,.2],CONSTRUIR:[.15,.3],DEMOLIR:[0,.3]};
+const PDFCOR={LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25],AGUA:[0,.3],PLUVIAL:[.2,.35],PERSP:[.5,.15],ESGOTO:[.25,.5],FORRO:[.3,.15],PISO:[.45,.1],LIMPISO:[0,.3],SOLEIRA:[0,.25],REVEST:[0,.4],PAGINA:[.35,.1],ESTRUT:[0,.3],VIGA:[0,.3],FUNDACAO:[.35,.25],LAJE:[.25,.2],ESCADA:[0,.3],EIXO:[0,.2],CONSTRUIR:[.15,.3],DEMOLIR:[0,.3]};
 function pdfTxt(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?").replace(/[\\()]/g,m=>"\\"+m); }
 function buildPDF(fmt){
   const P=pranchas(fmt), {W,H,mo,ml,cw,ch,ha,TT,side}=P; const TR=P.G.vazio?null:terreno(P.G); const n=v=>(+v).toFixed(3); let c=[]; const pages=[], imgs=[];
@@ -5932,8 +5940,10 @@ $("comeceOk").onclick=()=>{ $("comece").hidden=true; try{ localStorage.setItem("
 loadForm(); render();
 /* arquivo do app entregue com um projeto dentro (<script id="projeto-inicial" type="application/json">): na 1ª abertura entra na lista e abre; depois vale o que foi salvo */
 { const el=document.getElementById("projeto-inicial"); if(el){ try{ const o=JSON.parse(el.textContent), est=o&&o.estado?o.estado:o;
-    if(est&&Array.isArray(est.walls)){ const nome=String(o.nome||nomeCliente(est)||est.obra||"Projeto"), ch="arq-inicial-ok:"+nome; let ja=false; try{ ja=!!localStorage.getItem(ch); localStorage.setItem(ch,"1"); }catch(e){}
-      if(!ja) pjUsar(PJ.lista[nome]?pjNome(nome):nome,est); } }catch(e){} } }
+    if(est&&Array.isArray(est.walls)){ const nome=String(o.nome||nomeCliente(est)||est.obra||"Projeto"), ch="arq-inicial-ok:"+nome, txt=JSON.stringify(est); let h=0; for(let i=0;i<txt.length;i++) h=(h*31+txt.charCodeAt(i))|0;
+      let ja=null; try{ ja=localStorage.getItem(ch); localStorage.setItem(ch,String(h)); }catch(e){}
+      if(ja!==String(h)){ if(PJ.lista[nome]&&ja){ const ant=pjRenomear(nome,pjNomeLivre(nome+" (versão anterior)",nome)); if(PJ.lista[ant]) PJ.lista[ant].pjManual=true; }   // o arquivo trouxe uma versão nova do projeto: a salva fica guardada com outro nome
+        pjUsar(PJ.lista[nome]?pjNome(nome):nome,est); } } }catch(e){} } }
 if(deFundacao&&Array.isArray(deFundacao.walls)&&deFundacao.walls.length&&Date.now()-(+deFundacao.t||0)<30*60*1000){ try{
   const o=defaults(); o.walls=deFundacao.walls; o.rooms=Array.isArray(deFundacao.rooms)?deFundacao.rooms:[]; o.ab=[]; o.cA=null; o.cB=null;
   ["obra","cliente","local"].forEach(k=>{ if(typeof deFundacao[k]==="string") o[k]=deFundacao[k]; });
