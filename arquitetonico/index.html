@@ -110,8 +110,9 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <h1>Projeto Arquitetônico e Complementares</h1>
       <div class="sub"><span class="feat">Planta baixa com áreas e cotas · Demolir e construir · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Revestimento de parede · Paginação da fachada · Memorial descritivo · Orçamento estimado · Cortes AA e BB · Cobertura · Fachadas · Situação · Escada · Banheiro · Quadro de esquadrias · Águas pluviais · Pintura · Estrutural · Diagrama unifilar · Perspectivas · </span><b id="versao"></b></div>
     </div>
-    <div class="stamp" id="stamp"></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="stamp" id="stamp"></div><button class="btn pri" id="btnInstalar" type="button" hidden>Instalar no computador / celular</button></div>
   </header>
+  <div class="panel" id="instAjuda" hidden style="margin:10px 16px"></div>
 
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="planta" aria-selected="true">Planta</button>
@@ -716,7 +717,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.56 · vigota, caibro, calha e telha no corte", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.57 · botão para instalar no computador e no celular", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -6149,5 +6150,24 @@ if(deFundacao&&Array.isArray(deFundacao.walls)&&deFundacao.walls.length&&Date.no
 }catch(e){} }
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
+<script>
+/* Botão de instalar: Chrome/Edge (computador e Android) abrem a janela de instalação; iPhone e arquivo baixado recebem o passo a passo */
+(function(){ const URL_APP="https://elielengenharia.github.io/rdo-eliel/arquitetonico/", b=document.getElementById("btnInstalar"), aj=document.getElementById("instAjuda");
+  const instalado=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+  if(instalado()) return;   // já está aberto como aplicativo
+  let pedido=null; b.hidden=false;
+  window.addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); pedido=e; });
+  window.addEventListener("appinstalled",()=>{ b.hidden=true; aj.hidden=false; aj.innerHTML=`<b>Aplicativo instalado.</b> Ele aparece no menu Iniciar / área de trabalho (computador) ou na tela inicial (celular) e funciona sem internet.`; });
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1), arquivo=location.protocol==="file:"||(()=>{ try{ return window.top!==window; }catch(e){ return true; } })();   /* arquivo baixado ou aberto dentro de outra página: instala pelo endereço */
+  const fechar=`<div class="row" style="margin-top:8px"><button class="btn" type="button" data-fecha>Fechar</button></div>`;
+  b.onclick=async()=>{
+    if(pedido){ pedido.prompt(); const r=await pedido.userChoice.catch(()=>null); pedido=null; if(r&&r.outcome==="accepted") return; }
+    aj.hidden=false;
+    if(arquivo) aj.innerHTML=`<b>Para instalar, abra o app pelo endereço da internet</b> (aqui ele está aberto como arquivo ou dentro de outra página, e o navegador só instala pelo endereço do site):<p style="margin:8px 0"><a class="btn pri" href="${URL_APP}" target="_blank" rel="noopener">Abrir ${URL_APP.replace("https://","")}</a></p>Lá, toque de novo em <b>Instalar no computador / celular</b>. Os projetos deste arquivo não passam sozinhos: antes, na aba Dados, toque em <b>Baixar projeto (.json)</b> e, no app instalado, em <b>Abrir projeto (.json)</b>.`+fechar;
+    else if(ios) aj.innerHTML=`<b>No iPhone / iPad (Safari):</b> toque no botão <b>Compartilhar</b> (quadrado com a seta para cima), depois em <b>Adicionar à Tela de Início</b> e em <b>Adicionar</b>.`+fechar;
+    else aj.innerHTML=`<b>Instalar:</b> no <b>computador</b> (Chrome ou Edge), clique no ícone de instalar no fim da barra de endereço (monitor com seta) ou no menu ⋮ → <b>Instalar Projeto Arquitetônico</b> / Aplicativos → Instalar este site como aplicativo. No <b>celular Android</b> (Chrome), menu ⋮ → <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.`+fechar;
+    aj.scrollIntoView({block:"nearest"}); const f=aj.querySelector("[data-fecha]"); if(f) f.onclick=()=>aj.hidden=true; };
+})();
+</script>
 </body>
 </html>
