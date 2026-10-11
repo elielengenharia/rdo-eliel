@@ -184,6 +184,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <p class="cap">Linha de corte na horizontal da planta (ou paralela a um lado do lote), olhando para cima. Arraste para o corte passar por janelas e portas. <b>Concreto cortado (viga e laje) em cinza escuro</b>, alvenaria em cinza claro; a viga do fundo aparece em vista, só com o contorno.</p>
       <label style="font-size:13px">Direção da linha<select id="cAdir"></select></label>
       <label class="slide">Posição (m)<input type="range" id="cAr" step="0.05"><input type="number" id="cAn" step="0.05"></label>
+      <div class="row" style="gap:10px;flex-wrap:wrap;margin:6px 0"><label style="font-size:13px">Corte costurado<select id="cAcost"><option value="não">Não (linha reta)</option><option value="sim">Sim (dobra para passar por outro ambiente)</option></select></label><label style="font-size:13px" data-cost="A">Segundo ambiente<select id="cAamb2"></select></label><button class="btn" data-banco="A">Passar pelo banheiro</button></div>
+      <div id="cAaviso"></div>
       <div class="draw" id="secA"></div>
     </div>
     <div class="sheet">
@@ -191,6 +193,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <p class="cap">Linha de corte na vertical da planta (ou paralela a um lado do lote), olhando para a direita.</p>
       <label style="font-size:13px">Direção da linha<select id="cBdir"></select></label>
       <label class="slide">Posição (m)<input type="range" id="cBr" step="0.05"><input type="number" id="cBn" step="0.05"></label>
+      <div class="row" style="gap:10px;flex-wrap:wrap;margin:6px 0"><label style="font-size:13px">Corte costurado<select id="cBcost"><option value="não">Não (linha reta)</option><option value="sim">Sim (dobra para passar por outro ambiente)</option></select></label><label style="font-size:13px" data-cost="B">Segundo ambiente<select id="cBamb2"></select></label><button class="btn" data-banco="B">Passar pelo banheiro</button></div>
+      <div id="cBaviso"></div>
       <div class="draw" id="secB"></div>
     </div>
     <div class="sheet">
@@ -696,7 +700,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.45 · volumes: pé-direito e telhado por parte da casa", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.46 · corte pelo banheiro e corte costurado", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1242,9 +1246,25 @@ function frameCorte(G,q){ const A=q==="A", v=String((A?S.cAdir:S.cBdir)||"");
 function faixaCasa(G,v){ const pts=(G.casas&&G.casas.length?G.casas.flat():[[G.bb.x0,G.bb.y0],[G.bb.x1,G.bb.y0],[G.bb.x1,G.bb.y1],[G.bb.x0,G.bb.y1]]).map(p=>p[0]*v[0]+p[1]*v[1]);
   return [Math.min(...pts),Math.max(...pts)]; }
 function faixaPosCorte(G,q){ const F=frameCorte(G,q), bb=G.bb; return F.ax?(q==="A"?[bb.y0,bb.y1]:[bb.x0,bb.x1]):faixaCasa(G,F.n); }
+// banheiro por onde o corte passa sozinho: o maior no corte A, outro (se houver) no corte B
+function banheiroDoCorte(G,q){ const bs=G.rooms.filter(r=>ehBanho(r.n)).sort((p,q2)=>q2.area-p.area); if(!bs.length) return null; return q==="B"&&bs.length>1?bs[1]:bs[0]; }
+const centroN=(r,n)=>{ const vs=r.poly.map(p=>p[0]*n[0]+p[1]*n[1]); return (Math.min(...vs)+Math.max(...vs))/2; };
+const faixaD=(r,d)=>{ const vs=r.poly.map(p=>p[0]*d[0]+p[1]*d[1]); return [Math.min(...vs),Math.max(...vs)]; };
+// trechos do corte: um só, ou costurado (dobra para passar também por outro ambiente: pé-direito diferente, escada...)
+function pecasCorte(G,q){ const A=q==="A", F=frameCorte(G,q), c1=posCorte(G,q), un=[{a:-1e9,b:1e9,c:c1}];
+  if((A?S.cAcost:S.cBcost)!=="sim"||!F.ax) return un;
+  const nm=String((A?S.cAamb2:S.cBamb2)||"").trim().toLowerCase(), vs=volumesTel(G), naLin=r=>naLinha(r.poly,F,c1).length>0;
+  let r2=nm?G.rooms.find(r=>r.n.toLowerCase()===nm):null;
+  if(!r2){ const cand=G.rooms.filter(r=>!naLin(r)&&!ehBanho(r.n)); r2=vs?cand.sort((p,q2)=>pdAmb(G,q2)-pdAmb(G,p)||q2.area-p.area)[0]:cand.sort((p,q2)=>q2.area-p.area)[0]; }
+  if(!r2||naLin(r2)) return un;
+  const lim=G.h+0.05; let c2=centroN(r2,F.n); const ax=G.orto.filter(w=>A?w.hz:w.vt).map(w=>A?w.y1:w.x1); for(let n=0;n<12&&ax.some(a=>Math.abs(a-c2)<lim);n++) c2+=G.h+0.05;
+  // onde dobra: entre os dois ambientes ao longo da linha (pela parte do ambiente cortado que fica do lado do outro)
+  const sAt=G.rooms.filter(r=>naLin(r)), b=banheiroDoCorte(G,q)||sAt[0], [b0,b1]=b?faixaD(b,F.d):[0,0], [r0,r1]=faixaD(r2,F.d);
+  let uj=r0>=b1?(b1+r0)/2:r1<=b0?(r1+b0)/2:(r0+r1)/2; const perp=G.orto.filter(w=>A?w.vt:w.hz).map(w=>A?w.x1:w.y1); for(let n=0;n<12&&perp.some(a=>Math.abs(a-uj)<lim);n++) uj+=0.25;
+  return r0>=b1||(r0+r1)/2>uj?[{a:-1e9,b:uj,c:c1},{a:uj,b:1e9,c:c2}]:[{a:-1e9,b:uj,c:c2},{a:uj,b:1e9,c:c1}]; }
 function posCorte(G,q){
   const A=q==="A", F=frameCorte(G,q), [lo,hi]=faixaPosCorte(G,q), v=A?S.cA:S.cB;
-  let c=(v===null||v===""||v===undefined)?(lo+hi)/2:num(v); c=Math.min(hi-0.02,Math.max(lo+0.02,c));
+  let c=(v===null||v===""||v===undefined)?(()=>{ const b=banheiroDoCorte(G,q); return b?centroN(b,F.n):(lo+hi)/2; })():num(v); c=Math.min(hi-0.02,Math.max(lo+0.02,c));   // sem posição escolhida: passa pelo banheiro (mostra a altura do azulejo)
   const ax=F.ax?G.orto.filter(w=>A?w.hz:w.vt).map(w=>A?w.y1:w.x1):G.walls.filter(w=>Math.abs(w.ux*F.n[0]+w.uy*F.n[1])<0.02).map(w=>w.x1*F.n[0]+w.y1*F.n[1]);   // paredes paralelas à linha
   const lim=F.ax?G.h+0.02:G.h+0.45, pas=F.ax?G.h+0.05:0.25;   // linha inclinada: fica mais longe das paredes paralelas a ela (senão parece andar por dentro da parede)
   for(let n=0;n<12&&ax.some(a=>Math.abs(a-c)<lim);n++) c+=pas;
@@ -1367,10 +1387,13 @@ function desenhoPlanta(G,k,ajuda){
     L(D,...P(e0),...P(e1),.35,"CORTE",true);
     [P(e0-r),P(e1+r)].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,q,2.2,{b:true,l:"CORTE"}); const bx=x+fv[0]*(r+0.4*k), by=y+fv[1]*(r+0.4*k);   // seta: lado para onde se olha
       PG(D,[[bx-d[0]*1.2*k,by-d[1]*1.2*k],[bx+d[0]*1.2*k,by+d[1]*1.2*k],[x+fv[0]*(r+2.6*k),y+fv[1]*(r+2.6*k)]],"CORTE"); }); });
-  if(frameCorte(G,"A").ax){ L(D,bb.x0-27*k,cA,bb.x1+27*k,cA,.35,"CORTE",true);
-  [[bb.x0-27*k-r,cA],[bb.x1+27*k+r,cA]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"A",2.2,{b:true,l:"CORTE"}); PG(D,[[x-1.2*k,y-r-0.4*k],[x+1.2*k,y-r-0.4*k],[x,y-r-2.6*k]],"CORTE"); }); }
-  if(frameCorte(G,"B").ax){ L(D,cB,bb.y0-27*k,cB,bb.y1+27*k,.35,"CORTE",true);
-  [[cB,bb.y0-27*k-r],[cB,bb.y1+27*k+r]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"B",2.2,{b:true,l:"CORTE"}); PG(D,[[x+r+0.4*k,y-1.2*k],[x+r+0.4*k,y+1.2*k],[x+r+2.6*k,y]],"CORTE"); }); }
+  const linhaCosturada=(q)=>{ const PCq=pecasCorte(G,q), Aq=q==="A", e0=(Aq?bb.x0:bb.y0)-27*k, e1=(Aq?bb.x1:bb.y1)+27*k, pts=[];   // costurado: a linha dobra entre os trechos
+    PCq.forEach((p0,i)=>{ const a=Math.max(e0,p0.a), b=Math.min(e1,p0.b); pts.push(Aq?[a,p0.c]:[p0.c,a],Aq?[b,p0.c]:[p0.c,b]); });
+    for(let i=0;i+1<pts.length;i++) L(D,...pts[i],...pts[i+1],.35,"CORTE",true); return [PCq[0].c,PCq[PCq.length-1].c]; };
+  if(frameCorte(G,"A").ax){ const [cA0,cA1]=linhaCosturada("A");
+  [[bb.x0-27*k-r,cA0],[bb.x1+27*k+r,cA1]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"A",2.2,{b:true,l:"CORTE"}); PG(D,[[x-1.2*k,y-r-0.4*k],[x+1.2*k,y-r-0.4*k],[x,y-r-2.6*k]],"CORTE"); }); }
+  if(frameCorte(G,"B").ax){ const [cB0,cB1]=linhaCosturada("B");
+  [[cB0,bb.y0-27*k-r],[cB1,bb.y1+27*k+r]].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,"B",2.2,{b:true,l:"CORTE"}); PG(D,[[x+r+0.4*k,y-1.2*k],[x+r+0.4*k,y+1.2*k],[x+r+2.6*k,y]],"CORTE"); }); }
   if(ajuda) G.walls.forEach(w=>TX(D,(w.x1+w.x2)/2,(w.y1+w.y2)/2,String(w.i+1),1.7,{b:true,l:"AJUDA"}));
   return D;
 }
@@ -1378,24 +1401,48 @@ function desenhoPlanta(G,k,ajuda){
 /* ---------------- Cortes AA e BB ---------------- */
 function desenhoCorte(G,k,q){
   const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
-  const A=q==="A", c=posCorte(G,q), h=G.h, pd=num(S.pd), lj=Math.max(0,num(S.laje)), ps=Math.max(0,num(S.piso)), TI=infoTelhado(G);
+  const A=q==="A", PC=pecasCorte(G,q), c=PC[0].c, cAt=u=>(PC.find(p0=>u>=p0.a&&u<p0.b)||PC[PC.length-1]).c, h=G.h, pd=num(S.pd), lj=Math.max(0,num(S.laje)), ps=Math.max(0,num(S.piso)), TI=infoTelhado(G);
   const F=frameCorte(G,q), fd=F.d, fn=F.n, W=(u,v)=>[u*fd[0]+v*fn[0],u*fd[1]+v*fn[1]];   // ponto da planta a u na linha e v na normal
-  const Y=z=>-z, zr=u=>TI.z(...W(u,c));
-  const ext=(u)=>{ const C=G.compAt(...W(u,c)); return C!==null&&(!C||C.ext); };
-  const cs=[]; G.walls.filter(w=>Math.abs(w.ux*fn[0]+w.uy*fn[1])>1e-6).flatMap(w=>naLinha(w.poly,F,c).map(([a,b])=>({a,b,ws:[w]}))).sort((p,q2)=>p.a-q2.a)
+  const porPeca=fz=>PC.flatMap(p0=>fz(p0.c).map(([a,b])=>[Math.max(a,p0.a),Math.min(b,p0.b)]).filter(([a,b])=>b-a>1e-6));   // corte costurado: cada trecho na sua linha
+  const Y=z=>-z, zr=u=>TI.z(...W(u,cAt(u)));
+  const ext=(u)=>{ const C=G.compAt(...W(u,cAt(u))); return C!==null&&(!C||C.ext); };
+  const cs=[]; G.walls.filter(w=>Math.abs(w.ux*fn[0]+w.uy*fn[1])>1e-6).flatMap(w=>porPeca(cc=>naLinha(w.poly,F,cc)).map(([a,b])=>({a,b,ws:[w]}))).sort((p,q2)=>p.a-q2.a)
     .forEach(x=>{ const l=cs[cs.length-1]; if(l&&x.a<=l.b+1e-6){ l.b=Math.max(l.b,x.b); l.ws.push(...x.ws); } else cs.push(x); });
   if(!cs.length){ TX(D,0,0,"A linha de corte não cruza nenhuma parede. Mude a posição.",3); return D; }
   const cR=[[TI.R.x0,TI.R.y0],[TI.R.x1,TI.R.y0],[TI.R.x1,TI.R.y1],[TI.R.x0,TI.R.y1]], pR=v=>cR.map(p=>p[0]*v[0]+p[1]*v[1]);
-  const runs=G.row(F,c), u0=Math.min(...pR(fd)), u1=Math.max(...pR(fd)), v0=Math.min(...pR(fn)), v1=Math.max(...pR(fn));
+  const runs=juntar(porPeca(cc=>G.row(F,cc))), u0=Math.min(...pR(fd)), u1=Math.max(...pR(fd)), v0=Math.min(...pR(fn)), v1=Math.max(...pR(fn));
   const uMin=cs[0].a, uMax=cs[cs.length-1].b;
   // terreno, contrapiso e laje
   L(D,Math.min(u0,uMin)-1.2,Y(-ps),Math.max(u1,uMax)+1.2,Y(-ps),.35,"TERRENO");
-  const salas=G.roomRuns(F,c), vOn=S.viga&&S.viga.on!=="não", hv=vOn?Math.min(Math.max(0,num(S.viga.h)),pd-0.5):0, zv=pd-hv;
+  const salas=PC.flatMap(p0=>G.roomRuns(F,p0.c).map(s0=>({...s0,u0:Math.max(s0.u0,p0.a),u1:Math.min(s0.u1,p0.b)})).filter(s0=>s0.u1-s0.u0>1e-6)), vOn=S.viga&&S.viga.on!=="não", hv=vOn?Math.min(Math.max(0,num(S.viga.h)),pd-0.5):0, zv=pd-hv;
   salas.forEach(({r,u0:a,u1:b})=>{ RF(D,a,Y(r.nv),b,Y(r.nv-0.10),"HACHURA"); L(D,a,Y(r.nv),b,Y(r.nv),.35,"PAREDE"); L(D,a,Y(r.nv-0.10),b,Y(r.nv-0.10),.18,"PAREDE"); });
-  const pdU=u=>TI.pdAt?TI.pdAt(...W(u,c)):pd, topoU=u=>TI.topoAt?TI.topoAt(...W(u,c)):TI.topoPlat;   // casa com volumes: pé-direito e platibanda de cada um
+  const pdU=u=>TI.pdAt?TI.pdAt(...W(u,cAt(u))):pd, topoU=u=>TI.topoAt?TI.topoAt(...W(u,cAt(u))):TI.topoPlat;   // casa com volumes: pé-direito e platibanda de cada um
   runs.forEach(([a,b])=>{ const N0=Math.max(2,Math.ceil((b-a)/0.05)), pcs=[]; for(let n=0;n<N0;n++){ const u=a+(b-a)*(n+0.5)/N0, p0=pdU(u), l0=pcs[pcs.length-1]; if(l0&&Math.abs(l0.pd-p0)<1e-6) l0.b=a+(b-a)*(n+1)/N0; else pcs.push({a:a+(b-a)*n/N0,b:a+(b-a)*(n+1)/N0,pd:p0}); }
     pcs.forEach(q=>{ if(lj>0) hachConcreto(D,q.a,Y(q.pd+lj),q.b,Y(q.pd)); else L(D,q.a,Y(q.pd),q.b,Y(q.pd),.35,"PAREDE"); }); });
-  const nvAt=u=>{ const C=G.compAt(...W(u,c)); return C&&!C.ext&&C.nv!==undefined?C.nv:0; };
+  const nomeCorte=(r,a,b)=>{ const t=r.n.toUpperCase(), w=(b-a)/k-1, h1=w/(largTexto(t,true)*1.39*1.05); if(h1>=1.3||!t.includes(" ")) return {ls:[t],hs:Math.max(1.0,Math.min(1.9,h1))};
+    const ps=t.split(" "), i=Math.max(1,Math.round(ps.length/2)), ls=[ps.slice(0,i).join(" "),ps.slice(i).join(" ")]; return {ls,hs:Math.max(1.0,Math.min(1.6,w/(Math.max(...ls.map(x=>largTexto(x,true)))*1.39*1.05)))}; };
+  const RV0=revParede(G), comAz=sl=>{ const rv=RV0.find(x=>x.r===sl.r); return !!(rv&&rv.h>0&&rv.re==="todas"); };
+  const pdTxt=[]; { const grupos={}; salas.forEach(sl=>{ const pv=TI.vols?pdAmb(G,sl.r):pd; (grupos[pv]=grupos[pv]||[]).push(sl); });
+    Object.entries(grupos).forEach(([pv,ls])=>{ const ord=ls.slice().sort((p0,q0)=>(comAz(p0)-comAz(q0))||((q0.u1-q0.u0)-(p0.u1-p0.u0))); const sl=ord[0]; if(sl&&(sl.u1-sl.u0>=1||!TI.vols)) pdTxt.push({sl,pv:+pv}); });
+    if(!TI.vols) pdTxt.splice(1); }   // casa sem volumes: um texto só
+  // revestimento cerâmico na parede do fundo de cada ambiente cortado (banheiro, cozinha, área de serviço): juntas e altura
+  { const RV=RV0, fv=[fd[1],-fd[0]], vistos=new Set();
+    salas.forEach(sl=>{ const rv=RV.find(x=>x.r===sl.r); if(!rv||!(rv.h>0)) return;
+      let spans=[[sl.u0,sl.u1]];
+      if(rv.re!=="todas"){ spans=(rv.faces||[]).filter(e=>e.N[0]*fv[0]+e.N[1]*fv[1]<-0.99).map(e=>{ const a=e.A[0]*fd[0]+e.A[1]*fd[1], b=a+e.Le*(e.u[0]*fd[0]+e.u[1]*fd[1]); return [Math.max(Math.min(a,b),sl.u0),Math.min(Math.max(a,b),sl.u1)]; }).filter(([a,b])=>b-a>0.05); }
+      const z0=sl.r.nv, z1=z0+rv.h, um=(sl.u0+sl.u1)/2, ate=rv.h>=rv.H-0.01?`ATÉ O FORRO (+${f(z1)})`:`ATÉ +${f(z1)}`, l1="REVEST. CERÂMICO", txt=`${l1} ${ate}`, yT=Y(z0+Math.min(rv.h*0.62,1.55));
+      // rótulo em duas linhas, na largura do ambiente (banheiro estreito: letra menor, até 0,9 mm)
+      const wL=(sl.u1-sl.u0)/k-2, fit=ls0=>wL/(Math.max(...ls0.map(x=>largTexto(x)))*1.39); let lsA=[l1,ate];
+      if(fit(lsA)<1.0) lsA=rv.h>=rv.H-0.01?["AZULEJO","ATÉ O FORRO",`+${f(z1)}`]:["AZULEJO",`ATÉ +${f(z1)}`];   // banheiro estreito: texto curto
+      const hs=Math.max(0.9,Math.min(1.3,fit(lsA))), yLs=lsA.map((_,j)=>yT+(j-(lsA.length-1)/2)*hs*1.5*k), temPd=pdTxt.some(o=>o.sl===sl), NC=nomeCorte(sl.r,sl.u0,sl.u1);
+      // respiro nas juntas em volta dos textos (nome, nível, pé-direito e o próprio rótulo)
+      const caixa=(cx,cy,t,hh,b0)=>{ const w=largTexto(t,b0)*hh*1.39*k/2+0.8*k; return [cx-w,cy-hh*0.9*k,cx+w,cy+hh*0.9*k]; };
+      const fur=[...NC.ls.map((t,j)=>caixa(um,Y(sl.r.nv)-7.2*k-(NC.ls.length-1-j)*NC.hs*1.5*k,t,NC.hs,true)),[um-3.5*k,Y(sl.r.nv)-4.6*k,um+3.5*k,Y(sl.r.nv)+0.5*k],...(temPd?[caixa(um,Y(pdAmb(G,sl.r)/2),"PÉ-DIREITO 0,00",1.6,false)]:[]),...lsA.map((t,j)=>caixa(um,yLs[j],t,hs,false))];
+      const dentro=(u,y)=>fur.some(([x0,y0,x1,y1])=>u>x0&&u<x1&&y>y0&&y<y1), hz=(a,b,y)=>{ let st=null; for(let n=0;n<=200;n++){ const u=a+(b-a)*n/200, ok=!dentro(u,y); if(ok&&st===null) st=u; if((!ok||n===200)&&st!==null){ const e2=ok?u:a+(b-a)*(n-1)/200; if(e2-st>1e-3) L(D,st,y,e2,y,.1,"PAGINA"); st=null; } } };
+      spans.forEach(([a,b])=>{ for(let z=z0+0.30;z<z1-0.02;z+=0.30) hz(a,b,Y(z)); let lin=0; for(let z=z0;z<z1-0.02;z+=0.30,lin++){ const zt=Math.min(z1,z+0.30); for(let u=a+(lin%2?0.30:0.60);u<b-0.02;u+=0.60){ if(dentro(u,(Y(z)+Y(zt))/2)) continue; L(D,u,Y(z),u,Y(zt),.1,"PAGINA"); } }
+        L(D,a,Y(z1),b,Y(z1),.3,"PAGINA");
+        if(!vistos.has(sl.r)&&b-a>0.6){ vistos.add(sl.r); lsA.forEach((t,j)=>TX(D,um,yLs[j],t,hs,{l:"COTAS"})); } }); }); }
+  const nvAt=u=>{ const C=G.compAt(...W(u,cAt(u))); return C&&!C.ext&&C.nv!==undefined?C.nv:0; };
   const menos=(segs,z0,z1)=>segs.flatMap(([a,b])=>b<=z0||a>=z1?[[a,b]]:[[a,Math.min(b,z0)],[Math.max(a,z1),b]].filter(([p,q2])=>q2-p>1e-6));
   // paredes cortadas (com portas e janelas)
   cs.forEach(({a:ua,b:ub,ws})=>{
@@ -1405,7 +1452,7 @@ function desenhoCorte(G,k,q){
     let topo=pdW; if(externa) topo=TI.plat?topoU(eL?ub+0.03:ua-0.03):naBorda?Math.max(pdW+lj,zr(eL?ua:ub)):pdW+lj;
     else if(pL!==null&&pR!==null&&Math.abs(pL-pR)>1e-6) topo=TI.plat?topoU(pL>pR?ua-0.03:ub+0.03):pdW+lj;   // parede entre volumes: sobe até a platibanda do mais alto
     const nvL=nvAt(ua-0.03), nvR=nvAt(ub+0.03), base=externa?-ps:Math.min(0,nvL,nvR)-0.10;
-    const g=G.abs.find(g=>{ if(!ws.includes(g.w)) return false; const sc=(c-(g.w.x1*fn[0]+g.w.y1*fn[1]))/(g.w.ux*fn[0]+g.w.uy*fn[1]); return sc>=g.d-1e-6&&sc<=g.d+g.l+1e-6; });
+    const g=G.abs.find(g=>{ if(!ws.includes(g.w)) return false; const sc=(cAt(um)-(g.w.x1*fn[0]+g.w.y1*fn[1]))/(g.w.ux*fn[0]+g.w.uy*fn[1]); return sc>=g.d-1e-6&&sc<=g.d+g.l+1e-6; });
     const peds=[];
     if(!g) peds.push([base,topo]);
     else if(g.tipo==="Janela"){ const p0=num(g.a.p), p1=Math.min(vOn?zvW:topo,p0+(num(g.a.a)||1)); peds.push([base,p0],[p1,topo]);
@@ -1426,7 +1473,7 @@ function desenhoCorte(G,k,q){
   // calhas cortadas: onde a linha de corte atravessa uma calha (platibanda: junto da face de dentro; beiral: na ponta do beiral)
   const cortadas=[]; { const CLc=TI.plat?calhasPlat(G,TI):calhasBeiral(G,TI), uc=(u0+u1)/2;
     if(CLc) CLc.lista.forEach(cl=>{ const [x0,y0,x1,y1]=cl.seg, dd=(x1-x0)*fn[0]+(y1-y0)*fn[1]; if(Math.abs(dd)<1e-6) return;   // calha paralela ao corte: não é cortada
-      const t=(c-(x0*fn[0]+y0*fn[1]))/dd; if(t<-0.01||t>1.01) return; const u=(x0+(x1-x0)*t)*fd[0]+(y0+(y1-y0)*t)*fd[1];
+      let t=null, u=null; for(const p0 of PC){ const t0=(p0.c-(x0*fn[0]+y0*fn[1]))/dd; if(t0<-0.01||t0>1.01) continue; const u0_=(x0+(x1-x0)*t0)*fd[0]+(y0+(y1-y0)*t0)*fd[1]; if(u0_<p0.a-0.01||u0_>p0.b+0.01) continue; t=t0; u=u0_; break; } if(t===null) return;
       if(cortadas.some(v=>Math.abs(v.u-u)<0.3)) return;
       const b=cl.b, h=cl.h, sIn=u<uc?1:-1; let ua, ub, zt;
       if(TI.plat){ const uf=u-sIn*0.25; ua=uf; ub=uf+sIn*b; zt=Math.max(pdU(ub)+lj+0.02+h,zr(ub)+0.03); }   // fundo apoiado sobre a laje, junto da platibanda; a ponta do telhado descarrega dentro dela
@@ -1434,7 +1481,7 @@ function desenhoCorte(G,k,q){
       cortadas.push({u,ua,ub,zt,zb:zt-h,b,h,cl,ic:CLc.ic}); }); }
   const corta=(a,b)=>{ if(!TI.plat) return [a,b]; cortadas.forEach(x=>{ const lo=Math.min(x.ua,x.ub), hi=Math.max(x.ua,x.ub); if(Math.abs(lo-a)<0.4) a=Math.max(a,hi-0.05); if(Math.abs(hi-b)<0.4) b=Math.min(b,lo+0.05); }); return [a,b]; };
   // telhado cortado: o trecho todo (com beiral) ou, com platibanda no contorno real, só dentro do caixote (entrando 5 cm na calha)
-  (TI.vols||[TI]).forEach(tv=>(tv.poly?naLinha(tv.poly,F,c):[[u0,u1]]).map(([a,b])=>corta(a,b)).forEach(([a,b])=>{ const pr=[]; for(let n=0;n<=120;n++){ const u=a+(b-a)*n/120; pr.push([u,Y(tv.z(...W(u,c)))]); }
+  (TI.vols||[TI]).forEach(tv=>(tv.poly?porPeca(cc=>naLinha(tv.poly,F,cc)):[[u0,u1]]).map(([a,b])=>corta(a,b)).forEach(([a,b])=>{ const pr=[]; for(let n=0;n<=120;n++){ const u=a+(b-a)*n/120; pr.push([u,Y(tv.z(...W(u,cAt(u))))]); }
     const sp=simp(pr); PL(D,sp,.5,"TELHADO"); PL(D,sp.map(([u,y])=>[u,y-et]),.25,"TELHADO");
     L(D,sp[0][0],sp[0][1],sp[0][0],sp[0][1]-et,.25,"TELHADO"); L(D,sp[sp.length-1][0],sp[sp.length-1][1],sp[sp.length-1][0],sp[sp.length-1][1]-et,.25,"TELHADO"); }));
   cortadas.forEach(({ua,ub,zt,zb,b,h,cl,ic})=>{ PL(D,[[ua,Y(zt)],[ua,Y(zb)],[ub,Y(zb)],[ub,Y(zt)]],.45,"TELHADO");
@@ -1444,7 +1491,7 @@ function desenhoCorte(G,k,q){
       TX(D,ux+sg*1*k,Y(zl)+2.4*k,`i=${f(ic*100,1)}% · AP Ø${Math.max(75,cl.dia)}`,1.2,{a:sg>0?"s":"e",l:"COTAS",mv:"l"}); });
   // nomes dos ambientes
   // nome do ambiente e, logo abaixo, o nível do piso dele
-  salas.forEach(({r,u0:a,u1:b})=>{ if(b-a<0.4) return; TX(D,(a+b)/2,Y(r.nv)-7.2*k,r.n.toUpperCase(),Math.max(1.3,Math.min(1.9,(b-a)/k/(largTexto(r.n.toUpperCase(),true)*1.39*1.05))),{b:true,mv:"r"}); nivelInt(D,(a+b)/2,Y(r.nv),fNv(r.nv)); });
+  salas.forEach(({r,u0:a,u1:b})=>{ if(b-a<0.4) return; const NC=nomeCorte(r,a,b); NC.ls.forEach((t,j)=>TX(D,(a+b)/2,Y(r.nv)-7.2*k-(NC.ls.length-1-j)*NC.hs*1.5*k,t,NC.hs,{b:true,mv:"r"})); nivelInt(D,(a+b)/2,Y(r.nv),fNv(r.nv)); });
   // cotas verticais, níveis e cota horizontal
   const pdsC=TI.vols?uniq(salas.map(s0=>pdAmb(G,s0.r))).sort((p,q)=>p-q):[pd], tops=TI.vols?uniq(cs.map(x=>topoU((x.a+x.b)/2))):[];
   const zTop=TI.plat?(TI.vols?Math.max(...tops,...pdsC):TI.topoPlat):Math.max(TI.H0,...sil.map(p=>-p[1]));
@@ -1453,8 +1500,7 @@ function desenhoCorte(G,k,q){
   const xn=Math.max(u1,uMax)+3*k;
   nivel(D,xn,Y(0),"±0,00"); pdsC.forEach(v=>nivel(D,xn,Y(v),"+"+f(v))); tops.filter(v=>Math.abs(v-zTop)>0.01).forEach(v=>nivel(D,xn,Y(v),"+"+f(v))); nivel(D,xn,Y(zTop),"+"+f(zTop)); if(ps>0) nivel(D,xn,Y(-ps),"-"+f(ps),true);
   const rr=[...salas].sort((p,q2)=>(q2.u1-q2.u0)-(p.u1-p.u0))[0];
-  if(TI.vols){ const vistos=new Set(); salas.forEach(sl=>{ const pv=pdAmb(G,sl.r); if(vistos.has(pv)||sl.u1-sl.u0<1) return; vistos.add(pv); TX(D,(sl.u0+sl.u1)/2,Y(pv/2),`PÉ-DIREITO ${f(pv-sl.r.nv)}`,1.6,{l:"COTAS",mv:"l"}); }); }   // um texto por altura
-  else if(rr) TX(D,(rr.u0+rr.u1)/2,Y(pd/2),`PÉ-DIREITO ${f(pd-rr.r.nv)}`,1.6,{l:"COTAS",mv:"l"});
+  pdTxt.forEach(({sl,pv})=>TX(D,(sl.u0+sl.u1)/2,Y(pv/2),`PÉ-DIREITO ${f(pv-sl.r.nv)}`,1.6,{l:"COTAS",mv:"l"}));   // um texto por altura, fora do azulejo
   // viga vista: a cinta da parede do fundo aparece como faixa (sem hachura) em cada ambiente
   if(vOn&&hv>0){
     salas.forEach(({r:r0,u0:a,u1:b})=>{ const z0=(TI.vols?pdAmb(G,r0):pd)-hv; L(D,a,Y(z0),b,Y(z0),.25,"PAREDE"); });
@@ -4390,7 +4436,7 @@ function render(){
     $("sec"+q).innerHTML=svgDe(desenhoCorte(G,k,q)); });
   // cobertura
   $("roofTypes").innerHTML=[1,2,3,4].map(tp=>`<button type="button" data-tipo="${tp}" aria-pressed="${TI.tipo===tp}">${iconeTelhado(tp)}${tp} ${tp===1?"água":"águas"}</button>`).join("");
-  renderVols(G);
+  renderVols(G); renderCortesOp(G);
   $("telCheck").innerHTML=verificaTelhado(G).map(x=>`<div class="alert ${x.ok?"ok":"warn"}">${x.ok?"OK: ":"Atenção: "}${esc(x.t)}</div>`).join("");
   const ds=[...DIRS[TI.tipo],...(TI.tipo===1&&TI.plat?ladosCaimento(G).map(o=>[o.v,o.txt]):[])]; $("tel.dir").innerHTML=ds.map(([v,t])=>`<option value="${v}"${v===(S.tel.dir||"")?" selected":""}>${t}</option>`).join("");
   $("lblDir").hidden=TI.tipo===4; $("lblBeiral").hidden=TI.plat; document.querySelectorAll("[data-soplat]").forEach(e=>e.hidden=!TI.plat); { const fb=/Fibrocimento|Metálica|Termoac/.test(S.tel.telha)&&TI.tipo===1; document.querySelectorAll("[data-sofibro]").forEach(e=>e.hidden=!fb); document.querySelectorAll("[data-sovig]").forEach(e=>e.hidden=!(fb&&S.tel.estr==="vigota")); }
@@ -4627,8 +4673,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["est.tCota","est.tNome","est.tArea","est.lPar","est.lCota","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["cAcost","cBcost","cAamb2","cBamb2","est.tCota","est.tNome","est.tArea","est.lPar","est.lCota","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["cAcost","cBcost","cAamb2","cBamb2","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
   const tb=$("ladosTab"), foco=document.activeElement&&tb.contains(document.activeElement)?[document.activeElement.dataset.li,document.activeElement.dataset.lc]:null;
@@ -4690,6 +4736,14 @@ $("addA").onclick=()=>{S.ab.push({n:"",t:"Janela",w:0,d:0.5,l:1.2,a:1.0,p:1.1});
 
 
 
+
+// aba Cortes: costurado, segundo ambiente e aviso quando o corte não passa por banheiro
+function renderCortesOp(G){ ["A","B"].forEach(q=>{ const sel=$(`c${q}amb2`); if(!sel) return; const v=(q==="A"?S.cAamb2:S.cBamb2)||"";
+    sel.innerHTML=`<option value="">Automático (pé-direito diferente ou o maior)</option>`+G.rooms.map(r=>`<option value="${esc(r.n)}"${r.n===v?" selected":""}>${esc(r.n)}</option>`).join("");
+    const cs=$(`c${q}cost`); if(cs) cs.value=(q==="A"?S.cAcost:S.cBcost)==="sim"?"sim":"não"; document.querySelectorAll(`[data-cost="${q}"]`).forEach(e=>e.hidden=cs&&cs.value!=="sim");
+    const av=$(`c${q}aviso`); if(!av||G.vazio) return; const F=frameCorte(G,q), PC=pecasCorte(G,q), passa=G.rooms.filter(r=>ehBanho(r.n)).some(r=>PC.some(p0=>naLinha(r.poly,F,p0.c).some(([a,b])=>Math.min(b,p0.b)-Math.max(a,p0.a)>0.05)));
+    av.innerHTML=G.rooms.some(r=>ehBanho(r.n))&&!passa?`<div class="alert warn">Este corte não passa por nenhum banheiro: a altura do azulejo não aparece. Toque em <b>Passar pelo banheiro</b>.</div>`:""; }); }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-banco]"); if(!b) return; const q=b.dataset.banco; if(q==="A") S.cA=null; else S.cB=null; save(); render(); });
 /* ---------------- volumes (pé-direito e telhado por parte da casa) ---------------- */
 const DIR1=[["dir","Cai para a direita"],["esq","Cai para a esquerda"],["cima","Cai para cima na planta (fundo)"],["baixo","Cai para baixo na planta (frente)"]], DIR2=[["v","Uma água para cada lado (esquerda e direita)"],["h","Uma água para frente e outra para o fundo"]];
 function renderVols(G){ const el=$("volBox"); if(!el) return; const vs=Array.isArray(S.vols)?S.vols:[], amb=[...G.rooms,...(G.pisos||[])].map(r=>r.n), ativo=volumesTel(G);
@@ -5178,7 +5232,7 @@ function textosLado(P,lado,fl){
     :{t:"RECUOS",cols:[["RECUO",0],["m",1]],rows:[["Frontal",f(Tr.rec.frente)],["Lateral esquerdo",f(Tr.rec.esq)],["Lateral direito",f(Tr.rec.dir)],["Fundos",f(Tr.rec.fundo)]]},
     ...(fl.QD?[tabConf(fl.QD)]:[])]; }
   if(lado==="fachadas") return [{t:"NOTAS",linhas:[`Frente da casa: ${{baixo:"lado de baixo",cima:"lado de cima",esq:"lado esquerdo",dir:"lado direito"}[S.frente]||"lado de baixo"} da planta baixa.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}`+(TI.plat?", escondido por platibanda.":`, beiral ${f(TI.b)} m.`),`Esquadrias conforme quadro da prancha 01 (códigos P, J e V).`,`Níveis em metros a partir do piso acabado (±0,00).`]}];
-  if(lado==="alturas") return [{t:"NOTAS",linhas:[`Pé-direito: ${f(pd)} m.`,...(S.viga.on!=="não"?[`Viga/cinta de concreto ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm no topo das paredes${num(S.laje)>0?", sob a laje":""}. Concreto cortado em cinza escuro.`]:[]),`Níveis de piso: ${G.rooms.map(r=>`${r.n} ${fNv(r.nv)}`).join("; ")}.`,num(S.laje)>0?`Laje: ${f(num(S.laje))} m. Piso a ${f(num(S.piso))} m do terreno.`:`Sem laje: forro sob o telhado, apoiado na cinta. Piso a ${f(num(S.piso))} m do terreno.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}, i = ${f(num(S.tel.inc),0)}%.`,`Paredes com ${f(G.t)} m de espessura.`,`Cotas e níveis em metros. Conferir as medidas na obra.`]}];
+  if(lado==="alturas") return [{t:"NOTAS",linhas:[(()=>{ const vs=volumesTel(G); return vs?`Pé-direito por volume: ${vs.map(v=>`${v.V.n||"volume"} ${f(num(v.V.pd))} m`).join("; ")}.`:`Pé-direito: ${f(pd)} m.`; })(),...((S.cAcost==="sim"||S.cBcost==="sim")?["Corte costurado: a linha de corte dobra na planta para passar pelos dois ambientes indicados."]:[]),"Revestimento cerâmico das áreas molhadas indicado na parede do fundo do corte (juntas e altura).",...(S.viga.on!=="não"?[`Viga/cinta de concreto ${f(G.t*100,0)}x${f(num(S.viga.h)*100,0)} cm no topo das paredes${num(S.laje)>0?", sob a laje":""}. Concreto cortado em cinza escuro.`]:[]),`Níveis de piso: ${G.rooms.map(r=>`${r.n} ${fNv(r.nv)}`).join("; ")}.`,num(S.laje)>0?`Laje: ${f(num(S.laje))} m. Piso a ${f(num(S.piso))} m do terreno.`:`Sem laje: forro sob o telhado, apoiado na cinta. Piso a ${f(num(S.piso))} m do terreno.`,`Telhado em ${TI.nome}, ${String(S.tel.telha).toLowerCase()}, i = ${f(num(S.tel.inc),0)}%.`,`Paredes com ${f(G.t)} m de espessura.`,`Cotas e níveis em metros. Conferir as medidas na obra.`]}];
   const CLp=calhasPlat(G,TI); if(CLp) return [{t:"CALHAS (NBR 10844)",cols:[["CALHA",0],["COMPR.",1],["ÁREA",1],["VAZÃO",1],["SEÇÃO",1],["CONDUTORES",1]],pc:[0.13,0.14,0.15,0.18,0.16,0.24],
       rows:CLp.lista.map(c=>[c.nome,`${f(c.L)} m`,`${f(c.A,1)} m²`,`${f(c.Q,0)} L/min`,`${f(c.b*100,0)}x${f(c.h*100,0)}`,`${c.nC} x Ø${c.dia}`])},{t:"NOTAS DA CALHA",linhas:notasCalha(CLp).slice(0,4)}];
   return [{t:"COBERTURA",linhas:[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}.`,`Inclinação ${f(num(S.tel.inc),0)}%.`+(TI.plat?" Platibanda com calha.":` Beiral ${f(TI.b)} m.`),`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`,(TI.Lcum?`Cumeeira: ${f(TI.Lcum)} m.`:"")+(TI.Lesp?` Espigões: ${f(TI.Lesp)} m.`:""),`Altura máxima: ${f(TI.plat?TI.topoPlat:TI.zmax)} m acima do piso.`].filter(Boolean)}];
