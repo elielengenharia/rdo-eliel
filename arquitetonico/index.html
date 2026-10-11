@@ -712,7 +712,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.53 · todos os tipos de porta e janela", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.54 · portas abrem para dentro dos quartos e banheiros", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -957,12 +957,13 @@ function geom(todas=false){
   G.retangular=casas.length===1&&Math.abs((bb.x1-bb.x0)*(bb.y1-bb.y0)-G.areaC)<0.01;
   G.row=(q,c)=>juntar(casas.flatMap(P=>naLinha(P,q,c)));
   G.roomRuns=(q,c)=>rooms.flatMap(r=>naLinha(r.poly,q,c).map(([a,b])=>({r,u0:a,u1:b})));
-  // lado de abertura das portas: abre para dentro da casa; entre ambientes, para o menor
+  // lado de abertura das portas: abre para dentro da casa; entre ambientes, para dentro do banheiro/quarto (não para o hall); empate: para o menor
   abs.forEach(g=>{
     const mx=(g.p0[0]+g.p1[0])/2, my=(g.p0[1]+g.p1[1])/2, off=h+0.12;
     const A=G.compAt(mx+g.nX*off,my+g.nY*off), B=G.compAt(mx-g.nX*off,my-g.nY*off);
     const ea=!A||A.ext, eb=!B||B.ext; let s=1;
-    if(ea&&!eb) s=-1; else if(eb&&!ea) s=1; else if(!ea&&!eb) s=A.area<=B.area?1:-1;
+    const prio=C=>{ const n=String(C.n||""); return /banh|lavabo|\bwc\b|sanit/i.test(n)?3:/quarto|su[ií]te|closet|dormit|escrit|home|dep[oó]sito|despensa|estudo/i.test(n)?2:/hall|corredor|circula|varanda|garagem|sala|estar|cozinha|jantar|copa/i.test(n)?0:1; };   /* abre para dentro do quarto/banheiro, nunca para o corredor */
+    if(ea&&!eb) s=-1; else if(eb&&!ea) s=1; else if(!ea&&!eb){ const pa=prio(A), pb=prio(B); s=pa!==pb?(pa>pb?1:-1):A.area<=B.area?1:-1; }
     if(g.a.inv) s=-s; g.lado=s; g.externa=ea||eb;
   });
   return G;
