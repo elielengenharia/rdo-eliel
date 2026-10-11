@@ -616,6 +616,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
           <label>Layer das esquadrias (janelas e portas de correr)<select id="impEsq"></select></label>
           <label>Layer dos nomes dos ambientes<select id="impTxt"></select></label>
           <label>Layer do lote<select id="impLote"></select></label>
+          <label>Layer do limite de piso (garagem, varanda, soleira)<select id="impPiso"></select></label>
           <label>Unidade do desenho<select id="impUnit"><option value="1">metros</option><option value="0.01">centímetros</option><option value="0.001">milímetros</option></select></label>
         </div>
         <p class="cap" style="margin:6px 0 0">O app escolhe sozinho pelos nomes dos layers (PAREDE, ESQUADRIA/ESQUADRILHA, TEXTO, LOTE...). Buraco na parede com o desenho da esquadria vira janela (linhas de ponta a ponta) ou porta de correr (folhas); sem esquadria vira porta de abrir, ou vão livre a partir de 1,30 m.</p>
@@ -690,7 +691,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.43 · móveis e louças no lugar que o profissional escolher", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.44 · limite de piso: garagem e varanda 5 cm abaixo", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -753,7 +754,7 @@ function modeloSalas(){ const o=defaults();
   o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua lateral (o terreno cai para ela)
   return o; }
 // estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
-function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); if(S.emp==="Eliel Ribeiro Engenharia") S.emp="Eliel Engenharia"; /* nome fantasia no carimbo */ S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto"},o.fossa||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim"},o.estS||{}); S.est=Object.assign({tCota:1.8,tNome:2.2,tArea:1.7,lPar:0.5,lCota:0.18,marca:"traco"},o.est||{}); }catch(e){ S=defaults(); } return S; }
+function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); if(S.emp==="Eliel Ribeiro Engenharia") S.emp="Eliel Engenharia"; /* nome fantasia no carimbo */ S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto"},o.fossa||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim"},o.estS||{}); S.lims=Array.isArray(o.lims)?o.lims:[]; S.est=Object.assign({tCota:1.8,tNome:2.2,tArea:1.7,lPar:0.5,lCota:0.18,marca:"traco"},o.est||{}); }catch(e){ S=defaults(); } return S; }
 let _o0=null; try{ _o0=JSON.parse(localStorage.getItem("arq-casa-v1")); }catch(e){} S=estadoDe(_o0||{});
 /* vários projetos no mesmo aparelho: a lista fica em arq-projetos-v1; o aberto continua em arq-casa-v1 */
 const PJ_KEY="arq-projetos-v1";
@@ -830,6 +831,30 @@ function pontoTexto(P){
    faces das paredes; os contornos internos fechados são os ambientes, com
    a área exata (retângulo, trapézio, chanfro, L...).
    ====================================================================== */
+// áreas de piso externas: faces fechadas pelo contorno de fora das paredes e pelas linhas de limite de piso
+function pisosExt(ext,lims,casas){
+  const segs=[...ext,...lims].map(s=>[[s[0],s[1]],[s[2],s[3]]]).filter(([a,b])=>Math.hypot(b[0]-a[0],b[1]-a[1])>0.005), tol=0.015;
+  const ehLim=new Set(); const limS=lims.map(s=>[[s[0],s[1]],[s[2],s[3]]]);
+  // parte cada segmento nas pontas dos outros e nos cruzamentos
+  const pts=segs.flat(), cort=[];
+  segs.forEach(([a,b],i)=>{ const dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy, ts=[0,1];
+    pts.forEach(p=>{ const t=((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2; if(t<=1e-4||t>=1-1e-4) return; const q=[a[0]+dx*t,a[1]+dy*t]; if(Math.hypot(q[0]-p[0],q[1]-p[1])<tol) ts.push(t); });
+    segs.forEach(([c,d],j)=>{ if(i===j) return; const ex=d[0]-c[0], ey=d[1]-c[1], den=dx*ey-dy*ex; if(Math.abs(den)<1e-12) return; const t=((c[0]-a[0])*ey-(c[1]-a[1])*ex)/den, u=((c[0]-a[0])*dy-(c[1]-a[1])*dx)/den; if(t>1e-4&&t<1-1e-4&&u>-1e-4&&u<1+1e-4) ts.push(t); });
+    ts.sort((p,q)=>p-q); for(let m=0;m+1<ts.length;m++) if(ts[m+1]-ts[m]>1e-4) cort.push([[a[0]+dx*ts[m],a[1]+dy*ts[m]],[a[0]+dx*ts[m+1],a[1]+dy*ts[m+1]],i>=ext.length]); });
+  const V=new Map(), nb=new Map(); let nid=0;   // pontos a menos de 8 mm viram o mesmo nó (arredondar na grade separa 13,375 de 13,3749)
+  const no=p=>{ for(const [k0,q] of V) if(Math.abs(q[0]-p[0])<0.008&&Math.abs(q[1]-p[1])<0.008) return k0; const k0="n"+(nid++); V.set(k0,p); nb.set(k0,new Set()); return k0; };
+  const eLim=new Set();
+  cort.forEach(([a,b,lim])=>{ const ka=no(a), kb=no(b); if(ka===kb) return; nb.get(ka).add(kb); nb.get(kb).add(ka); if(lim){ eLim.add(ka+"|"+kb); eLim.add(kb+"|"+ka); } });
+  const ang=(k0,k1)=>{ const a=V.get(k0), b=V.get(k1); return Math.atan2(b[1]-a[1],b[0]-a[0]); };
+  const ord=new Map(); nb.forEach((s0,k0)=>ord.set(k0,[...s0].sort((p,q)=>ang(k0,p)-ang(k0,q))));
+  const usado=new Set(), faces=[];
+  nb.forEach((s0,k0)=>s0.forEach(k1=>{ if(usado.has(k0+"|"+k1)) return; const cyc=[]; let a=k0, b=k1, temLim=false, g=0;
+    while(!usado.has(a+"|"+b)&&g++<5000){ usado.add(a+"|"+b); if(eLim.has(a+"|"+b)) temLim=true; cyc.push(V.get(a)); const L0=ord.get(b), i=L0.indexOf(a), c=L0[(i-1+L0.length)%L0.length]; a=b; b=c; }
+    if(cyc.length>=3) faces.push({P:cyc,temLim}); }));
+  return faces.filter(F=>F.temLim).map(F=>{ const A=areaS(F.P); return {...F,A}; }).filter(F=>Math.abs(F.A)>=0.5).filter(F=>{ const c=pontoTexto(F.P); return pip(F.P,c[0],c[1])&&!casas.some(P=>pip(P,c[0],c[1])); })
+    .sort((p,q)=>Math.abs(p.A)-Math.abs(q.A)).filter((F,i,arr)=>Math.abs(F.A)<5000&&!arr.slice(0,i).some(G0=>Math.abs(Math.abs(G0.A)-Math.abs(F.A))<1e-6&&G0.P.length===F.P.length))
+    .map(F=>{ const P=F.P, xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), [cx,cy]=pontoTexto(P);
+      return {poly:P,area:Math.abs(F.A),per:perim(P),x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys),cx,cy,piso:true,ext:true}; }); }
 function geom(todas=false){
   const t=Math.max(0.05,num(S.esp)), h=t/2;
   const walls=[];
@@ -889,6 +914,9 @@ function geom(todas=false){
     return {poly:P,area:Math.abs(areaS(P)),per:perim(P),x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys),ext:false}; }).filter(r=>r.area>=0.3);
   const naParede=(x,y)=>walls.some(w=>pip(w.poly,x,y));
   G.compAt=(x,y)=>{ const r=rooms.find(r=>pip(r.poly,x,y)); if(r) return r; if(naParede(x,y)) return null; return casas.some(P=>pip(P,x,y))?null:{ext:true}; };
+  // limites de piso (S.lims): garagem, varanda... fecham com as paredes uma área de piso fora da casa, sem virar parede
+  G.pisos=[]; if(Array.isArray(S.lims)&&S.lims.length){ try{ G.pisos=pisosExt(G.contExt,S.lims.map(l=>[num(l.x1),num(l.y1),num(l.x2),num(l.y2)]),casas); }catch(e){ G.pisos=[]; } }
+  G.pisos.forEach(r=>{ r.labIdx=S.rooms.findIndex(q=>pip(r.poly,num(q.x),num(q.y))); const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; r.n=lab?String(lab.n||"").trim():""; r.nv=lab&&lab.nv!==undefined&&lab.nv!==""?num(lab.nv):-0.05; if(!r.n) r.n="Área externa"; });
   rooms.forEach(r=>{
     [r.cx,r.cy]=pontoTexto(r.poly);
     r.ret=r.poly.length===4&&r.poly.every((p,i)=>{ const q=r.poly[(i+1)%4]; return Math.abs(p[0]-q[0])<1e-6||Math.abs(p[1]-q[1])<1e-6; });
@@ -898,7 +926,7 @@ function geom(todas=false){
   });
   // nomes que ficaram fora de todos os ambientes ou empilhados no mesmo ponto (ex.: todos em 1,00 x 1,00): vão para os ambientes sem nome
   // banheiro/lavabo/WC no menor; os outros na ordem da lista, da esquerda para a direita; o ponto do nome é gravado no lugar certo
-  { const usados=new Set(rooms.map(r=>r.labIdx)), orf=S.rooms.map((q,j)=>({q,j})).filter(({q,j})=>String(q.n||"").trim()&&!usados.has(j)), livres=rooms.filter(r=>r.labIdx<0);   // fora de tudo ou repetido num ambiente que já tem nome
+  { const usados=new Set([...rooms.map(r=>r.labIdx),...G.pisos.map(r=>r.labIdx)]), orf=S.rooms.map((q,j)=>({q,j})).filter(({q,j})=>String(q.n||"").trim()&&!usados.has(j)), livres=rooms.filter(r=>r.labIdx<0);   // fora de tudo ou repetido num ambiente que já tem nome
     if(orf.length&&livres.length){ const usa=(o,r)=>{ const c=pontoTexto(r.poly); o.q.x=+c[0].toFixed(2); o.q.y=+c[1].toFixed(2); r.labIdx=o.j; r.n=String(o.q.n).trim(); r.nv=num(o.q.nv); livres.splice(livres.indexOf(r),1); };
       orf.filter(o=>/banh|lavabo|\bwc\b|sanit/i.test(o.q.n)).forEach(o=>{ if(livres.length) usa(o,livres.reduce((a,b)=>b.area<a.area?b:a)); });
       orf.filter(o=>!/banh|lavabo|\bwc\b|sanit/i.test(o.q.n)).forEach(o=>{ if(livres.length) usa(o,[...livres].sort((a,b)=>Math.abs(a.cx-b.cx)>0.3?a.cx-b.cx:a.cy-b.cy)[0]); }); } }
@@ -1269,6 +1297,7 @@ function desenhoPlanta(G,k,ajuda){
       const ts=uniq([0,e.Lr,...e.soltas.flatMap(o=>[o.t0,o.t1])].filter(t=>t>=-0.001&&t<=e.Lr+0.001)).sort((p,q)=>p-q);
       cadeiaAlinhada(D,e.a,e.u,e.n,ts,3,true); }); });
   desenhaAberturas(D,G,G.abs);
+  desenhaPisosExt(D,G,{rot:true});
   // números das cotas internas: o nome do ambiente desvia deles
   const obsCota=D.p.filter(q=>q.t==="t"&&q.l==="COTAS").map(q=>{ const w=largTexto(q.txt)*q.h*1.39*k/2+1.4*k, hh=q.h*0.8*k+0.8*k, a=(q.rot||0)*Math.PI/180, c=Math.cos(a), sn=Math.sin(a);
     return [[-w,-hh],[w,-hh],[w,hh],[-w,hh]].map(([x,y])=>[q.x+x*c-y*sn,q.y+x*sn+y*c]); });
@@ -1908,6 +1937,13 @@ function desenhaPeca(D,T,des,lay="MOBILIA"){ const w0=.18, dr={
   R:(s0,t0,s1,t1,w=w0)=>{ const q=retW(T,[s0,t0,s1,t1]); PL(D,[...q,q[0]],w,lay); },
   L:(s0,t0,s1,t1,w=w0,dd=false)=>L(D,...trf(T,s0,t0),...trf(T,s1,t1),w,lay,dd),
   C:(s,t,rr,w=w0)=>CI(D,...trf(T,s,t),rr,w,lay), T:(s,t,txt)=>TX(D,...trf(T,s,t),txt,1.3,{l:lay}) }; des(dr); }
+// pisos externos (garagem, varanda): linha do limite de piso (desnível), nome, área e nível; na garagem, o carro
+function desenhaPisosExt(D,G,o={}){ const k=D.k; (G.pisos||[]).forEach(r=>{
+    (S.lims||[]).forEach(l=>{ const a=[num(l.x1),num(l.y1)], b=[num(l.x2),num(l.y2)], m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; if(!r.poly.some((p,i)=>distSeg(m,{x1:p[0],y1:p[1],x2:r.poly[(i+1)%r.poly.length][0],y2:r.poly[(i+1)%r.poly.length][1]})<0.02)) return; L(D,...a,...b,.35,"PISO"); });
+    let carro=null; if(o.carro&&/garag/i.test(r.n)){ const W=r.x1-r.x0, H=r.y1-r.y0, lg=W>=H, Lc=4.30, Wc=1.80, cx=!lg&&W>Wc+2.4?r.x0+0.7+Wc/2:(r.x0+r.x1)/2, cy=lg&&H>Wc+2.4?r.y0+0.7+Wc/2:(r.y0+r.y1)/2;
+      const T={A:lg?[cx-Lc/2,cy-Wc/2]:[cx+Wc/2,cy-Lc/2],u:lg?[1,0]:[0,1],N:lg?[0,1]:[-1,0],s0:0,w:Lc,m:1}, Q=retW(T,[0,0,Lc,Wc]); if(Q.every(p=>pip(r.poly,p[0],p[1]))){ desenhaCarro(D,T); carro=Q; } }
+    if(o.rot){ const tN=Math.min(5,Math.max(1.2,num((S.est||{}).tNome)||2.2)), tA=Math.min(4,Math.max(1,num((S.est||{}).tArea)||1.7));
+      rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:tN,b:true},{t:`A = ${f(r.area)} m²`,h:tA},{t:`NV ${fNv(r.nv)}`,h:tA*0.88,l:"COTAS"}],r.cx,r.cy,carro?[carro]:[]); } }); }
 function desenhaCarro(D,T){ const Lc=T.w, Wc=1.80, c=0.28, dr=(pts,w=.25)=>PL(D,pts.map(([s,t])=>trf(T,s,t)),w,"MOBILIA");
   dr([[c,0],[Lc-c,0],[Lc,c],[Lc,Wc-c],[Lc-c,Wc],[c,Wc],[0,Wc-c],[0,c],[c,0]]);
   dr([[1.15,0.18],[1.55,0.30],[1.55,Wc-0.30],[1.15,Wc-0.18],[1.15,0.18]],.18); dr([[3.25,0.25],[3.50,0.18],[3.50,Wc-0.18],[3.25,Wc-0.25],[3.25,0.25]],.18);
@@ -1928,6 +1964,7 @@ function desenhoLayout(G,k,LM){
   G.pecas.forEach(P=>PG(D,P,"HACHURA"));
   G.contPar.forEach(s=>L(D,...s,.5,"PAREDE"));
   desenhaAberturas(D,G,G.abs);
+  desenhaPisosExt(D,G,{rot:true,carro:true});
   (LM||layoutMoveis(G)).forEach(R=>{ const r=R.r;
     R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des)); if(R.banho) desenhaLoucas(D,r,R.banho,k,false); if(R.carro) desenhaCarro(D,R.carro);
     const lab=r.labIdx>=0?S.rooms[r.labIdx]:null, x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy, nome=r.n.toUpperCase(), ar=`A = ${f(r.area)} m²`;
@@ -4255,7 +4292,7 @@ function render(){
   S.ab.forEach((a,i)=>{ if(a.st==="d"||(S.walls[Math.round(num(a.w))]||{}).st==="d") return; if(!G.walls.some(x=>x.i===Math.round(num(a.w)))) w.push(["warn",`A abertura ${i+1} (${esc(a.t)}) está numa parede que não existe mais.`]); });
   if(!G.vazio&&!G.retangular&&S.tel.plat!=="sim") w.push(["warn","A casa não é um retângulo: o telhado com beiral é calculado sobre o retângulo que envolve a casa. Com platibanda (telhado embutido) ele acompanha o contorno real. Confira a cobertura."]);
   if(S.viga.on!=="não") G.abs.filter(g=>g.tipo!=="Vão"&&num(g.a.a)+(g.tipo==="Janela"?num(g.a.p):0)>num(S.pd)-num(S.viga.h)+1e-6).forEach(g=>w.push(["warn",`${g.cod} (parede ${g.w.i+1}) termina a ${f(num(g.a.a)+(g.tipo==="Janela"?num(g.a.p):0))} m, acima do fundo da viga (${f(num(S.pd)-num(S.viga.h))} m).`]));
-  S.rooms.forEach(q=>{ if(String(q.n||"").trim()&&!G.vazio&&G.rooms.length&&!G.rooms.some(r=>pip(r.poly,num(q.x),num(q.y)))) w.push(["warn",`O nome "${esc(q.n)}" está num ponto (X ${f(num(q.x))}, Y ${f(num(q.y))}) fora de todos os ambientes, por isso não aparece na planta. Escreva o nome na lista "Nome dos ambientes" da aba Dados ou toque no ambiente na planta.`]); });
+  S.rooms.forEach(q=>{ if(String(q.n||"").trim()&&!G.vazio&&G.rooms.length&&![...G.rooms,...(G.pisos||[])].some(r=>pip(r.poly,num(q.x),num(q.y)))) w.push(["warn",`O nome "${esc(q.n)}" está num ponto (X ${f(num(q.x))}, Y ${f(num(q.y))}) fora de todos os ambientes, por isso não aparece na planta. Escreva o nome na lista "Nome dos ambientes" da aba Dados ou toque no ambiente na planta.`]); });
   if(!G.vazio&&!G.rooms.length) w.push(["warn","Nenhum ambiente fechado encontrado. Confira se as paredes se encontram nas pontas."]);
   if(!G.vazio&&S.terr.chanfro!=="sim"&&G.incl.some(w=>{ const V=(VISTA[S.frente]||VISTA.baixo).V, mx=(w.x1+w.x2)/2, my=(w.y1+w.y2)/2, C=G.compAt(mx+w.nX*(G.h+0.12),my+w.nY*(G.h+0.12)), sg=(!C||C.ext)?1:-1; return (w.nX*sg*V[0]+w.nY*sg*V[1])>0.5&&w.L>2; }))
     w.push(["warn","A frente da casa é uma parede chanfrada. Se a rua/avenida acompanha o chanfro, marque \"Frente acompanha a parede chanfrada\" na aba Situação."]);
@@ -5026,7 +5063,7 @@ function textosLado(P,lado,fl){
   if(lado==="layout") return [{t:"MOBILIÁRIO",linhas:fl.LM.filter(R=>resumoMob(R).length).map(R=>`${R.r.n}: ${resumoMob(R).join(", ")}.`)},{t:"NOTAS",linhas:notasLayout(fl.LM)}];
   if(lado==="quadros"){
     const util=G.rooms.reduce((s,r)=>s+r.area,0);
-    return [{t:"QUADRO DE ÁREAS",cols:[["AMBIENTE",0],["ÁREA (m²)",1]],rows:[...G.rooms.map(r=>[r.n,f(r.area)]),["ÁREA ÚTIL",f(util),1],["ÁREA CONSTRUÍDA",f(G.areaC),1]]},
+    return [{t:"QUADRO DE ÁREAS",cols:[["AMBIENTE",0],["ÁREA (m²)",1]],rows:[...G.rooms.map(r=>[r.n,f(r.area)]),["ÁREA ÚTIL",f(util),1],["ÁREA CONSTRUÍDA",f(G.areaC),1],...(G.pisos||[]).map(r=>[`${r.n} (piso externo, NV ${fNv(r.nv)})`,f(r.area)])]},
       {t:"QUADRO DE ESQUADRIAS",cols:[["CÓD.",0],["TIPO",0],["L x H",1],["PEIT.",1],["QTD",1]],rows:Q.map(q=>[q.cod,q.desc,`${f(q.l)} x ${f(q.a)}`,q.tipo==="Janela"?f(q.p):"-",String(q.q)])}];
   }
   if(lado==="banho") return [{t:"NOTAS DO BANHEIRO",linhas:notasBanho()}];
@@ -5598,7 +5635,8 @@ function handleDxfText(txt){
   const opts=(sel,v0,n0)=>`<option value="">${n0}</option>`+layers.map(l=>`<option value="${esc(l)}"${l===sel?" selected":""}>${esc(l)} (${cnt[l]} linhas)</option>`).join("");
   $("impLayer").innerHTML=`<option value="*">Todos os layers</option>`+layers.map(l=>`<option value="${esc(l)}"${l===pref?" selected":""}>${esc(l)} (${cnt[l]} linhas)</option>`).join("");
   $("impEsq").innerHTML=opts(layers.find(l=>l!==pref&&/esquad|janela|porta|caixilh|window|door/i.test(l))||"","","Nenhum");
-  $("impLote").innerHTML=opts(layers.find(l=>l!==pref&&/lote|terreno|limite|divisa/i.test(l))||"","","Nenhum");
+  $("impLote").innerHTML=opts(layers.find(l=>l!==pref&&/lote|terreno|divisa/i.test(l)&&!/piso/i.test(l))||layers.find(l=>l!==pref&&/limite/i.test(l)&&!/piso/i.test(l))||"","","Nenhum");
+  $("impPiso").innerHTML=opts(layers.find(l=>l!==pref&&/piso|soleira|desn[ií]vel/i.test(l))||"","","Nenhum");
   const tc={}; (impDxf.texts||[]).forEach(t=>{ if(/[A-Za-zÀ-ú]{3}/.test(t.t)&&!/cota|dim/i.test(t.l)) tc[t.l]=(tc[t.l]||0)+1; });
   const tl=Object.keys(tc).sort((a,b)=>tc[b]-tc[a]), tPref=tl.find(l=>/texto|text|amb|nome|cor-/i.test(l))||tl[0]||"";
   $("impTxt").innerHTML=`<option value="">Nenhum</option>`+tl.map(l=>`<option value="${esc(l)}"${l===tPref?" selected":""}>${esc(l)} (${tc[l]} textos)</option>`).join("");
@@ -5630,7 +5668,7 @@ $("projCopy").onclick=async()=>{
 };
 $("impDxfGo").onclick=()=>{
   if(!impDxf) return; const lay=$("impLayer").value, u=+$("impUnit").value;
-  const sc=s=>({x1:s.x1*u,y1:s.y1*u,x2:s.x2*u,y2:s.y2*u}), esqL=$("impEsq").value, txL=$("impTxt").value, loL=$("impLote").value;
+  const sc=s=>({x1:s.x1*u,y1:s.y1*u,x2:s.x2*u,y2:s.y2*u}), esqL=$("impEsq").value, txL=$("impTxt").value, loL=$("impLote").value, piL=$("impPiso").value;
   const segs=impDxf.segs.filter(s=>lay==="*"||s.l===lay).map(sc), esq=esqL?impDxf.segs.filter(s=>s.l===esqL).map(sc):[];
   const r=wallsFromSegs(segs,{esq});
   // DXF com vários desenhos (cortes, fachadas, outras pranchas): fica a planta com mais parede e o que está a até 3 m dela (muro, garagem)
@@ -5647,6 +5685,13 @@ $("impDxfGo").onclick=()=>{
     o.l=r2(l); o.d=r2(Math.max(0,Math.min(Lw-l,s0-l/2)));
     if(t==="Janela"&&l<=0.7){ o.a=0.60; o.p=1.50; } else if(t==="Janela"&&l>=1.8){ o.a=1.20; o.p=1.00; }
     return o; }).filter(Boolean);
+  // limite de piso: linha sobre uma abertura é soleira (a abertura é porta); as outras fecham garagem, varanda... (piso externo, 5 cm abaixo)
+  const lims=[]; let nSol=0;
+  if(piL) impDxf.segs.filter(s=>s.l===piL).map(sc).forEach(s0=>{ const a=[N.tx(s0.x1),N.ty(s0.y1)], b=[N.tx(s0.x2),N.ty(s0.y2)], m=[(a[0]+b[0])/2,(a[1]+b[1])/2], Ls=Math.hypot(b[0]-a[0],b[1]-a[1]); if(Ls<0.05) return;
+    const naParede=N.walls.some(w=>distSeg(a,w)<=(esp||0.15)/2+0.06&&distSeg(b,w)<=(esp||0.15)/2+0.06);
+    if(naParede){ const o=ab.find(o=>{ const w=N.walls[o.w], Lw=Math.hypot(w.x2-w.x1,w.y2-w.y1), c=[w.x1+(w.x2-w.x1)*(o.d+o.l/2)/Lw,w.y1+(w.y2-w.y1)*(o.d+o.l/2)/Lw]; return Math.hypot(c[0]-m[0],c[1]-m[1])<o.l/2+0.1; });
+      if(o){ nSol++; if(o.t==="Janela"){ o.t="Porta"; o.a=2.10; o.p=0; if(o.l>=1.2) o.mod=o.l>=2.4?"correr4":"correr"; } } return; }
+    lims.push({x1:+a[0].toFixed(3),y1:+a[1].toFixed(3),x2:+b[0].toFixed(3),y2:+b[1].toFixed(3)}); });
   // nomes dos ambientes: textos do layer escolhido que caem dentro da casa; nomes repetidos ganham número (Quarto 1, Quarto 2...)
   const xs=r.walls.flatMap(w=>[w.x1,w.x2]), ys=r.walls.flatMap(w=>[w.y1,w.y2]), bx=[Math.min(...xs)-0.3,Math.max(...xs)+0.3], by=[Math.min(...ys)-0.3,Math.max(...ys)+0.3];
   const cap=t=>t===t.toUpperCase()?t.toLowerCase().replace(/^\p{L}/u,c=>c.toUpperCase()):t;   // SALA ESTAR → Sala estar; "Sala / Cozinha" fica como está
@@ -5665,9 +5710,9 @@ $("impDxfGo").onclick=()=>{
   // cotas escritas à mão que não batem com a medida do desenho
   const dz=(impDxf.dims||[]), dif=dz.filter(d=>{ const v=num(String(d.t).replace(",",".")); return d.t&&d.t!=="<>"&&v>0&&isFinite(d.m)&&Math.abs(v-d.m*u)>0.011; });
   const cotTxt=dz.length?` ${dz.length} cotas no desenho${dif.length?`; ${dif.length} com o número trocado à mão (ex.: escrito ${dif[0].t}, medida ${f(dif[0].m*u)})`:", todas batem com a medida"}.`:" Nenhuma cota no desenho para conferir.";
-  const nJ=ab.filter(a=>a.t==="Janela").length, nC=ab.filter(a=>a.mod&&ehCorrer(a.mod)).length, nP=ab.filter(a=>a.t==="Porta").length-nC, nV=ab.filter(a=>a.t==="Vão").length;
-  const obs=`layers: paredes ${lay==="*"?"todos":lay}${esqL?`, esquadrias ${esqL}`:""}${txL?`, nomes ${txL}`:""}${loL?`, lote ${loL}`:""}. ${nJ} janelas, ${nC} portas de correr, ${nP} portas de abrir, ${nV} vãos livres.${loteTxt}${cotTxt}`;
-  showImport({walls:N.walls,ab,rooms,esp,terr,juntar:true,obs},"DXF");
+  const nJ=ab.filter(a=>a.t==="Janela").length, nC=ab.filter(a=>a.t==="Porta"&&a.mod&&ehCorrer(a.mod)).length, nP=ab.filter(a=>a.t==="Porta").length-nC, nV=ab.filter(a=>a.t==="Vão").length;
+  const obs=`layers: paredes ${lay==="*"?"todos":lay}${esqL?`, esquadrias ${esqL}`:""}${txL?`, nomes ${txL}`:""}${loL?`, lote ${loL}`:""}${piL?`, piso ${piL}`:""}. ${nJ} janelas, ${nC} portas de correr, ${nP} portas de abrir, ${nV} vãos livres.${piL?` ${lims.length} linhas de limite de piso${nSol?`, ${nSol} soleiras de porta`:""}.`:""}${loteTxt}${cotTxt}`;
+  showImport({walls:N.walls,ab,rooms,esp,terr,lims,juntar:true,obs},"DXF");
 };
 $("impAiGo").onclick=async()=>{
   if(!impFileObj) return;
@@ -5711,6 +5756,7 @@ $("impApply").onclick=()=>{ if(!IMP) return;
   S.walls=IMP.walls; S.rooms=IMP.rooms||[]; S.ab=IMP.ab||[]; if(IMP.esp&&IMP.esp>=0.08&&IMP.esp<=0.40) S.esp=IMP.esp; S.cA=null; S.cB=null;
   if(IMP.pd) S.pd=IMP.pd; if(IMP.piso!=null) S.piso=IMP.piso;
   if(IMP.terr) S.terr=Object.assign(S.terr,IMP.terr,{forma:"ret"});
+  if(IMP.juntar) S.lims=IMP.lims||[];
   const fora=[];
   if(IMP.juntar&&S.rooms.length){ try{ const G=geom(), del=new Set();   // dois nomes no mesmo ambiente (cozinha e jantar integrados): vira um nome só
     G.rooms.forEach(r=>{ const ids=S.rooms.map((_,j)=>j).filter(j=>!del.has(j)&&pip(r.poly,num(S.rooms[j].x),num(S.rooms[j].y))); if(ids.length<2) return;
@@ -5718,7 +5764,7 @@ $("impApply").onclick=()=>{ if(!IMP) return;
       if(/cozinha|copa/i.test(q.n)&&/jantar/i.test(q.n)&&!/estar|living/i.test(q.n)) q.mt="cozinha";
       ids.slice(1).forEach(j=>del.add(j)); });
     // nome em área aberta (garagem sem parede na frente, varanda): não vira ambiente, fica de fora e avisa
-    S.rooms.forEach((q,j)=>{ if(!G.rooms.some(r=>pip(r.poly,num(q.x),num(q.y)))){ del.add(j); fora.push(q.n); } });
+    S.rooms.forEach((q,j)=>{ if(G.rooms.some(r=>pip(r.poly,num(q.x),num(q.y)))) return; const pz=(G.pisos||[]).find(r=>pip(r.poly,num(q.x),num(q.y))); if(pz){ q.nv=-0.05; return; } del.add(j); fora.push(q.n); });
     S.rooms=S.rooms.filter((_,j)=>!del.has(j)); }catch(e){} }
   loadForm(); render(); $("impRes").hidden=true; impMsg(IMP.juntar?`Planta aplicada com portas, janelas e nomes do DXF. Confira na aba Planta.${fora.length?` Fora de ambiente fechado (área aberta, sem área no quadro): ${fora.join(", ")}.`:""}`:"Planta aplicada. Veja a aba Planta: dê nome aos ambientes e coloque as janelas tocando nas paredes."); };
 
