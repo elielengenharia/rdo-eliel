@@ -706,7 +706,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.49 · móvel afastado da parede, ajuste de 1 cm", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.50 · garagem e piso externo em todas as plantas", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2042,6 +2042,12 @@ function desenhaPeca(D,T,des,lay="MOBILIA"){ const w0=.18, dr={
 function pisoExtTipo(r){ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; return lab&&lab.pt&&lab.pt!=="padrao"?lab.pt:/garag/i.test(r.n)?"cimento":"cer45"; }
 function rotuloPisoExt(D,r,obs){ const {tN,tA}=estTxt();
   rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:tN,b:true},{t:`A = ${f(r.area)} m²`,h:tA},{t:`NV ${fNv(r.nv)}`,h:tA*0.88,l:"COTAS"},{t:`PISO ${curtoPiso[pisoExtTipo(r)]||""}`,h:tA*0.8,l:"COTAS"}],r.cx,r.cy,obs||[]); }
+// base comum a todas as plantas (a planta baixa é o modelo): limite do piso da garagem/varanda e o nome dela
+// o.leve: só a linha fina (estrutura, fundação); o.sit: situação/implantação (contorno e nome com a área)
+function baseExt(D,G,o={}){ const k=D.k; (G.pisos||[]).forEach(r=>{
+    if(o.sit){ PL(D,[...r.poly,r.poly[0]],.25,"LIMPISO"); rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.5,b:true},{t:`${f(r.area)} m²`,h:1.3,l:"COTAS"}],r.cx,r.cy); return; }
+    (S.lims||[]).forEach(l=>{ const a=[num(l.x1),num(l.y1)], b=[num(l.x2),num(l.y2)], m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; if(!r.poly.some((p,i)=>distSeg(m,{x1:p[0],y1:p[1],x2:r.poly[(i+1)%r.poly.length][0],y2:r.poly[(i+1)%r.poly.length][1]})<0.02)) return; L(D,...a,...b,o.leve?.13:.35,o.leve?"PROJECAO":"LIMPISO"); });
+    if(!o.leve&&!o.semNome) rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:estTxt().tN*0.8,b:true,l:"COTAS"},...(o.nv?[{t:`NV ${fNv(r.nv)}`,h:estTxt().tA*0.85,l:"COTAS"}]:[])],r.cx,r.cy,o.obs||[]); }); }
 function desenhaPisosExt(D,G,o={}){ const k=D.k; (G.pisos||[]).forEach(r=>{
     // paginação do piso (juntas), recortada no contorno da área
     if(o.pag){ const [, , pw, ph]=infoPiso(pisoExtTipo(r)), st=[Math.max(pw,0.3),Math.max(ph,0.3)], P=r.poly; let n0=0;
@@ -2212,7 +2218,7 @@ function simbolo(D,q){ const k=D.k*SIMB, l="ELETRICA", [x,y]=q.p, N=q.N||[0,-1],
 function desenhoEletrica(G,k,LM,EL,legenda=true){
   const D=Dw(k), bb=G.bb;
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
-  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
+  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs); baseExt(D,G,{nv:true});
   LM=LM||layoutMoveis(G); EL=EL||pontosEletricos(G,LM);
   if(S.ele.mob!=="não") LM.forEach(R=>{ R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des,"MOBILIAC")); if(R.banho){ const n0=D.p.length; desenhaLoucas(D,R.r,R.banho,k,false); for(let i=n0;i<D.p.length;i++) D.p[i].l="MOBILIAC"; } });
   const rotE=[];
@@ -2227,7 +2233,7 @@ function desenhoEletrica(G,k,LM,EL,legenda=true){
   EL.pts.forEach(q=>simbolo(D,q));
   // nome do ambiente longe dos pontos e dos móveis
   LM.forEach(R=>{ const r=R.r, obs=[...R.sol,...rotE,...EL.pts.filter(q=>q.r===r).map(q=>{ const e=(q.t==="luz"?4.5:3)*k*SIMB; return [[q.p[0]-e,q.p[1]-e],[q.p[0]+e*2,q.p[1]-e],[q.p[0]+e*2,q.p[1]+e],[q.p[0]-e,q.p[1]+e]]; })], nome=r.n.toUpperCase();
-    let pos=null, hh=1.8; for(const ob of [obs,R.sol,[]]){ pos=lugarRotulo(r,ob,r.cx,r.cy+3.5*k,nome.length*hh*0.85*k+0.04,hh*1.6*k); if(pos) break; }   // tamanho único em todos os ambientes
+    let pos=null, hh=estTxt().tN; for(const ob of [obs,R.sol,[]]){ pos=lugarRotulo(r,ob,r.cx,r.cy+3.5*k,nome.length*hh*0.85*k+0.04,hh*1.6*k); if(pos) break; }   // tamanho único em todos os ambientes
     TX(D,...(pos||[r.cx,r.cy+3.5*k]),nome,hh,{b:true,l:"COTAS"}); });
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
   if(legenda){ const x0=bb.x1+16*k, y0=bb.y0, l="ELETRICA"; let y=y0; TX(D,x0,y,"LEGENDA",2,{a:"s",b:true}); y+=6*k;
@@ -2530,7 +2536,7 @@ const notasPluvial=PV=>PV.livre?[`Telhado sem calha: a água cai livre do beiral
   `Água de chuva separada do esgoto: não ligar na rede de esgoto nem na fossa séptica (NBR 10844 / NBR 8160).`];
 function desenhoPluvial(G,k,PV,legenda=true){ const D=Dw(k), bb=G.bb, l="PLUVIAL";
   if(G.vazio||!PV){ TX(D,0,0,"Sem paredes.",3); return D; }
-  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s0=>L(D,...s0,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
+  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s0=>L(D,...s0,.5,"PAREDE")); desenhaAberturas(D,G,G.abs); baseExt(D,G,{nv:true});
   const TI=PV.TI, R=TI.R; if(TI.poly) PL(D,[...TI.poly,TI.poly[0]],.2,"PROJECAO",true); else PL(D,[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1],[R.x0,R.y0]],.2,"PROJECAO",true);
   G.rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:estTxt().tN*0.8,b:true,l:"COTAS"}],r.cx,r.cy));
   if(PV.livre){ TX(D,(bb.x0+bb.x1)/2,bb.y1+8*k,"TELHADO SEM CALHA: ÁGUA CAI LIVRE DO BEIRAL - CALÇADA DE PROTEÇÃO COM CAIMENTO DE 2%",1.6,{b:true,l}); return D; }
@@ -2789,7 +2795,7 @@ function cotasPilares(D,G,ES){ const k=D.k, bb=G.bb, P=ES.pil.map(q=>q.c), y0=Ma
   for(let i=0;i+1<xu.length;i++) cotaH(D,xu[i],xu[i+1],bb.y0-9*k,bb.y0,f(xu[i+1]-xu[i]));
   for(let i=0;i+1<yu.length;i++) cotaV(D,yu[i],yu[i+1],bb.x1+11*k,bb.x1,f(yu[i+1]-yu[i])); }
 function desenhoForma(G,k,ES){ const D=Dw(k); if(!ES){ TX(D,0,0,"Sem paredes.",3); return D; }
-  paredesClaras(D,G);
+  paredesClaras(D,G); baseExt(D,G,{leve:true});
   ES.vigas.forEach(v=>{ const n=[-v.u[1],v.u[0]], e=v.b/2; [-1,1].forEach(sg=>{ const a=v.P(v.s0), c=v.P(v.s1); L(D,a[0]+n[0]*e*sg,a[1]+n[1]*e*sg,c[0]+n[0]*e*sg,c[1]+n[1]*e*sg,.3,"VIGA",!ES.simples); });
     let im=0; v.vaos.forEach((x,i)=>{ if(x>v.vaos[im]) im=i; }); const ap=[v.s0,...v.ps.map(p=>p.s),v.s1].sort((a,c)=>a-c), sm=(ap[im]+ap[im+1])/2||((v.s0+v.s1)/2), m=v.P(sm);
     let an=Math.atan2(v.u[1],v.u[0])*180/Math.PI; if(an>90) an-=180; if(an<-90) an+=180;
@@ -2860,7 +2866,7 @@ const notasEstrS=ES=>{ const CF=ES.CF, vb=CF.vb, pl=CF.pl, Q=ES.Q; return [
   `Vergas sobre todas as portas e janelas e contravergas sob as janelas com treliça ${CF.tr.nome}, passando ${CF.tr.apoio} cm para cada lado do vão.`,
   `Coluninhas a no máximo ${f(CF.vaoMax)} m, fora das portas e janelas. Carga estimada por área de influência; admissível de ${f(CF.cap,0)} kN por broca (confirmar com o responsável técnico).`]; };
 function desenhoFundacao(G,k,ES){ const D=Dw(k); if(!ES){ TX(D,0,0,"Sem paredes.",3); return D; }
-  paredesClaras(D,G);
+  paredesClaras(D,G); baseExt(D,G,{leve:true});
   ES.vigas.forEach(v=>{ const n=[-v.u[1],v.u[0]], bb0=v.bb||v.b, e=bb0/2; [-1,1].forEach(sg=>{ const a=v.P(v.s0), c=v.P(v.s1); L(D,a[0]+n[0]*e*sg,a[1]+n[1]*e*sg,c[0]+n[0]*e*sg,c[1]+n[1]*e*sg,.3,"VIGA"); });
     const m=v.P((v.s0+v.s1)/2); let an=Math.atan2(v.u[1],v.u[0])*180/Math.PI; if(an>90) an-=180; if(an<-90) an+=180;
     TX(D,m[0]+n[0]*(e+2*k),m[1]+n[1]*(e+2*k),`${v.nomeB} ${f(bb0*100,0)}x${f(v.hb*100,0)}${ES.simples?` · ${ES.CF.vb.gb}x${ES.CF.vb.ga} ø${ES.CF.vb.bit}"`:""}`,1.4,{l:"VIGA",rot:an}); });
@@ -2911,7 +2917,7 @@ function rotuloLinha(D,a,b,txt,l,lado=1){ const k=D.k, dx=b[0]-a[0], dy=b[1]-a[1
 function desenhoHidro(G,k,LM,HD,legenda=true){
   const D=Dw(k), bb=G.bb;
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
-  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
+  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs); baseExt(D,G,{nv:true});
   LM=LM||layoutMoveis(G); HD=HD||redeHidro(G,LM);
   LM.forEach(R=>{ R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des,"MOBILIAC")); if(R.banho){ const n0=D.p.length; desenhaLoucas(D,R.r,R.banho,k,false); for(let i=n0;i<D.p.length;i++) D.p[i].l="MOBILIAC"; } });
   LM.forEach(R=>{ const r=R.r; rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:estTxt().tN*0.8,b:true,l:"COTAS"}],r.cx,r.cy); });
@@ -2980,7 +2986,7 @@ function desenhoForro(G,k,LM,EL,FO){
       const Q=paraDentro(P,F.ft==="gesso"||F.ft==="drywall"?0.04:0.03); if(Q&&Q.length>2) PL(D,[...Q,Q[0]],.13,"FORRO"); }
     if(F.ft==="sem"){ const s=0.5; for(let c=r.x0-H;c<r.x1;c+=s){ const pts=[]; for(let t=0;t<=1;t+=0.02){ const x=c+t*(H), y=r.y0+t*H; pts.push([x,y]); }
       const ln=[]; pts.forEach(p=>{ if(pip(P,...p)) ln.push(p); }); if(ln.length>1) L(D,...ln[0],...ln[ln.length-1],.09,"FORRO",true); } } });
-  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE"));
+  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); baseExt(D,G,{nv:true});
   // vergas: acima das portas e janelas a parede continua (tracejado)
   G.abs.forEach(g=>{ const w=g.w, ln=(s,n)=>[w.x1+w.ux*s+g.nX*n,w.y1+w.uy*s+g.nY*n]; [-h,h].forEach(n=>L(D,...ln(g.d,n),...ln(g.d+g.l,n),.18,"PROJECAO",true)); });
   // luzes da planta elétrica
@@ -2998,7 +3004,7 @@ function desenhoForro(G,k,LM,EL,FO){
       ...(alP&&F===al?[[[alP[0]-0.32,alP[1]-0.32],[alP[0]+0.32,alP[1]-0.32],[alP[0]+0.32,alP[1]+0.32+3*k],[alP[0]-0.32,alP[1]+0.32+3*k]]]:[])];
     const l1=r.n.toUpperCase(), l2=curtoForro[F.ft]||"", l3=F.ft==="sem"?"":`H = ${f(F.h)} m`;
     const obs2=[...luz.filter(q=>q.r===r).map(q=>{ const e=2.2*k; return [[q.p[0]-e,q.p[1]-e],[q.p[0]+e,q.p[1]-e],[q.p[0]+e,q.p[1]+e],[q.p[0]-e,q.p[1]+e]]; }),...obs.slice(luz.filter(q=>q.r===r).length)];
-    let pos=null, hh=2; for(const [h0,ob] of [[2,obs],[1.7,obs],[1.4,obs],[1.7,obs2],[1.4,obs2],[1.2,obs2]]){ const wt=Math.max(l1.length,l2.length,l3.length)*h0*0.8*k+0.04; pos=lugarRotulo(r,ob,r.cx,r.cy+4*k,wt,h0*4.6*k); hh=h0; if(pos) break; }
+    let pos=null, hh=2; for(const [h0,ob] of (t0=>[[t0,obs],[t0*0.85,obs],[t0*0.7,obs],[t0*0.85,obs2],[t0*0.7,obs2],[t0*0.6,obs2]])(estTxt().tN)){ const wt=Math.max(l1.length,l2.length,l3.length)*h0*0.8*k+0.04; pos=lugarRotulo(r,ob,r.cx,r.cy+4*k,wt,h0*4.6*k); hh=h0; if(pos) break; }
     const [x,y]=pos||[r.cx,r.cy+4*k];
     TX(D,x,y-hh*1.5*k,l1,hh,{b:true}); TX(D,x,y,l2,hh*0.78,{l:"FORRO"}); if(l3) TX(D,x,y+hh*1.4*k,l3,hh*0.78,{l:"COTAS"}); });
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
@@ -3139,7 +3145,7 @@ function estruturaTelhado(G,TIo){
 function desenhoEstrutura(G,k,ET){
   const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
   ET=ET||estruturaTelhado(G); const TI=ET.TI, R=TI.R;
-  G.contPar.forEach(s=>L(D,...s,.18,"PROJECAO",true));
+  G.contPar.forEach(s=>L(D,...s,.18,"PROJECAO",true)); baseExt(D,G,{leve:true});
   if(TI.vols) TI.vols.forEach(tv=>PL(D,[...tv.poly,tv.poly[0]],.35,"PAREDE")); else if(TI.poly) PL(D,[...TI.poly,TI.poly[0]],.35,"PAREDE"); else PL(D,[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1],[R.x0,R.y0]],.4,TI.plat?"PAREDE":"TELHADO");
   ET.caibros.forEach(c=>L(D,...c.s,.13,"ESTRUT"));
   ET.vigotas.forEach(c=>{ const [x1,y1,x2,y2]=c.s, n=[-(y2-y1),x2-x1], l=Math.hypot(...n)||1, o=0.05; L(D,x1+n[0]/l*o,y1+n[1]/l*o,x2+n[0]/l*o,y2+n[1]/l*o,.25,"ESTRUT",true); L(D,x1-n[0]/l*o,y1-n[1]/l*o,x2-n[0]/l*o,y2-n[1]/l*o,.25,"ESTRUT",true); });
@@ -3337,10 +3343,10 @@ function pintura(G){ if(G.vazio) return null; const P0=S.pint||{}, LM=layoutMove
   add("Verniz para forro de madeira (3 demãos)",aTetoV*CONS.verniz,"L",latas(aTetoV*CONS.verniz,3.6,0.9),"forro de madeira");
   return {amb,aTex,aLat,esq,aMad,aFer,aTetoP,aTetoV,aParede:aLatInt+aTexInt+aEpo,M,corFach:P0.corFach||"conforme projeto de fachada",corEsq:P0.corEsq||"Branco",verniz}; }
 function desenhoPintura(G,k,PQ){ const D=Dw(k); if(!PQ){ TX(D,0,0,"Sem paredes.",3); return D; }
-  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
+  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs); baseExt(D,G,{nv:true});
   PQ.amb.forEach(a=>{ const r=a.r; let ls=[r.n.toUpperCase(), a.rp==="nenhuma"?"PAREDE: sem pintura":`PAREDE: ${PINTP[a.rp]||"-"}`, a.rp!=="nenhuma"?`cor ${a.corP}`:"",
       a.teto?`TETO: ${a.teto==="pva"?"látex PVA":"verniz"} · ${a.corT}`:`TETO: ${a.ft==="pvc"?"forro PVC":"sem pintura"}`].filter(Boolean);
-    let pos=null; const hh=1.6, L00=ls; for(let n=L00.length;n>=1&&!pos;n--){ const L1=L00.slice(0,n), wt=Math.max(...L1.map((t,i)=>t.length*(i?0.72:1)))*hh*0.62*k+0.04;
+    let pos=null; const hh=estTxt().tN*0.9, L00=ls; for(let n=L00.length;n>=1&&!pos;n--){ const L1=L00.slice(0,n), wt=Math.max(...L1.map((t,i)=>t.length*(i?0.72:1)))*hh*0.62*k+0.04;
       pos=lugarRotulo({...r,poly:paraDentro(r.poly,0.12)||r.poly},(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })(),r.cx,r.cy,wt,hh*L1.length*1.6*k); if(pos) ls=L1; }   // tamanho único; ambiente pequeno mostra só as linhas que cabem (o resto está na tabela)
     if(!pos) ls=ls.slice(0,1);
     const [x0,y0]=pos||[r.cx,r.cy]; ls.forEach((t,i)=>TX(D,x0,y0+(i-(ls.length-1)/2)*hh*1.5*k,t,i?hh*0.72:hh,{b:!i,l:i?"COTAS":"TEXTO"})); });
@@ -3360,11 +3366,11 @@ function quantRevp(RV){ const c={}, p={}; RV.forEach(x=>{ if(x.cer>0) c[x.rt]=(c
 function desenhoRevp(G,k,RV){
   const D=Dw(k), bb=G.bb;
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
-  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
+  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs); baseExt(D,G,{nv:true});
   RV.forEach(x=>{ if(!(x.cer>0)) return; const off=0.05; x.faces.forEach(e=>{ const a=[e.A[0]+e.N[0]*off,e.A[1]+e.N[1]*off], b=[e.A[0]+e.u[0]*e.Le+e.N[0]*off,e.A[1]+e.u[1]*e.Le+e.N[1]*off];
       L(D,...a,...b,.7,"REVEST"); const n=Math.floor(e.Le/0.15); for(let i=1;i<n;i++){ const p=[a[0]+e.u[0]*i*0.15,a[1]+e.u[1]*i*0.15]; L(D,...p,p[0]+e.N[0]*0.06,p[1]+e.N[1]*0.06,.13,"REVEST"); } }); });
   RV.forEach(x=>{ const r=x.r, l1=r.n.toUpperCase(), l2=x.cer>0?`${curtoRevp[x.rt]} ATÉ ${x.h>=x.H-1e-6?"O TETO":f(x.h)+" m"}`:"", l3=x.rp==="nenhuma"||!(x.pint>0)?"":(x.cer>0?"ACIMA: ":"")+nomePint(x.rp).toUpperCase();
-    let ls=[l1,l2,l3].filter(Boolean); const L00=ls; let pos=null, hh=1.8; for(let n=L00.length;n>=1;n--){ const h0=1.8, L1=L00.slice(0,n), wt=Math.max(...L1.map((t,i)=>t.length*(i?0.75:1)))*h0*0.62*k+0.04; pos=lugarRotulo({...r,poly:paraDentro(r.poly,0.12)||r.poly},(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })(),r.cx,r.cy,wt,h0*L1.length*1.7*k); hh=h0; if(pos) ls=L1; if(pos) break; }
+    let ls=[l1,l2,l3].filter(Boolean); const L00=ls; let pos=null, hh=1.8; for(let n=L00.length;n>=1;n--){ const h0=estTxt().tN, L1=L00.slice(0,n), wt=Math.max(...L1.map((t,i)=>t.length*(i?0.75:1)))*h0*0.62*k+0.04; pos=lugarRotulo({...r,poly:paraDentro(r.poly,0.12)||r.poly},(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })(),r.cx,r.cy,wt,h0*L1.length*1.7*k); hh=h0; if(pos) ls=L1; if(pos) break; }
     if(!pos) ls=ls.slice(0,1);
     const [x0,y0]=pos||[r.cx,r.cy]; ls.forEach((t,i)=>TX(D,x0,y0+(i-(ls.length-1)/2)*hh*1.6*k,t,i?hh*0.75:hh,{b:!i,l:i===1?"REVEST":i?"COTAS":"TEXTO"})); });
   const FA=fachadaRev(G); TX(D,(bb.x0+bb.x1)/2,bb.y1+7*k,`FACHADAS: ${nomePint(FA.tipo).toUpperCase()} (${f(FA.area)} m²)`,1.8,{b:true,l:"COTAS"});
@@ -3401,7 +3407,7 @@ function desenhoReforma(G2,k,G,leg=true){
   pe.filter(x=>x.st==="c").forEach(x=>PG(D,x.P,"CONSTRUIR")); fechar.forEach(P=>PG(D,P,"CONSTRUIR"));
   contornoUniao([...pe.filter(x=>x.st!=="d").map(x=>x.P),...fechar]).forEach(s=>L(D,s[0][0],s[0][1],s[1][0],s[1][1],.5,"PAREDE"));
   pe.filter(x=>x.st==="d").forEach(x=>tracejaDem(x.P)); abrir.forEach(P=>tracejaDem(P));
-  desenhaAberturas(D,G2,G2.abs.filter(g=>stA(g.a)!=="d"&&stW(g.w.i)!=="d"));
+  desenhaAberturas(D,G2,G2.abs.filter(g=>stA(g.a)!=="d"&&stW(g.w.i)!=="d")); baseExt(D,G2);
   // rótulos dos vãos alterados
   G2.abs.forEach(g=>{ const st=stA(g.a); if(st==="e"||stW(g.w.i)==="d") return; const w=g.w, m=[w.x1+w.ux*(g.d+g.l/2)-g.nX*(h+5.5*k)*g.lado,w.y1+w.uy*(g.d+g.l/2)-g.nY*(h+5.5*k)*g.lado];
     TX(D,...m,st==="d"?"FECHAR":"ABRIR",1.4,{b:true,l:st==="d"?"CONSTRUIR":"DEMOLIR"}); });
@@ -3548,7 +3554,7 @@ function desenhoPiso(G,k,LM,HD,PI){
     else { linhasX(a).forEach(x=>naLinha(P,"B",x).forEach(([u0,u1])=>L(D,x,u0,x,u1,lw,ly,dash))); linhasY(b).forEach(y=>naLinha(P,"A",y).forEach(([u0,u1])=>L(D,u0,y,u1,y,lw,ly,dash))); }
     // rodapé
     if(F.rod>0){ const Q=paraDentro(P,0.015); if(Q&&Q.length>2) PL(D,[...Q,Q[0]],.13,"PISO"); } });
-  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE"));
+  G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaPisosExt(D,G,{pag:true,rot:true});   // garagem/varanda com a paginação do piso dela
   // soleiras (portas e vãos) e peitoris (janelas) de granito
   const SO=[];
   G.abs.forEach(g=>{ const w=g.w, ln=(s,n)=>[w.x1+w.ux*s+g.nX*n,w.y1+w.uy*s+g.nY*n], s0=g.d, s1=g.d+g.l, jan=g.tipo==="Janela", e=jan?h+0.03:h;
@@ -3569,7 +3575,7 @@ function desenhoPiso(G,k,LM,HD,PI){
   PI.forEach(F=>{ const r=F.r, l1=r.n.toUpperCase(), l2=curtoPiso[F.pt]||"", l3=`A = ${f(r.area)} m²`;
     const l4=`NV ${fNv(r.nv)}`;
     const obs=CAI.filter(q=>q.r===r).map(q=>{ const xs=[q.a[0],q.c[0]], ys=[q.a[1],q.c[1]], e=0.12+2.5*k; return [[Math.min(...xs)-e,Math.min(...ys)-e],[Math.max(...xs)+e,Math.min(...ys)-e],[Math.max(...xs)+e,Math.max(...ys)+e],[Math.min(...xs)-e,Math.max(...ys)+e]]; });
-    let pos=null, hh=2; for(const h0 of [2,1.7,1.4,1.2]){ const wt=Math.max(l1.length,l2.length,l3.length)*h0*0.8*k+0.04; pos=lugarRotulo(r,obs,r.cx,r.cy,wt,h0*6.4*k); hh=h0; if(pos) break; }
+    let pos=null, hh=estTxt().tN; for(const h0 of (t0=>[t0,t0*0.85,t0*0.7,t0*0.6])(estTxt().tN)){ const wt=Math.max(l1.length,l2.length,l3.length)*h0*0.8*k+0.04; pos=lugarRotulo(r,obs,r.cx,r.cy,wt,h0*6.4*k); hh=h0; if(pos) break; }
     const [x,y]=pos||[r.cx,r.cy], bx=Math.max(l1.length,l2.length,l3.length)*hh*0.8*k/2+0.03;
     PG(D,[[x-bx,y-hh*3.2*k],[x+bx,y-hh*3.2*k],[x+bx,y+hh*3.2*k],[x-bx,y+hh*3.2*k]],"FUNDO");
     TX(D,x,y-hh*2.2*k,l1,hh,{b:true}); TX(D,x,y-hh*0.7*k,l2,hh*0.75,{l:"PISO"}); TX(D,x,y+hh*0.7*k,l3,hh*0.75,{l:"COTAS"});
@@ -3850,7 +3856,7 @@ function desenhoLocacao(G,k,LC){
   const clip=([xa,ya,xb,yb])=>{ let t0=0,t1=1; const dx=xb-xa, dy=yb-ya; for(const [pp,qq] of [[-dx,xa-W.x0],[dx,W.x1-xa],[-dy,ya-W.y0],[dy,W.y1-ya]]){ if(Math.abs(pp)<1e-12){ if(qq<0) return null; continue; } const rr=qq/pp; if(pp<0) t0=Math.max(t0,rr); else t1=Math.min(t1,rr); } return t0<t1?[xa+dx*t0,ya+dy*t0,xa+dx*t1,ya+dy*t1]:null; };
   T.lote.forEach((a,i)=>{ const b=T.lote[(i+1)%T.lote.length], q=clip([a[0],a[1],b[0],b[1]]); if(q) L(D,...q,.5,"LOTE"); });
   // obra (projeção das paredes) e gabarito
-  (G.casas||[]).forEach(Pc=>PG(D,Pc,"HACHURA")); G.contExt.forEach(s0=>L(D,...s0,.35,"PAREDE"));
+  (G.casas||[]).forEach(Pc=>PG(D,Pc,"HACHURA")); G.contExt.forEach(s0=>L(D,...s0,.35,"PAREDE")); baseExt(D,G,{semNome:true});
   G.pecas.forEach(Pp=>PL(D,[...Pp,Pp[0]],.1,"PAREDE"));
   PL(D,[[g.x0,g.y0],[g.x1,g.y0],[g.x1,g.y1],[g.x0,g.y1],[g.x0,g.y0]],.35,"EIXO",true);
   TX(D,(g.x0+g.x1)/2,g.y0-2*k,"GABARITO (tábuas a 1,20 m da obra)",1.6,{l:"EIXO",b:true});
@@ -3883,7 +3889,7 @@ function desenhoLocPilares(G,k,LC,D){ const {T,P0,gab}=LC, bb=G.bb, Rt=T.Rt, V=T
   const W={x0:Math.min(P0[0],g.x0)-0.8,x1:Math.max(P0[0],g.x1)+0.8,y0:Math.min(P0[1],g.y0)-0.8,y1:Math.max(P0[1],g.y1)+0.8};
   const clip=([xa,ya,xb,yb])=>{ let t0=0,t1=1; const dx=xb-xa, dy=yb-ya; for(const [pp,qq] of [[-dx,xa-W.x0],[dx,W.x1-xa],[-dy,ya-W.y0],[dy,W.y1-ya]]){ if(Math.abs(pp)<1e-12){ if(qq<0) return null; continue; } const rr=qq/pp; if(pp<0) t0=Math.max(t0,rr); else t1=Math.min(t1,rr); } return t0<t1?[xa+dx*t0,ya+dy*t0,xa+dx*t1,ya+dy*t1]:null; };
   T.lote.forEach((a,i)=>{ const b=T.lote[(i+1)%T.lote.length], q=clip([a[0],a[1],b[0],b[1]]); if(q) L(D,...q,.5,"LOTE"); });
-  (G.casas||[]).forEach(Pc=>PG(D,Pc,"HACHURA")); G.contExt.forEach(s0=>L(D,...s0,.35,"PAREDE")); G.pecas.forEach(Pp=>PL(D,[...Pp,Pp[0]],.1,"PAREDE"));
+  (G.casas||[]).forEach(Pc=>PG(D,Pc,"HACHURA")); G.contExt.forEach(s0=>L(D,...s0,.35,"PAREDE")); baseExt(D,G,{semNome:true}); G.pecas.forEach(Pp=>PL(D,[...Pp,Pp[0]],.1,"PAREDE"));
   PL(D,[[g.x0,g.y0],[g.x1,g.y0],[g.x1,g.y1],[g.x0,g.y1],[g.x0,g.y0]],.35,"EIXO",true);
   TX(D,(g.x0+g.x1)/2,g.y0-2*k,"GABARITO (tábuas a 1,20 m da obra)",1.6,{l:"EIXO",b:true});
   // ponto no papel a partir de (X, Y) do P0
@@ -3949,7 +3955,7 @@ function desenhoSituacao(G,k){
   if(esqn!=="dir") TX(D,...P((F0+F1)/2,R1+3*k),String(S.terr.confDir||"").toUpperCase(),1.8,{l:"COTAS",rot:rotR(angV)});
   TX(D,...P(F0-3*k,(R0+R1)/2),String(S.terr.confFundo||"").toUpperCase(),1.8,{l:"COTAS",rot:rotR(angR)});
   // casa: projeção da construção (hachurada) e do telhado (tracejado)
-  const casa=(G.casas||[]); casa.forEach(Pc=>PG(D,Pc,"HACHURA")); G.contExt.forEach(s0=>L(D,...s0,.5,"PAREDE"));
+  const casa=(G.casas||[]); casa.forEach(Pc=>PG(D,Pc,"HACHURA")); G.contExt.forEach(s0=>L(D,...s0,.5,"PAREDE")); baseExt(D,G,{sit:true});
   if(TI.poly) PL(D,[...TI.poly,TI.poly[0]],.2,"PROJECAO",true); else if(!TI.plat){ const Rr=TI.R; PL(D,[[Rr.x0,Rr.y0],[Rr.x1,Rr.y0],[Rr.x1,Rr.y1],[Rr.x0,Rr.y1],[Rr.x0,Rr.y0]],.2,"PROJECAO",true); }
   const fm=(T.fMin+T.fMax)/2, rm=(T.rMin+T.rMax)/2;
   { const c0=P(fm,rm), ar=rotR(angR)*Math.PI/180, dn=[-Math.sin(ar),Math.cos(ar)];   // "para baixo" na direção do texto
@@ -4011,7 +4017,7 @@ function confrontacoes(G,QD){ if(QD.pol) return S.terr.lados.map((l,i)=>[i?`Lado
 function desenhoQuadra(G,k,QD){
   const D=Dw(k); QD=QD||quadra(G); if(!QD){ TX(D,0,0,"Sem paredes.",3); return D; }
   if(QD.pol){ const {T,loc,lote}=QD; ruasDoLote(D,lote,S.terr.lados,{ext:18,alin:true,hr:2.4});
-    PG(D,lote,"HACHURA"); PL(D,[...lote,lote[0]],.7,"LOTE"); (G.casas||[]).forEach(Pc=>PG(D,Pc.map(loc),"CONCRETOS"));
+    PG(D,lote,"HACHURA"); PL(D,[...lote,lote[0]],.7,"LOTE"); (G.casas||[]).forEach(Pc=>PG(D,Pc.map(loc),"CONCRETOS")); (G.pisos||[]).forEach(r=>{ const Q=r.poly.map(loc); PL(D,[...Q,Q[0]],.2,"LIMPISO"); });
     const cl=lote.reduce((s,p)=>[s[0]+p[0]/lote.length,s[1]+p[1]/lote.length],[0,0]);
     const yl=(cl[1]+Math.min(...lote.map(p=>p[1])))/2; TX(D,cl[0],yl-1.5*k,S.terr.lote?`LOTE ${S.terr.lote}`:"LOTE",2.2,{b:true}); if(S.terr.quadra) TX(D,cl[0],yl+1.8*k,`QUADRA ${String(S.terr.quadra).toUpperCase()}`,1.8,{b:true});
     const xs=lote.map(p=>p[0]), ys=lote.map(p=>p[1]), th=num(S.terr.norte)*Math.PI/180, dw=[Math.sin(th),-Math.cos(th)], d=[dw[0]*T.Rt[0]+dw[1]*T.Rt[1],dw[0]*T.V[0]+dw[1]*T.V[1]], pp=[-d[1],d[0]], r=5*k, c=[Math.max(...xs)+26,Math.min(...ys)-10];
@@ -4037,7 +4043,7 @@ function desenhoQuadra(G,k,QD){
   if(yL-yB>T.prof*0.3) L(D,x0,yL,x1,yL,.13,"LOTE",true);
   // o lote do projeto: hachurado, com a construção
   PG(D,lote,"HACHURA"); PL(D,[...lote,lote[0]],.7,"LOTE");
-  (G.casas||[]).forEach(Pc=>PG(D,Pc.map(loc),"CONCRETOS"));
+  (G.casas||[]).forEach(Pc=>PG(D,Pc.map(loc),"CONCRETOS")); (G.pisos||[]).forEach(r=>{ const Q=r.poly.map(loc); PL(D,[...Q,Q[0]],.2,"LIMPISO"); });
   const cl=[lote.reduce((s,p)=>s+p[0],0)/4,lote.reduce((s,p)=>s+p[1],0)/4];
   const rot=[S.terr.lote?`LOTE ${S.terr.lote}`:"LOTE"].join(""); TX(D,cl[0],Math.min(...lote.map(p=>p[1]))-2.5*k,rot,2,{b:true,a:"m"});
   TX(D,(x0+x1)/2,yB+Math.min(QD.Pq*0.25,6)+1*k,S.terr.quadra?`QUADRA ${String(S.terr.quadra).toUpperCase()}`:"QUADRA",2.6,{b:true});
@@ -4322,6 +4328,7 @@ function desenhaCalhas(D,G,TI){ const k=D.k, CL=calhasPlat(G,TI); if(!CL) return
 function desenhoCobertura(G,k){
   const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
   const TI=infoTelhado(G), R=TI.R, bb=G.bb;
+  (G.pisos||[]).forEach(r=>{ if(TI.vols&&TI.vols.some(tv=>tv.vol.rooms.includes(r))) return; PL(D,[...r.poly,r.poly[0]],.25,"PROJECAO",true); const c=pontoTexto(r.poly); TX(D,c[0],c[1],`${r.n.toUpperCase()} (DESCOBERTA)`,1.6,{l:"COTAS"}); });
   if(TI.vols){ G.contExt.forEach(s=>L(D,...s,.5,"PAREDE"));
     TI.vols.forEach(tv=>{ const PO=paraFora(tv.vol.polyAx,G.h); PL(D,[...PO,PO[0]],.5,"PAREDE"); PL(D,[...tv.poly,tv.poly[0]],.35,"PAREDE");
       tv.calhas.forEach(s0=>L(D,...s0,.18,"TELHADO",true)); tv.cum.forEach(s0=>L(D,...s0,.5,"TELHADO")); tv.esp.forEach(s0=>L(D,...s0,.35,"TELHADO"));
