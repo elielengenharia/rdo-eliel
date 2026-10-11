@@ -601,8 +601,12 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <div id="impDxf" hidden>
         <div class="form" style="margin-top:10px">
           <label>Layer das paredes<select id="impLayer"></select></label>
+          <label>Layer das esquadrias (janelas e portas de correr)<select id="impEsq"></select></label>
+          <label>Layer dos nomes dos ambientes<select id="impTxt"></select></label>
+          <label>Layer do lote<select id="impLote"></select></label>
           <label>Unidade do desenho<select id="impUnit"><option value="1">metros</option><option value="0.01">centímetros</option><option value="0.001">milímetros</option></select></label>
         </div>
+        <p class="cap" style="margin:6px 0 0">O app escolhe sozinho pelos nomes dos layers (PAREDE, ESQUADRIA/ESQUADRILHA, TEXTO, LOTE...). Buraco na parede com o desenho da esquadria vira janela (linhas de ponta a ponta) ou porta de correr (folhas); sem esquadria vira porta de abrir, ou vão livre a partir de 1,30 m.</p>
         <div class="row"><button class="btn pri" id="impDxfGo">Reconhecer paredes</button></div>
       </div>
       <div id="impImg" hidden>
@@ -674,7 +678,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.38 · sala sem mesa quando já há jantar", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.39 · DXF lido pelos layers", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -4978,13 +4982,17 @@ $("pdfBtn").onclick=async()=>{
 let IMP=null, impFileObj=null, impDxf=null, impCtl=null, impPdfDoc=null, impPdfLib=null, impPdfSegs=null, impPdfAll=null;
 const impMsg=t=>{$("impMsg").textContent=t;};
 function loadScript(src){return new Promise((res,rej)=>{const e=document.createElement("script");e.src=src;e.onload=res;e.onerror=()=>rej(new Error("script"));document.head.appendChild(e);});}
+// texto do DXF sem os códigos de formatação do MTEXT (\P, \f...;, {}, \U+00C1)
+const limpaMText=t=>String(t).replace(/\\U\+([0-9A-Fa-f]{4})/g,(m,h)=>String.fromCharCode(parseInt(h,16))).replace(/\\[Pp]/g," ").replace(/\\[A-Za-z][^;\\{}]*;/g,"").replace(/\\~/g," ").replace(/[{}]/g,"").replace(/%%[cC]/g,"Ø").replace(/\s+/g," ").trim();
 function parseDXF(txt){
   const Ls=txt.split(/\r?\n/); const pr=[]; for(let i=0;i+1<Ls.length;i+=2) pr.push([Ls[i].trim(),Ls[i+1].trim()]);
-  let units=0, sec="", ent=null; const segs=[]; let poly=null;
+  let units=0, sec="", ent=null; const segs=[], texts=[], dims=[]; let poly=null;
   const flush=()=>{ if(!ent) return;
     if(ent.t==="LINE") segs.push({l:ent.l,x1:ent[10],y1:ent[20],x2:ent[11],y2:ent[21]});
     if(ent.t==="LWPOLYLINE"){ const v=ent.v; for(let k=0;k+1<v.length;k++) segs.push({l:ent.l,x1:v[k][0],y1:v[k][1],x2:v[k+1][0],y2:v[k+1][1]}); if(ent.cl&&v.length>2) segs.push({l:ent.l,x1:v[v.length-1][0],y1:v[v.length-1][1],x2:v[0][0],y2:v[0][1]}); }
     if(ent.t==="VERTEX"&&poly) poly.v.push([ent[10],ent[20]]);
+    if((ent.t==="TEXT"||ent.t==="MTEXT")&&isFinite(ent[10])){ const t=limpaMText(ent.s||""); if(t) texts.push({l:ent.l||"0",x:ent[10],y:ent[20],t}); }
+    if(ent.t==="DIMENSION") dims.push({l:ent.l||"0",m:ent.m,t:limpaMText(ent.s||"")});
     ent=null; };
   for(let i=0;i<pr.length;i++){ const [c,v]=pr[i];
     if(c==="0"){ flush();
@@ -4999,18 +5007,55 @@ function parseDXF(txt){
     else if(ent.t==="LWPOLYLINE"&&c==="20") ent.v[ent.v.length-1][1]=+v;
     else if(c==="70"&&(ent.t==="LWPOLYLINE")) ent.cl=(+v&1)===1;
     else if(c==="70"&&ent.t==="POLYHEAD"&&poly) poly.cl=(+v&1)===1;
+    else if((ent.t==="TEXT"||ent.t==="MTEXT"||ent.t==="DIMENSION")&&(c==="1"||c==="3")) ent.s=(ent.s||"")+v;
+    else if(ent.t==="DIMENSION"&&c==="42") ent.m=+v;
     else if(["10","20","11","21"].includes(c)) ent[c]=+v;
   }
-  flush(); return {segs,units};
+  flush(); return {segs,units,texts,dims};
 }
-function wallsFromSegs(segs){
+function vaosDxf(W0,lines,opt){
+  let P=W0.map(w=>{ const L=Math.hypot(w.x2-w.x1,w.y2-w.y1), ux=(w.x2-w.x1)/L, uy=(w.y2-w.y1)/L, al=(x,y)=>(x-w.x1)*ux+(y-w.y1)*uy;
+    const g=(w.gp||[]).map(([p,q])=>{ const a=al(p[0],p[1]), b=al(q[0],q[1]); return [Math.max(0,Math.min(a,b)),Math.min(L,Math.max(a,b))]; }).filter(([a,b])=>b-a>0.02);
+    return {x1:w.x1,y1:w.y1,x2:w.x2,y2:w.y2,t:w.t||0.15,L,ux,uy,g}; });
+  // paredes alinhadas juntas por um "vão" que passa por cima de outra parede: divide no cruzamento (cada lado fica com o seu vão)
+  for(let it=0;it<80;it++){ let mud=false;
+    for(const w of P){ for(const q of P){ if(q===w) continue; const den=w.ux*q.uy-w.uy*q.ux; if(Math.abs(den)<0.17) continue;
+        const t=((q.x1-w.x1)*q.uy-(q.y1-w.y1)*q.ux)/den, X=[w.x1+w.ux*t,w.y1+w.uy*t], sq=(X[0]-q.x1)*q.ux+(X[1]-q.y1)*q.uy;
+        if(sq<-q.t/2-0.05||sq>q.L+q.t/2+0.05||t<0.05||t>w.L-0.05) continue;
+        const gi=w.g.findIndex(([a,b])=>t>a+0.02&&t<b-0.02); if(gi<0) continue;
+        const [a,b]=w.g[gi], h=q.t/2;
+        const A={x1:w.x1,y1:w.y1,x2:X[0],y2:X[1],t:w.t,L:t,ux:w.ux,uy:w.uy,g:[...w.g.filter(([p,r])=>r<=t),[a,t-h]].filter(([p,r])=>r-p>0.02)};
+        const B={x1:X[0],y1:X[1],x2:w.x2,y2:w.y2,t:w.t,L:w.L-t,ux:w.ux,uy:w.uy,g:[[t+h,b],...w.g.filter(([p,r])=>p>=t)].map(([p,r])=>[p-t,r-t]).filter(([p,r])=>r-p>0.02)};
+        P.splice(P.indexOf(w),1,A,B); mud=true; break; }
+      if(mud) break; }
+    if(!mud) break; }
+  P=P.filter(w=>w.L>0.3);
+  const caps=lines.filter(s=>s.L<=0.4), esq=(opt.esq||[]).map(s=>({...s,L:Math.hypot(s.x2-s.x1,s.y2-s.y1)})).filter(s=>s.L>0.02), vaos=[];
+  P.forEach(w=>{ const nx=-w.uy, ny=w.ux, band=w.t/2, loc=(x,y)=>[(x-w.x1)*w.ux+(y-w.y1)*w.uy,(x-w.x1)*nx+(y-w.y1)*ny];
+    w.g.forEach(([a,b])=>{
+      // batente (pedacinho de parede) dentro do buraco: a porta começa nele
+      caps.forEach(s=>{ const dx=(s.x2-s.x1)/s.L, dy=(s.y2-s.y1)/s.L; if(Math.abs(dx*w.ux+dy*w.uy)>0.17||s.L<w.t*0.5||s.L>w.t*1.6) return;
+        const [u,v]=loc((s.x1+s.x2)/2,(s.y1+s.y2)/2); if(Math.abs(v)>band+0.03||u<=a+0.03||u>=b-0.03) return;
+        if(u<(a+b)/2) a=Math.max(a,u); else b=Math.min(b,u); });
+      const l=b-a; if(l<0.45) return;
+      const cov=[]; let full=0;
+      esq.forEach(s=>{ const dx=(s.x2-s.x1)/s.L, dy=(s.y2-s.y1)/s.L; if(Math.abs(dx*w.uy-dy*w.ux)>0.2) return;
+        const [u1,v1]=loc(s.x1,s.y1), [u2,v2]=loc(s.x2,s.y2); if(Math.max(Math.abs(v1),Math.abs(v2))>band+0.08) return;
+        const p=Math.max(a,Math.min(u1,u2)), q=Math.min(b,Math.max(u1,u2)); if(q-p<0.02) return; cov.push([p,q]); if(q-p>=0.85*l) full++; });
+      const cb=juntar(cov).reduce((t,[p,q])=>t+q-p,0)/l;
+      const tipo=cb>=0.4?(full>=2?"Janela":"Correr"):(l>=1.3?"Vão":"Porta");
+      vaos.push({x1:w.x1+w.ux*a,y1:w.y1+w.uy*a,x2:w.x1+w.ux*b,y2:w.y1+w.uy*b,tipo}); }); });
+  return {walls:P.map(({x1,y1,x2,y2})=>({x1,y1,x2,y2})),thick:P.map(w=>w.t),gapSegs:vaos}; }
+// opt (DXF por layers): {esq: linhas do layer das esquadrias}. Aceita pedacinhos de parede (batentes) para achar as portas,
+// divide a parede alinhada que atravessa outra no meio de um vão e devolve os vãos já classificados (vaos: Janela, Correr, Porta, Vão)
+function wallsFromSegs(segs,opt){
   // agrupa as linhas por direção, acha o eixo entre as duas faces de cada parede e guarda onde a parede é interrompida (vãos)
-  const lines=segs.map(s=>{ const dx=s.x2-s.x1, dy=s.y2-s.y1, L0=Math.hypot(dx,dy); let a=Math.atan2(dy,dx)*180/Math.PI; a=((a%180)+180)%180; return {...s,L:L0,a}; }).filter(s=>s.L>=0.1);
+  const lines=segs.map(s=>{ const dx=s.x2-s.x1, dy=s.y2-s.y1, L0=Math.hypot(dx,dy); let a=Math.atan2(dy,dx)*180/Math.PI; a=((a%180)+180)%180; return {...s,L:L0,a}; }).filter(s=>s.L>=(opt?0.05:0.1));
   const dirs=[]; lines.slice().sort((p,q)=>q.L-p.L).forEach(s=>{ const d=dirs.find(d=>{ const df=Math.abs(d.a-s.a); return Math.min(df,180-df)<0.6; }); if(d){ d.len+=s.L; } else dirs.push({a:s.a,len:s.L}); });
   const gapSegs=[];
   const axes=list=>{ const cl=[];
     list.forEach((s,i)=>{ const cand=[];
-      list.forEach((q,j)=>{ if(i===j) return; const d=Math.abs(q.c-s.c); if(d<0.07||d>0.35) return; const ov=Math.min(s.b,q.b)-Math.max(s.a,q.a); if(ov<0.15) return; cand.push({d,q,ov}); });
+      list.forEach((q,j)=>{ if(i===j) return; const d=Math.abs(q.c-s.c); if(d<0.07||d>0.35) return; const ov=Math.min(s.b,q.b)-Math.max(s.a,q.a); if(ov<(opt?0.06:0.15)) return; cand.push({d,q,ov}); });
       if(!cand.length) return;
       let bestD=null, bestCov=-1;
       cand.forEach(x=>{ const cov=cand.filter(y=>Math.abs(y.d-x.d)<=0.02).reduce((t,y)=>t+y.ov,0); if(cov>bestCov+0.05||(Math.abs(cov-bestCov)<=0.05&&x.d<bestD)){ bestCov=cov; bestD=x.d; } });
@@ -5029,8 +5074,9 @@ function wallsFromSegs(segs){
     const r=d.a*Math.PI/180, cs=Math.cos(r), sn=Math.sin(r);
     const loc=lines.filter(s=>{ const df=Math.abs(d.a-s.a); return Math.min(df,180-df)<0.6; }).map(s=>{
       const u1=s.x1*cs+s.y1*sn, v1=-s.x1*sn+s.y1*cs, u2=s.x2*cs+s.y2*sn, v2=-s.x2*sn+s.y2*cs; return {c:(v1+v2)/2,a:Math.min(u1,u2),b:Math.max(u1,u2)}; });
-    axes(loc).forEach(w=>{ W.push({x1:w.a*cs-w.c*sn,y1:w.a*sn+w.c*cs,x2:w.b*cs-w.c*sn,y2:w.b*sn+w.c*cs,t:w.t,ux:cs,uy:sn});
-      w.g.forEach(([a,b])=>gapSegs.push({x1:a*cs-w.c*sn,y1:a*sn+w.c*cs,x2:b*cs-w.c*sn,y2:b*sn+w.c*cs})); });
+    axes(loc).forEach(w=>{ const pt=a=>[a*cs-w.c*sn,a*sn+w.c*cs];
+      W.push({x1:w.a*cs-w.c*sn,y1:w.a*sn+w.c*cs,x2:w.b*cs-w.c*sn,y2:w.b*sn+w.c*cs,t:w.t,ux:cs,uy:sn,gp:w.g.map(([a,b])=>[pt(a),pt(b)])});
+      if(!opt) w.g.forEach(([a,b])=>gapSegs.push({x1:a*cs-w.c*sn,y1:a*sn+w.c*cs,x2:b*cs-w.c*sn,y2:b*sn+w.c*cs})); });
   });
   const inter=(p,q)=>{ const d=p.ux*q.uy-p.uy*q.ux; if(Math.abs(d)<0.17) return null; const t=((q.x1-p.x1)*q.uy-(q.y1-p.y1)*q.ux)/d; return [p.x1+p.ux*t,p.y1+p.uy*t]; };
   const along=(q,x,y)=>(x-q.x1)*q.ux+(y-q.y1)*q.uy, Lq=q=>Math.hypot(q.x2-q.x1,q.y2-q.y1);
@@ -5039,9 +5085,12 @@ function wallsFromSegs(segs){
     W.forEach(q=>{ if(q===w) return; const X=inter(w,q); if(!X) return; const reach=(q.t||0.15)+0.12, s=along(q,X[0],X[1]); if(s<-reach||s>Lq(q)+reach) return;
       const out=(X[0]-w[kx])*dx+(X[1]-w[ky])*dy;
       if(out<-((w.t||0.15)+0.15)||out>1.0) return;
-      const d=Math.abs(out); if(!best||d<best.d) best={d,X}; });
-    if(best){ w[kx]=best.X[0]; w[ky]=best.X[1]; } }); });
+      const d=Math.abs(out); if(!best||d<best.d) best={d,X,q,out}; });
+    if(best){ const face=best.out-(best.q.t||0.15)/2;   // DXF: ponta da parede longe da face da outra = porta encostada no canto
+      if(opt&&face>=0.45) w.gp.push([[w[kx],w[ky]],[w[kx]+dx*face,w[ky]+dy*face]]);
+      w[kx]=best.X[0]; w[ky]=best.X[1]; } }); });
   const all=W.filter(w=>Math.hypot(w.x2-w.x1,w.y2-w.y1)>0.3);
+  if(opt) return vaosDxf(all,lines,opt);
   return {walls:all.map(({x1,y1,x2,y2})=>({x1,y1,x2,y2})),thick:all.map(w=>w.t),gapSegs};
 }
 async function pdfSegments(page,lib){
@@ -5111,6 +5160,18 @@ function pdfAutoScale(segsPt){
     if(Math.abs(fk-1)>0.04){ const den=best.den*fk; const r=wallsFromPdf(segsPt,den); if(r.walls.length>=3) return {...r,den:Math.round(den)}; } }
   return best;
 }
+// grupos de paredes ligadas; fica o de maior pontuação: comprimento de parede, mais esquadrias e nomes dentro dele (cópia completa da planta)
+function grupoPrincipal(W,esq,txts){
+  const n=W.length, par=W.map((_,i)=>i), fd=i=>par[i]===i?i:(par[i]=fd(par[i]));
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){ const a=W[i], b=W[j];
+    if(distSeg([a.x1,a.y1],b)<0.4||distSeg([a.x2,a.y2],b)<0.4||distSeg([b.x1,b.y1],a)<0.4||distSeg([b.x2,b.y2],a)<0.4) par[fd(i)]=fd(j); }
+  const G={}; W.forEach((w,i)=>{ (G[fd(i)]=G[fd(i)]||[]).push(w); });
+  let best=null, bs=-1;
+  Object.values(G).forEach(g=>{ const xs=g.flatMap(w=>[w.x1,w.x2]), ys=g.flatMap(w=>[w.y1,w.y2]), x0=Math.min(...xs)-0.3, x1=Math.max(...xs)+0.3, y0=Math.min(...ys)-0.3, y1=Math.max(...ys)+0.3;
+    const den=(x,y)=>x>=x0&&x<=x1&&y>=y0&&y<=y1, len=g.reduce((t,w)=>t+Math.hypot(w.x2-w.x1,w.y2-w.y1),0);
+    const ne=(esq||[]).filter(s=>den((s.x1+s.x2)/2,(s.y1+s.y2)/2)).length, nt=(txts||[]).filter(([x,y])=>den(x,y)).length;
+    const sc=len*(1+Math.min(1,ne/20)+0.1*Math.min(nt,10)); if(sc>bs){ bs=sc; best=g; } });
+  return best||W; }
 // mesma normalização do app de fundação, aplicada também aos vãos
 function normWalls(walls,gaps,flip,step){
   if(!walls.length) return {walls:[],gaps:[]};
@@ -5122,7 +5183,7 @@ function normWalls(walls,gaps,flip,step){
       const t=Math.max(0,Math.min(1,((px-o.x1)*dx+(py-o.y1)*dy)/L2)), qx=o.x1+t*dx, qy=o.y1+t*dy, d=Math.hypot(px-qx,py-qy);
       if(d>0.001&&d<0.15){ w[kx]=+(qx.toFixed(3)); w[ky]=+(qy.toFixed(3)); } }); }); });
   W=W.map(w=>({x1:+w.x1.toFixed(2),y1:+w.y1.toFixed(2),x2:+w.x2.toFixed(2),y2:+w.y2.toFixed(2)}));
-  return {walls:W,gaps:(gaps||[]).map(g=>({x1:tx(g.x1),y1:ty(g.y1),x2:tx(g.x2),y2:ty(g.y2)}))};
+  return {walls:W,gaps:(gaps||[]).map(g=>({...g,x1:tx(g.x1),y1:ty(g.y1),x2:tx(g.x2),y2:ty(g.y2)})),tx,ty};
 }
 // liga cada vão (ou abertura informada pelo centro) à parede mais próxima
 function abrirEmParede(W,cx,cy,l,t,extra={}){
@@ -5229,7 +5290,7 @@ function showImport(res,src){
   o+=`<text x="${mx*sc/2}" y="-12" text-anchor="middle" style="font-size:10px;fill:var(--muted)">${f(mx)} m</text><text x="-12" y="${my*sc/2}" text-anchor="middle" transform="rotate(-90 -12 ${my*sc/2})" style="font-size:10px;fill:var(--muted)">${f(my)} m</text></svg>`;
   $("impPrev").innerHTML=o;
   const nP=(res.ab||[]).filter(a=>a.t!=="Janela").length, nJ=(res.ab||[]).filter(a=>a.t==="Janela").length;
-  $("impSum").textContent=`${src}: ${W.length} paredes, projeção ${f(mx)} × ${f(my)} m${nP?`, ${nP} portas/vãos (em vermelho)`:""}${nJ?`, ${nJ} janelas (em verde)`:""}${res.rooms&&res.rooms.length?`, ${res.rooms.length} ambientes`:""}.${res.obs?" Observação: "+res.obs:""} Confira as medidas antes de usar.${src!=="Leitura do Claude"&&src!=="Maquete 3D"?" Janelas não são reconhecidas no PDF/DXF: coloque tocando na parede, na aba Planta.":""}`;
+  $("impSum").textContent=`${src}: ${W.length} paredes, projeção ${f(mx)} × ${f(my)} m${nP?`, ${nP} portas/vãos (em vermelho)`:""}${nJ?`, ${nJ} janelas (em verde)`:""}${res.rooms&&res.rooms.length?`, ${res.rooms.length} ambientes`:""}.${res.obs?" Observação: "+res.obs:""} Confira as medidas antes de usar.${src!=="Leitura do Claude"&&src!=="Maquete 3D"&&!res.juntar?" Janelas não são reconhecidas no PDF/DXF: coloque tocando na parede, na aba Planta.":""}`;
   $("impRes").hidden=false; impMsg("");
 }
 $("impFile").onchange=e=>{ const fl=e.target.files[0]; $("impName").textContent=fl?fl.name:""; handleFile(fl); };
@@ -5294,8 +5355,14 @@ function handleDxfText(txt){
   impDxf=parseDXF(txt);
   const cnt={}; impDxf.segs.forEach(s=>cnt[s.l]=(cnt[s.l]||0)+1);
   const layers=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
-  const pref=layers.find(l=>/parede|alven|wall|baldrame/i.test(l))||layers[0];
+  const pref=layers.find(l=>/parede|alven|wall|baldrame|sectioncut/i.test(l))||layers[0];
+  const opts=(sel,v0,n0)=>`<option value="">${n0}</option>`+layers.map(l=>`<option value="${esc(l)}"${l===sel?" selected":""}>${esc(l)} (${cnt[l]} linhas)</option>`).join("");
   $("impLayer").innerHTML=`<option value="*">Todos os layers</option>`+layers.map(l=>`<option value="${esc(l)}"${l===pref?" selected":""}>${esc(l)} (${cnt[l]} linhas)</option>`).join("");
+  $("impEsq").innerHTML=opts(layers.find(l=>l!==pref&&/esquad|janela|porta|caixilh|window|door/i.test(l))||"","","Nenhum");
+  $("impLote").innerHTML=opts(layers.find(l=>l!==pref&&/lote|terreno|limite|divisa/i.test(l))||"","","Nenhum");
+  const tc={}; (impDxf.texts||[]).forEach(t=>{ if(/[A-Za-zÀ-ú]{3}/.test(t.t)&&!/cota|dim/i.test(t.l)) tc[t.l]=(tc[t.l]||0)+1; });
+  const tl=Object.keys(tc).sort((a,b)=>tc[b]-tc[a]), tPref=tl.find(l=>/texto|text|amb|nome|cor-/i.test(l))||tl[0]||"";
+  $("impTxt").innerHTML=`<option value="">Nenhum</option>`+tl.map(l=>`<option value="${esc(l)}"${l===tPref?" selected":""}>${esc(l)} (${tc[l]} textos)</option>`).join("");
   const u={4:"0.001",5:"0.01",6:"1"}[impDxf.units];
   if(u) $("impUnit").value=u; else { const xs=impDxf.segs.flatMap(s=>[s.x1,s.x2]); const span=Math.max(...xs)-Math.min(...xs); $("impUnit").value=span>2000?"0.001":span>200?"0.01":"1"; }
   $("impDxf").hidden=false; $("impImg").hidden=true; impMsg(`${impDxf.segs.length} linhas encontradas.`);
@@ -5324,10 +5391,44 @@ $("projCopy").onclick=async()=>{
 };
 $("impDxfGo").onclick=()=>{
   if(!impDxf) return; const lay=$("impLayer").value, u=+$("impUnit").value;
-  const segs=impDxf.segs.filter(s=>lay==="*"||s.l===lay).map(s=>({x1:s.x1*u,y1:s.y1*u,x2:s.x2*u,y2:s.y2*u}));
-  const r=wallsFromSegs(segs), N=normWalls(r.walls,r.gapSegs,true,0.01);
-  const th=[...(r.thick||[])].sort((p,q)=>p-q), esp=th.length?Math.round(th[th.length>>1]*100)/100:null;
-  showImport({walls:N.walls,ab:abDosVaos(N.walls,N.gaps),rooms:[],esp},"DXF");
+  const sc=s=>({x1:s.x1*u,y1:s.y1*u,x2:s.x2*u,y2:s.y2*u}), esqL=$("impEsq").value, txL=$("impTxt").value, loL=$("impLote").value;
+  const segs=impDxf.segs.filter(s=>lay==="*"||s.l===lay).map(sc), esq=esqL?impDxf.segs.filter(s=>s.l===esqL).map(sc):[];
+  const r=wallsFromSegs(segs,{esq});
+  // DXF com vários desenhos (cortes, fachadas, outras pranchas): fica a planta com mais parede e o que está a até 3 m dela (muro, garagem)
+  if(r.walls.length>3){ const tx0=(impDxf.texts||[]).filter(t=>t.l===txL).map(t=>[t.x*u,t.y*u]), g=grupoPrincipal(r.walls,esq,tx0), gx=g.flatMap(w=>[w.x1,w.x2]), gy=g.flatMap(w=>[w.y1,w.y2]), m=3;
+    const dentro=w=>{ const x=(w.x1+w.x2)/2, y=(w.y1+w.y2)/2; return x>=Math.min(...gx)-m&&x<=Math.max(...gx)+m&&y>=Math.min(...gy)-m&&y<=Math.max(...gy)+m; };
+    const k=r.walls.map(dentro); r.walls=r.walls.filter((_,i)=>k[i]); r.thick=r.thick.filter((_,i)=>k[i]);
+    r.gapSegs=r.gapSegs.filter(v=>r.walls.some(w=>distSeg([(v.x1+v.x2)/2,(v.y1+v.y2)/2],w)<=0.3)); }
+  const N=normWalls(r.walls,r.gapSegs,true,0.01);
+  const th=[...(r.thick||[])].sort((p,q)=>p-q), esp=th.length?Math.round(th[th.length>>1]*100)/100:null, r2=v=>Math.round(v*100)/100;
+  // aberturas com a medida do desenho (cm)
+  const ab=N.gaps.map(g=>{ const l=Math.hypot(g.x2-g.x1,g.y2-g.y1), cx=(g.x1+g.x2)/2, cy=(g.y1+g.y2)/2, t=g.tipo==="Correr"?"Porta":g.tipo;
+    const o=abrirEmParede(N.walls,cx,cy,l,t,g.tipo==="Correr"?{mod:l>=2.4?"correr4":"correr"}:{}); if(!o) return null;
+    const w=N.walls[o.w], Lw=Math.hypot(w.x2-w.x1,w.y2-w.y1), s0=(cx-w.x1)*(w.x2-w.x1)/Lw+(cy-w.y1)*(w.y2-w.y1)/Lw;
+    o.l=r2(l); o.d=r2(Math.max(0,Math.min(Lw-l,s0-l/2)));
+    if(t==="Janela"&&l<=0.7){ o.a=0.60; o.p=1.50; } else if(t==="Janela"&&l>=1.8){ o.a=1.20; o.p=1.00; }
+    return o; }).filter(Boolean);
+  // nomes dos ambientes: textos do layer escolhido que caem dentro da casa; nomes repetidos ganham número (Quarto 1, Quarto 2...)
+  const xs=r.walls.flatMap(w=>[w.x1,w.x2]), ys=r.walls.flatMap(w=>[w.y1,w.y2]), bx=[Math.min(...xs)-0.3,Math.max(...xs)+0.3], by=[Math.min(...ys)-0.3,Math.max(...ys)+0.3];
+  const cap=t=>t===t.toUpperCase()?t.toLowerCase().replace(/^\p{L}/u,c=>c.toUpperCase()):t;   // SALA ESTAR → Sala estar; "Sala / Cozinha" fica como está
+  let rooms=txL?(impDxf.texts||[]).filter(t=>t.l===txL&&/[A-Za-zÀ-ú]{3}/.test(t.t)&&t.t.length<=30).map(t=>({n:cap(t.t),X:t.x*u,Y:t.y*u})).filter(t=>t.X>=bx[0]&&t.X<=bx[1]&&t.Y>=by[0]&&t.Y<=by[1])
+    .map(t=>({n:t.n,x:r2(N.tx(t.X)),y:r2(N.ty(t.Y)),nv:ehBanho(t.n.toLowerCase())?-0.02:0})):[];
+  rooms.sort((p,q)=>Math.abs(p.y-q.y)>0.3?p.y-q.y:p.x-q.x);
+  const rep={}; rooms.forEach(q=>rep[q.n]=(rep[q.n]||0)+1); const k={}; rooms.forEach(q=>{ if(rep[q.n]>1){ k[q.n]=(k[q.n]||0)+1; q.n=`${q.n} ${k[q.n]}`; } });
+  // lote: retângulo do layer do lote em volta da casa (frente embaixo)
+  let terr=null, loteTxt="";
+  if(loL){ const L=impDxf.segs.filter(s=>s.l===loL).map(sc).filter(s=>{ const x=(s.x1+s.x2)/2, y=(s.y1+s.y2)/2; return x>=bx[0]-40&&x<=bx[1]+40&&y>=by[0]-60&&y<=by[1]+60; }), lx=L.flatMap(s=>[s.x1,s.x2]), ly=L.flatMap(s=>[s.y1,s.y2]);
+    // face de fora da casa: linhas do layer das paredes que pertencem a alguma parede reconhecida
+    const fz=segs.filter(s=>r.walls.some(w=>distSeg([(s.x1+s.x2)/2,(s.y1+s.y2)/2],w)<=0.3)), fx=fz.flatMap(s=>[s.x1,s.x2]), fy=fz.flatMap(s=>[s.y1,s.y2]);
+    if(L.length&&fz.length){ const x0=Math.min(...lx), x1=Math.max(...lx), y0=Math.min(...ly), y1=Math.max(...ly), hx=Math.min(...fx), hy=Math.min(...fy);
+      if(x1-x0<=150&&y1-y0<=150&&hx>=x0-0.05&&Math.max(...fx)<=x1+0.05&&hy>=y0-0.05&&Math.max(...fy)<=y1+0.05){ terr={testada:r2(x1-x0),prof:r2(y1-y0),recFrente:r2(hy-y0),recEsq:r2(Math.max(0,hx-x0))};
+        loteTxt=` Lote ${f(terr.testada)} x ${f(terr.prof)} m (frente embaixo no desenho), recuo de frente ${f(terr.recFrente)} m.`; } } }
+  // cotas escritas à mão que não batem com a medida do desenho
+  const dz=(impDxf.dims||[]), dif=dz.filter(d=>{ const v=num(String(d.t).replace(",",".")); return d.t&&d.t!=="<>"&&v>0&&isFinite(d.m)&&Math.abs(v-d.m*u)>0.011; });
+  const cotTxt=dz.length?` ${dz.length} cotas no desenho${dif.length?`; ${dif.length} com o número trocado à mão (ex.: escrito ${dif[0].t}, medida ${f(dif[0].m*u)})`:", todas batem com a medida"}.`:" Nenhuma cota no desenho para conferir.";
+  const nJ=ab.filter(a=>a.t==="Janela").length, nC=ab.filter(a=>a.mod&&ehCorrer(a.mod)).length, nP=ab.filter(a=>a.t==="Porta").length-nC, nV=ab.filter(a=>a.t==="Vão").length;
+  const obs=`layers: paredes ${lay==="*"?"todos":lay}${esqL?`, esquadrias ${esqL}`:""}${txL?`, nomes ${txL}`:""}${loL?`, lote ${loL}`:""}. ${nJ} janelas, ${nC} portas de correr, ${nP} portas de abrir, ${nV} vãos livres.${loteTxt}${cotTxt}`;
+  showImport({walls:N.walls,ab,rooms,esp,terr,juntar:true,obs},"DXF");
 };
 $("impAiGo").onclick=async()=>{
   if(!impFileObj) return;
@@ -5370,7 +5471,17 @@ $("imp3dGo").onclick=()=>lerMaquete();
 $("impApply").onclick=()=>{ if(!IMP) return;
   S.walls=IMP.walls; S.rooms=IMP.rooms||[]; S.ab=IMP.ab||[]; if(IMP.esp&&IMP.esp>=0.08&&IMP.esp<=0.40) S.esp=IMP.esp; S.cA=null; S.cB=null;
   if(IMP.pd) S.pd=IMP.pd; if(IMP.piso!=null) S.piso=IMP.piso;
-  loadForm(); render(); $("impRes").hidden=true; impMsg("Planta aplicada. Veja a aba Planta: dê nome aos ambientes e coloque as janelas tocando nas paredes."); };
+  if(IMP.terr) S.terr=Object.assign(S.terr,IMP.terr,{forma:"ret"});
+  const fora=[];
+  if(IMP.juntar&&S.rooms.length){ try{ const G=geom(), del=new Set();   // dois nomes no mesmo ambiente (cozinha e jantar integrados): vira um nome só
+    G.rooms.forEach(r=>{ const ids=S.rooms.map((_,j)=>j).filter(j=>!del.has(j)&&pip(r.poly,num(S.rooms[j].x),num(S.rooms[j].y))); if(ids.length<2) return;
+      const q=S.rooms[ids[0]]; q.n=ids.map(j=>S.rooms[j].n).join(" / ").slice(0,40);
+      if(/cozinha|copa/i.test(q.n)&&/jantar/i.test(q.n)&&!/estar|living/i.test(q.n)) q.mt="cozinha";
+      ids.slice(1).forEach(j=>del.add(j)); });
+    // nome em área aberta (garagem sem parede na frente, varanda): não vira ambiente, fica de fora e avisa
+    S.rooms.forEach((q,j)=>{ if(!G.rooms.some(r=>pip(r.poly,num(q.x),num(q.y)))){ del.add(j); fora.push(q.n); } });
+    S.rooms=S.rooms.filter((_,j)=>!del.has(j)); }catch(e){} }
+  loadForm(); render(); $("impRes").hidden=true; impMsg(IMP.juntar?`Planta aplicada com portas, janelas e nomes do DXF. Confira na aba Planta.${fora.length?` Fora de ambiente fechado (área aberta, sem área no quadro): ${fora.join(", ")}.`:""}`:"Planta aplicada. Veja a aba Planta: dê nome aos ambientes e coloque as janelas tocando nas paredes."); };
 
 $("versao").textContent=VERSAO;
 /* projeto vindo do Detalhador de Fundação pelo botão "Fazer o hidrossanitário": entra como projeto novo, com fossa, aberto na aba Hidrossanitário */
