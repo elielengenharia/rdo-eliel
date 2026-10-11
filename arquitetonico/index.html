@@ -157,8 +157,9 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px;font-weight:600">Estilo do desenho (texto, linhas e cotas)</summary>
         <div class="form" style="margin-top:8px">
           <label>Altura do texto das cotas<select id="est.tCota"><option value="1.5">1,5 mm</option><option value="1.8" selected>1,8 mm</option><option value="2">2 mm</option><option value="2.5">2,5 mm</option><option value="3">3 mm</option></select></label>
-          <label>Nome do ambiente<select id="est.tNome"><option value="1.8">1,8 mm</option><option value="2.2" selected>2,2 mm</option><option value="2.5">2,5 mm</option><option value="3">3 mm</option><option value="3.5">3,5 mm</option></select></label>
-          <label>Área e nível do ambiente<select id="est.tArea"><option value="1.4">1,4 mm</option><option value="1.7" selected>1,7 mm</option><option value="2">2 mm</option><option value="2.5">2,5 mm</option></select></label>
+          <label>Nome do ambiente<select id="est.tNome"><option value="1.2">1,2 mm</option><option value="1.4">1,4 mm</option><option value="1.6">1,6 mm</option><option value="1.8" selected>1,8 mm</option><option value="2">2 mm</option><option value="2.2">2,2 mm</option><option value="2.5">2,5 mm</option><option value="3">3 mm</option></select></label>
+          <label>Área e nível do ambiente<select id="est.tArea"><option value="1">1 mm</option><option value="1.2">1,2 mm</option><option value="1.4" selected>1,4 mm</option><option value="1.7">1,7 mm</option><option value="2">2 mm</option></select></label>
+          <label>Largura da letra (fator)<select id="est.fLarg"><option value="1" selected>1,0 normal</option><option value="0.9">0,9</option><option value="0.8">0,8 estreita</option><option value="0.7">0,7 bem estreita</option></select></label>
           <label>Linha das paredes<select id="est.lPar"><option value="0.35">0,35 mm</option><option value="0.5" selected>0,5 mm</option><option value="0.7">0,7 mm</option><option value="0.9">0,9 mm</option></select></label>
           <label>Linha das cotas<select id="est.lCota"><option value="0.13">0,13 mm</option><option value="0.18" selected>0,18 mm</option><option value="0.25">0,25 mm</option><option value="0.35">0,35 mm</option></select></label>
           <label>Marca da cota<select id="est.marca"><option value="traco" selected>Traço inclinado</option><option value="ponto">Ponto</option><option value="seta">Seta</option></select></label>
@@ -281,6 +282,11 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <h2>Planta de layout</h2>
       <p class="cap">Os móveis entram sozinhos pelo nome do ambiente (quarto, sala, cozinha, banheiro, lavanderia, escritório, garagem): longe do giro das portas, sem móvel alto na frente de janela e com espaço para circular. Mude o tipo do ambiente na tabela abaixo ou toque em <b>Outra posição</b> para trocar o móvel principal de parede. <b>Toque numa peça e arraste</b> para mudar de lugar (móveis, vaso, lavatório e box); a posição vale para todas as plantas, a hidráulica e a elétrica.</p>
       <div class="form"><label>Uso do imóvel<select id="uso"><option value="residencial">Residencial (casa)</option><option value="comercial">Comercial (salas, loja, escritório)</option></select></label></div>
+      <div class="row" style="gap:10px;flex-wrap:wrap;margin:4px 0">
+        <label style="font-size:13px">Nome do ambiente<select data-est="tNome" style="width:auto"><option value="1.2">1,2 mm</option><option value="1.4">1,4 mm</option><option value="1.6">1,6 mm</option><option value="1.8" selected>1,8 mm</option><option value="2">2 mm</option><option value="2.2">2,2 mm</option><option value="2.5">2,5 mm</option><option value="3">3 mm</option></select></label>
+        <label style="font-size:13px">Área<select data-est="tArea" style="width:auto"><option value="1">1 mm</option><option value="1.2">1,2 mm</option><option value="1.4" selected>1,4 mm</option><option value="1.7">1,7 mm</option><option value="2">2 mm</option></select></label>
+        <label style="font-size:13px">Largura da letra<select data-est="fLarg" style="width:auto"><option value="1">1,0 normal</option><option value="0.9">0,9</option><option value="0.8">0,8 estreita</option><option value="0.7">0,7 bem estreita</option></select></label>
+      </div>
       <div id="layBar" style="margin:4px 0 8px"></div>
       <div class="draw" id="lay" style="touch-action:none;cursor:pointer;user-select:none;-webkit-user-select:none"></div>
     </div>
@@ -700,7 +706,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.47 · piso da garagem e varanda na planta baixa", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.48 · letras dos ambientes no tamanho escolhido em todas as plantas", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -763,7 +769,7 @@ function modeloSalas(){ const o=defaults();
   o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua lateral (o terreno cai para ela)
   return o; }
 // estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
-function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); if(S.emp==="Eliel Ribeiro Engenharia") S.emp="Eliel Engenharia"; /* nome fantasia no carimbo */ S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto"},o.fossa||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim"},o.estS||{}); S.lims=Array.isArray(o.lims)?o.lims:[]; S.vols=Array.isArray(o.vols)?o.vols:[]; S.est=Object.assign({tCota:1.8,tNome:2.2,tArea:1.7,lPar:0.5,lCota:0.18,marca:"traco"},o.est||{}); }catch(e){ S=defaults(); } return S; }
+function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); if(S.emp==="Eliel Ribeiro Engenharia") S.emp="Eliel Engenharia"; /* nome fantasia no carimbo */ S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto"},o.fossa||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim"},o.estS||{}); S.lims=Array.isArray(o.lims)?o.lims:[]; S.vols=Array.isArray(o.vols)?o.vols:[]; S.est=Object.assign({tCota:1.8,tNome:1.8,tArea:1.4,lPar:0.5,lCota:0.18,marca:"traco",fLarg:1},o.est||{}); if(!S.est.v){ if(num(S.est.tNome)===2.2) S.est.tNome=1.8; if(num(S.est.tArea)===1.7) S.est.tArea=1.4; S.est.v=2; } /* nome do ambiente menor (pedido do Eliel) */ }catch(e){ S=defaults(); } return S; }
 let _o0=null; try{ _o0=JSON.parse(localStorage.getItem("arq-casa-v1")); }catch(e){} S=estadoDe(_o0||{});
 /* vários projetos no mesmo aparelho: a lista fica em arq-projetos-v1; o aberto continua em arq-casa-v1 */
 const PJ_KEY="arq-projetos-v1";
@@ -1105,8 +1111,8 @@ const TX=(D,x,y,txt,h=2,o={})=>D.p.push({t:"t",x,y,txt:String(txt),h,a:o.a||"m",
    Cada texto vira uma caixa no papel; os fixos (nomes dos ambientes, tabelas, legendas) ficam, os outros procuram o lugar livre mais perto. */
 const MOVEIS=new Set(["ESGOTO","AGUA","PLUVIAL","VIGA","EIXO","ESQUADRIA","ELETRICA","FORRO","TELHADO","ESTRUT","FUNDACAO","LAJE","PISO","SOLEIRA","REVEST","CORTE"]);
 let _medeCv=null; const _larg=new Map();
-function largTexto(t,b){ const ch=(b?"b":"n")+t; if(_larg.has(ch)) return _larg.get(ch); let w; try{ if(!_medeCv) _medeCv=document.createElement("canvas").getContext("2d"); _medeCv.font=`${b?"bold ":""}100px Helvetica, Arial, sans-serif`; w=_medeCv.measureText(t).width/100; }catch(e){ w=t.length*(b?0.58:0.52); }
-  if(_larg.size>20000) _larg.clear(); _larg.set(ch,w); return w; }   // largura do texto em mm para letra de 1 mm (fonte do PDF: h·1,39)
+function largTexto(t,b){ const ch=(b?"b":"n")+t; if(_larg.has(ch)) return _larg.get(ch)*fLarg(); let w; try{ if(!_medeCv) _medeCv=document.createElement("canvas").getContext("2d"); _medeCv.font=`${b?"bold ":""}100px Helvetica, Arial, sans-serif`; w=_medeCv.measureText(t).width/100; }catch(e){ w=t.length*(b?0.58:0.52); }
+  if(_larg.size>20000) _larg.clear(); _larg.set(ch,w); return w*fLarg(); }   // largura do texto em mm para letra de 1 mm (fonte do PDF: h·1,39)
 function desencavala(D){ if(!D||D._dc) return D; D._dc=1; const k=D.k, T=D.p.filter(q=>q.t==="t"&&String(q.txt).trim()); if(T.length<2) return D;
   const modo=q=>q.mv||(MOVEIS.has(q.l)?"l":"f"), pr={f:0,r:0.5,c:1,l:2,n:2}, folga=0.35*k;
   const caixa=(q,x,y)=>{ const w=largTexto(q.txt,q.b)*q.h*1.39*k+2*folga, hh=q.h*k/2+folga, al={s:0,m:0.5,e:1}[q.a]??0.5, r=(q.rot||0)*Math.PI/180, d=[Math.cos(r),Math.sin(r)], n=[-Math.sin(r),Math.cos(r)], s0=-w*al, s1=w*(1-al);
@@ -1149,6 +1155,7 @@ function desencavala(D){ if(!D||D._dc) return D; D._dc=1; const k=D.k, T=D.p.fil
 function seta(D,x0,y0,x1,y1,l="TELHADO"){ const k=D.k, d=Math.hypot(x1-x0,y1-y0)||1, ux=(x1-x0)/d, uy=(y1-y0)/d, s=1.6*k;
   L(D,x0,y0,x1,y1,.25,l); PG(D,[[x1,y1],[x1-ux*s*1.8-uy*s*0.6,y1-uy*s*1.8+ux*s*0.6],[x1-ux*s*1.8+uy*s*0.6,y1-uy*s*1.8-ux*s*0.6]],l); }
 /* cota horizontal: linha em y, chamadas a partir de yRef */
+const estTxt=()=>({tN:Math.min(5,Math.max(1,num((S.est||{}).tNome)||1.8)),tA:Math.min(4,Math.max(0.8,num((S.est||{}).tArea)||1.4))}), fLarg=()=>Math.min(1.2,Math.max(0.6,num((typeof S!=="undefined"&&S&&S.est||{}).fLarg)||1));
 // estilo do desenho (aba Planta): tamanho do texto das cotas, espessura da linha de cota e marca (traço inclinado, ponto ou seta)
 const tc=()=>Math.min(4,Math.max(1,num((S.est||{}).tCota)||1.8)), lc=()=>Math.min(0.5,Math.max(0.09,num((S.est||{}).lCota)||0.18));
 function marcaCota(D,x,y,ux,uy,lado){ const k=D.k, m=(S.est||{}).marca||"traco", z=tc()/1.8;
@@ -1301,10 +1308,12 @@ function rotuloAmb(D,r,ls,x,y,obs=[]){ const k=D.k, P=paraDentro(r.poly,0.05)||r
   let best=null;
   // primeiro mantém tudo e diminui um pouco; depois só nome e área; por último só o nome, até a metade do tamanho
   // nome e área sempre juntos: primeiro tudo, depois só nome e área (letra até a metade), desviando das portas; se não couber de jeito nenhum, só o nome
-  const n2=Math.min(2,ls.length), fase1=[], fase2=[]; [1,0.9,0.8].forEach(z=>{ for(let n=ls.length;n>n2;n--) fase1.push([n,z]); }); [1,0.9,0.8,0.7].forEach(z=>fase1.push([n2,z])); [1,0.85,0.7].forEach(z=>fase1.push([1,z])); [0.6,0.5].forEach(z=>fase1.push([n2,z])); [0.6,0.5].forEach(z=>fase2.push([1,z]));   // ambiente apertado (corredor): fica só o nome em letra legível, a área está no quadro
+  // mesmo tamanho em todos os ambientes: primeiro tenta o tamanho escolhido (até 80%) desviando de tudo, depois encostando nos móveis; só diminui mais se o ambiente for pequeno
+  const n2=Math.min(2,ls.length), fase0=[], fase1=[], fase2=[]; [1,0.9,0.8].forEach(z=>{ for(let n=ls.length;n>=n2;n--) fase0.push([n,z]); }); [1,0.9,0.8].forEach(z=>fase0.push([1,z]));
+  [0.7].forEach(z=>fase1.push([n2,z])); [0.7].forEach(z=>fase1.push([1,z])); [0.6,0.5].forEach(z=>fase1.push([n2,z])); [0.6,0.5].forEach(z=>fase2.push([1,z]));   // ambiente apertado (corredor): fica só o nome, a área está no quadro
   // na horizontal primeiro (desenho técnico se lê de baixo e da direita); em pé só se não couber deitado de jeito nenhum
   for(const dv of [[[1,0]],dirs.slice(1)]){ if(!dv.length) continue; dirsV=dv;
-    for(const planos of [fase1,fase2]){ for(const ob of [obs,arcos,[]]){ for(const [n,z] of planos){ const L0=esc(ls.slice(0,n),z), t=tenta(L0,ob); if(t){ best={...t,L0}; break; } } if(best) break; } if(best) break; }
+    for(const planos of [fase0,fase1,fase2]){ for(const ob of [obs,arcos,[]]){ for(const [n,z] of planos){ const L0=esc(ls.slice(0,n),z), t=tenta(L0,ob); if(t){ best={...t,L0}; break; } } if(best) break; } if(best) break; }
     if(best) break; }
   if(!best) best={p:c,u:[1,0],L0:esc(ls.slice(0,1),0.5),solto:1};   // não coube: pode ser empurrado um pouco pelos textos vizinhos
   const u=best.u, v=[-u[1],u[0]], ang=Math.atan2(u[1],u[0])*180/Math.PI; let dd=-alt(best.L0)/2;
@@ -1355,7 +1364,7 @@ function desenhoPlanta(G,k,ajuda){
     return [[-w,-hh],[w,-hh],[w,hh],[-w,hh]].map(([x,y])=>[q.x+x*c-y*sn,q.y+x*sn+y*c]); });
   // ambientes
   G.rooms.forEach(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; const x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy;
-    const tN=Math.min(5,Math.max(1.2,num((S.est||{}).tNome)||2.2)), tA=Math.min(4,Math.max(1,num((S.est||{}).tArea)||1.7));
+    const {tN,tA}=estTxt();
     rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:tN,b:true},{t:`A = ${f(r.area)} m²`,h:tA},{t:`NV ${fNv(r.nv)}`,h:tA*0.88,l:"COTAS"}],x,y,(()=>{ try{ return zonasAmb(G,r).porta.concat(obsCota); }catch(e){ return obsCota; } })()); });   // fora do giro das portas e dos números das cotas
   (G.pisos||[]).forEach(r=>rotuloPisoExt(D,r,obsCota));   // garagem, varanda: nome, área, nível e piso
   // cotas: faces das paredes (em cima e à esquerda) e totais
@@ -2031,7 +2040,7 @@ function desenhaPeca(D,T,des,lay="MOBILIA"){ const w0=.18, dr={
 // pisos externos (garagem, varanda): linha do limite de piso (desnível), nome, área e nível; na garagem, o carro
 // piso de garagem e varanda: cimentado na garagem, cerâmica antiderrapante na varanda (ou o escolhido na aba Piso para aquele nome)
 function pisoExtTipo(r){ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null; return lab&&lab.pt&&lab.pt!=="padrao"?lab.pt:/garag/i.test(r.n)?"cimento":"cer45"; }
-function rotuloPisoExt(D,r,obs){ const tN=Math.min(5,Math.max(1.2,num((S.est||{}).tNome)||2.2)), tA=Math.min(4,Math.max(1,num((S.est||{}).tArea)||1.7));
+function rotuloPisoExt(D,r,obs){ const {tN,tA}=estTxt();
   rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:tN,b:true},{t:`A = ${f(r.area)} m²`,h:tA},{t:`NV ${fNv(r.nv)}`,h:tA*0.88,l:"COTAS"},{t:`PISO ${curtoPiso[pisoExtTipo(r)]||""}`,h:tA*0.8,l:"COTAS"}],r.cx,r.cy,obs||[]); }
 function desenhaPisosExt(D,G,o={}){ const k=D.k; (G.pisos||[]).forEach(r=>{
     // paginação do piso (juntas), recortada no contorno da área
@@ -2065,12 +2074,10 @@ function desenhoLayout(G,k,LM){
   desenhaPisosExt(D,G,{rot:true,carro:true});
   (LM||layoutMoveis(G)).forEach(R=>{ const r=R.r;
     R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des)); if(R.banho) desenhaLoucas(D,r,R.banho,k,false); if(R.carro) desenhaCarro(D,R.carro);
-    const lab=r.labIdx>=0?S.rooms[r.labIdx]:null, x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy, nome=r.n.toUpperCase(), ar=`A = ${f(r.area)} m²`;
-    // ambiente pequeno: diminui a letra; se ainda não couber, fica só o nome (a área está no quadro)
-    const Zp=zonasAmb(G,r).porta, So=[...R.sol,...Zp]; let ok=null, hn=2.3, sa=false;
-    for(const [hh,obs,s1] of [[2.0,So],[2.0,So,1],[2.0,R.sol],[2.0,R.sol,1],[2.0,[],1]]){ const wt=Math.max(nome.length*hh*0.85,s1?0:ar.length*hh*0.78*0.83)*k+0.04, ht=hh*(s1?1.6:3)*k; ok=lugarRotulo(r,obs,x,y,wt,ht); hn=hh; sa=!!s1; if(ok) break; }
-    const [px,py]=ok||[x,y];
-    if(sa) TX(D,px,py,nome,hn,{b:true}); else { TX(D,px,py-hn*0.6*k,nome,hn,{b:true}); TX(D,px,py+hn*0.8*k,ar,hn*0.78); } });
+    const lab=r.labIdx>=0?S.rooms[r.labIdx]:null, x=lab?num(lab.x):r.cx, y=lab?num(lab.y):r.cy, {tN,tA}=estTxt();
+    // nome e área no tamanho escolhido (aba Planta ou Layout): cabe dentro do ambiente, fora dos móveis e do giro das portas, e diminui se precisar
+    const Zp=(()=>{ try{ return zonasAmb(G,r).porta; }catch(e){ return []; } })();
+    rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:tN,b:true},{t:`A = ${f(r.area)} m²`,h:tA}],x,y,[...R.sol,...Zp]); });
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
   return D;
 }
@@ -2525,7 +2532,7 @@ function desenhoPluvial(G,k,PV,legenda=true){ const D=Dw(k), bb=G.bb, l="PLUVIAL
   if(G.vazio||!PV){ TX(D,0,0,"Sem paredes.",3); return D; }
   G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s0=>L(D,...s0,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
   const TI=PV.TI, R=TI.R; if(TI.poly) PL(D,[...TI.poly,TI.poly[0]],.2,"PROJECAO",true); else PL(D,[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1],[R.x0,R.y0]],.2,"PROJECAO",true);
-  G.rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.4,b:true,l:"COTAS"}],r.cx,r.cy));
+  G.rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:estTxt().tN*0.8,b:true,l:"COTAS"}],r.cx,r.cy));
   if(PV.livre){ TX(D,(bb.x0+bb.x1)/2,bb.y1+8*k,"TELHADO SEM CALHA: ÁGUA CAI LIVRE DO BEIRAL - CALÇADA DE PROTEÇÃO COM CAIMENTO DE 2%",1.6,{b:true,l}); return D; }
   // calhas
   PV.CL.lista.forEach(c=>{ const [x0,y0,x1,y1]=c.seg, u=[(x1-x0)/(c.L||1),(y1-y0)/(c.L||1)]; L(D,x0,y0,x1,y1,.45,l);
@@ -2907,7 +2914,7 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
   G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs);
   LM=LM||layoutMoveis(G); HD=HD||redeHidro(G,LM);
   LM.forEach(R=>{ R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des,"MOBILIAC")); if(R.banho){ const n0=D.p.length; desenhaLoucas(D,R.r,R.banho,k,false); for(let i=n0;i<D.p.length;i++) D.p[i].l="MOBILIAC"; } });
-  LM.forEach(R=>{ const r=R.r; rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.4,b:true,l:"COTAS"}],r.cx,r.cy); });
+  LM.forEach(R=>{ const r=R.r; rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:estTxt().tN*0.8,b:true,l:"COTAS"}],r.cx,r.cy); });
   // esgoto
   HD.salas.forEach(sa=>{ const sd=sa.saida.p;
     sa.A.forEach(a=>{ if(!a.es) return; simbHidro(D,{t:"es",p:a.es});
@@ -3398,7 +3405,7 @@ function desenhoReforma(G2,k,G,leg=true){
   // rótulos dos vãos alterados
   G2.abs.forEach(g=>{ const st=stA(g.a); if(st==="e"||stW(g.w.i)==="d") return; const w=g.w, m=[w.x1+w.ux*(g.d+g.l/2)-g.nX*(h+5.5*k)*g.lado,w.y1+w.uy*(g.d+g.l/2)-g.nY*(h+5.5*k)*g.lado];
     TX(D,...m,st==="d"?"FECHAR":"ABRIR",1.4,{b:true,l:st==="d"?"CONSTRUIR":"DEMOLIR"}); });
-  (G||geom()).rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:1.6,b:true}],r.cx,r.cy));
+  (G||geom()).rooms.forEach(r=>rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:estTxt().tN*0.9,b:true}],r.cx,r.cy));
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
   if(leg){ const x0=bb.x1+14*k; let y=bb.y0; TX(D,x0,y,"LEGENDA",2,{a:"s",b:true}); y+=6*k;
     const sw=(st,txt)=>{ const P=[[x0,y-1.5*k],[x0+6*k,y-1.5*k],[x0+6*k,y+1.5*k],[x0,y+1.5*k]];
@@ -4370,7 +4377,7 @@ function primsSVG(D,map,k){
       s+=`<path d="M${n2(a)} ${n2(b)}A${n2(r)} ${n2(r)} 0 0 ${cr>0?1:0} ${n2(c)} ${n2(d)}" style="fill:none;stroke:${cor}" stroke-width="${p.w}"/>`; }
     else if(p.t==="c"){ const [a,b]=map(p.cx,p.cy); s+=`<circle cx="${n2(a)}" cy="${n2(b)}" r="${n2(p.r/k)}" style="fill:none;stroke:${cor}" stroke-width="${p.w}"/>`; }
     else if(p.t==="t"){ const [a,b]=map(p.x,p.y), an={s:"start",m:"middle",e:"end"}[p.a];
-      s+=`<text x="${n2(a)}" y="${n2(b)}" font-size="${n2(p.h*1.39)}" text-anchor="${an}" dominant-baseline="central"${p.b?' font-weight="600"':""} style="fill:${cor}"${p.rot?` transform="rotate(${p.rot} ${n2(a)} ${n2(b)})"`:""}>${esc(p.txt)}</text>`; }
+      s+=`<text x="${n2(a)}" y="${n2(b)}" font-size="${n2(p.h*1.39)}" text-anchor="${an}" dominant-baseline="central"${p.b?' font-weight="600"':""} style="fill:${cor}"${(()=>{ const fl=fLarg(); return fl!==1?` transform="translate(${n2(a)} ${n2(b)})${p.rot?` rotate(${p.rot})`:""} scale(${fl} 1) translate(${n2(-a)} ${n2(-b)})"`:p.rot?` transform="rotate(${p.rot} ${n2(a)} ${n2(b)})"`:""; })()}>${esc(p.txt)}</text>`; }
   });
   return s;
 }
@@ -4382,7 +4389,8 @@ function svgDe(D,id,pad=4){
 }
 const VIEW={};
 // escala da tela: textos legíveis no celular (a prancha usa a escala real)
-function kTela(G){ const bb=G.bb, base=window.innerWidth<600?92:120; return Math.max(0.02,(Math.max(bb.x1-bb.x0,bb.y1-bb.y0)+2)/base); }
+// escala da tela = a da prancha (1:50, 1:75, 1:100...): letras e linhas aparecem do tamanho que vão sair no PDF
+function kTela(G){ const bb=G.bb, W=bb.x1-bb.x0+2, H=bb.y1-bb.y0+2, lg=Math.max(W,H), cu=Math.min(W,H), s0=[50,75,100,125,150,200,250,500].find(e=>lg*1000/e<=330&&cu*1000/e<=240)||500; return s0/1000; }
 let estreita=window.innerWidth<600; window.addEventListener("resize",()=>{ const e=window.innerWidth<600; if(e!==estreita){ estreita=e; later(); } });
 
 /* ---------------- Ícones dos telhados ---------------- */
@@ -4681,7 +4689,7 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["cAcost","cBcost","cAamb2","cBamb2","est.tCota","est.tNome","est.tArea","est.lPar","est.lCota","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const FIELDS=["est.fLarg","cAcost","cBcost","cAamb2","cBamb2","est.tCota","est.tNome","est.tArea","est.lPar","est.lCota","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
 const TEXTOS=["cAcost","cBcost","cAamb2","cBamb2","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
@@ -4698,7 +4706,7 @@ $("ladosTab").addEventListener("click",e=>{ const b=e.target.closest("[data-ldel
 $("ladoAdd").onclick=()=>{ S.terr.lados.push({m:0,c:"",rua:"não"}); $("ladosTab").innerHTML=""; render(); };
 { const tbP=$("tabPint"), labDeIdx=i=>{ const k=+i; return k>=0?S.rooms[k]:null; };
   tbP.addEventListener("input",e=>{ const el=e.target, L0=labDeIdx(el.dataset.pc??el.dataset.pt??el.dataset.pp); if(!L0) return; if(el.dataset.pc!=null) L0.cp=el.value; else if(el.dataset.pt!=null) L0.ct=el.value; else if(el.dataset.pp!=null){ L0.rp=el.value; render(); return; } later(); }); }
-function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); $("fmt").value=S.fmt||"A3"; $("agrupar").value=S.agrupar||"auto"; $("cotGer").value=S.cotGer==="não"?"não":"sim"; renderWalls(); renderRooms(); renderAb(); }
+function loadForm(){ FIELDS.forEach(id=>{ const el=$(id); if(el&&id!=="tel.dir") el.value=getv(id); }); document.querySelectorAll("[data-est]").forEach(el=>{ el.value=String(num(S.est[el.dataset.est])); }); $("fmt").value=S.fmt||"A3"; $("agrupar").value=S.agrupar||"auto"; $("cotGer").value=S.cotGer==="não"?"não":"sim"; renderWalls(); renderRooms(); renderAb(); }
 let tmr; const later=()=>{clearTimeout(tmr);tmr=setTimeout(render,180);};
 FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
   el.addEventListener(el.tagName==="SELECT"?"change":"input",()=>{ const v=TEXTOS.includes(id)?el.value:num(el.value); setv(id,v);
@@ -4706,6 +4714,7 @@ FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
     if(el.tagName==="SELECT") render(); else later(); }); });
 $("fmt").onchange=()=>{ S.fmt=$("fmt").value; save(); };
 $("agrupar").onchange=()=>{ S.agrupar=$("agrupar").value; save(); };
+document.addEventListener("change",e=>{ const el=e.target.closest&&e.target.closest("[data-est]"); if(!el) return; S.est[el.dataset.est]=num(el.value); const tw=$("est."+el.dataset.est); if(tw) tw.value=el.value; save(); render(); });   // altura e largura das letras: o mesmo estilo em todas as plantas
 $("cotGer").onchange=()=>{ S.cotGer=$("cotGer").value; save(); render(); };   // cotas gerais da planta (cadeias de cima e da esquerda)
 $("roofTypes").addEventListener("click",e=>{ const b=e.target.closest("[data-tipo]"); if(!b) return; const tp=+b.dataset.tipo; S.tel.tipo=tp; S.tel.dir=dirPadrao(tp,GG||geom()); render(); });
 ["A","B"].forEach(q=>{ const set=v=>{ S["c"+q]=num(v); later(); }; $("c"+q+"r").addEventListener("input",e=>{ $("c"+q+"n").value=e.target.value; set(e.target.value); }); $("c"+q+"n").addEventListener("change",e=>set(e.target.value)); $("c"+q+"dir").addEventListener("change",e=>{ S["c"+q+"dir"]=e.target.value; S["c"+q]=null; save(); render(); }); });   // direção da linha: muda e volta para o meio
@@ -5261,7 +5270,7 @@ function buildDXF(){
   p(0,"ENDTAB");p(0,"ENDSEC");
   p(0,"SECTION");p(2,"ENTITIES");
   const lay=l=>LAYERS[l]?l:"GERAL";
-  const T=(x,y,h,t,l,al=0,rot=0)=>{ p(0,"TEXT");p(8,l);p(10,n(x));p(20,n(y));p(30,0);p(40,n(h));p(1,dxfEnc(t)); if(rot)p(50,n(rot)); p(72,al);p(73,2);p(11,n(x));p(21,n(y));p(31,0); };
+  const T=(x,y,h,t,l,al=0,rot=0)=>{ p(0,"TEXT");p(8,l);p(10,n(x));p(20,n(y));p(30,0);p(40,n(h));p(1,dxfEnc(t)); if(rot)p(50,n(rot)); if(fLarg()!==1)p(41,n(fLarg())); p(72,al);p(73,2);p(11,n(x));p(21,n(y));p(31,0); };
   let cur=0;
   P.folhas.forEach(fl=>fl.itens.forEach(it=>{
     const {D,e,k,s}=it.d, dx=cur-e.x0, X=x=>x+dx, Yy=y=>-(y-e.y0);
@@ -5310,9 +5319,9 @@ function buildPDF(fmt){
   const line=(x1,y1,x2,y2)=>c.push(`${n(x1)} ${n(H-y1)} m ${n(x2)} ${n(H-y2)} l S`);
   const rect=(x,y,w,h,fill)=>c.push(`${n(x)} ${n(H-y-h)} ${n(w)} ${n(h)} re ${fill?"f":"S"}`);
   const poly=(pts,fill)=>c.push(pts.map((q,i)=>`${n(q[0])} ${n(H-q[1])} ${i?"l":"m"}`).join(" ")+(fill?" h f":" S"));
-  const text=(x,y,sz,t,bold=false,al=0,rot=0)=>{ if(t===""||t==null) return; const fs=sz*1.39, w=String(t).length*fs*(bold?0.58:0.52)*(al===1?.5:al===2?1:0);
+  const text=(x,y,sz,t,bold=false,al=0,rot=0,fl=1)=>{ if(t===""||t==null) return; const fs=sz*1.39, w=String(t).length*fs*(bold?0.58:0.52)*fl*(al===1?.5:al===2?1:0);
     const a=-rot*Math.PI/180, cs=Math.cos(a), sn=Math.sin(a); const X=x, Yp=H-y; const tx=X-w*cs+(sz/2)*sn, ty=Yp-w*sn-(sz/2)*cs;
-    c.push(`BT /${bold?"F2":"F1"} ${n(fs)} Tf ${n(cs)} ${n(sn)} ${n(-sn)} ${n(cs)} ${n(tx)} ${n(ty)} Tm (${pdfTxt(t)}) Tj ET`); };
+    c.push(`BT /${bold?"F2":"F1"} ${n(fs)} Tf ${fl!==1?`${n(fl*100)} Tz `:""}${n(cs)} ${n(sn)} ${n(-sn)} ${n(cs)} ${n(tx)} ${n(ty)} Tm (${pdfTxt(t)}) Tj ET`); };   // fl: largura da letra (Tz)
   const wrap=(t,sz,wmm)=>{ const max=Math.max(8,Math.floor(wmm/(sz*1.39*0.53))); const out=[]; let cur="";
     String(t).split(" ").forEach(wd=>{ if((cur+" "+wd).trim().length>max){ if(cur.trim()) out.push(cur.trim()); cur=wd; } else cur+=" "+wd; }); if(cur.trim()) out.push(cur.trim()); return out; };
   const carimbo=(fl)=>{
@@ -5368,7 +5377,7 @@ function buildPDF(fmt){
       else if(q.t==="a"){ gray(0); lw(q.w); dash(false); const a0=Math.atan2(q.y1-q.cy,q.x1-q.cx), a1=Math.atan2(q.y2-q.cy,q.x2-q.cx); let d=a1-a0; while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI;
         const pts=[]; for(let m=0;m<=12;m++){ const a=a0+d*m/12; pts.push([X(q.cx+q.r*Math.cos(a)),Y(q.cy+q.r*Math.sin(a))]); } poly(pts,false); }
       else if(q.t==="c"){ gray(st[0]); lw(q.w); dash(false); const pts=[]; for(let m=0;m<=24;m++){ const a=m/24*2*Math.PI; pts.push([X(q.cx+q.r*Math.cos(a)),Y(q.cy+q.r*Math.sin(a))]); } poly(pts,false); }
-      else if(q.t==="t"){ gray(q.l==="COTAS"?.25:0,true); text(X(q.x),Y(q.y),q.h,q.txt,q.b,{s:0,m:1,e:2}[q.a],q.rot); } });
+      else if(q.t==="t"){ gray(q.l==="COTAS"?.25:0,true); text(X(q.x),Y(q.y),q.h,q.txt,q.b,{s:0,m:1,e:2}[q.a],q.rot,fLarg()); } });
     dash(false);
   };
   const ladoBox=(fl)=>{
