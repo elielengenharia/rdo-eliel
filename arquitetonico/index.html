@@ -270,7 +270,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
   <section id="tab-lay" hidden>
     <div class="sheet">
       <h2>Planta de layout</h2>
-      <p class="cap">Os móveis entram sozinhos pelo nome do ambiente (quarto, sala, cozinha, banheiro, lavanderia, escritório, garagem): longe do giro das portas, sem móvel alto na frente de janela e com espaço para circular. Mude o tipo do ambiente na tabela abaixo ou toque em <b>Outra posição</b> para trocar o móvel principal de parede.</p>
+      <p class="cap">Os móveis entram sozinhos pelo nome do ambiente (quarto, sala, cozinha, banheiro, lavanderia, escritório, garagem): longe do giro das portas, sem móvel alto na frente de janela e com espaço para circular. Mude o tipo do ambiente na tabela abaixo ou toque em <b>Outra posição</b> para trocar o móvel principal de parede. <b>Vaso, lavatório, box e chuveiro</b>: arraste na aba Banheiro; a posição vale aqui, na hidráulica e na elétrica.</p>
       <div class="form"><label>Uso do imóvel<select id="uso"><option value="residencial">Residencial (casa)</option><option value="comercial">Comercial (salas, loja, escritório)</option></select></label></div>
       <div class="draw" id="lay"></div>
     </div>
@@ -689,7 +689,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.40 · planta baixa para a obra", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.41 · louças do banheiro no lugar que o profissional escolher", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1600,7 +1600,7 @@ function layoutBanheiro(G,r){
   const pc=porta?[(porta.p0[0]+porta.p1[0])/2,(porta.p0[1]+porta.p1[1])/2]:[x0,y0];
   const cs=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]], cd=cs.reduce((m,c)=>Math.hypot(c[0]-pc[0],c[1]-pc[1])<Math.hypot(m[0]-pc[0],m[1]-pc[1])?c:m,cs[0]);
   const sx=Math.abs(cd[0]-x0)<1e-6?-1:1, sy=Math.abs(cd[1]-y0)<1e-6?-1:1, cb=[sx>0?x0:x1,sy>0?y0:y1];   // canto do box (oposto à porta); sx, sy: do canto para dentro
-  const lavabo=r.area<2.2||Math.min(W,H)<1.1||(S.uso==="comercial"&&r.area<4);   // sala comercial: banheiro pequeno sem chuveiro
+  let lavabo=r.area<2.2||Math.min(W,H)<1.1||(S.uso==="comercial"&&r.area<4);   // sala comercial: banheiro pequeno sem chuveiro
   let box=null;
   if(!lavabo){ const bs=Math.min(0.90,Math.max(0.70,Math.min(W,H)-0.65));
     if(Math.min(W,H)<=1.25){ if(W<=H) box={x0,x1,y0:sy>0?y0:y1-0.9,y1:sy>0?y0+0.9:y1}; else box={x0:sx>0?x0:x1-0.9,x1:sx>0?x0+0.9:x1,y0,y1}; }
@@ -1620,8 +1620,18 @@ function layoutBanheiro(G,r){
     const ini=box?bH:0.95;
     if(!box&&H-0.25<ini) lav=LV([cb[0]+sx*1.01,cb[1]],[sx,0],[0,sy],0.5);
     else { const lv=H-ini; lav=LV([cb[0],cb[1]+sy*(box?(bH+(lenV>=0.9?Math.max(0.45,Math.min(lenV-0.4,lenV/2)):lenV/2)):Math.max(ini,Math.min(H-0.3,ini+lv/2)))],[0,sy],[sx,0],box?lenV-0.1:0.5); } }
-  return {box,vaso,lav,porta,cb,sx,sy,lavabo,...(fr?{fr,rL:r}:{}),chuv:box?(cheioX?{c:[(box.x0+box.x1)/2,cb[1]],n:[0,sy]}:cheioY?{c:[cb[0],(box.y0+box.y1)/2],n:[sx,0]}:{c:[(box.x0+box.x1)/2,cb[1]],n:[0,sy]}):null};
+  let chuv=box?(cheioX?{c:[(box.x0+box.x1)/2,cb[1]],n:[0,sy]}:cheioY?{c:[cb[0],(box.y0+box.y1)/2],n:[sx,0]}:{c:[(box.x0+box.x1)/2,cb[1]],n:[0,sy]}):null;
+  // posição escolhida pelo profissional (aba Banheiro): vale para todos os desenhos (layout, detalhe, vistas, hidráulica, elétrica, orçamento)
+  const lab=r.labIdx>=0?S.rooms[r.labIdx]:null, M=lab&&lab.lb;
+  if(M&&M.vaso&&M.lav){ const aDe=n=>[-n[1],n[0]], R=v=>[+v[0],+v[1]];
+    vaso={c:R(M.vaso.c),n:R(M.vaso.n),a:aDe(M.vaso.n),larg:0.38,prof:0.65};
+    lav={c:R(M.lav.c),n:R(M.lav.n),a:aDe(M.lav.n),larg:Math.max(0.35,Math.min(1.5,num(M.lav.larg)||0.5)),prof:0.42};
+    box=M.box?{x0:+M.box.x0,x1:+M.box.x1,y0:+M.box.y0,y1:+M.box.y1}:null; chuv=box?chuvDoBox(box,{x0,x1,y0,y1},M.chuv):null; lavabo=!box; }
+  return {box,vaso,lav,porta,cb,sx,sy,lavabo,...(fr?{fr,rL:r}:{}),chuv,manual:!!(M&&M.vaso&&M.lav)};
 }
+// chuveiro no meio do lado do box que encosta numa parede (o lado escolhido, ou o primeiro que encosta)
+function chuvDoBox(b,R,lado){ const t=0.03, L=[["A",Math.abs(b.y0-R.y0)<t,{c:[(b.x0+b.x1)/2,b.y0],n:[0,1]}],["C",Math.abs(b.y1-R.y1)<t,{c:[(b.x0+b.x1)/2,b.y1],n:[0,-1]}],["D",Math.abs(b.x0-R.x0)<t,{c:[b.x0,(b.y0+b.y1)/2],n:[1,0]}],["B",Math.abs(b.x1-R.x1)<t,{c:[b.x1,(b.y0+b.y1)/2],n:[-1,0]}]];
+  const ok=L.filter(l=>l[1]); const e=ok.find(l=>l[0]===lado)||ok[0]; return e?{...e[2],lado:e[0]}:{c:[(b.x0+b.x1)/2,b.y0],n:[0,1],lado:"A"}; }
 function desenhoBanheiro(G,r,k){
   if(!r.ret&&retUtil(r)) r=retUtil(r);   // parede inclinada: detalhe pelo retângulo útil
   if(r.fr) return desenhoBanheiroGirado(G,r,k);
@@ -4290,9 +4300,10 @@ function render(){
   { const bs=G.rooms.filter(r=>ehBanho(r.n)), kb=0.03;
     $("banhos").innerHTML=!bs.length?`<div class="sheet"><p class="cap" style="margin:0">Nenhum ambiente com nome de banheiro (Banho, Banheiro, WC, Lavabo). Dê o nome tocando no ambiente na aba Planta.</p></div>`:
       bs.map(r=>!retUtil(r)?`<div class="sheet"><h2>${esc(r.n)}</h2><p class="cap">Este banheiro foge muito do retângulo: o detalhe com louças é feito para banheiro retangular ou com uma parede inclinada.</p><div class="draw">${svgDe(desenhoBanheiro(G,r,kb))}</div></div>`:
-        `<div class="sheet"><h2>${esc(r.n)} · planta ampliada</h2><div class="draw" style="max-width:520px">${svgDe(desenhoBanheiro(G,r,kb))}</div>
+        `<div class="sheet"><h2>${esc(r.n)} · planta ampliada</h2>${banBarra(r.labIdx)}<div class="draw" data-banplan="${r.labIdx}" style="max-width:520px;touch-action:none;cursor:pointer">${svgDe(desenhoBanheiro(G,r,kb),"ban"+r.labIdx)}</div><div class="cap" data-banmsg="${r.labIdx}" style="margin-top:6px"></div>
         <div class="grid2" style="margin-top:12px">${["A","B","C","D"].map(l=>`<div><h3 style="margin-top:0">Vista ${l}</h3><div class="draw">${svgDe(vistaBanheiro(G,r,kb,l))}</div></div>`).join("")}</div>
-        <ol class="notes" style="margin-top:12px">${notasBanho().map(t=>`<li>${esc(t)}</li>`).join("")}</ol></div>`).join(""); }
+        <ol class="notes" style="margin-top:12px">${notasBanho().map(t=>`<li>${esc(t)}</li>`).join("")}</ol></div>`).join("");
+    bs.forEach(r=>{ if(retUtil(r)) banMarca(r.labIdx); }); }
   { const G2=geom(true), q=quantReforma(G2), ref=temReforma(); $("refDes").innerHTML=svgDe(desenhoReforma(G2,k,G),"ref");
     $("refChips").innerHTML=G2.vazio?"":(ref?[`Demolir ${f(q.dem)} m²`,`Construir ${f(q.con)} m²`,`Entulho ${f(q.entulho,1)} m³`,q.nRet?`${q.nRet} esquadria(s) a retirar`:""]:["Nada marcado: obra nova (tudo existente)"]).filter(Boolean).map(t=>`<span class="chip">${esc(t)}</span>`).join("");
     $("tabRefW").innerHTML=`<tr><th>Parede</th><th class="n">Comp. (m)</th><th>Situação</th></tr>`+G2.walls.map(w=>`<tr><td><b>${w.i+1}</b></td><td class="n">${f(w.L)}</td><td><select data-rw="${w.i}" aria-label="Situação da parede ${w.i+1}">${ST_PAR.map(([v,t])=>`<option value="${v}"${stW(w.i)===v?" selected":""}>${t}</option>`).join("")}</select></td></tr>`).join("");
@@ -4559,6 +4570,87 @@ $("atab").addEventListener("change",e=>{const i=e.target.dataset.i,c=e.target.da
   if(c==="t"){ S.ab[i].t=e.target.value; const df=ABDEF[S.ab[i].t]; S.ab[i].a=df.a; S.ab[i].p=df.p; delete S.ab[i].mod; delete S.ab[i].mat; renderAb(); } else if(c==="w") S.ab[i].w=+e.target.value; else S.ab[i][c]=e.target.value; render();});
 $("atab").addEventListener("click",e=>{const d=e.target.dataset.del; if(d==null)return; S.ab.splice(+d,1); renderAb(); render();});
 $("addA").onclick=()=>{S.ab.push({n:"",t:"Janela",w:0,d:0.5,l:1.2,a:1.0,p:1.1}); renderAb(); render();};
+
+/* ======================================================================
+   EDITOR DAS LOUÇAS DO BANHEIRO (modelo único: a posição escolhida vale para
+   layout, detalhe, vistas, hidráulica, elétrica e orçamento)
+   ====================================================================== */
+const BANSEL={}, KB=0.03;
+function banGeo(li){ const G=geom(), r=G.rooms.find(x=>x.labIdx===li); if(!r) return null; const u=r.ret?r:retUtil(r); return u?{G,r,u}:null; }
+// grava no ambiente o arranjo de agora (automático) na primeira mexida
+function banLb(li,X){ const lab=S.rooms[li]; if(lab.lb&&lab.lb.vaso&&lab.lb.lav) return lab.lb; const Lb=layoutBanheiro(X.G,X.u); if(!Lb) return null;
+  const c2=v=>[+(+v[0]).toFixed(3),+(+v[1]).toFixed(3)];
+  lab.lb={vaso:{c:c2(Lb.vaso.c),n:c2(Lb.vaso.n)},lav:{c:c2(Lb.lav.c),n:c2(Lb.lav.n),larg:Math.round(Lb.lav.larg*100)/100},box:Lb.box?{...Lb.box}:null,chuv:Lb.chuv&&Lb.chuv.lado||null}; return lab.lb; }
+const BAN_PAR=[["A",[0,1]],["B",[-1,0]],["C",[0,-1]],["D",[1,0]]];   // paredes do retângulo útil: cima, direita, baixo, esquerda (n = para dentro)
+function banParede(u,n){ return n[1]>0.5?"A":n[0]<-0.5?"B":n[1]<-0.5?"C":"D"; }
+// encosta a peça (vaso ou lavatório) na parede mais perto do ponto p, sem passar dos cantos
+function banEncosta(u,p,larg,forca){ const d={A:p[1]-u.y0,C:u.y1-p[1],D:p[0]-u.x0,B:u.x1-p[0]}, w=forca||Object.keys(d).sort((a,b)=>d[a]-d[b])[0], n=BAN_PAR.find(x=>x[0]===w)[1], h=larg/2+0.02;
+  const cl=(v,a,b)=>Math.max(a+h,Math.min(b-h,v)); const c=w==="A"?[cl(p[0],u.x0,u.x1),u.y0]:w==="C"?[cl(p[0],u.x0,u.x1),u.y1]:w==="D"?[u.x0,cl(p[1],u.y0,u.y1)]:[u.x1,cl(p[1],u.y0,u.y1)];
+  return {c:[+c[0].toFixed(3),+c[1].toFixed(3)],n}; }
+// box: leva o retângulo para o ponto e gruda nas paredes que estiverem a menos de 35 cm
+function banMoveBox(u,b,p){ const w=b.x1-b.x0, h=b.y1-b.y0; let x0=p[0]-w/2, y0=p[1]-h/2;
+  if(x0-u.x0<0.35) x0=u.x0; if(u.x1-(x0+w)<0.35) x0=u.x1-w; if(y0-u.y0<0.35) y0=u.y0; if(u.y1-(y0+h)<0.35) y0=u.y1-h;
+  x0=Math.max(u.x0,Math.min(u.x1-w,x0)); y0=Math.max(u.y0,Math.min(u.y1-h,y0)); const r3=v=>+v.toFixed(3); return {x0:r3(x0),y0:r3(y0),x1:r3(x0+w),y1:r3(y0+h)}; }
+// contorno de cada peça (para tocar, marcar a escolhida e avisar quando uma pisa na outra)
+function banCont(it,larg,prof){ const a=[-it.n[1],it.n[0]], P=(s0,t0)=>[it.c[0]+a[0]*s0+it.n[0]*t0,it.c[1]+a[1]*s0+it.n[1]*t0]; return [P(-larg/2,0),P(larg/2,0),P(larg/2,prof),P(-larg/2,prof)]; }
+function banPecas(Lb){ const o={vaso:banCont(Lb.vaso,0.38,0.65),lav:banCont(Lb.lav,Lb.lav.larg,Lb.lav.prof)}; if(Lb.box){ const b=Lb.box; o.box=[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]]; } return o; }
+function banBarra(li){ const L=S.rooms[li]||{}, M=L.lb, sel=BANSEL[li]||"vaso", bx=M&&M.box?`${f(M.box.x1-M.box.x0)}x${f(M.box.y1-M.box.y0)}`:"";
+  const BOX=["0,80x0,80","0,90x0,90","0,80x1,00","0,90x1,20","1,00x1,20","0,90x1,40","1,00x1,50"];
+  return `<p class="cap" style="margin:0 0 6px">Toque numa peça na planta e arraste: ela encosta sozinha na parede. A posição vale para o layout, as vistas, a hidráulica (pontos de água e esgoto), a elétrica e o orçamento.${M?" <b>Arranjo seu (manual).</b>":" Arranjo automático."}</p>
+  <div class="row" data-banbar="${li}" style="gap:6px;flex-wrap:wrap;margin:0 0 8px">
+    <select data-banpeca aria-label="Peça"><option value="vaso"${sel==="vaso"?" selected":""}>Vaso</option><option value="lav"${sel==="lav"?" selected":""}>Lavatório</option><option value="box"${sel==="box"?" selected":""}>Box e chuveiro</option></select>
+    ${(()=>{ const it=M&&(sel==="box"?(M.box?chuvDoBox(M.box,(banGeo(li)||{}).u||M.box,M.chuv):null):M[sel]), vt=it&&it.n&&Math.abs(it.n[0])>0.5; return `<button class="btn" data-banacao="menos" title="5 cm">${vt?"▲":"◀"} 5 cm</button><button class="btn" data-banacao="mais" title="5 cm">5 cm ${vt?"▼":"▶"}</button>`; })()}
+    <button class="btn" data-banacao="girar">${sel==="box"?"Chuveiro na outra parede":"Outra parede"}</button>
+    ${sel==="lav"?`<select data-banlarg aria-label="Largura do lavatório">${[0.4,0.45,0.5,0.6,0.8,1,1.2].map(v=>`<option value="${v}"${M&&Math.abs((M.lav.larg||0.5)-v)<0.01?" selected":""}>bancada ${f(v)} m</option>`).join("")}</select>`:""}
+    ${sel==="box"?`<select data-banbox aria-label="Tamanho do box"><option value="">${M&&!M.box?"sem box":"tamanho do box"}</option>${BOX.map(v=>`<option value="${v}"${v===bx?" selected":""}>box ${v}</option>`).join("")}<option value="sem">sem box (lavabo)</option></select>`:""}
+    ${M?`<button class="btn" data-banacao="auto">Voltar ao automático</button>`:""}
+  </div>`; }
+// redesenha só a planta deste banheiro (rápido, durante o arraste) e marca a peça escolhida
+function banDesenha(li){ const X=banGeo(li), el=document.querySelector(`[data-banplan="${li}"]`); if(!X||!el) return; el.innerHTML=svgDe(desenhoBanheiro(X.G,X.r,KB),"ban"+li); banMarca(li,X); }
+function banMarca(li,X){ X=X||banGeo(li); const el=document.querySelector(`[data-banplan="${li}"]`); if(!X||!el) return; const V=VIEW["ban"+li], svg=el.querySelector("svg"); if(!V||!svg) return;
+  const Lb=layoutBanheiro(X.G,X.u); if(!Lb) return; const P=banPecas(Lb), sel=BANSEL[li]||"vaso", W=p=>X.u.fr?frMundo(X.u.fr,p):p, m=p=>{ const q=W(p); return [V.pad+(q[0]-V.e.x0)/V.k,V.pad+(q[1]-V.e.y0)/V.k]; };
+  if(P[sel]) svg.insertAdjacentHTML("beforeend",`<polygon points="${P[sel].map(p=>m(p).map(v=>v.toFixed(2)).join(",")).join(" ")}" fill="rgba(37,99,235,.12)" stroke="#2563eb" stroke-width="0.5" stroke-dasharray="1.5 1"/>`);
+  // aviso: peça em cima de outra
+  const msg=document.querySelector(`[data-banmsg="${li}"]`); if(msg){ const nomes={vaso:"vaso",lav:"lavatório",box:"box"}, ks=Object.keys(P), av=[];
+    for(let i=0;i<ks.length;i++) for(let j=i+1;j<ks.length;j++) if(sobrepoe(encolhe(P[ks[i]]),encolhe(P[ks[j]]))) av.push(`${nomes[ks[i]]} e ${nomes[ks[j]]} se encostam`);
+    msg.innerHTML=av.length?`<span style="color:var(--bad)">Atenção: ${av.join("; ")}. Confira a posição.</span>`:""; } }
+const encolhe=Q=>{ const c=[Q.reduce((s,p)=>s+p[0],0)/Q.length,Q.reduce((s,p)=>s+p[1],0)/Q.length]; return Q.map(p=>[c[0]+(p[0]-c[0])*0.97,c[1]+(p[1]-c[1])*0.97]); };
+function banPonto(ev,li,X){ const el=document.querySelector(`[data-banplan="${li}"] svg`), V=VIEW["ban"+li]; if(!el||!V) return null; const pt=el.createSVGPoint(); pt.x=ev.clientX; pt.y=ev.clientY;
+  const q=pt.matrixTransform(el.getScreenCTM().inverse()), w=[V.e.x0+(q.x-V.pad)*V.k,V.e.y0+(q.y-V.pad)*V.k]; return X.u.fr?frLocal(X.u.fr,w):w; }
+function banAplica(li,X,peca,p){ const M=banLb(li,X); if(!M) return; const u=X.u;
+  if(peca==="vaso"){ const e=banEncosta(u,p,0.38); M.vaso={c:e.c,n:e.n}; }
+  else if(peca==="lav"){ const e=banEncosta(u,p,num(M.lav.larg)||0.5); M.lav={...M.lav,c:e.c,n:e.n}; }
+  else if(peca==="box"&&M.box) M.box=banMoveBox(u,M.box,p); }
+{ let arr=null, pend=null;
+  const cont=$("banhos");
+  cont.addEventListener("pointerdown",ev=>{ const el=ev.target.closest("[data-banplan]"); if(!el) return; const li=+el.dataset.banplan, X=banGeo(li); if(!X) return; const p=banPonto(ev,li,X); if(!p) return;
+    const Lb=layoutBanheiro(X.G,X.u), P=banPecas(Lb); let peca=null, dm=0.6;
+    Object.entries(P).forEach(([k0,Q])=>{ if(pip(Q,p[0],p[1])){ peca=k0; dm=0; return; } const c=[Q.reduce((s,q)=>s+q[0],0)/4,Q.reduce((s,q)=>s+q[1],0)/4], d=Math.hypot(c[0]-p[0],c[1]-p[1]); if(d<dm){ dm=d; peca=k0; } });
+    if(!peca) return; BANSEL[li]=peca; const bar=document.querySelector(`[data-banbar="${li}"] [data-banpeca]`); if(bar&&bar.value!==peca){ bar.value=peca; }
+    ev.preventDefault(); el.setPointerCapture(ev.pointerId); arr={li,X,peca,id:ev.pointerId,moveu:false}; banDesenha(li); });
+  cont.addEventListener("pointermove",ev=>{ if(!arr||ev.pointerId!==arr.id) return; const p=banPonto(ev,arr.li,arr.X); if(!p) return; pend=p;
+    if(!arr.raf) arr.raf=requestAnimationFrame(()=>{ if(!arr) return; arr.raf=0; banAplica(arr.li,arr.X,arr.peca,pend); arr.moveu=true; banDesenha(arr.li); }); });
+  const fim=ev=>{ if(!arr||ev.pointerId!==arr.id) return; const a=arr; arr=null; if(a.moveu){ save(); render(); } else { const sb=document.querySelector(`[data-banbar="${a.li}"]`); if(sb) sb.outerHTML=banBarra(a.li); } };
+  cont.addEventListener("pointerup",fim); cont.addEventListener("pointercancel",fim);
+  cont.addEventListener("change",e=>{ const bar=e.target.closest("[data-banbar]"); if(!bar) return; const li=+bar.dataset.banbar, X=banGeo(li); if(!X) return;
+    if(e.target.matches("[data-banpeca]")){ BANSEL[li]=e.target.value; render(); return; }
+    const M=banLb(li,X); if(!M) return;
+    if(e.target.matches("[data-banlarg]")){ const l=num(e.target.value); M.lav.larg=l; const e2=banEncosta(X.u,M.lav.c,l,banParede(X.u,M.lav.n)); M.lav.c=e2.c; }
+    if(e.target.matches("[data-banbox]")){ const v=e.target.value; if(v==="sem") M.box=null; else if(v){ const [w,h]=v.split("x").map(num), u=X.u, b=M.box||{x0:u.x0,y0:u.y0,x1:u.x0+w,y1:u.y0+h};
+        const cx=(b.x0+b.x1)/2<(u.x0+u.x1)/2?"e":"d", cy=(b.y0+b.y1)/2<(u.y0+u.y1)/2?"c":"b", W0=Math.min(w,u.x1-u.x0), H0=Math.min(h,u.y1-u.y0);   // fica no mesmo canto
+        const x0=cx==="e"?u.x0:u.x1-W0, y0=cy==="c"?u.y0:u.y1-H0; M.box={x0,y0,x1:x0+W0,y1:y0+H0}; } }
+    save(); render(); });
+  cont.addEventListener("click",e=>{ const b=e.target.closest("[data-banacao]"); if(!b) return; const bar=b.closest("[data-banbar]"), li=+bar.dataset.banbar, X=banGeo(li); if(!X) return; const ac=b.dataset.banacao, sel=BANSEL[li]||"vaso";
+    if(ac==="auto"){ delete S.rooms[li].lb; save(); render(); return; }
+    const M=banLb(li,X); if(!M) return; const u=X.u;
+    if(ac==="menos"||ac==="mais"){ const sg=ac==="mais"?1:-1, dirDe=n=>Math.abs(n[1])>0.5?[1,0]:[0,1];   // setas como na tela: ◀ ▶ em parede deitada, ▲ ▼ em parede em pé
+      if(sel==="box"&&M.box){ const a=dirDe(chuvDoBox(M.box,u,M.chuv).n); M.box=banMoveBox(u,M.box,[(M.box.x0+M.box.x1)/2+a[0]*0.05*sg,(M.box.y0+M.box.y1)/2+a[1]*0.05*sg]); }
+      else if(sel!=="box"){ const it=M[sel], a=dirDe(it.n), l=sel==="vaso"?0.38:num(it.larg)||0.5, e2=banEncosta(u,[it.c[0]+a[0]*0.05*sg,it.c[1]+a[1]*0.05*sg],l,banParede(u,it.n)); M[sel]={...it,c:e2.c}; } }
+    if(ac==="girar"){
+      if(sel==="box"&&M.box){ const ok=["A","B","C","D"].filter(w=>{ const ch=chuvDoBox(M.box,u,w); return ch.lado===w; }), at=chuvDoBox(M.box,u,M.chuv).lado, i=ok.indexOf(at); M.chuv=ok[(i+1)%ok.length]||at; }
+      else if(sel!=="box"){ const it=M[sel], l=sel==="vaso"?0.38:num(it.larg)||0.5, ord=["A","B","C","D"], w=ord[(ord.indexOf(banParede(u,it.n))+1)%4], e2=banEncosta(u,it.c,l,w); M[sel]={...it,c:e2.c,n:e2.n}; } }
+    save(); render(); });
+}
 /* troca de projeto */
 const pjMsg=t=>{ $("pjMsg").textContent=t; };
 function pjUI(){ $("pjSel").innerHTML=Object.keys(PJ.lista).map(n=>`<option value="${esc(n)}"${n===PJ.atual?" selected":""}>${esc(n)}</option>`).join(""); }
