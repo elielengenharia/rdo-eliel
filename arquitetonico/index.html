@@ -706,7 +706,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.50 · garagem e piso externo em todas as plantas", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.51 · TV na suíte e blocos em qualquer ambiente", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1920,10 +1920,16 @@ function pMesa(){ const w=1.20;
 function pEspera(){ return {nome:"espera",extra:"2 poltronas e mesinha",w:1.60,pri:0,sol:[[0,0,1.60,0.65]],liv:[[0,0.65,1.60,1.15]],des:d=>{
   [[0,0.60],[1.00,1.60]].forEach(([a,b])=>{ d.R(a,0.05,b,0.65,.25); d.L(a+0.08,0.17,b-0.08,0.17,.18); d.L(a+0.08,0.17,a+0.08,0.65,.13); d.L(b-0.08,0.17,b-0.08,0.65,.13); }); d.R(0.65,0.10,0.95,0.40,.18); }}; }
 function pArmario(){ return {nome:"armário",extra:"",w:0.80,pri:0,sol:[[0,0,0.80,0.45,1]],liv:[[0,0.45,0.80,1.0]],des:d=>{ d.R(0,0,0.80,0.45,.25); d.L(0.40,0.40,0.40,0.45,.13); d.L(0,0.40,0.80,0.40,.13); }}; }
+// blocos que podem ir em qualquer ambiente ("Pôr peça" na aba Layout)
+const EXTRAS=[["tv","Rack / painel com TV"],["guarda","Guarda-roupa"],["mesa","Mesa de trabalho"],["armario","Armário"],["espera","Poltronas (2) e mesinha"],["sofa","Sofá"],["jantar","Mesa de jantar"]];
+function itemExtra(tp){ const C=(k,alts)=>({k,alts:alts.filter(Boolean),opc:true});
+  return tp==="tv"?C("tv",[1.6,1.4,1.2,1.0,0.8].map(pRack)):tp==="guarda"?C("guarda",[2.4,2.0,1.8,1.6,1.4,1.2,1.0,0.8].map(pGuarda)):tp==="mesa"?C("mesa",[pMesaExec(),pMesa()]):tp==="armario"?C("armario",[pArmario()]):tp==="espera"?C("espera",[pEspera()])
+    :tp==="sofa"?C("sofa",[2.1,1.8,1.5].map(w=>pSofa(w,0,false))):tp==="jantar"?C("jantar",[pJantar(4),pJantarParede()]):null; }
 function listaMob(tipo,r){ const A=r.area, C=(k,alts,opc)=>({k,alts:alts.filter(Boolean),opc:!!opc});
   const sofa=()=>C("sofa",[2.1,1.8,1.5].flatMap(w=>[0,1.3,1.6].flatMap(o=>[pSofa(w,o,true),pSofa(w,o,false)]))), rack=()=>C("rack",[1.8,1.4,1.0].map(pRack));
   switch(tipo){
-    case "casal": return [C("cama",[pCama(1.38,2),pCama(1.38,1),pCama(1.38,0)]),C("guarda",[2.4,2.0,1.8,1.6,1.4,1.2,1.0].map(pGuarda))];
+    case "casal": { const closet=/su[ií]te/i.test(r.n)&&S.rooms.some(l=>l&&/closet/i.test(l.n||""));   // suíte com closet: os guarda-roupas ficam no closet
+      return [C("cama",[pCama(1.38,2),pCama(1.38,1),pCama(1.38,0)]),...(closet?[]:[C("guarda",[2.4,2.0,1.8,1.6,1.4,1.2,1.0].map(pGuarda))]),C("tv",[1.6,1.4,1.2,1.0].map(pRack),true)]; }
     case "solteiro": return [C("cama",[pCama(0.88,1),pCama(0.88,0)]),C("guarda",[1.8,1.6,1.4,1.2,1.0,0.8].map(pGuarda))];
     case "sala": { const temJantar=S.rooms.some(l=>l&&l.n!==r.n&&(/jantar|copa/i.test(l.n||"")||["jantar","salacoz"].includes(l.mt)));   // a casa já tem jantar em outro ambiente: sala sem mesa
       return [sofa(),rack(),...(A>=14&&!temJantar?[C("jantar",[pJantar(4),pJantarParede()],true)]:[])]; }
@@ -1968,6 +1974,7 @@ function notaMob(k,c,ctx){ const pc=c.pc, T=c.T, Le=c.Le, cen=c.cen, Z=ctx.Z;
   else if(k==="lavand"||k==="maquina") s+=pc.w+(canto?0.5:0)+(k==="maquina"&&ctx.pos.lavand?-0.3*Math.hypot(ctx.pos.lavand.cen[0]-cen[0],ctx.pos.lavand.cen[1]-cen[1]):0);
   else if(k==="mesa"){ s+=0.3*Math.min(dP,4); if(pc.porta&&Z.porta.length){ const q=centro(Z.porta[0]); if((q[0]-cen[0])*T.N[0]+(q[1]-cen[1])*T.N[1]>0) s+=1; } }
   else if(k==="armario") s+=(canto?0.5:0)+0.1*dP;
+  else if(k==="tv"){ const cm=ctx.pos.cama; s+=pc.w*0.2-(jan?5:0); /* TV nunca na frente de janela */ if(cm){ const dt=T.N[0]*cm.T.N[0]+T.N[1]*cm.T.N[1]; if(dt<-0.9) s+=3-1.5*Math.abs((cm.cen[0]-cen[0])*T.u[0]+(cm.cen[1]-cen[1])*T.u[1]); } }   // TV na parede em frente à cama, alinhada com ela
   else if(k==="espera") s+=0.4*Math.min(dP,3)*-1+(canto?0.3:0);   // espera perto da entrada
   return s; }
 function candidatos(it,ctx){ const r=ctx.r, P=r.poly, out=[];
@@ -1980,7 +1987,7 @@ function candidatos(it,ctx){ const r=ctx.r, P=r.poly, out=[];
         if(sol.some(q=>ctx.Z.porta.some(z=>sobrepoe(q,z))||ctx.sol.some(z=>sobrepoe(q,z))||ctx.liv.some(z=>sobrepoe(q,z)))) return;
         if(pc.sol.some((q,j)=>q[4]&&ctx.Z.jan.some(z=>sobrepoe(sol[j],z)))) return;
         if(liv.some(q=>ctx.sol.some(z=>sobrepoe(q,z)))) return;
-        const cen=centro(sol.flat()), c={pc,T,sol,liv,cen,Le,ed:i}; c.nota=notaMob(it.k,c,ctx); out.push(c); })); }); });
+        const cen=centro(sol.flat()), c={pc,T,sol,liv,cen,Le,ed:i}; c.nota=notaMob(it.kn||it.k,c,ctx); out.push(c); })); }); });
   return out; }
 // arranjo de todos os ambientes (feito uma vez por desenho)
 function layoutMoveis(G){
@@ -2005,12 +2012,17 @@ function layoutMoveis(G){
         const ls=Object.values(grupos).map(g=>{ g.sort((p,q)=>q.nota-p.nota); const esc=[]; for(const c of g){ if(esc.length>=(itens.length>1?3:1)) break; if(esc.every(e=>Math.abs(e.T.s0-c.T.s0)>=0.3||e.pc!==c.pc)) esc.push(c); }
           return esc.map(rodar).reduce((m,o)=>o.tot>m.tot?o:m); }).sort((p,q)=>q.tot-p.tot);
         const o=ls[((v%ls.length)+ls.length)%ls.length]; res.pos=o.pos; res.faltou=o.falt; res.nVar=ls.length; } }
-    const MM=lab&&lab.mobM; if(MM&&itens.length){ res.pos=res.pos.slice();
+    const MM=lab&&lab.mobM; if(MM&&itens.length){ /* peças do tipo do ambiente */ res.pos=res.pos.slice();
       itens.forEach(it=>{ if(!(it.k in MM)) return; const o=MM[it.k], i0=res.pos.findIndex(c=>c.k===it.k); if(o===null){ if(i0>=0) res.pos.splice(i0,1); return; }
         const pc=it.alts[o.ai]&&it.alts[o.ai].nome===o.nome?it.alts[o.ai]:it.alts.find(a=>a.nome===o.nome&&Math.abs(a.w-o.w)<0.005)||it.alts.find(a=>a.nome===o.nome)||it.alts[0];
         const T={A:o.A,u:o.u,N:o.N,s0:o.s0,w:pc.w,m:o.m||1,off:Math.max(0,num(o.off))}, sol=pc.sol.map(q=>retW(T,q)), liv=pc.liv.map(q=>retW(T,q)), c={pc,T,sol,liv,cen:centro(sol.flat()),k:it.k,manual:1};
         if(i0>=0) res.pos[i0]=c; else res.pos.push(c); res.faltou=res.faltou.filter(n=>n!==it.alts[0].nome); }); }
-    res.itens=itens;
+    res.itens=itens.slice();
+    if(MM) Object.keys(MM).filter(k0=>k0.startsWith("x:")).forEach(k0=>{ const tp=k0.slice(2), base=itemExtra(tp); if(!base||!MM[k0]) return; const it={...base,k:k0,kn:tp}; res.itens.push(it); const o=MM[k0];
+      if(o==="auto"){ const ctx={r,G,Z:zonasAmb(G,r),sol:res.pos.flatMap(c=>c.sol),liv:res.pos.flatMap(c=>c.liv),pos:Object.fromEntries(res.pos.map(c=>[c.k,c]))}, cs=candidatos(it,ctx); if(!cs.length){ res.faltou.push(base.alts[0].nome); return; }
+        const c=cs.reduce((m,q)=>q.nota>m.nota?q:m,cs[0]); c.k=k0; res.pos.push(c); return; }
+      const pc=it.alts[o.ai]&&it.alts[o.ai].nome===o.nome?it.alts[o.ai]:it.alts.find(a=>a.nome===o.nome&&Math.abs(a.w-o.w)<0.005)||it.alts[0];
+      const T={A:o.A,u:o.u,N:o.N,s0:o.s0,w:pc.w,m:o.m||1,off:Math.max(0,num(o.off))}, sol=pc.sol.map(q=>retW(T,q)), liv=pc.liv.map(q=>retW(T,q)); res.pos.push({pc,T,sol,liv,cen:centro(sol.flat()),k:k0,manual:1}); });
     res.pos.forEach(c=>res.sol.push(...c.sol));
     return res; }); }
 function desenhaLoucas(D,r,Lb,k,txt){
@@ -4830,22 +4842,22 @@ let LAYPASSO=0.05;
 function layBarra(){ const el=$("layBar"); if(!el) return; const P=LAYSEL&&layPecas().find(x=>x.li===LAYSEL.li&&(LAYSEL.k?x.k===LAYSEL.k:x.ban===LAYSEL.ban));
   const R=LAYSEL&&(LAYLM||[]).find(R=>R.r.labIdx===LAYSEL.li), lab=LAYSEL&&S.rooms[LAYSEL.li], man=lab&&((lab.mobM&&Object.keys(lab.mobM).length)||lab.lb);
   const fora=R&&R.itens?R.itens.filter(it=>!R.pos.some(c=>c.k===it.k)):[];
-  if(!LAYSEL||!R){ el.innerHTML=`<p class="cap" style="margin:0"><b>Toque numa peça</b> (cama, guarda-roupa, sofá, mesa, cozinha, vaso, lavatório, box...) e arraste: ela encosta na parede mais perto. A posição vale para todas as plantas, a elétrica e a hidráulica.</p>`; return; }
+  if(!LAYSEL||!R){ el.innerHTML=`<p class="cap" style="margin:0"><b>Toque numa peça</b> (cama, guarda-roupa, sofá, TV, mesa, cozinha, vaso, lavatório, box...) e arraste. <b>Toque num lugar vazio do ambiente</b> para pôr outro bloco (TV, guarda-roupa, mesa, armário, poltronas...). A posição vale para todas as plantas, a elétrica e a hidráulica.</p>`; return; }
   if(LAYSEL.ban){ el.innerHTML=`<div class="row" style="gap:6px;flex-wrap:wrap"><b style="font-size:13px">${esc(R.r.n)} · ${P?esc(P.nome):""}</b><span class="cap" style="margin:0">Arraste na planta. Tamanho do box, bancada e outras opções na aba Banheiro.</span><button class="btn" data-layac="banheiro">Abrir na aba Banheiro</button>${lab.lb?`<button class="btn" data-layac="auto">Voltar ao automático</button>`:""}<button class="btn" data-layac="fechar">OK</button></div>`; return; }
   const c=P&&P.c, item=R.itens&&R.itens.find(x=>x.k===LAYSEL.k), vt=c&&Math.abs(c.T.u[0])<0.5;
-  el.innerHTML=`<div class="row" style="gap:6px;flex-wrap:wrap"><b style="font-size:13px">${esc(R.r.n)} · ${c?esc(c.pc.nome):"peça retirada"}</b>
+  el.innerHTML=`<div class="row" style="gap:6px;flex-wrap:wrap"><b style="font-size:13px">${esc(R.r.n)} · ${c?esc(c.pc.nome):"escolha um bloco para pôr"}</b>
     ${c?`<select data-laypasso aria-label="Passo">${[[0.01,"1 cm"],[0.02,"2 cm"],[0.05,"5 cm"],[0.10,"10 cm"]].map(([v,t])=>`<option value="${v}"${Math.abs(v-LAYPASSO)<1e-6?" selected":""}>passo ${t}</option>`).join("")}</select>
     <button class="btn" data-layac="menos">${vt?"▲":"◀"}</button><button class="btn" data-layac="mais">${vt?"▼":"▶"}</button>
     <button class="btn" data-layac="afastar" title="Afastar da parede (corredor atrás)">Afastar da parede</button><button class="btn" data-layac="aproximar">Aproximar</button>${(c.T.off||0)>0?`<button class="btn" data-layac="encostar">Encostar na parede</button><span class="cap" style="margin:0">a ${f(c.T.off)} m da parede</span>`:""}
     <button class="btn" data-layac="girar">Outra parede</button><button class="btn" data-layac="espelhar">Espelhar</button>
     ${item&&item.alts.length>1?`<select data-laytam aria-label="Modelo e tamanho">${item.alts.map((a,i)=>`<option value="${i}"${a===c.pc?" selected":""}>${esc(a.nome)}${a.extra?" "+esc(a.extra):""} · ${f(a.w)} m</option>`).join("")}</select>`:""}
     <button class="btn" data-layac="tirar">Tirar</button>`:""}
-    ${fora.length?`<select data-laypor aria-label="Pôr peça"><option value="">Pôr peça neste ambiente...</option>${fora.map(it=>`<option value="${it.k}">${esc(it.alts[0].nome)}</option>`).join("")}</select>`:""}
-    ${man?`<button class="btn" data-layac="auto">Voltar ao automático</button>`:""}<button class="btn" data-layac="fechar">OK</button></div>`; }
+    <select data-laypor aria-label="Pôr peça"><option value="">Pôr peça neste ambiente...</option>${fora.filter(it=>!it.k.startsWith("x:")).map(it=>`<option value="${it.k}">${esc(it.alts[0].nome)}</option>`).join("")}<optgroup label="Outros blocos">${EXTRAS.filter(([tp])=>!R.pos.some(c=>c.k==="x:"+tp)).map(([tp,t])=>`<option value="x:${tp}">${t}</option>`).join("")}</optgroup></select>
+    ${man?`<button class="btn" data-layac="auto">Voltar ao automático</button>`:""}<button class="btn" data-layac="fechar">OK</button></div>${R.faltou&&R.faltou.length?`<div class="alert warn" style="margin-top:6px">Não coube neste ambiente: ${esc(R.faltou.join(", "))}. Tire, troque o tamanho ou afaste outra peça.</div>`:""}`; }
 { let arr=null, pend=null; const cont=$("lay");
   cont.addEventListener("pointerdown",ev=>{ const p=layPonto(ev); if(!p) return; const ps=layPecas(); let hit=ps.find(x=>x.Q.some(Q=>pip(Q,p[0],p[1])));
     if(!hit){ let dm=0.35; ps.forEach(x=>x.Q.forEach(Q=>{ const cc=centro(Q), d=Math.hypot(cc[0]-p[0],cc[1]-p[1]); if(d<dm){ dm=d; hit=x; } })); }
-    if(!hit){ LAYSEL=null; layBarra(); layMarca(); return; }
+    if(!hit){ const rr=(LAYLM||[]).find(R0=>pip(R0.r.poly,p[0],p[1])); LAYSEL=rr&&rr.r.labIdx>=0?{li:rr.r.labIdx}:null; layBarra(); layMarca(); return; }   // tocou no ambiente vazio: escolhe o ambiente para pôr um bloco
     LAYSEL={li:hit.li,k:hit.k,ban:hit.ban}; layBarra(); layMarca(); ev.preventDefault(); cont.setPointerCapture(ev.pointerId);
     const c0=hit.c&&centro(hit.c.sol.flat()); arr={hit,id:ev.pointerId,p0:p,off:c0?[c0[0]-p[0],c0[1]-p[1]]:[0,0],moveu:false}; });
   cont.addEventListener("pointermove",ev=>{ if(!arr||ev.pointerId!==arr.id) return; const p=layPonto(ev); if(!p) return; if(!arr.moveu&&Math.hypot(p[0]-arr.p0[0],p[1]-arr.p0[1])<0.05) return; pend=p;
@@ -4861,7 +4873,7 @@ function layBarra(){ const el=$("layBar"); if(!el) return; const P=LAYSEL&&layPe
     if(ac==="banheiro"){ BANSEL[li]=LAYSEL.ban; const t=document.querySelector('nav.tabs button[data-tab="ban"]'); if(t) t.click(); return; }
     if(ac==="auto"){ delete lab.mobM; delete lab.lb; save(); render(); return; }
     const P=layPecas().find(x=>x.li===li&&x.k===LAYSEL.k); if(!P||!P.c) return; const c=P.c, T={...c.T};
-    if(ac==="tirar"){ layMM(li)[c.k]=null; save(); render(); return; }
+    if(ac==="tirar"){ if(c.k.startsWith("x:")) delete layMM(li)[c.k]; else layMM(li)[c.k]=null; LAYSEL={li}; save(); render(); return; }
     if(ac==="espelhar") T.m=-(T.m||1);
     if(ac==="menos"||ac==="mais"){ const sg=ac==="mais"?1:-1, d=Math.abs(T.u[0])>=0.5?Math.sign(T.u[0]):Math.sign(T.u[1]), e=layEdges(P.R.r).find(x=>Math.hypot(x.A[0]-T.A[0],x.A[1]-T.A[1])<1e-3&&Math.abs(x.u[0]-T.u[0])<1e-3); const Le=e?e.Le:T.s0+T.w;
       T.s0=Math.max(0,Math.min(Le-T.w,T.s0+sg*d*LAYPASSO)); }
@@ -4871,7 +4883,7 @@ function layBarra(){ const el=$("layBar"); if(!el) return; const P=LAYSEL&&layPe
     if(ac==="girar"){ const es=layEdges(P.R.r).filter(x=>x.Le>=T.w-1e-6); const i0=es.findIndex(x=>Math.hypot(x.A[0]-T.A[0],x.A[1]-T.A[1])<1e-3&&Math.abs(x.u[0]-T.u[0])<1e-3); const e=es[(i0+1)%es.length]; if(e){ T.A=e.A; T.u=e.u; T.N=e.N; T.s0=Math.max(0,(e.Le-T.w)/2); T.off=0; } }
     layGrava(li,c,T); save(); render(); });
   bar.addEventListener("change",e=>{ if(e.target.matches("[data-laypasso]")){ LAYPASSO=num(e.target.value)||0.05; return; } if(!LAYSEL) return; const li=LAYSEL.li;
-    if(e.target.matches("[data-laypor]")){ const k=e.target.value; if(!k) return; const MM=layMM(li); delete MM[k]; LAYSEL={li,k}; save(); render(); return; }
+    if(e.target.matches("[data-laypor]")){ const k=e.target.value; if(!k) return; const MM=layMM(li); if(k.startsWith("x:")) MM[k]="auto"; else delete MM[k]; LAYSEL={li,k}; save(); render(); return; }
     if(e.target.matches("[data-laytam]")){ const P=layPecas().find(x=>x.li===li&&x.k===LAYSEL.k); if(!P||!P.c) return; const R=P.R, item=R.itens.find(x=>x.k===P.k), ai=+e.target.value, pc=item.alts[ai];
       const e0=layEdges(R.r).find(x=>Math.hypot(x.A[0]-P.c.T.A[0],x.A[1]-P.c.T.A[1])<1e-3&&Math.abs(x.u[0]-P.c.T.u[0])<1e-3), mid=P.c.T.s0+P.c.T.w/2, T={...P.c.T,w:pc.w,s0:Math.max(0,Math.min((e0?e0.Le:pc.w)-pc.w,mid-pc.w/2))};
       layGrava(li,{...P.c,pc},T,ai); save(); render(); } }); }
