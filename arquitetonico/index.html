@@ -93,7 +93,7 @@ h3{font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.06em;
 .slide input[type=range]{flex:1;min-width:160px}
 .slide input[type=number]{width:90px}
 .panel{border:1px solid var(--accent);border-radius:4px;padding:12px;margin-top:10px;background:var(--paper)}
-#selPanel{position:fixed;right:16px;bottom:16px;width:min(440px,calc(100vw - 32px));max-height:70vh;overflow:auto;z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:0}
+#selPanel,#elePanel{position:fixed;right:16px;bottom:16px;width:min(440px,calc(100vw - 32px));max-height:70vh;overflow:auto;z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:0}
 .panel h4{margin:0 0 8px;font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
 /* SVG */
 svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink)}   /* mesma letra do PDF: o lugar dos textos é medido com ela */
@@ -304,7 +304,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <h2>Planta de pontos elétricos</h2>
       <p class="cap">Pontos de luz, interruptores, tomadas e quadro colocados sozinhos pela NBR 5410: luz no teto com potência pela área, interruptor ao lado da fechadura da porta, tomadas junto dos móveis do Layout e completando o mínimo por perímetro (cozinha e serviço a cada 3,5 m, demais a cada 5 m), chuveiro no box. O quadro de cargas sai com circuitos, disjuntor e fio.</p>
       <div class="form"><label>Tensão das tomadas e luz<select id="ele.v"><option value="127">127 V</option><option value="220">220 V</option></select></label><label>Ar-condicionado (quartos e salas)<select id="ele.ar"><option value="não">Não</option><option value="sim">Sim, tomada 2,20 m</option></select></label><label>Mostrar móveis em cinza<select id="ele.mob"><option value="sim">Sim</option><option value="não">Não</option></select></label><label>Mostrar eletrodutos<select id="ele.rede"><option value="sim">Sim</option><option value="não">Não</option></select></label><label>Distância do padrão ao QD (m)<input id="ele.ent" inputmode="decimal"></label><label>Salas comerciais<select id="ele.qdSala"><option value="sim">Um quadro e medidor por sala</option><option value="não">Um quadro para tudo</option></select></label></div>
-      <div class="draw" id="ele"></div>
+      <p class="cap" style="margin:6px 0"><b>Mudar um ponto:</b> toque nele (quadro, tomada, interruptor, luz) e <b>arraste</b>, ou toque em <b>Mover</b> e depois no lugar novo. Toque num lugar vazio para <b>acrescentar</b> tomada, luz ou interruptor. Os circuitos, o quadro de cargas e os eletrodutos se refazem sozinhos.</p>
+      <div class="draw" id="ele" style="touch-action:pan-y"></div><div id="elePanel" class="panel" hidden></div>
       <div class="chips" id="eleChips"></div><div id="eleAvisos"></div>
     </div>
     <div class="sheet"><h2>Quadro de cargas</h2><div class="tbl"><table id="tabCargas"></table></div><ol class="notes" id="eleNotas" style="margin-top:12px"></ol></div>
@@ -717,7 +718,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.58 · instalar levando o projeto aberto", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.59 · mover, apagar e acrescentar pontos elétricos", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2269,6 +2270,17 @@ function pontosEletricos(G,LM){
   const L2=LM.filter(R=>R.qd).sort((a,b)=>b.r.area-a.r.area);
   UN0.forEach(U=>{ const lst=multi?[U.R,...L2.filter(R=>R!==U.R&&uDe(R.r)===U.i)]:L2; if(!lst.some(R=>R.qd())&&!G.vazio) aviso.push(multi?`${U.nome}: não achei porta de entrada com parede livre para o quadro (QD${U.i+1}): marque na obra.`:"Não achei porta de entrada com parede livre para o quadro (QD): marque na obra."); });
   pts.filter(q=>q.t==="qd").forEach(q=>q.nome=multi?`QD${q.u+1}`:"QD");
+  // ajustes do profissional (aba Elétrica): pontos movidos, apagados e acrescentados
+  { const M=S.eleM||{}, cnt={}, tipoDe=r=>{ const R=LM.find(R=>R.r===r); return R?R.tipo:"sala"; }, ambDe=(p,N)=>{ const C=G.compAt(p[0]+(N?N[0]*0.06:0),p[1]+(N?N[1]*0.06:0)); return C&&!C.ext?C:null; };
+    pts.forEach(q=>{ const kk=q.t==="qd"?`qd|${q.u}`:`${q.t}|${q.r.n}|`; cnt[kk]=(cnt[kk]??-1)+1; q.key=q.t==="qd"?kk:kk+cnt[kk]; });
+    for(let i=pts.length-1;i>=0;i--){ const q=pts[i], o=M[q.key]; if(!o) continue; if(o.del){ pts.splice(i,1); continue; }
+      q.p=[num(o.x),num(o.y)]; if(o.N) q.N=o.N; if(o.alt) q.alt=o.alt; q.man=1; const C=ambDe(q.p,q.N); if(C&&q.t!=="qd"){ q.r=C; q.tp=tipoDe(C); } else if(C) q.r=C; }
+    (S.eleAdd||[]).forEach((a,j)=>{ const p=[num(a.x),num(a.y)], C=ambDe(p,a.N); if(!C) return; const tp=tipoDe(C), q={t:a.t,p,N:a.N||null,alt:a.alt,r:C,tp,u:uDe(C),key:"add|"+j,man:1,add:1};
+      if(a.t==="luz"){ const l0=pts.find(x=>x.t==="luz"&&x.r===C); q.cmd=l0?l0.cmd:letra(); q.va=100; }
+      else if(a.t==="int"){ const l0=pts.find(x=>x.t==="luz"&&x.r===C); q.cmd=l0?l0.cmd:letra(); }
+      else if(a.t==="tug"){ const nM=pts.filter(x=>x.t==="tug"&&x.r===C&&x.va===600).length; q.va=MOLHADA(tp)&&nM<3?600:100; }
+      pts.push(q); });
+    pts.filter(q=>q.t==="int").forEach(q=>{ q.liga=pts.filter(l=>l.t==="luz"&&l.cmd===q.cmd&&l.r===q.r).map(l=>l.p); if(!q.liga.length) q.liga=pts.filter(l=>l.t==="luz"&&l.cmd===q.cmd).map(l=>l.p); }); }
   const circuitos=P=>{
   // circuitos
   const C=[], lim=v127?1270:2200, novoC=(desc,tipo,v)=>{ const c={n:C.length+1,desc,tipo,v,va:0,pts:[],amb:new Set(),dr:false}; C.push(c); return c; };
@@ -4633,7 +4645,7 @@ function render(){
     $("tabRefA").innerHTML=`<tr><th>Esquadria</th><th>Parede</th><th class="n">L x H (m)</th><th>Situação</th></tr>`+(G2.abs.length?G2.abs.map(g=>`<tr><td><b>${esc(g.a.n||g.tipo)}</b> <span style="color:var(--muted)">${esc(g.tipo)}</span></td><td>${g.w.i+1}${stW(g.w.i)==="d"?" (demolida)":""}</td><td class="n">${f(g.l)} x ${f(num(g.a.a)||2.1)}</td><td><select data-ra="${g.k}" aria-label="Situação da esquadria"${stW(g.w.i)==="d"?" disabled":""}>${ST_AB.map(([v,t])=>`<option value="${v}"${stA(g.a)===v?" selected":""}>${t}</option>`).join("")}</select></td></tr>`).join(""):`<tr><td colspan="4" style="color:var(--muted)">Sem portas ou janelas.</td></tr>`);
     $("refNotas").innerHTML=ref?notasReforma(q).map(t=>`<li>${esc(t)}</li>`).join(""):""; }
   { const LM=layoutMoveis(G); $("lay").innerHTML=svgDe(desenhoLayout(G,k,LM),"lay"); LAYLM=LM; layBarra(); layMarca();
-    const EL=pontosEletricos(G,LM); $("ele").innerHTML=svgDe(desenhoEletrica(G,k,LM,EL));
+    const EL=pontosEletricos(G,LM); $("ele").innerHTML=svgDe(desenhoEletrica(G,k,LM,EL),"ele"); ELV=EL; eleMarca();
     const HD=redeHidro(G,LM); $("hid").innerHTML=svgDe(desenhoHidro(G,k,LM,HD));
     { const PV=redePluvial(G,HD); $("pluvDes").innerHTML=PV?svgDe(desenhoPluvial(G,k,PV)):"";
       $("pluvChips").innerHTML=PV&&!PV.livre?[`${PV.cond.length} condutores`,`${PV.caixas.filter(c=>c.tipo==="CA").length} caixas de areia`,`${PV.caixas.filter(c=>c.tipo==="CI").length} caixas de inspeção`,`Vazão ${f(PV.Qtot,0)} L/min`,...Object.entries(PV.tubos).map(([d,m])=>`Tubo Ø${d}: ${f(m*1.1,1)} m`),`Condutores: ${f(PV.Lcond,1)} m`].map(t=>`<span class="chip">${esc(t)}</span>`).join(""):"";
@@ -4747,6 +4759,50 @@ $("plan").addEventListener("click",ev=>{
   if(bw){ painelParede(bw.w,bw.s); return; }
   const C=G.compAt(x,y); if(C&&!C.ext) painelAmbiente(C,x,y); else $("selPanel").hidden=true;
 });
+/* ---------------- Edição dos pontos elétricos (aba Elétrica) ---------------- */
+let ELV=null, ELESEL=null, ELEMOVE=false;
+const NOME_PT=q=>q.t==="qd"?`Quadro de distribuição (${q.nome||"QD"})`:q.t==="luz"?"Ponto de luz no teto":q.t==="int"?"Interruptor":q.t==="tug"?`Tomada ${q.alt==="a"?"alta (2,20 m)":q.alt==="m"?"média (1,10 m)":"baixa (0,30 m)"}`:q.ch?"Chuveiro":q.ar?"Ar-condicionado":"Tomada de uso específico";
+function ptVista(ev,id){ const svg=$(id).querySelector("svg"), v=VIEW[id]; if(!svg||!v) return null; const r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal;
+  return [v.e.x0+((ev.clientX-r.left)/r.width*vb.width-v.pad)*v.k, v.e.y0+((ev.clientY-r.top)/r.height*vb.height-v.pad)*v.k]; }
+// encaixe: luz fica dentro do ambiente; o resto vai para a face da parede mais perto (do lado de dentro do ambiente)
+function eleEncaixa(t,p){ const G=GG; if(!G||G.vazio) return null;
+  if(t==="luz"){ const C=G.compAt(...p); return C&&!C.ext?{x:+p[0].toFixed(3),y:+p[1].toFixed(3),N:null}:null; }
+  let best=null; G.rooms.forEach(r=>arestas(r).forEach(e=>{ const s=Math.max(0.10,Math.min(e.Le-0.10,(p[0]-e.A[0])*e.u[0]+(p[1]-e.A[1])*e.u[1])), q=[e.A[0]+e.u[0]*s,e.A[1]+e.u[1]*s], d=Math.hypot(q[0]-p[0],q[1]-p[1]); if(!best||d<best.d) best={d,q,N:e.N,e,s}; }));
+  if(!best||best.d>1.2) return null; return {x:+best.q[0].toFixed(3),y:+best.q[1].toFixed(3),N:best.N}; }
+function eleAchar(p){ if(!ELV) return null; let b=null; ELV.pts.forEach(q=>{ const d=Math.hypot(q.p[0]-p[0],q.p[1]-p[1]); if(d<0.35&&(!b||d<b.d)) b={q,d}; }); return b&&b.q; }
+function eleGrava(q,o){ if(q.add){ const j=+q.key.split("|")[1]; Object.assign(S.eleAdd[j],o); } else { S.eleM=S.eleM||{}; S.eleM[q.key]=Object.assign({},S.eleM[q.key]||{},o); } ELESEL=q.key; save(); render(); elePainel(); }
+function eleMarca(){ const svg=$("ele").querySelector("svg"), v=VIEW.ele; if(!svg||!v||!ELV) return; const q=ELV.pts.find(x=>x.key===ELESEL); if(!q){ return; }
+  const cx=v.pad+(q.p[0]-v.e.x0)/v.k, cy=v.pad+(q.p[1]-v.e.y0)/v.k; svg.insertAdjacentHTML("beforeend",`<circle cx="${cx}" cy="${cy}" r="3.2" fill="none" stroke="#d33" stroke-width="0.5" stroke-dasharray="1 0.6"/>`); }
+function elePainel(p0){ const P=$("elePanel"), q=ELV&&ELV.pts.find(x=>x.key===ELESEL);
+  if(!q&&!p0){ P.hidden=true; return; } P.hidden=false;
+  if(!q){ const lugar=GG.compAt(...p0); P.innerHTML=`<h4>Acrescentar aqui${lugar&&!lugar.ext?` · ${esc(lugar.n)}`:""}</h4><div class="row" style="margin:0;flex-wrap:wrap">
+      <button class="btn" data-add="tug|b">Tomada baixa</button><button class="btn" data-add="tug|m">Tomada média</button><button class="btn" data-add="tug|a">Tomada alta</button><button class="btn" data-add="luz|">Ponto de luz</button><button class="btn" data-add="int|">Interruptor</button><button class="btn pri" data-add="qd|">Trazer o quadro para cá</button><button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" id="eleMsg" style="margin:6px 0 0"></p>`;
+    P.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ const [t,alt]=b.dataset.add.split("|"), E=eleEncaixa(t,p0); if(!E){ $("eleMsg").textContent=t==="luz"?"Toque dentro de um ambiente.":"Toque mais perto de uma parede."; return; }
+      if(t==="qd"){ const qd=ELV.pts.find(x=>x.t==="qd"); if(!qd){ $("eleMsg").textContent="Este projeto ainda não tem quadro."; return; } ELESEL=qd.key; eleGrava(qd,{x:E.x,y:E.y,N:E.N}); return; }
+      S.eleAdd=S.eleAdd||[]; S.eleAdd.push({t,x:E.x,y:E.y,N:E.N,alt:alt||undefined}); ELESEL="add|"+(S.eleAdd.length-1); save(); render(); elePainel(); });
+    P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; }; return; }
+  const parede=q.t!=="luz";
+  P.innerHTML=`<h4>${esc(NOME_PT(q))} · ${esc(q.r?q.r.n:"")}</h4><p class="cap" style="margin:0 0 8px">${ELEMOVE?"<b>Toque no lugar novo</b> na planta.":`Arraste na planta, ou toque em <b>Mover</b> e depois no lugar novo.${q.man?" (posição escolhida por você)":""}`}</p>
+    <div class="row" style="margin:0;flex-wrap:wrap"><button class="btn pri" data-m>${ELEMOVE?"Cancelar":"Mover"}</button>${parede?`<button class="btn" data-pa="-0.1" aria-label="Andar 10 cm para um lado">◀ 10 cm</button><button class="btn" data-pa="0.1" aria-label="Andar 10 cm para o outro lado">10 cm ▶</button>`:""}
+    ${q.t==="tug"?`<select data-alt aria-label="Altura da tomada" style="width:auto"><option value="b"${q.alt==="b"?" selected":""}>Baixa 0,30 m</option><option value="m"${q.alt==="m"?" selected":""}>Média 1,10 m</option><option value="a"${q.alt==="a"?" selected":""}>Alta 2,20 m</option></select>`:""}
+    ${q.t!=="qd"?`<button class="btn dng" data-del>Excluir</button>`:""}${q.man&&!q.add?`<button class="btn" data-auto>Voltar ao automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div>`;
+  P.querySelector("[data-m]").onclick=()=>{ ELEMOVE=!ELEMOVE; elePainel(); };
+  P.querySelectorAll("[data-pa]").forEach(b=>b.onclick=()=>{ const N=q.N||[0,-1], u=[-N[1],N[0]], d=+b.dataset.pa, E=eleEncaixa(q.t,[q.p[0]+u[0]*d-N[0]*0.02,q.p[1]+u[1]*d-N[1]*0.02]); if(E) eleGrava(q,{x:E.x,y:E.y,N:E.N}); });
+  const sa=P.querySelector("[data-alt]"); if(sa) sa.onchange=()=>eleGrava(q,{alt:sa.value});
+  const dl=P.querySelector("[data-del]"); if(dl) dl.onclick=()=>{ if(q.add){ S.eleAdd.splice(+q.key.split("|")[1],1); } else { S.eleM=S.eleM||{}; S.eleM[q.key]={del:true}; } ELESEL=null; ELEMOVE=false; save(); render(); P.hidden=true; };
+  const au=P.querySelector("[data-auto]"); if(au) au.onclick=()=>{ delete S.eleM[q.key]; ELEMOVE=false; save(); render(); elePainel(); };
+  P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; ELESEL=null; ELEMOVE=false; render(); }; }
+{ const cont=$("ele"); let arr=null, tArr=0;
+  cont.addEventListener("pointerdown",ev=>{ const p=ptVista(ev,"ele"); if(!p||ELEMOVE) return; const q=eleAchar(p); if(!q) return; arr={id:ev.pointerId,q,p0:p,moveu:false}; ELESEL=q.key; try{ cont.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); });
+  cont.addEventListener("pointermove",ev=>{ if(!arr||ev.pointerId!==arr.id) return; const p=ptVista(ev,"ele"); if(!p) return; if(!arr.moveu&&Math.hypot(p[0]-arr.p0[0],p[1]-arr.p0[1])<0.08) return; arr.moveu=true; arr.p=p;
+    const svg=cont.querySelector("svg"), v=VIEW.ele; let g=svg.querySelector("#eleFantasma"); if(!g){ svg.insertAdjacentHTML("beforeend",`<circle id="eleFantasma" r="2.6" fill="rgba(220,50,50,.25)" stroke="#d33" stroke-width="0.4"/>`); g=svg.querySelector("#eleFantasma"); }
+    g.setAttribute("cx",v.pad+(p[0]-v.e.x0)/v.k); g.setAttribute("cy",v.pad+(p[1]-v.e.y0)/v.k); });
+  const fim=ev=>{ if(!arr||ev.pointerId!==arr.id) return; const a=arr; arr=null; if(a.moveu) tArr=Date.now(); if(a.moveu&&a.p){ const E=eleEncaixa(a.q.t,a.p); if(E){ eleGrava(a.q,{x:E.x,y:E.y,N:E.N}); return; } } render(); elePainel(); };
+  cont.addEventListener("pointerup",fim); cont.addEventListener("pointercancel",ev=>{ arr=null; });
+  cont.addEventListener("click",ev=>{ if(Date.now()-tArr<400) return; const p=ptVista(ev,"ele"); if(!p||!GG||GG.vazio) return;
+    if(ELEMOVE){ const q=ELV&&ELV.pts.find(x=>x.key===ELESEL); ELEMOVE=false; if(q){ const E=eleEncaixa(q.t,p); if(E){ eleGrava(q,{x:E.x,y:E.y,N:E.N}); return; } } elePainel(); return; }
+    if(eleAchar(p)) return;   // tratado no pointerdown/up
+    ELESEL=null; render(); elePainel(p); }); }
 /* ---------------- Unir paredes alinhadas (ex.: chanfro importado em pedaços) ---------------- */
 // o buraco entre duas paredes na mesma linha vira abertura de verdade
 function paresAlinhados(maxGap=6){ const W=S.walls.map((w,i)=>({i,a:[num(w.x1),num(w.y1)],b:[num(w.x2),num(w.y2)],st:w.st})).filter(w=>w.st!=="d"&&Math.hypot(w.b[0]-w.a[0],w.b[1]-w.a[1])>0.05);
