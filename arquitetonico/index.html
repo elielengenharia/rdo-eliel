@@ -175,6 +175,12 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <div class="chips" id="planChips"></div>
       <div id="warnings"></div>
       <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option><option>A0</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Desenhos por folha<select id="agrupar" style="width:auto"><option value="auto">Automático (A0 até 9, A1 até 6, A2 até 4)</option><option value="não">Um por folha</option><option value="2">Até 2 por folha</option><option value="4">Até 4 por folha</option><option value="6">Até 6 por folha</option><option value="9">Até 9 por folha</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Cotas gerais (em cima e à esquerda)<select id="cotGer" style="width:auto"><option value="sim">Mostrar</option><option value="não">Não mostrar</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><span class="toast" id="pdfMsg" role="status"></span></div>
+      <div class="row" id="pdfDisc" style="font-size:13px"><b>O que vai no PDF e no DXF:</b>
+        <label style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" data-disc="arq">Arquitetônico</label>
+        <label style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" data-disc="ele">Elétrico</label>
+        <label style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" data-disc="hid">Hidrossanitário</label>
+        <label style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" data-disc="est">Estrutural</label>
+        <button class="btn" type="button" data-disc-todos style="padding:4px 10px">Todos</button><span class="toast" id="discMsg" role="status"></span></div>
       <div class="row"><button class="btn pri" data-dxf>Baixar DXF para o AutoCAD</button><button class="btn" data-dxfcopy>Copiar DXF</button><span class="toast" data-dxfmsg role="status"></span></div>
       <details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px;font-weight:600">Estilo do desenho (texto, linhas e cotas)</summary>
         <div class="form" style="margin-top:8px">
@@ -754,7 +760,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.67 · altura do caixote (platibanda) por volume", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.68 · PDF por disciplina (arquitetônico, elétrico, hidro, estrutural)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -4921,7 +4927,7 @@ const DIRS={1:[["baixo","Caimento para baixo"],["cima","Caimento para cima"],["e
    RENDER
    ====================================================================== */
 let GG=null;
-function render(){
+function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
   S.rt=`${S.rtNome||""}${S.crea?" · "+S.crea:""}`;
   const G=geom(); GG=G; const Q=esquadrias(G), TI=infoTelhado(G), k=kTela(G);
   $("stamp").innerHTML=`<b>${esc(S.obra||"Obra")}</b>${S.cliente?" · "+esc(S.cliente):""}${S.local?"<br>"+esc(S.local):""}<br>${esc(S.rt)} · ${esc(S.data)}`;
@@ -5791,6 +5797,10 @@ const naEscala=(gerar,s)=>{ const k=s/1000, D=gerar(k), e=extensao(D); return {D
 /* pranchas agrupadas: junta desenhos da mesma disciplina numa folha (A0 até 9, A1 até 6, A2 até 4) */
 const GRUPOS=[/PLANTA BAIXA|DEMOLIR|LAYOUT|CORTES|FACHADAS|COBERTURA|SITUAÇÃO|PAGINAÇÃO/,/FORMA|COLUNINHAS|PILARES|LOCAÇÃO|ESTRUTURA E DETALHES DO TELHADO|ESCADA/,/ELÉTRIC|UNIFILAR|HIDROSS|PLUVIA|FOSSA/,/PINTURA|FORRO|PISO|REVESTIMENTO/,/BANHEIRO|PORTAS|ESQUADRIAS|PERSPECTIVA/];
 const grupoFolha=fl=>{ const i=GRUPOS.findIndex(r=>r.test(fl.conteudo)); return i<0?GRUPOS.length:i; };
+// disciplina de cada prancha (para imprimir só o arquitetônico, só o elétrico...)
+function discFolha(fl){ const l=fl.lado; if(l==="eletrica"||l==="unifilar") return "ele"; if(l==="hidro"||l==="pluvial"||l==="fossa") return "hid";
+  if(["forma","formaS","fundacao","armadura","basepiso"].includes(l)||(l==="locacao"&&fl.LC&&fl.LC.pil)) return "est"; return "arq"; }
+const discSel=()=>{ const d=S.pdfDisc||{}; return {arq:d.arq!==false,ele:d.ele!==false,hid:d.hid!==false,est:d.est!==false}; };
 function agruparFolhas(folhas,cap,area,TT){ const aw=area.x1-area.x0, ah=area.y1-area.y0, out=[];
   const ordem=folhas.map((fl,i)=>({fl,i,g:grupoFolha(fl)})).sort((a,b)=>a.g-b.g||a.i-b.i);
   let cur=null; const fecha=()=>{ if(!cur) return; out.push(cur.fs.length===1?cur.fs[0]:montaGrupo(cur.fs)); cur=null; };
@@ -5907,7 +5917,9 @@ function pranchas(fmt){
     folhas.forEach(fl=>{ if(fl.itens.length!==1||!["quadros","layout","eletrica","hidro","pluvial","pintura","forro","piso","revp","reforma","telhado","locacao"].includes(fl.lado)) return; const it=fl.itens[0]; if(!it.d||!it.d.gen||it.sem) return;
       const v=encaixar(it.d.gen,bV[2],bV[3]-TT); if(!(v.s<it.d.s)||v.w>bV[2]||v.h>bV[3]-TT) return;
       it.d=v; it.box=bV; fl.side=sV; fl.escala=fl.escala.replace(/^1:\d+/,`1:${v.s}`); }); }
-  const fls=cap>1?agruparFolhas(folhas,cap,area,TT):folhas;
+  // só as disciplinas marcadas (arquitetônico, elétrico, hidrossanitário, estrutural); a numeração das folhas segue o que sai
+  const DSel=discSel(), folhasD=folhas.filter(fl=>DSel[discFolha(fl)]); if(!folhasD.length) folhasD.push(...folhas);
+  const fls=cap>1?agruparFolhas(folhasD,cap,area,TT):folhasD;
   fls.forEach((fl,i)=>fl.n=`${String(i+1).padStart(2,"0")}/${String(fls.length).padStart(2,"0")}`);
   fls.forEach(fl=>fl.itens.forEach(it=>{ if(!it.d||!it.d.D||!it.d.k) return; desencavala(it.d.D); const e=extensao(it.d.D); Object.assign(it.d,{e,w:(e.x1-e.x0)/it.d.k,h:(e.y1-e.y0)/it.d.k}); }));   // tira os textos de cima uns dos outros (PDF e DXF) e mede de novo
   return {W,H,mo,ml,cw,ch,ha,TT,area,side,G,Q,TI,folhas:fls};
@@ -6137,6 +6149,9 @@ function buildPDF(fmt){
   out+=`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF\n`;
   return to1252(out);
 }
+{ const box=$("pdfDisc"), mostra=()=>{ const d=discSel(); box.querySelectorAll("[data-disc]").forEach(c=>c.checked=d[c.dataset.disc]); const n=Object.values(d).filter(Boolean).length; $("discMsg").textContent=n===4?"":n?"O PDF sai só com o que está marcado, numerado de novo.":"Marque pelo menos um."; };
+  box.addEventListener("change",e=>{ const c=e.target.closest("[data-disc]"); if(!c) return; S.pdfDisc=Object.assign(discSel(),{[c.dataset.disc]:c.checked}); save(); mostra(); });
+  box.querySelector("[data-disc-todos]").onclick=()=>{ S.pdfDisc={arq:true,ele:true,hid:true,est:true}; save(); mostra(); }; mostra(); window.__discMostra=mostra; }
 $("pdfBtn").onclick=async()=>{
   const msg=$("pdfMsg"), fmt=$("fmt").value;
   try{ const st=await saveFile(`${slug()}-${fmt}-${agora().arq}.pdf`,buildPDF(fmt),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":st==="shared"?"PDF pronto: escolha Salvar em Arquivos ou envie.":"PDF enviado."; }
