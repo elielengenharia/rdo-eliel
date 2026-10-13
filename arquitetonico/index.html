@@ -763,7 +763,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.76 · garagem na planta de forro", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.77 · código do projeto completo", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -6671,7 +6671,7 @@ $("impPaste").addEventListener("paste",e=>{
 $("impPasteGo").onclick=()=>{
   const t=$("impPaste").value.trim(); if(!t||t==="[imagem colada]"){ impMsg(t?"Imagem já carregada acima.":"Cole algo primeiro."); return; }
   const dec=s=>JSON.parse(decodeURIComponent(escape(atob(s.replace(/\s+/g,"")))));
-  if(/^ARQ1:/.test(t)){ try{ const o=dec(t.slice(5)); Object.keys(defaults()).forEach(k=>{ if(o[k]!==undefined) S[k]=o[k]; }); S.tel=Object.assign(clone(TEL0),o.tel||{});
+  if(/^ARQ1:/.test(t)){ try{ const o=dec(t.slice(5)); S=estadoDe(Object.assign(JSON.parse(JSON.stringify(S)),o)); PJ.lista[PJ.atual]=S;   /* o projeto inteiro (volumes, limites de piso, perspectiva...), não só os campos básicos */
       loadForm(); render(); impMsg("Projeto carregado. Confira na aba Planta."); $("impPaste").value=""; } catch(e){ impMsg("Código de projeto inválido. Copie de novo, inteiro."); } return; }
   if(/^FDNC1:/.test(t)){ try{ const o=dec(t.slice(6));
       if(Array.isArray(o.walls)) S.walls=o.walls; if(Array.isArray(o.rooms)) S.rooms=o.rooms; ["obra","cliente","local"].forEach(k=>{ if(typeof o[k]==="string") S[k]=o[k]; });
@@ -6681,7 +6681,7 @@ $("impPasteGo").onclick=()=>{
   impMsg("Não reconheci o que foi colado. Cole uma imagem, o texto de um DXF ou um código de projeto.");
 };
 $("projCopy").onclick=async()=>{
-  const o={}; Object.keys(defaults()).forEach(k=>o[k]=S[k]);
+  const o=JSON.parse(JSON.stringify(S));   // projeto inteiro (volumes, limites de piso, perspectiva, ajustes manuais)
   const code="ARQ1:"+btoa(unescape(encodeURIComponent(JSON.stringify(o))));
   try{ await navigator.clipboard.writeText(code); impMsg("Código copiado. Guarde no bloco de notas ou mande no chat."); }
   catch(e){ $("impPaste").value=code; $("impPaste").select(); impMsg("Selecione o código na caixa acima e copie."); }
