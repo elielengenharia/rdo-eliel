@@ -753,7 +753,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.62 · coletor e caixas no corredor", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.63 · esgoto e pluvial separados, nada na garagem", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2547,9 +2547,12 @@ function redeHidro(G,LM){
   const TL=G.vazio?null:terreno(G).lote, nT=TL?TL.length:0;
   const PS=passeios(G);
   const muro=(p,m)=>G.walls.some(w=>!w.dw&&distSeg(p,w)<m);   // muro ou parede solta: caixa e coletor não passam por cima
+  const OBRA=[...(G.casas||[]),...(G.pisos||[]).map(q=>q.poly).filter(Boolean)], naObra=p=>OBRA.some(P0=>pontoDentro(p,P0));   // garagem e varanda contam como obra
   const okP=p=>(!TL||noPasseio(p,PS,0.25)||(pontoDentro(p,TL)&&Math.min(...TL.map((a,i)=>distSeg(p,{x1:a[0],y1:a[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.25))&&!muro(p,0.25);
   const livre=(pa,pb)=>[0,0.25,0.5,0.75,1].every(t=>okP([pa[0]+(pb[0]-pa[0])*t,pa[1]+(pb[1]-pa[1])*t]));
   let C=(G.casas&&G.casas.length?G.casas.slice().sort((p,q)=>Math.abs(areaS(q))-Math.abs(areaS(p)))[0]:[[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x1,bb.y1],[bb.x0,bb.y1]]).map(p=>[p[0],p[1]]);
+  // o anel contorna a casa junto com a garagem/varanda (pisos externos): caixa nenhuma fica dentro da garagem
+  if(G.pisos&&G.pisos.length){ try{ const Lu=lacos(contornoUniao([C,...G.pisos.map(q=>q.poly).filter(Boolean)])); const mx=Lu.reduce((m,P0)=>!m||Math.abs(areaS(P0))>Math.abs(areaS(m))?P0:m,null); if(mx&&Math.abs(areaS(mx))>=Math.abs(areaS(C))-1e-6) C=mx.map(p=>[p[0],p[1]]); }catch(e){} }
   for(let it=0;it<50&&C.length>3;it++){ const n0=C.length; let tira=-1;
     for(let i=0;i<n0;i++){ const a=C[(i+n0-1)%n0], b=C[i], c=C[(i+1)%n0], l1=Math.hypot(b[0]-a[0],b[1]-a[1]), l2=Math.hypot(c[0]-b[0],c[1]-b[1]), cr=((b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]))/((l1*l2)||1);
       if(l2<0.25||Math.abs(cr)<0.02){ tira=l2<0.25?(i+1)%n0:i; break; } }
@@ -2560,24 +2563,29 @@ function redeHidro(G,LM){
       // primeiro a 0,80 m; se cair numa faixa estreita do lote, vai mais para fora até a calçada; senão, dentro da obra
       const tenta=[d,1.0,1.25,1.5,1.75,2.0,2.5,3.0].find(o=>livre([a[0]+nn[0]*o+u[0]*0.3,a[1]+nn[1]*o+u[1]*0.3],[b[0]+nn[0]*o-u[0]*0.3,b[1]+nn[1]*o-u[1]*0.3]));
       // corredor estreito entre a casa e o muro/divisa: o coletor e as caixas vão no meio do corredor (antes iam para dentro da casa)
-      let dd=tenta; if(dd===undefined){ const okC=p=>!TL||noPasseio(p,PS,0.05)||(pontoDentro(p,TL)&&Math.min(...TL.map((q,i)=>distSeg(p,{x1:q[0],y1:q[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.05)&&!(G.casas||[]).some(P0=>pontoDentro(p,P0))&&!muro(p,0.10);
+      let dd=tenta; if(dd===undefined){ const okC=p=>!TL||noPasseio(p,PS,0.05)||(pontoDentro(p,TL)&&Math.min(...TL.map((q,i)=>distSeg(p,{x1:q[0],y1:q[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.05)&&!naObra(p)&&!muro(p,0.10);
         const livreC=(pa,pb)=>[0,0.25,0.5,0.75,1].every(t=>okC([pa[0]+(pb[0]-pa[0])*t,pa[1]+(pb[1]-pa[1])*t]));
         let w=0; for(let o=0.10;o<=3.01;o+=0.05){ if(livreC([a[0]+nn[0]*o+u[0]*0.3,a[1]+nn[1]*o+u[1]*0.3],[b[0]+nn[0]*o-u[0]*0.3,b[1]+nn[1]*o-u[1]*0.3])) w=o; else break; }
-        dd=w>=0.45?Math.max(0.25,Math.min(d,w/2+0.025)):dIn; }
-      return {a,b,u,n:nn,dd,corr:tenta===undefined&&dd>0}; });
-  const R=ED.map((e,i)=>{ const pv=ED[(i+nC-1)%nC], p1=[e.a[0]+e.n[0]*e.dd,e.a[1]+e.n[1]*e.dd], p0=[pv.b[0]+pv.n[0]*pv.dd,pv.b[1]+pv.n[1]*pv.dd], den=pv.u[0]*e.u[1]-pv.u[1]*e.u[0];
+        dd=w>=0.45?Math.max(0.25,Math.min(d,w/2+0.025)):dIn;
+        // corredor: esgoto do lado do muro, águas pluviais junto da parede da casa (redes separadas)
+        if(dd>0&&w>=0.80){ dd=Math.max(0.40,Math.min(w-0.30,w*0.64)); return {a,b,u,n:nn,dd,dp:Math.max(0.20,Math.min(dd-0.35,w*0.26)),corr:true,w}; }
+        return {a,b,u,n:nn,dd,dp:dd>0?Math.max(0.15,dd-0.20):dd,corr:dd>0,w}; }
+      return {a,b,u,n:nn,dd,dp:Math.max(0.30,dd-0.45),corr:false}; });
+  const mkAnel=K=>{ const R=ED.map((e,i)=>{ const pv=ED[(i+nC-1)%nC], p1=[e.a[0]+e.n[0]*e[K],e.a[1]+e.n[1]*e[K]], p0=[pv.b[0]+pv.n[0]*pv[K],pv.b[1]+pv.n[1]*pv[K]], den=pv.u[0]*e.u[1]-pv.u[1]*e.u[0];
     if(Math.abs(den)<1e-6) return [(p0[0]+p1[0])/2,(p0[1]+p1[1])/2];
     const t=((p1[0]-p0[0])*e.u[1]-(p1[1]-p0[1])*e.u[0])/den, X=[p0[0]+pv.u[0]*t,p0[1]+pv.u[1]*t]; return Math.hypot(X[0]-e.a[0],X[1]-e.a[1])>3?[(p0[0]+p1[0])/2,(p0[1]+p1[1])/2]:X; });
   const cum=[0]; R.forEach((p,i)=>{ const q=R[(i+1)%nC]; cum.push(cum[i]+Math.hypot(q[0]-p[0],q[1]-p[1])); }); const PER=cum[nC]||1;
   const anelP=t=>{ t=((t%PER)+PER)%PER; let i=0; while(i<nC-1&&t>cum[i+1]) i++; const p=R[i], q=R[(i+1)%nC], L0=cum[i+1]-cum[i]||1, f0=(t-cum[i])/L0; return [p[0]+(q[0]-p[0])*f0,p[1]+(q[1]-p[1])*f0]; };
-  const anelT=(p,soFora)=>{ let best=null; R.forEach((a,i)=>{ if(soFora&&!(ED[i].dd>0)) return; const b=R[(i+1)%nC], dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1, u=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2)), q=[a[0]+dx*u,a[1]+dy*u], dd=Math.hypot(p[0]-q[0],p[1]-q[1]); if(!best||dd<best.d) best={d:dd,t:cum[i]+u*Math.sqrt(L2)}; }); return soFora?best:best.t; };
+  const anelT=(p,soFora)=>{ let best=null; R.forEach((a,i)=>{ if(soFora&&!(ED[i][K]>0)) return; const b=R[(i+1)%nC], dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1, u=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2)), q=[a[0]+dx*u,a[1]+dy*u], dd=Math.hypot(p[0]-q[0],p[1]-q[1]); if(!best||dd<best.d) best={d:dd,t:cum[i]+u*Math.sqrt(L2)}; }); return soFora?best:best.t; };
+    return {R,cum,PER,anelP,anelT,anelCn:cum.slice(0,nC)}; };
+  const AE=mkAnel("dd"), {cum,PER,anelP,anelT}=AE, AP=mkAnel("dp");
   // lado da frente: o trecho do anel cuja face olha para a rua (o mais comprido)
   const VF={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente]||[0,1];
   let iF=0, bF=-1e9; ED.forEach((e,i)=>{ const v=(e.n[0]*VF[0]+e.n[1]*VF[1])>0.6?Math.hypot(e.b[0]-e.a[0],e.b[1]-e.a[1]):-1+(e.n[0]*VF[0]+e.n[1]*VF[1]); if(v>bF){ bF=v; iF=i; } });
-  const frente=[cum[iF],cum[iF+1]], dFr=ED[iF].dd;
+  const frente=[cum[iF],cum[iF+1]], dFr=ED[iF].dd; AP.frente=[AP.cum[iF],AP.cum[iF+1]]; AP.ED=ED; AP.iF=iF;
   const caixas=[], ramal=[], comFossa=(S.fossa||{}).on==="sim";
   // com fossa: a caixa fica logo do lado de fora da parede mais perto da saída (lote ou calçada), sem dar a volta na obra
-  const caixaFora=(p,alvo)=>{ let best=null; const cs0=G.casas||[];
+  const caixaFora=(p,alvo)=>{ let best=null; const cs0=OBRA;
     ED.forEach(e=>{ const dx=e.b[0]-e.a[0], dy=e.b[1]-e.a[1], L2=dx*dx+dy*dy||1, u=Math.max(0.05,Math.min(0.95,((p[0]-e.a[0])*dx+(p[1]-e.a[1])*dy)/L2)), pr=[e.a[0]+dx*u,e.a[1]+dy*u];
       for(let o=0.45;o<=3.01;o+=0.15){ const q=[pr[0]+e.n[0]*o,pr[1]+e.n[1]*o]; if(cs0.some(P0=>pontoDentro(q,P0))||!okP(q)) continue; const d0=Math.hypot(q[0]-p[0],q[1]-p[1])+(alvo?Math.hypot(q[0]-alvo[0],q[1]-alvo[1]):0); if(!best||d0<best.d) best={d:d0,q}; break; } });
     return best&&best.q; };
@@ -2611,7 +2619,7 @@ function redeHidro(G,LM){
   const cantos=cum.slice(0,nC); const usados=new Set();
   trechos.forEach(([a,b])=>cantos.forEach(cn=>[cn,cn+PER].forEach(v=>{ if(v>a+0.05&&v<b-0.05) usados.add(cn); })));
   const ci=[...caixas];
-  usados.forEach(cn=>{ if(!ci.some(c=>dist(c.t,cn)<0.6)) ci.push({p:anelP(cn),t:cn,tipo:"CI"}); });
+  usados.forEach(cn=>{ if(!ci.some(c=>dist(c.t,cn)<0.6)&&!naObra(anelP(cn))) ci.push({p:anelP(cn),t:cn,tipo:"CI"}); });   // curva debaixo da garagem: sem caixa
   if(!ci.some(c=>dist(c.t,tf)<0.6)) ci.push({p:anelP(tf),t:tf,tipo:"CI",fim:true}); else ci.find(c=>dist(c.t,tf)<0.6).fim=true;
   // caixas muito juntas viram uma só
   const cx2=[]; ci.forEach(c=>{ const o=c.add?null:cx2.find(q=>!q.add&&dist(q.t,c.t)<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; o.fim=o.fim||c.fim; if(c.key) o.keys.push(c.key); o.man=o.man||c.man; } else cx2.push({...c,keys:c.key?[c.key]:[]}); });
@@ -2624,7 +2632,7 @@ function redeHidro(G,LM){
     caixas.forEach(c=>{ const o=c.add?null:cs1.find(q=>!q.add&&Math.hypot(q.p[0]-c.p[0],q.p[1]-c.p[1])<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; if(c.key) o.keys.push(c.key); o.man=o.man||c.man; } else cs1.push({...c,fim:false,keys:c.key?[c.key]:[]}); });
     const f0=cs1.reduce((m,c)=>!m||Math.hypot(c.p[0]-ent[0],c.p[1]-ent[1])<Math.hypot(m.p[0]-ent[0],m.p[1]-ent[1])?c:m,null); if(f0) f0.fim=true;
     cs1.forEach(c=>{ if(c!==f0) ligs.push([c.p,f0.p]); }); cx2.length=0; cx2.push(...cs1); }
-  const dentroObra=c=>(G.casas||[]).some(P0=>pontoDentro(c.p,P0));
+  const dentroObra=c=>naObra(c.p);
   if(cx2.some(dentroObra)) aviso.push("Construção encostada na divisa do vizinho: a caixa desse trecho fica dentro da edificação (caixa com tampa no piso), para não passar para o lote vizinho.");
   if(TL&&cx2.some(c=>!dentroObra(c)&&noPasseio(c.p,PS,0))) aviso.push("Construção no alinhamento: caixa de inspeção na calçada, junto da parede (confirmar com a prefeitura).");
   const iDe=t=>{ t=((t%PER)+PER)%PER; let i=0; while(i<nC-1&&t>cum[i+1]) i++; return i; };
@@ -2659,7 +2667,7 @@ function redeHidro(G,LM){
       if(b){ o.alvo=b.c.p; o.d=a.t==="rsc"?40:50; } else if(a.t==="rsc"){ const b2=perto(a.p,csLista); o.alvo=b2?b2.c.p:null; o.d=40; if(b2&&b2.d>3) aviso.push(`Ralo seco${r?` em ${r.n}`:""} sem caixa sifonada no ambiente: ficou ligado na caixa sifonada mais perto, a ${f(b2.d,1)} m. Melhor acrescentar uma caixa sifonada ou usar ralo sifonado.`); if(!b2) aviso.push(`Ralo seco${r?` em ${r.n}`:""} sem caixa sifonada: ralo seco precisa descarregar numa caixa sifonada (acrescente uma).`); }
       else { const b2=perto(a.p,cxV); o.alvo=b2?b2.c.p:null; o.d=50; } }
     extra.push(o); });
-  return {ap,salas,ramal,trechos,ligs,anelP,anelT,ED,iF,frente,TL,PS,anelCn:cum.slice(0,nC),PER,fossa,caixas:cxV,caixasTodas:cx2,extra,fim,out,res,desc,ramaisAF,hd,pessoas,cons,Vn,aviso,com}; }
+  return {ap,salas,ramal,trechos,ligs,anelP,anelT,ED,iF,frente,TL,PS,anelCn:cum.slice(0,nC),PER,AP,naObra,fossa,caixas:cxV,caixasTodas:cx2,extra,fim,out,res,desc,ramaisAF,hd,pessoas,cons,Vn,aviso,com}; }
 const idCaixa=c=>"cx|"+(c.key&&c.add?c.key:(c.keys&&c.keys[0])||(c.fim?"fim":"canto|"+c.p[0].toFixed(1)+","+c.p[1].toFixed(1)));
 const NOME_RALO={rs:"Ralo sifonado",rsc:"Ralo seco",rq:"Ralo quadrado (grelha 15x15)",rl:"Ralo linear (retangular)",cs:"Caixa sifonada",ci:"Caixa de inspeção",cg:"Caixa de gordura"};
 const ROT_RALO={rs:"RS",rsc:"RSC",rq:"RQ",rl:"RL",cs:"CS"};
@@ -2668,7 +2676,9 @@ const ROT_RALO={rs:"RS",rsc:"RSC",rq:"RQ",rl:"RL",cs:"CS"};
 // capacidade dos condutores horizontais de seção circular, n = 0,011, lâmina 2/3 do diâmetro (L/min; i = 0,5 / 1 / 2 / 4 %)
 const TAB_AP={75:[95,133,188,267],100:[204,287,405,575],125:[370,521,735,1040],150:[602,847,1190,1690],200:[1300,1820,2570,3650]};
 const capHor=(d,i)=>{ const I=[0.5,1,2,4], v=TAB_AP[d]; if(i<=0.5) return v[0]*Math.sqrt(i/0.5); for(let j=0;j<3;j++) if(i<=I[j+1]) return v[j]+(v[j+1]-v[j])*(i-I[j])/(I[j+1]-I[j]); return v[3]; };
-function redePluvial(G,HD){ if(G.vazio||!HD||!HD.anelP) return null;
+function redePluvial(G,HD0){ if(G.vazio||!HD0||!HD0.anelP) return null;
+  // rede de águas pluviais no anel dela (junto da parede), separada do esgoto; caixa final longe da caixa final do esgoto
+  const HD=HD0.AP?{...HD0,...HD0.AP,PS:HD0.PS,TL:HD0.TL,fim:null,fimE:HD0.fim}:HD0;
   const TI=infoTelhado(G), CL=TI.plat?calhasPlat(G,TI):calhasBeiral(G,TI), i=Math.min(4,Math.max(0.5,num(S.ap.i)||1)), aviso=[];
   if(!CL) return {livre:true,TI,TL:HD.TL,i,cond:[],caixas:[],arcs:[],aviso};
   const W=G.contExt.map(s0=>({a:[s0[0],s0[1]],b:[s0[2],s0[3]]})), dentro=p=>(G.casas||[]).some(P0=>pontoDentro(p,P0));
@@ -2679,12 +2689,12 @@ function redePluvial(G,HD){ if(G.vazio||!HD||!HD.anelP) return null;
     if(best) cond.push({nome:`AP${cond.length+1}`,top:p,pe:best.pe,dia:Math.max(75,c.dia),Q:c.Q/c.nC,A:c.A/c.nC,calha:c.nome}); }));
   // caixa de areia no anel de caixas (o mesmo do esgoto), uma por condutor; condutores juntos dividem a caixa
   const PER=HD.PER, nt=t=>((t%PER)+PER)%PER, dist=(a,b)=>{ const x=nt(a-b); return Math.min(x,PER-x); }, caixas=[];
-  cond.forEach(c=>{ const t=nt(HD.anelT(c.pe)), o=caixas.find(q=>dist(q.t,t)<0.6); if(o){ o.Q+=c.Q; o.cond.push(c); c.ca=o; } else { const q={t,p:HD.anelP(t),Q:c.Q,cond:[c],tipo:"CA"}; caixas.push(q); c.ca=q; } });
+  cond.forEach(c=>{ const bo=HD.anelT(c.pe,true), t=nt(bo?bo.t:HD.anelT(c.pe)), o=caixas.find(q=>dist(q.t,t)<0.6); if(o){ o.Q+=c.Q; o.cond.push(c); c.ca=o; } else { const q={t,p:HD.anelP(t),Q:c.Q,cond:[c],tipo:"CA"}; caixas.push(q); c.ca=q; } });
   // caixa final na frente (ou do lado da rua escolhida, para onde o terreno cai), perto das outras e afastada da caixa final do esgoto
   const PSr=S.ap.rua!=="frente"?(HD.PS||[]).find(q=>String(q.i+1)===String(S.ap.rua)):null, mf=q=>[q.a[0]+q.n[0]*q.cal,q.a[1]+q.n[1]*q.cal], dMf=(p,q)=>{ const m=mf(q); return (m[0]-p[0])*q.n[0]+(m[1]-p[1])*q.n[1]; };
   let fr=HD.frente; if(PSr){ let mn=1e9; for(let t=0;t<PER;t+=0.1) mn=Math.min(mn,dMf(HD.anelP(t),PSr)); const ok=[]; for(let t=0;t<PER;t+=0.1) if(dMf(HD.anelP(t),PSr)<=mn+0.4) ok.push(t); if(ok.length) fr=[ok[0],ok[ok.length-1]]; if(ok.length&&ok[ok.length-1]-ok[0]>PER/2){ const sh=ok.map(t=>t<PER/2?t+PER:t).sort((a,b)=>a-b); fr=[sh[0],sh[sh.length-1]]; } }
-  const tE=HD.fim?HD.fim.t:null; let tf=(fr[0]+fr[1])/2, bc=1e18;
-  for(let t=fr[0]+(fr[1]-fr[0]>0.8?0.3:0);t<=fr[1]-(fr[1]-fr[0]>0.8?0.3:0)+1e-9;t+=0.1){ const v=caixas.reduce((s0,c)=>s0+c.Q*dist(c.t,t),0)+(tE!=null&&dist(t,tE)<1.2?1e9:0); if(v<bc){ bc=v; tf=t; } }
+  const pE=HD.fimE?HD.fimE.p:(HD.fim?HD.fim.p:null); let tf=(fr[0]+fr[1])/2, bc=1e18;
+  for(let t=fr[0]+(fr[1]-fr[0]>0.8?0.3:0);t<=fr[1]-(fr[1]-fr[0]>0.8?0.3:0)+1e-9;t+=0.1){ const q=HD.anelP(t), v=caixas.reduce((s0,c)=>s0+c.Q*dist(c.t,t),0)+(pE&&Math.hypot(q[0]-pE[0],q[1]-pE[1])<1.2?1e9:0); if(v<bc){ bc=v; tf=t; } }
   // trechos: de cada caixa até a final pelo lado mais curto do anel; vazões somadas trecho a trecho
   const tr=caixas.map(c=>{ let dd=nt(tf-c.t), dir=1; if(dd>PER/2){ dd=PER-dd; dir=-1; } return {t0:c.t,dir,L:dd,Q:c.Q}; }).filter(x=>x.L>0.05);
   const bk=[...new Set([...caixas.map(c=>+nt(c.t).toFixed(3)),+nt(tf).toFixed(3),...HD.anelCn.map(c=>+nt(c).toFixed(3))])].sort((a,b)=>a-b), arcs=[];
@@ -2692,7 +2702,7 @@ function redePluvial(G,HD){ if(G.vazio||!HD||!HD.anelP) return null;
     const Q=cob.reduce((s0,x)=>s0+x.Q,0), dia=[100,125,150,200].find(d=>capHor(d,i)>=Q)||200, pts=[HD.anelP(a),...HD.anelCn.map(c=>[c,c+PER]).flat().filter(c=>c>a+0.02&&c<b-0.02).sort((x,y)=>x-y).map(c=>HD.anelP(c)),HD.anelP(b)];
     arcs.push({a,b,Q,dia,dir:cob[0].dir,pts,L:b-a}); });
   // caixa de inspeção nas mudanças de direção (cantos do anel que a rede usa)
-  HD.anelCn.forEach(cn=>{ const c0=nt(cn); if(arcs.some(x=>c0>x.a+0.05&&c0<x.b-0.05||c0+PER>x.a+0.05&&c0+PER<x.b-0.05)&&!caixas.some(q=>dist(q.t,c0)<0.6)) caixas.push({t:c0,p:HD.anelP(c0),Q:0,cond:[],tipo:"CI"}); });
+  HD.anelCn.forEach(cn=>{ const c0=nt(cn); if(arcs.some(x=>c0>x.a+0.05&&c0<x.b-0.05||c0+PER>x.a+0.05&&c0+PER<x.b-0.05)&&!caixas.some(q=>dist(q.t,c0)<0.6)&&!(HD.naObra&&HD.naObra(HD.anelP(c0)))) caixas.push({t:c0,p:HD.anelP(c0),Q:0,cond:[],tipo:"CI"}); });
   let fim=caixas.find(q=>dist(q.t,tf)<0.6); if(!fim){ fim={t:nt(tf),p:HD.anelP(tf),Q:0,cond:[],tipo:"CI"}; caixas.push(fim); } fim.fim=true;
   // profundidade: 0,30 m na caixa mais alta e o caimento até a final
   const Lmax=Math.max(0,...caixas.map(c=>dist(c.t,tf))), hF=0.30+i/100*Lmax; caixas.forEach(c=>{ c.h=Math.max(0.30,hF-i/100*dist(c.t,tf)); c.lado=c.h>0.60?0.60:0.40; });
