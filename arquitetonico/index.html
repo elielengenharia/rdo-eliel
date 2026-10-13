@@ -763,7 +763,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.79 · instalar no iPhone pelo Safari com o link copiado", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.80 · instalar igual ao Diário de Obra", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -6836,30 +6836,34 @@ if(deFundacao&&Array.isArray(deFundacao.walls)&&deFundacao.walls.length&&Date.no
 }catch(e){} }
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script>
+<dialog id="dlgInstalar" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;width:min(460px,92vw);max-height:90vh;overflow:auto;border:0;border-radius:10px;padding:0;box-shadow:0 10px 40px rgba(0,0,0,.35)"><div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--ink);color:#fff;font-weight:700">📲 Instalar o app<button type="button" id="instFecha" style="background:none;border:0;color:#fff;font-size:22px;line-height:1;cursor:pointer" aria-label="Fechar">×</button></div><div id="instCorpo" style="padding:16px"></div></dialog>
 <script>
-/* Botão de instalar: Chrome/Edge (computador e Android) abrem a janela de instalação; iPhone e arquivo baixado recebem o passo a passo */
-(function(){ const URL_APP="https://elielengenharia.github.io/rdo-eliel/arquitetonico/", b=document.getElementById("btnInstalar"), aj=document.getElementById("instAjuda");
-  const instalado=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
-  if(instalado()) return;   // já está aberto como aplicativo
-  let pedido=null; b.hidden=false;
-  window.addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); pedido=e; });
-  window.addEventListener("appinstalled",()=>{ b.hidden=true; aj.hidden=false; aj.innerHTML=`<b>Aplicativo instalado.</b> Ele aparece no menu Iniciar / área de trabalho (computador) ou na tela inicial (celular) e funciona sem internet.`; });
-  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1), arquivo=location.protocol==="file:"||(()=>{ try{ return window.top!==window; }catch(e){ return true; } })();   /* arquivo baixado ou aberto dentro de outra página: instala pelo endereço */
-  const fechar=`<div class="row" style="margin-top:8px"><button class="btn" type="button" data-fecha>Fechar</button></div>`;
+/* Instalar (igual ao Diário de Obra): janela com os passos de cada aparelho; Chrome/Edge/Android instalam com um toque; iPhone pelo Safari (Compartilhar → Adicionar à Tela de Início) */
+(function(){ const URL_APP="https://elielengenharia.github.io/rdo-eliel/arquitetonico/", b=document.getElementById("btnInstalar"), dlg=document.getElementById("dlgInstalar"), corpo=document.getElementById("instCorpo");
+  const UA=navigator.userAgent, ehIOS=/iPhone|iPad|iPod/.test(UA)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1), instalado=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+  const interno=/FBAN|FBAV|Instagram|WhatsApp|Line\//.test(UA)||(()=>{ try{ return window.top!==window; }catch(e){ return true; } })()||location.protocol==="file:";   // WhatsApp, dentro do Claude ou arquivo baixado
+  const safari=ehIOS&&/Safari/.test(UA)&&!/CriOS|FxiOS|EdgiOS|OPiOS/.test(UA)&&!interno;
+  if(instalado()) return; b.hidden=false;
+  let pedido=null; window.addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); pedido=e; });
+  window.addEventListener("appinstalled",()=>{ b.hidden=true; try{ dlg.close(); }catch(e){} alert("App instalado! Procure o ícone “Arq. e Complementares” na tela."); });
+  document.getElementById("instFecha").onclick=()=>dlg.close();
+  const passo=(n,t)=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px"><span style="flex:none;width:30px;height:30px;border-radius:99px;background:#2563eb;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center">${n}</span><span style="font-size:15px;padding-top:4px">${t}</span></div>`;
+  let lk=URL_APP;
+  const copiar=async()=>{ let ok=false; try{ await navigator.clipboard.writeText(lk); ok=true; }catch(e){} if(!ok){ try{ const t=document.createElement("textarea"); t.value=lk; document.body.appendChild(t); t.select(); ok=document.execCommand("copy"); t.remove(); }catch(e){} } if(!ok) prompt("Copie este link:",lk); else { const m=document.getElementById("instCopiado"); if(m) m.textContent="✅ Link copiado. Agora cole no Safari."; } };
   b.onclick=async()=>{
     if(pedido){ pedido.prompt(); const r=await pedido.userChoice.catch(()=>null); pedido=null; if(r&&r.outcome==="accepted") return; }
-    aj.hidden=false;
-    let lk=URL_APP; if(arquivo||ios){ try{ lk=URL_APP+"#importar="+await pjPacote(); }catch(e){} }
-    const copia=async()=>{ let ok=false; try{ await navigator.clipboard.writeText(lk); ok=true; }catch(e){} if(!ok){ try{ const t=document.createElement("textarea"); t.value=lk; document.body.appendChild(t); t.select(); ok=document.execCommand("copy"); t.remove(); }catch(e){} } return ok; };
-    if(ios){ const ok=await copia();   // iPhone: a Apple só instala pelo Safari, no menu Compartilhar; o link (com o projeto) vai copiado para colar lá
-      alert(`Para instalar no iPhone:\n\n1. Abra o SAFARI (não o Claude, não o Chrome).\n2. ${ok?"Toque na barra de endereço e COLE o link (já copiado).":"Digite: elielengenharia.github.io/rdo-eliel/arquitetonico"}\n3. Toque em Compartilhar (quadrado com seta para cima).\n4. Toque em "Adicionar à Tela de Início" e em Adicionar.`);
-      aj.hidden=false; aj.innerHTML=`<b>Instalar no iPhone:</b> abra o <b>Safari</b>, ${ok?"cole o link que acabei de copiar":`digite <b>${URL_APP.replace("https://","")}</b>`} na barra de endereço, toque em <b>Compartilhar</b> (quadrado com a seta para cima) e em <b>Adicionar à Tela de Início</b>.${ok?" O link já leva o projeto aberto.":""}<div class="row" style="margin-top:8px"><button class="btn pri" type="button" data-copia>Copiar o link de novo</button><button class="btn" type="button" data-fecha>Fechar</button></div>`;
-      aj.querySelector("[data-copia]").onclick=async()=>{ const ok2=await copia(); if(!ok2) prompt("Copie este link e cole no Safari:",lk); };
-      aj.querySelector("[data-fecha]").onclick=()=>aj.hidden=true; aj.scrollIntoView({block:"nearest"}); return; }
-    if(arquivo) aj.innerHTML=`<b>Para instalar, abra o app pelo endereço da internet</b> (aqui ele está aberto como arquivo ou dentro de outra página, e o navegador só instala pelo endereço do site):<p style="margin:8px 0"><a class="btn pri" href="${lk}" target="_blank" rel="noopener">Abrir no site com o projeto “${esc(PJ.atual)}”</a></p>O site abre já com este projeto. Lá, toque de novo em <b>Instalar no computador / celular</b>. Para levar outro projeto, abra ele aqui e toque em Instalar de novo.`+fechar;
-    else if(ios) aj.innerHTML=`<b>No iPhone / iPad (Safari):</b> toque no botão <b>Compartilhar</b> (quadrado com a seta para cima), depois em <b>Adicionar à Tela de Início</b> e em <b>Adicionar</b>.`+fechar;
-    else aj.innerHTML=`<b>Instalar:</b> no <b>computador</b> (Chrome ou Edge), clique no ícone de instalar no fim da barra de endereço (monitor com seta) ou no menu ⋮ → <b>Instalar Projeto Arquitetônico</b> / Aplicativos → Instalar este site como aplicativo. No <b>celular Android</b> (Chrome), menu ⋮ → <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.`+fechar;
-    aj.scrollIntoView({block:"nearest"}); const f=aj.querySelector("[data-fecha]"); if(f) f.onclick=()=>aj.hidden=true; };
+    if(interno){ try{ lk=URL_APP+"#importar="+await pjPacote(); }catch(e){ lk=URL_APP; } }
+    const btnCopiar=`<button type="button" class="btn pri" id="instCopia" style="width:100%;margin-top:4px">📋 Copiar o link do app${interno?" (com este projeto)":""}</button><p class="cap" id="instCopiado" style="margin:6px 0 0"></p>`;
+    let h;
+    if(interno&&ehIOS) h=`<p style="margin-top:0">Aqui o app está aberto <b>dentro de outro aplicativo</b> (Claude, WhatsApp...). No iPhone ele só instala pelo <b>Safari</b>:</p>`+passo(1,"Toque no botão abaixo para <b>copiar o link</b>.")+passo(2,"Abra o <b>Safari</b> (bússola azul), toque na barra de endereço e <b>cole</b>.")+passo(3,"No Safari, toque em <b>Compartilhar</b> <span style=\"font-size:18px\">⬆️</span> (quadradinho com a setinha, embaixo no meio).")+passo(4,"Role a lista e toque em <b>Adicionar à Tela de Início</b> ➕ e depois em <b>Adicionar</b>.")+btnCopiar;
+    else if(interno) h=`<p style="margin-top:0">Aqui o app está aberto <b>dentro de outro aplicativo</b> ou como arquivo. Para instalar, abra pelo navegador:</p>`+passo(1,"Toque no botão abaixo para <b>copiar o link</b>.")+passo(2,"Abra o <b>Chrome</b> (ou Edge), cole o link e abra.")+passo(3,"Toque de novo em <b>Instalar no computador / celular</b>.")+btnCopiar;
+    else if(ehIOS&&!safari) h=`<p style="margin-top:0">No iPhone a instalação só funciona pelo <b>Safari</b>:</p>`+passo(1,"Copie o link abaixo e cole no <b>Safari</b>.")+passo(2,"No Safari, toque em <b>Compartilhar</b> <span style=\"font-size:18px\">⬆️</span>.")+passo(3,"Toque em <b>Adicionar à Tela de Início</b> e depois em <b>Adicionar</b>.")+btnCopiar;
+    else if(ehIOS) h=`<p style="margin-top:0">No iPhone são 3 toques:</p>`+passo(1,"Toque no botão <b>Compartilhar</b> <span style=\"font-size:18px\">⬆️</span> (quadradinho com a setinha, embaixo no meio da tela).")+passo(2,"Role a lista para baixo e toque em <b>Adicionar à Tela de Início</b> ➕.")+passo(3,"Toque em <b>Adicionar</b> no canto de cima.")+`<p class="cap">Depois abra sempre pelo ícone <b>Arq. e Complementares</b> na tela do iPhone.</p>`;
+    else if(/Android/.test(UA)) h=`<p style="margin-top:0">No Android:</p>`+passo(1,"Toque nos <b>3 pontinhos ⋮</b> do Chrome (canto de cima, à direita).")+passo(2,"Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.")+passo(3,"Confirme em <b>Instalar</b>.")+btnCopiar;
+    else h=`<p style="margin-top:0">No computador (Chrome ou Edge):</p>`+passo(1,"Clique no ícone de <b>instalar</b> no fim da barra de endereço (monitor com seta) ou no menu <b>⋮</b>.")+passo(2,"Escolha <b>Instalar Projeto Arquitetônico</b> (ou Aplicativos → Instalar este site como aplicativo).")+passo(3,"Confirme em <b>Instalar</b>. O ícone vai para a área de trabalho e o menu Iniciar.")+btnCopiar;
+    corpo.innerHTML=h; const bc=document.getElementById("instCopia"); if(bc) bc.onclick=copiar;
+    const vv=window.visualViewport; if(vv){ dlg.style.width=Math.min(460,vv.width*0.92)+"px"; dlg.style.left=(vv.offsetLeft+vv.width/2)+"px"; dlg.style.top=(vv.offsetTop+vv.height/2)+"px"; dlg.style.maxHeight=(vv.height*0.9)+"px"; }   // centro da parte da tela que aparece (no iPhone a página é mais larga que a tela)
+    try{ dlg.showModal(); }catch(e){ dlg.setAttribute("open",""); } };
 })();
 </script>
 </body>
