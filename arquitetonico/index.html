@@ -754,7 +754,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.66 · fossa conferida: fora da casa, muro e garagem, entrada virada para a caixa", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.67 · altura do caixote (platibanda) por volume", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -5443,14 +5443,16 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-banco]");
 const DIR1=[["dir","Cai para a direita"],["esq","Cai para a esquerda"],["cima","Cai para cima na planta (fundo)"],["baixo","Cai para baixo na planta (frente)"]], DIR2=[["v","Uma água para cada lado (esquerda e direita)"],["h","Uma água para frente e outra para o fundo"]];
 function renderVols(G){ const el=$("volBox"); if(!el) return; const vs=Array.isArray(S.vols)?S.vols:[], amb=[...G.rooms,...(G.pisos||[])].map(r=>r.n), ativo=volumesTel(G);
   const usado=n=>vs.findIndex(v=>Array.isArray(v.amb)&&v.amb.some(a=>a.toLowerCase()===n.toLowerCase()));
-  el.innerHTML=(vs.length?`<div class="tbl"><table><tr><th>Volume</th><th>Ambientes</th><th class="n">Pé-direito (m)</th><th>Telhado</th><th></th></tr>`+vs.map((v,i)=>{ const t2=Math.round(num(v.tipo))===2, dirs=t2?DIR2:DIR1;
+  el.innerHTML=(vs.length?`<div class="tbl"><table><tr><th>Volume</th><th>Ambientes</th><th class="n">Pé-direito (m)</th><th>Telhado</th><th class="n">Platibanda (caixote): altura final (m)</th><th></th></tr>`+vs.map((v,i)=>{ const t2=Math.round(num(v.tipo))===2, dirs=t2?DIR2:DIR1, av0=ativo&&ativo.find(a=>a.V===v), TIv=av0?infoTelhado(G):null, tv=TIv&&TIv.vols?TIv.vols.find(t=>t.vol===av0):null, hP=num(v.hPlat), zT=tv&&tv.zmax!=null?tv.zmax:null;
       return `<tr><td><input type="text" data-vi="${i}" data-vc="n" value="${esc(v.n||"")}" style="width:130px" aria-label="Nome do volume"></td>
       <td>${v.amb==="resto"?`<i>todos os outros</i> <button class="btn" data-vi="${i}" data-vac="escolher" style="padding:2px 8px">escolher</button>`:amb.map(n=>{ const u=usado(n); return `<label style="display:inline-flex;gap:4px;margin:0 8px 4px 0;font-size:12px;white-space:nowrap"><input type="checkbox" data-vi="${i}" data-vamb="${esc(n)}"${u===i?" checked":""}${u>=0&&u!==i?" disabled":""}>${esc(n)}</label>`; }).join("")+` <button class="btn" data-vi="${i}" data-vac="resto" style="padding:2px 8px">todos os outros</button>`}</td>
       <td class="n"><input type="number" step="0.05" data-vi="${i}" data-vc="pd" value="${num(v.pd)||""}" style="width:70px" aria-label="Pé-direito"></td>
       <td><select data-vi="${i}" data-vc="tipo"><option value="1"${!t2?" selected":""}>1 água</option><option value="2"${t2?" selected":""}>2 águas</option></select>
         <select data-vi="${i}" data-vc="dir">${dirs.map(([k0,t])=>`<option value="${k0}"${v.dir===k0?" selected":""}>${t}</option>`).join("")}</select></td>
+      <td class="n"><input type="number" step="0.05" data-vi="${i}" data-vc="hPlat" value="${hP>0?hP:""}" placeholder="${tv&&tv.topoPlat?"auto "+f(tv.topoPlat):"automática"}" style="width:90px" aria-label="Altura final da platibanda do volume">${hP>0&&zT!=null&&hP<zT+0.10-1e-9?`<div style="color:var(--bad);font-size:11px;white-space:normal;max-width:160px;text-align:left">Abaixo do telhado (topo ${f(zT)} m): o caixote não esconde a telha.</div>`:""}${hP>0&&hP<num(v.pd)+0.2-1e-9?`<div style="color:var(--bad);font-size:11px;white-space:normal;max-width:160px;text-align:left">Menor que o pé-direito + 0,20 m.</div>`:""}</td>
       <td><button class="btn x" data-vi="${i}" data-vac="del" aria-label="Tirar volume">×</button></td></tr>`; }).join("")+`</table></div>`:"")+
     `<div class="row" style="margin-top:8px"><button class="btn" data-vac="add">Adicionar volume</button>${vs.length?`<button class="btn" data-vac="limpar">Um pé-direito só (sem volumes)</button>`:""}</div>`+
+    (vs.length&&S.tel.plat!=="sim"?`<div class="alert warn" style="margin-top:8px">Para o caixote (platibanda) esconder o telhado, escolha <b>Platibanda: Sim (telhado escondido)</b> lá em cima; aí a altura final de cada volume vale.</div>`:"")+
     (vs.length>=2&&!ativo?`<div class="alert warn" style="margin-top:8px">Marque os ambientes de cada volume (pelo menos 2 volumes com ambientes) para os volumes valerem.</div>`:"")+
     (ativo?`<div class="chips" style="margin-top:8px">${ativo.map(v=>{ const TI=infoTelhado(G), tv=TI.vols&&TI.vols.find(t=>t.vol===v); return `<span class="chip">${esc(v.V.n||"Volume")}: ${f(num(v.V.pd))} m · ${tv?tv.nome:""} · platibanda +${tv?f(tv.topoPlat):"-"} · ${f(Math.abs(areaS(v.polyIn)))} m²</span>`; }).join("")}</div>`:""); }
 { const el=$("volBox"), vs=()=>{ if(!Array.isArray(S.vols)) S.vols=[]; return S.vols; };
@@ -5463,6 +5465,7 @@ function renderVols(G){ const el=$("volBox"); if(!el) return; const vs=Array.isA
   el.addEventListener("change",e=>{ const t=e.target, i=+t.dataset.vi, V=vs(); if(isNaN(i)||!V[i]) return;
     if(t.dataset.vamb!=null){ const n=t.dataset.vamb; let a=Array.isArray(V[i].amb)?V[i].amb:[]; a=a.filter(x=>x.toLowerCase()!==n.toLowerCase()); if(t.checked) a.push(n); V[i].amb=a; }
     else if(t.dataset.vc==="pd") V[i].pd=num(t.value);
+    else if(t.dataset.vc==="hPlat") V[i].hPlat=t.value===""?"":num(t.value);
     else if(t.dataset.vc==="tipo"){ V[i].tipo=+t.value; V[i].dir=+t.value===2?"v":"dir"; }
     else if(t.dataset.vc) V[i][t.dataset.vc]=t.value;
     save(); render(); }); }
