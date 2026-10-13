@@ -761,7 +761,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.71 · CPF do proprietário no carimbo", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.72 · perspectiva na prancha única do arquitetônico", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -5838,9 +5838,16 @@ function pranchaUnica(folhas,area,TT){
     const hs=rows.map(r=>Math.max(...r.its.map(x=>x.d.h))+TT), tot=hs.reduce((a,b)=>a+b,0)+gy*(rows.length-1); return {rows,hs,tot,ok:tot<=ah&&rows.every(r=>r.w<=aw)}; };
   let A=null; for(const sP of [50,75,100,125,150,200,250]){ for(const sE of [sP,ESCALAS.find(x=>x>sP)||sP]){ const sI=Math.max(sP*2,150); A=arruma(sP,sE,sI); if(A.ok) break; } if(A.ok) break; }
   const ex=Math.max(0,(ah-A.tot)/(A.rows.length+1)), itens=[]; let y=area.y0+ex;
-  A.rows.forEach((r,ri)=>{ const sw=r.its.reduce((a,x)=>a+x.d.w,0), sp=Math.max(gx,(aw-sw)/r.its.length); let x=area.x0+sp/2;
+  // perspectiva no espaço que sobra à direita das faixas de cortes e fachadas (pedido do Eliel: prancha para o cliente)
+  let PZ=null; { const VS=(S.persp||{}).pdf==="não"?[]:vistasPersp(GG||geom()), v=VS.find(x=>/FRONTAL/.test(x.titulo))||VS[0];
+    if(v){ const sws=A.rows.map(r=>r.w); let best=null; for(let i=0;i<A.rows.length;i++){ if(A.rows[i].faixa===0) continue; for(let j=i;j<A.rows.length;j++){ const wl=Math.max(...sws.slice(i,j+1)), fw=aw-wl-gx*2, fh=A.hs.slice(i,j+1).reduce((a,b)=>a+b,0)+gy*(j-i)+ex*(j-i); if(fw>=150&&fh>=80&&(!best||fw*fh>best.fw*best.fh)) best={i,j,fw,fh}; } }
+      if(best) PZ={...best,v}; } }
+  A.rows.forEach((r,ri)=>{ const noBloco=PZ&&ri>=PZ.i&&ri<=PZ.j, awR=noBloco?aw-PZ.fw-gx:aw, sw=r.its.reduce((a,x)=>a+x.d.w,0), sp=Math.max(gx,(awR-sw)/r.its.length); let x=area.x0+sp/2;
+    if(PZ&&ri===PZ.i) PZ.y=y;
     r.its.forEach(q=>{ itens.push({...q,box:[x-sp/2+4,y,q.d.w+sp-8,A.hs[ri]]}); x+=q.d.w+sp; }); y+=A.hs[ri]+gy+ex; });
-  const nomes=["PLANTA BAIXA",fLA&&"LAYOUT",fCO&&"COBERTURA",fCT&&"CORTES",fFA&&"FACHADAS",imp&&"IMPLANTAÇÃO"].filter(Boolean);
+  if(PZ){ const bw=PZ.fw, bh=PZ.fh, zg=Z=>k=>desenhoPersp(PZ.v.V,k,Z); let d=null; for(const Z of [3.2,2.6,2.1,1.7,1.4,1.15,1,0.85,0.7,0.55,0.45,0.38,0.32,0.27]){ d=encaixar(zg(Z),bw,bh-TT); if(d.w<=bw&&d.h<=bh-TT) break; }
+    itens.push({d,zgen:zg,sem:1,titulo:"PERSPECTIVA "+PZ.v.titulo.replace(/^PERSPECTIVA /,""),box:[area.x1-bw,PZ.y,bw,bh]}); }
+  const nomes=["PLANTA BAIXA",fLA&&"LAYOUT",fCO&&"COBERTURA",fCT&&"CORTES",fFA&&"FACHADAS",imp&&"IMPLANTAÇÃO",PZ&&"PERSPECTIVA"].filter(Boolean);
   return {n:"",conteudo:`PROJETO ARQUITETÔNICO: ${nomes.join(", ")}`,escala:"INDICADA",itens,lado:"grupo",subs}; }
 function encaixar2(g1,g2,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=s/1000, D1=g1(k), D2=g2(k), e1=extensao(D1), e2=extensao(D2);
     const a={D:D1,s,k,e:e1,w:(e1.x1-e1.x0)/k,h:(e1.y1-e1.y0)/k,gen:g1}, b={D:D2,s,k,e:e2,w:(e2.x1-e2.x0)/k,h:(e2.y1-e2.y0)/k,gen:g2}; ult=[a,b];
