@@ -104,6 +104,26 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
 </style>
 </head>
 <body>
+<div id="trava" style="position:fixed;inset:0;z-index:9999;background:#1A2130;color:#fff;display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,-apple-system,sans-serif">
+  <form id="travaF" style="width:min(320px,100%);text-align:center" autocomplete="off">
+    <div style="font:700 22px/1.2 'Barlow Condensed','Arial Narrow',sans-serif;letter-spacing:.04em;text-transform:uppercase">Projeto Arquitetônico</div>
+    <div style="opacity:.75;font-size:13px;margin:6px 0 18px">Eliel Engenharia · digite a senha para abrir</div>
+    <input id="travaS" type="password" inputmode="numeric" aria-label="Senha" style="width:100%;font-size:24px;letter-spacing:.4em;text-align:center;padding:10px;border-radius:6px;border:1px solid #5B6474;background:#0f141d;color:#fff">
+    <button type="submit" style="margin-top:12px;width:100%;padding:11px;border:0;border-radius:6px;background:#2446C4;color:#fff;font-size:15px;font-weight:600;cursor:pointer">Entrar</button>
+    <div id="travaM" role="status" style="min-height:20px;margin-top:10px;font-size:13px;color:#FF8A7E"></div>
+  </form>
+</div>
+<script>
+/* trava de acesso: senha pedida uma vez por aparelho (guardada como resumo, não a senha) */
+(function(){ const H="c5950092b701a4337c2b6d6f83dd3682efc6f7dd12e3f5da8253569b2285a18a", K="arq-acesso-v1", t=document.getElementById("trava");
+  let ok=false; try{ ok=localStorage.getItem(K)===H; }catch(e){} if(ok){ t.remove(); return; }
+  document.documentElement.style.overflow="hidden"; setTimeout(()=>{ const i=document.getElementById("travaS"); if(i) i.focus(); },50);
+  const hash=async s=>{ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("arq-eliel:"+s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); };
+  document.getElementById("travaF").onsubmit=async e=>{ e.preventDefault(); const i=document.getElementById("travaS"), m=document.getElementById("travaM");
+    let h=""; try{ h=await hash(i.value.trim()); }catch(err){ m.textContent="Este navegador não conseguiu conferir a senha."; return; }
+    if(h===H){ try{ localStorage.setItem(K,H); }catch(err){} document.documentElement.style.overflow=""; t.remove(); }
+    else { m.textContent="Senha errada."; i.value=""; i.focus(); } }; })();
+</script>
 <div class="wrap">
   <header class="top">
     <div>
@@ -733,7 +753,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.60 · caixas, ralos e fossa editáveis, armadura e resumo do aço", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.61 · senha de acesso", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
