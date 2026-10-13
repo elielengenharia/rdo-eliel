@@ -763,7 +763,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.75 · testeira do caixote e forro de gesso abaixo do pé-direito", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.76 · garagem na planta de forro", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -3459,6 +3459,11 @@ function paraDentro(P,d){ const a=recuar(P,d), b=recuar(P,-d), A=x=>x&&x.length>
 const FORROS=[["pvc","Forro de PVC (réguas 200 mm)"],["gesso","Forro de gesso liso"],["drywall","Forro de gesso acartonado (drywall)"],["madeira","Forro de madeira (lambri)"],["laje","Laje rebocada e pintada"],["sem","Sem forro (telha aparente)"]];
 const nomeForro=t=>(FORROS.find(q=>q[0]===t)||FORROS[0])[1];
 const curtoForro={pvc:"FORRO PVC",gesso:"FORRO DE GESSO",drywall:"FORRO DRYWALL",madeira:"FORRO DE MADEIRA",laje:"LAJE PINTADA",sem:"SEM FORRO"};
+// forro dos pisos externos cobertos por um volume com forro próprio (ex.: garagem com gesso a 2,45): entra na planta e no quadro de forros
+function forrosExt(G){ const VS=volumesTel(G); if(!VS) return []; return (G.pisos||[]).flatMap(r=>{ const v=VS.find(v=>v.rooms.includes(r)); if(!v||!(num(v.V.hForro)>0)) return [];
+    const xs=r.poly.map(p=>p[0]), ys=r.poly.map(p=>p[1]), per=r.poly.reduce((s0,p,i)=>{ const q=r.poly[(i+1)%r.poly.length]; return s0+Math.hypot(q[0]-p[0],q[1]-p[1]); },0);
+    const R={...r,x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys),area:r.area||Math.abs(areaS(r.poly)),per:r.per||per}; if(R.cx==null){ const c=pontoTexto(r.poly); R.cx=c[0]; R.cy=c[1]; }
+    return [{r:R,ft:v.V.ftForro||S.forro.tipo,h:num(v.V.hForro),area:R.area,per:R.per,ext:true}]; }); }
 function forros(G){ const vol=!!volumesTel(G); return G.rooms.map(r=>{ const lab=r.labIdx>=0?S.rooms[r.labIdx]:null, ft=lab&&lab.ft&&lab.ft!=="padrao"?lab.ft:S.forro.tipo, hf0=lab&&lab.hf!=null&&lab.hf!==""?num(lab.hf):0;
   const VV=vol?(volumesTel(G).find(v=>v.rooms.includes(r))||{}).V:null, hv=VV&&num(VV.hForro)>0?num(VV.hForro):0, reb=Math.max(0,num(S.forro.reb));
   const h=hf0>0?hf0:hv>0?hv:num(S.forro.h)>0&&!vol?num(S.forro.h):pdAmb(G,r)-reb;   // com volumes: forro do volume, ou o pé-direito dele menos o rebaixo (gesso 20 cm abaixo)
@@ -3466,7 +3471,7 @@ function forros(G){ const vol=!!volumesTel(G); return G.rooms.map(r=>{ const lab
 function desenhoForro(G,k,LM,EL,FO){
   const D=Dw(k), bb=G.bb, h=G.h;
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
-  FO=FO||forros(G); LM=LM||layoutMoveis(G); EL=EL||pontosEletricos(G,LM);
+  FO=FO||[...forros(G),...forrosExt(G)]; LM=LM||layoutMoveis(G); EL=EL||pontosEletricos(G,LM);
   // paginação (por baixo de tudo)
   FO.forEach(F=>{ const r=F.r, P=r.poly, W=r.x1-r.x0, H=r.y1-r.y0, esp=F.ft==="pvc"?0.20:F.ft==="madeira"?0.10:0;
     if(esp){ // réguas no sentido do menor vão (sem emenda); linhas paralelas ao lado menor
@@ -3496,11 +3501,11 @@ function desenhoForro(G,k,LM,EL,FO){
   // rótulo de cada ambiente: nome, tipo do forro e altura
   FO.forEach(F=>{ const r=F.r, obs=[...luz.filter(q=>q.r===r).map(q=>{ const e=4.5*k; return [[q.p[0]-e,q.p[1]-e],[q.p[0]+e*2.4,q.p[1]-e],[q.p[0]+e*2.4,q.p[1]+e],[q.p[0]-e,q.p[1]+e]]; }),
       ...(alP&&F===al?[[[alP[0]-0.32,alP[1]-0.32],[alP[0]+0.32,alP[1]-0.32],[alP[0]+0.32,alP[1]+0.32+3*k],[alP[0]-0.32,alP[1]+0.32+3*k]]]:[])];
-    const l1=r.n.toUpperCase(), l2=curtoForro[F.ft]||"", l3=F.ft==="sem"?"":`H = ${f(F.h)} m`;
+    const l1=F.ext?"":r.n.toUpperCase(), l2=curtoForro[F.ft]||"", l3=F.ft==="sem"?"":`H = ${f(F.h)} m`;   /* piso externo: o nome já vem da base (garagem) */
     const obs2=[...luz.filter(q=>q.r===r).map(q=>{ const e=2.2*k; return [[q.p[0]-e,q.p[1]-e],[q.p[0]+e,q.p[1]-e],[q.p[0]+e,q.p[1]+e],[q.p[0]-e,q.p[1]+e]]; }),...obs.slice(luz.filter(q=>q.r===r).length)];
     let pos=null, hh=2; for(const [h0,ob] of (t0=>[[t0,obs],[t0*0.85,obs],[t0*0.7,obs],[t0*0.85,obs2],[t0*0.7,obs2],[t0*0.6,obs2]])(estTxt().tN)){ const wt=Math.max(l1.length,l2.length,l3.length)*h0*0.8*k+0.04; pos=lugarRotulo(r,ob,r.cx,r.cy+4*k,wt,h0*4.6*k); hh=h0; if(pos) break; }
-    const [x,y]=pos||[r.cx,r.cy+4*k];
-    TX(D,x,y-hh*1.5*k,l1,hh,{b:true}); TX(D,x,y,l2,hh*0.78,{l:"FORRO"}); if(l3) TX(D,x,y+hh*1.4*k,l3,hh*0.78,{l:"COTAS"}); });
+    const [x,y0]=pos||[r.cx,r.cy+4*k], y=F.ext?Math.max(y0,r.cy+7*k):y0;
+    if(l1) TX(D,x,y-hh*1.5*k,l1,hh,{b:true}); TX(D,x,y,l2,hh*0.78,{l:"FORRO"}); if(l3) TX(D,x,y+hh*1.4*k,l3,hh*0.78,{l:"COTAS"}); });
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
   D.alcapao=al&&alP?al.r.n:null;
   return D;
@@ -5038,7 +5043,7 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
       $("pluvAvisos").innerHTML=PV?PV.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join(""):"";
       $("tabPluv").innerHTML=PV&&!PV.livre?`<tr><th>Caixa</th><th>Tipo</th><th class="n">Lado (cm)</th><th class="n">Profund. (m)</th><th>Recebe</th><th class="n">Vazão (L/min)</th></tr>`+PV.caixas.map(c=>`<tr><td><b>${c.nome}</b>${c.fim?" (final)":""}</td><td>${c.tipo==="CA"?"Caixa de areia":"Caixa de inspeção"}</td><td class="n">${f(c.lado*100,0)}x${f(c.lado*100,0)}</td><td class="n">${f(c.h,2)}</td><td>${c.cond.map(q=>`${q.nome} Ø${q.dia}`).join(", ")||"-"}</td><td class="n">${c.Q?f(c.Q,0):"-"}</td></tr>`).join(""):"";
       $("pluvNotas").innerHTML=PV?notasPluvial(PV).map(t=>`<li>${esc(t)}</li>`).join(""):""; }
-    const FO=forros(G), DF=desenhoForro(G,k,LM,EL,FO); $("forroDes").innerHTML=svgDe(DF);
+    const FO=[...forros(G),...forrosExt(G)], DF=desenhoForro(G,k,LM,EL,FO); $("forroDes").innerHTML=svgDe(DF);
     { const RV=revParede(G,LM,FO), FA=fachadaRev(G), q=quantRevp(RV); $("revpDes").innerHTML=svgDe(desenhoRevp(G,k,RV));
       $("revpChips").innerHTML=G.vazio?"":[...Object.entries(q.c).map(([t,a])=>`${nomeRevp(t)} ${f(a)} m²`),...Object.entries(q.p).map(([t,a])=>`${nomePint(t)} ${f(a)} m²`),`Fachadas ${f(FA.area)} m²`].map(t=>`<span class="chip">${esc(t)}</span>`).join("");
       $("tabRevp").innerHTML=`<tr><th>Ambiente</th><th>Revestimento</th><th class="n">Altura (m)</th><th>Onde</th><th>Pintura acima</th><th class="n">Revest. (m²)</th><th class="n">Pintura (m²)</th></tr>`+RV.map((x,i)=>{ const lab=x.r.labIdx>=0?S.rooms[x.r.labIdx]:null, rt=lab&&lab.rt||"padrao";
@@ -5900,7 +5905,7 @@ function pranchas(fmt){
   const HD=redeHidro(G,LM), hi=HD.salas.length?encaixar(k=>desenhoHidro(G,k,LM,HD),aw,ah-TT):null;
   const PV=G.rooms.length?redePluvial(G,HD):null, pv=PV?encaixar(k=>desenhoPluvial(G,k,PV),aw,ah-TT):null;
   const FS=HD.salas.length?fossaSeptica(G,HD):null, fs=FS?encaixar(k=>desenhoFossa(k,FS),aw,ah-TT):null;
-  const FO=forros(G), fo=G.rooms.length?encaixar(k=>desenhoForro(G,k,LM,EL,FO),aw,ah-TT):null;
+  const FO=[...forros(G),...forrosExt(G)], fo=G.rooms.length?encaixar(k=>desenhoForro(G,k,LM,EL,FO),aw,ah-TT):null;
   const PQ=G.rooms.length?pintura(G):null, ptz=PQ?encaixar(k=>desenhoPintura(G,k,PQ),aw,ah-TT):null;
   const BP=basePiso(G), bpz=BP?(()=>{ let u=null; for(const s0 of [5,10,15,20,25]){ const k=s0/1000, D=desenhoBasePiso(k,BP), e=extensao(D); u={D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:kk=>desenhoBasePiso(kk,BP)}; if(u.w<=aw&&u.h<=ah-TT) break; } return u; })():null;
   const PI=pisos(G), pi=G.rooms.length?encaixar(k=>desenhoPiso(G,k,LM,HD,PI),aw,ah-TT):null;
