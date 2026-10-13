@@ -763,7 +763,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.73 · imagem do 3D do profissional na prancha", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.74 · cobertura sem degrau pequeno: calha reta no alinhamento da parede", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1148,6 +1148,18 @@ function infoTelhado1(G,o){
 // polígono que sai d metros para fora (o lado é escolhido pela área: serve em qualquer sentido de giro)
 function paraFora(P,d){ const a=recuar(P,d), b=recuar(P,-d); return Math.abs(areaS(a))>Math.abs(areaS(b))?a:b; }
 function paraDentroV(P,d){ const a=recuar(P,d), b=recuar(P,-d); return Math.abs(areaS(a))<Math.abs(areaS(b))?a:b; }
+// tira degraus pequenos (até 20 cm) entre dois lados paralelos de um contorno: o lado mais curto vai para o alinhamento do mais comprido
+function tiraDegraus(P0,lim=0.20){ let P=P0.map(p=>[p[0],p[1]]); const L=(a,b)=>Math.hypot(b[0]-a[0],b[1]-a[1]);
+  for(let it=0;it<20&&P.length>4;it++){ let mudou=false; const n=P.length;
+    for(let i=0;i<n&&!mudou;i++){ const a=P[(i-1+n)%n], b=P[i], c=P[(i+1)%n], d=P[(i+2)%n], l0=L(a,b), l1=L(b,c), l2=L(c,d); if(l1>=lim||l1<1e-6||l0<1e-6||l2<1e-6) continue;
+      const u0=[(b[0]-a[0])/l0,(b[1]-a[1])/l0], u2=[(d[0]-c[0])/l2,(d[1]-c[1])/l2]; if(u0[0]*u2[0]+u0[1]*u2[1]<0.995) continue;   // os dois lados seguem na mesma direção
+      const off=[c[0]-b[0],c[1]-b[1]], par=off[0]*u0[0]+off[1]*u0[1], perp=[off[0]-u0[0]*par,off[1]-u0[1]*par];
+      if(l2<=l0){ [ (i+1)%n,(i+2)%n ].forEach(j=>{ P[j]=[P[j][0]-perp[0],P[j][1]-perp[1]]; }); } else { [ (i-1+n)%n,i ].forEach(j=>{ P[j]=[P[j][0]+perp[0],P[j][1]+perp[1]]; }); }
+      P=P.filter((p,j)=>L(p,P[(j+1)%P.length])>1e-6);   // pontos que ficaram juntos
+      P=P.filter((p,j)=>{ const a2=P[(j-1+P.length)%P.length], c2=P[(j+1)%P.length]; return Math.abs((p[0]-a2[0])*(c2[1]-p[1])-(p[1]-a2[1])*(c2[0]-p[0]))>1e-7; });   // e os que ficaram no meio de uma reta
+      mudou=true; }
+    if(!mudou) break; }
+  return P; }
 // volumes: S.vols = [{n, amb:[nomes dos ambientes] ou "resto", pd, tipo (1 ou 2 águas), dir}] — 2 ou mais volumes ligam o modo
 function volumesTel(G){ const V0=Array.isArray(S.vols)?S.vols.filter(v=>v&&num(v.pd)>0):[]; if(V0.length<2||!G||G.vazio) return null;
   const kv=JSON.stringify(S.vols); if(G._vols!==undefined&&G._volsK===kv) return G._vols; G._volsK=kv;
@@ -1155,7 +1167,7 @@ function volumesTel(G){ const V0=Array.isArray(S.vols)?S.vols.filter(v=>v&&num(v
   const lista=V0.map(V=>{ const am=Array.isArray(V.amb)?V.amb.map(nm):[]; const rs=V.amb==="resto"?[]:todos.filter(r=>am.includes(nm(r.n))); rs.forEach(r=>usados.add(r)); return {V,rs}; });
   lista.forEach(o=>{ if(o.V.amb==="resto") o.rs=todos.filter(r=>!usados.has(r)&&!r.piso); });
   const out=lista.filter(o=>o.rs.length).map(o=>{ const polys=o.rs.map(r=>paraFora(r.poly,h+0.003)); const L0=lacos(contornoUniao(polys)); if(!L0.length) return null;
-      const ax=L0.reduce((m,P)=>!m||Math.abs(areaS(P))>Math.abs(areaS(m))?P:m,null), polyIn=paraDentroV(ax,h+0.003);
+      const ax=tiraDegraus(L0.reduce((m,P)=>!m||Math.abs(areaS(P))>Math.abs(areaS(m))?P:m,null)), polyIn=paraDentroV(ax,h+0.003);   /* degrau pequeno (piso da garagem passando 15 cm da parede) some: cobertura e calha retas no alinhamento da parede */
       return {V:o.V,rooms:o.rs,polyAx:ax,polyIn}; }).filter(Boolean);
   G._vols=out.length>=2?out:null; return G._vols; }
 function telhadoComposto(G,vs){
