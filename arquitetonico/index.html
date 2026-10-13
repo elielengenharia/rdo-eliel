@@ -93,7 +93,7 @@ h3{font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.06em;
 .slide input[type=range]{flex:1;min-width:160px}
 .slide input[type=number]{width:90px}
 .panel{border:1px solid var(--accent);border-radius:4px;padding:12px;margin-top:10px;background:var(--paper)}
-#selPanel,#elePanel{position:fixed;right:16px;bottom:16px;width:min(440px,calc(100vw - 32px));max-height:70vh;overflow:auto;z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:0}
+#selPanel,#elePanel,#hidPanel{position:fixed;right:16px;bottom:16px;width:min(440px,calc(100vw - 32px));max-height:70vh;overflow:auto;z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:0}
 .panel h4{margin:0 0 8px;font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
 /* SVG */
 svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink)}   /* mesma letra do PDF: o lugar dos textos é medido com ela */
@@ -304,7 +304,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <h2>Planta de pontos elétricos</h2>
       <p class="cap">Pontos de luz, interruptores, tomadas e quadro colocados sozinhos pela NBR 5410: luz no teto com potência pela área, interruptor ao lado da fechadura da porta, tomadas junto dos móveis do Layout e completando o mínimo por perímetro (cozinha e serviço a cada 3,5 m, demais a cada 5 m), chuveiro no box. O quadro de cargas sai com circuitos, disjuntor e fio.</p>
       <div class="form"><label>Tensão das tomadas e luz<select id="ele.v"><option value="127">127 V</option><option value="220">220 V</option></select></label><label>Ar-condicionado (quartos e salas)<select id="ele.ar"><option value="não">Não</option><option value="sim">Sim, tomada 2,20 m</option></select></label><label>Mostrar móveis em cinza<select id="ele.mob"><option value="sim">Sim</option><option value="não">Não</option></select></label><label>Mostrar eletrodutos<select id="ele.rede"><option value="sim">Sim</option><option value="não">Não</option></select></label><label>Distância do padrão ao QD (m)<input id="ele.ent" inputmode="decimal"></label><label>Salas comerciais<select id="ele.qdSala"><option value="sim">Um quadro e medidor por sala</option><option value="não">Um quadro para tudo</option></select></label></div>
-      <p class="cap" style="margin:6px 0"><b>Mudar um ponto:</b> toque nele (quadro, tomada, interruptor, luz) e <b>arraste</b>, ou toque em <b>Mover</b> e depois no lugar novo. Toque num lugar vazio para <b>acrescentar</b> tomada, luz ou interruptor. Os circuitos, o quadro de cargas e os eletrodutos se refazem sozinhos.</p>
+      <p class="cap" style="margin:6px 0"><b>Mudar um ponto:</b> toque nele (quadro, tomada, interruptor, luz) e <b>arraste</b>, ou toque em <b>Mover</b> e depois no lugar novo. Toque num lugar vazio para <b>acrescentar</b> tomada, luz ou interruptor. Para <b>tirar</b> um ponto, toque nele e em <b>Excluir</b>, ou ligue <b>Apagar pontos</b> e vá tocando nos que quer tirar. Os circuitos, o quadro de cargas e os eletrodutos se refazem sozinhos.</p>
+      <div class="row" style="margin:0 0 8px"><button class="btn" id="eleApagar" type="button" aria-pressed="false">Apagar pontos</button><button class="btn" id="eleRestaura" type="button" hidden></button><span class="toast" id="eleDelMsg" role="status"></span></div>
       <div class="draw" id="ele" style="touch-action:pan-y"></div><div id="elePanel" class="panel" hidden></div>
       <div class="chips" id="eleChips"></div><div id="eleAvisos"></div>
     </div>
@@ -319,7 +320,9 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
     <div class="sheet">
       <h2>Planta hidrossanitária</h2>
       <p class="cap">Água fria e esgoto traçados sozinhos a partir das louças do Banheiro e dos móveis do Layout (pia, tanque, máquina). Água: reservatório sobre o banheiro, coluna (AF1, AF2…) em cada área molhada e ramal pela parede até cada ponto. Esgoto: aparelhos para a caixa sifonada, vaso direto em Ø100, pia para a caixa de gordura, saída para caixas de inspeção do lado de fora (ou dentro da edificação no lado em que ela encosta na divisa ou no alinhamento, para nada cair no lote vizinho) e coletor até a rede ou fossa na frente do lote.</p>
-      <div class="draw" id="hid"></div>
+      <p class="cap" style="margin:6px 0"><b>Mudar uma caixa:</b> toque na caixa de inspeção (CI), de gordura (CG) ou sifonada (CS) e <b>arraste</b>, ou toque em <b>Mover</b> e depois no lugar novo. Ligado na rede pública, a CI e a CG correm pelo coletor em volta da obra (vão para o lado onde você soltar); com fossa elas ficam onde você soltar. Com fossa, arraste o <b>tanque (TS)</b> para levar o conjunto todo, ou o <b>filtro (FA)</b> e o <b>sumidouro (SM)</b> para mudar só aquela unidade. Toque num <b>lugar vazio</b> para <b>acrescentar</b> caixa de inspeção, caixa de gordura, caixa sifonada ou ralo (sifonado, seco, quadrado ou linear). Para <b>tirar</b> uma caixa ou ralo, toque nele e em <b>Excluir</b>, ou ligue <b>Apagar itens</b>. Os canos, o coletor e as conferências se refazem sozinhos.</p>
+      <div class="row" style="margin:0 0 8px"><button class="btn" id="hidApagar" type="button" aria-pressed="false">Apagar itens</button><button class="btn" id="hidRestaura" type="button" hidden></button><span class="toast" id="hidDelMsg" role="status"></span></div>
+      <div class="draw" id="hid" style="touch-action:pan-y"></div><div id="hidPanel" class="panel" hidden></div>
       <div class="chips" id="hidChips"></div><div id="hidAvisos"></div>
     </div>
     <div class="sheet"><h2>Conjunto fossa séptica, filtro anaeróbio e sumidouro</h2>
@@ -337,7 +340,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
         <label>Limpeza do tanque a cada<select id="fossa.lim"><option value="1">1 ano</option><option value="2">2 anos</option><option value="3">3 anos</option><option value="4">4 anos</option><option value="5">5 anos</option></select></label>
         <label>Coeficiente de infiltração do solo (L/m²·dia)<input type="number" step="5" id="fossa.ci"></label>
       </div>
-      <div id="fossaBox" hidden><div class="draw" id="fossaDes" style="margin-top:10px"></div><div id="fossaAvisos"></div><div class="tbl"><table id="tabFossa"></table></div><ol class="notes" id="fossaNotas" style="margin-top:12px"></ol></div>
+      <div id="fossaBox" hidden><div class="row" style="margin-top:10px"><button class="btn" id="fossaGira" type="button">Girar o conjunto 90°</button><button class="btn" id="fossaAuto" type="button">Voltar ao lugar automático</button><span class="toast" id="fossaPosMsg" role="status"></span></div>
+        <p class="cap" style="margin:6px 0 0">Para mudar o lugar do conjunto, arraste o tanque, o filtro ou o sumidouro na planta hidrossanitária acima.</p><div class="draw" id="fossaDes" style="margin-top:10px"></div><div id="fossaAvisos"></div><div class="tbl"><table id="tabFossa"></table></div><ol class="notes" id="fossaNotas" style="margin-top:12px"></ol></div>
     </div>
     <div class="sheet"><h2>Águas pluviais</h2>
       <p class="cap">Água da chuva separada do esgoto (NBR 10844): calha (da platibanda ou do beiral), condutor vertical (AP) descendo pela parede até a caixa de areia, rede enterrada pelo contorno da obra com caimento e saída por baixo da calçada até a sarjeta (ou ligação na galeria pluvial da rua). Chuva e caimento da calha ficam na aba Cobertura.</p>
@@ -493,6 +497,16 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <div class="grid2" style="margin-top:12px"><div><h3 style="margin-top:0">Quadro de pilares</h3><div class="tbl"><table id="tabPil"></table></div></div><div><h3 style="margin-top:0">Vigas e lajes</h3><div class="tbl"><table id="tabVig"></table></div></div></div>
       <ol class="notes" id="estrNotas" style="margin-top:12px"></ol>
     </div>
+    <div class="sheet"><h2>Armadura, detalhamento e aço</h2>
+      <p class="cap">Pré-dimensionamento pela NBR 6118 (concreto do fck acima, aço CA-50 e estribos CA-60): cargas da laje ou do forro e telhado pela faixa de influência, momentos de viga contínua, quantidade e bitola dos ferros embaixo e em cima, ferros extras sobre os apoios, estribos pelo cortante, pilares à compressão e sapatas pela flexão na face do pilar. A relação e o resumo do aço saem nas pranchas do PDF. Conferir com o projeto estrutural e a ART.</p>
+      <div class="chips" id="armChips"></div><div id="armAvisos"></div>
+      <h3>Ferros de cada viga</h3><div class="tbl"><table id="tabArmV"></table></div>
+      <h3>Pilares e fundação</h3><div class="tbl"><table id="tabArmP"></table></div>
+      <h3>Detalhamento das vigas</h3><div class="draw" id="armVigas" style="max-height:720px;overflow:auto"></div>
+      <h3>Detalhe de pilares e sapatas</h3><div class="draw" id="armPil"></div>
+      <div class="grid2" style="margin-top:12px"><div><h3 style="margin-top:0">Relação do aço</h3><div class="tbl" style="max-height:520px;overflow:auto"><table id="tabRel"></table></div></div>
+        <div><h3 style="margin-top:0">Resumo do aço</h3><div class="tbl"><table id="tabRes"></table></div><div class="tbl" style="margin-top:12px"><table id="tabResP"></table></div></div></div>
+    </div>
   </section>
 
   <section id="tab-estS" hidden>
@@ -509,6 +523,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <h3>Locação das coluninhas e fundação</h3><div class="draw" id="estSFund"></div>
       <h3>Seções</h3><div class="draw" id="estSDet" style="max-width:640px"></div>
       <div class="tbl" style="margin-top:12px"><table id="tabEstS"></table></div>
+      <div class="grid2" style="margin-top:12px"><div><h3 style="margin-top:0">Ferros de cada peça</h3><div class="tbl"><table id="tabEstSFer"></table></div></div><div><h3 style="margin-top:0">Resumo do aço por bitola</h3><div class="tbl"><table id="tabEstSRes"></table></div></div></div>
       <ol class="notes" id="estSNotas" style="margin-top:12px"></ol>
     </div>
   </section>
@@ -718,7 +733,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.59 · mover, apagar e acrescentar pontos elétricos", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.60 · caixas, ralos e fossa editáveis, armadura e resumo do aço", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2502,7 +2517,9 @@ function redeHidro(G,LM){
       else if(pc.nome==="tanque"){ novo("Tanque",{p:w(0.30,0),N:T.N},25,"0,90",w(0.30,0.25),40,"cs"); cs=cs||w(0.30,0.80); }
       else if(pc.nome==="máquina de lavar"){ novo("Máquina de lavar",{p:w(0.30,0),N:T.N},25,"0,90",w(0.30,0.12),50,"cs"); cs=cs||w(0.30,0.80); } });
     if(!A.length) return;
+    { const o=(S.hidM||{})["cs|"+r.n]; if(cs&&o) cs=[num(o.x),num(o.y)]; }   // caixa sifonada mudada pelo profissional
     if(cs&&!saida) saida={p:cs,d:50};
+    if((S.hidDel||{})["cs|"+r.n]) cs=null;   // caixa sifonada excluída: os aparelhos vão direto para a saída
     salas.push({r,A,cs,saida}); });
   // anel das caixas de inspeção: a 0,80 m da casa, por fora; no lado em que isso cai fora do lote
   // (construção na divisa ou no alinhamento) as caixas ficam dentro da edificação, a 0,60 m da parede
@@ -2541,11 +2558,18 @@ function redeHidro(G,LM){
   // a saída de cada área molhada vai para o anel do lado de fora (lote ou calçada), se não for muito mais longe que o de dentro
   salas.forEach(sa=>{ const p=sa.saida.p, tIn=anelT(p), qIn=anelP(tIn), bo=anelT(p,true), q=(comFossa&&caixaFora(p))||(bo&&bo.d<=Math.hypot(qIn[0]-p[0],qIn[1]-p[1])+4?anelP(bo.t):qIn);
     ramal.push({a:p,b:q,d:sa.saida.d,r:sa.r});
-    caixas.push({p:q,t:anelT(q),tipo:sa.saida.cg?"CG":"CI",r:sa.r}); });
+    caixas.push({p:q,t:anelT(q),tipo:sa.saida.cg?"CG":"CI",r:sa.r,key:(sa.saida.cg?"CG":"CI")+"|"+sa.r.n}); });
+  // caixas mudadas pelo profissional (aba Hidrossanitário): sem fossa correm pelo anel do coletor
+  const HM=S.hidM||{}, ovP=k=>HM[k]?[num(HM[k].x),num(HM[k].y)]:null;
+  if(!comFossa) caixas.forEach((c,i)=>{ const o=ovP(c.key); if(!o) return; c.t=anelT(o); c.p=anelP(c.t); c.man=1; ramal[i].b=c.p; });
+  // caixas acrescentadas pelo profissional: sem fossa entram no coletor (perto dele encaixam no anel; longe, ligam nele por um cano)
+  const ADD=(S.hidAdd||[]).map((a,j)=>({...a,j,p:[num(a.x),num(a.y)]})), ligAdd=[];
+  ADD.forEach(a=>{ if(a.t!=="ci"&&a.t!=="cg") return; const t=anelT(a.p), q=anelP(t), longe=Math.hypot(q[0]-a.p[0],q[1]-a.p[1])>0.6;
+    const c={p:comFossa||longe?a.p:q,t,tipo:a.t==="cg"?"CG":"CI",key:"add|"+a.j,add:1,man:1}; if(!comFossa&&longe) ligAdd.push([a.p,q]); caixas.push(c); });
   const qts=G.rooms.filter(r=>/su[ií]te|quarto|dormit/i.test(r.n)).length, com=S.uso==="comercial";
   const pessoas=com?Math.max(2,Math.ceil(LM.filter(R=>R.tipo==="escrit").reduce((s,R)=>s+R.r.area,0)/7.5)):Math.max(2,2*qts), cons=com?50:150, Vn=pessoas*cons;
   // sem rede pública: o conjunto fossa/filtro/sumidouro é colocado no lote e a caixa final fica no lado virado para ele
-  const fossa=(S.fossa||{}).on==="sim"&&caixas.length?(()=>{ const FSd=dimFossa({pessoas,com}), al=[caixas.reduce((s0,c)=>s0+c.p[0],0)/caixas.length,caixas.reduce((s0,c)=>s0+c.p[1],0)/caixas.length]; return {...FSd,...posFossa(G,FSd,al)}; })():null;
+  const fossa=(S.fossa||{}).on==="sim"&&caixas.length?(()=>{ const FSd=dimFossa({pessoas,com}), al=[caixas.reduce((s0,c)=>s0+c.p[0],0)/caixas.length,caixas.reduce((s0,c)=>s0+c.p[1],0)/caixas.length]; return ajustaFossa(G,{...FSd,...posFossa(G,FSd,al)}); })():null;
   // caixa final no lado da frente (ou do lado da fossa), na posição mais perto das outras
   const dist=(a,b)=>{ const x=Math.abs(a-b)%PER; return Math.min(x,PER-x); };
   let fr=frente;
@@ -2555,6 +2579,7 @@ function redeHidro(G,LM){
   const naFrente=t=>{ const tt=((t%PER)+PER)%PER; if(tt>=fr[0]-1e-9&&tt<=fr[1]+1e-9) return tt; return dist(tt,fr[0])<=dist(tt,fr[1])?fr[0]:fr[1]; };
   caixas.forEach(c=>{ const tt=naFrente(c.t); const v=caixas.reduce((s,o)=>s+dist(o.t,tt),0); if(v<best){ best=v; tf=tt; } });
   if(tf===null) tf=(fr[0]+fr[1])/2;
+  const fimMan=!comFossa&&ovP("fim"); if(fimMan) tf=anelT(fimMan);
   // coletor pelo anel, sempre pelo caminho mais curto até a caixa final
   const trechos=[]; caixas.forEach(c=>{ let a=c.t, b=tf; let dd=((b-a)%PER+PER)%PER; if(dd>PER/2){ [a,b]=[b,a]; dd=PER-dd; } if(dd>0.05) trechos.push([a,a+dd]); });
   const cantos=cum.slice(0,nC); const usados=new Set();
@@ -2563,18 +2588,21 @@ function redeHidro(G,LM){
   usados.forEach(cn=>{ if(!ci.some(c=>dist(c.t,cn)<0.6)) ci.push({p:anelP(cn),t:cn,tipo:"CI"}); });
   if(!ci.some(c=>dist(c.t,tf)<0.6)) ci.push({p:anelP(tf),t:tf,tipo:"CI",fim:true}); else ci.find(c=>dist(c.t,tf)<0.6).fim=true;
   // caixas muito juntas viram uma só
-  const cx2=[]; ci.forEach(c=>{ const o=cx2.find(q=>dist(q.t,c.t)<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; o.fim=o.fim||c.fim; } else cx2.push({...c}); });
+  const cx2=[]; ci.forEach(c=>{ const o=c.add?null:cx2.find(q=>!q.add&&dist(q.t,c.t)<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; o.fim=o.fim||c.fim; if(c.key) o.keys.push(c.key); o.man=o.man||c.man; } else cx2.push({...c,keys:c.key?[c.key]:[]}); });
+  if(fimMan){ const o=cx2.find(c=>c.fim); if(o) o.man=1; }
   // com fossa: só as caixas das saídas; a mais perto do tanque é a final e as outras ligam direto nela
   let ligs=[]; if(fossa&&fossa.pos){ trechos.length=0; const ent=fossa.pos.ent, cs1=[];
     // a caixa de cada saída vai para a parede de fora que fica no caminho do tanque (menor cano no total)
     salas.forEach((sa,i)=>{ const q=caixaFora(sa.saida.p,ent); if(q){ caixas[i].p=q; ramal[i].b=q; } });
-    caixas.forEach(c=>{ const o=cs1.find(q=>Math.hypot(q.p[0]-c.p[0],q.p[1]-c.p[1])<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; } else cs1.push({...c,fim:false}); });
+    caixas.forEach((c,i)=>{ const o=ovP(c.key); if(!o||!ramal[i]) return; c.p=o; c.t=anelT(o); c.man=1; ramal[i].b=o; });   // com fossa a caixa fica onde o profissional soltou
+    caixas.forEach(c=>{ const o=c.add?null:cs1.find(q=>!q.add&&Math.hypot(q.p[0]-c.p[0],q.p[1]-c.p[1])<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; if(c.key) o.keys.push(c.key); o.man=o.man||c.man; } else cs1.push({...c,fim:false,keys:c.key?[c.key]:[]}); });
     const f0=cs1.reduce((m,c)=>!m||Math.hypot(c.p[0]-ent[0],c.p[1]-ent[1])<Math.hypot(m.p[0]-ent[0],m.p[1]-ent[1])?c:m,null); if(f0) f0.fim=true;
     cs1.forEach(c=>{ if(c!==f0) ligs.push([c.p,f0.p]); }); cx2.length=0; cx2.push(...cs1); }
   const dentroObra=c=>(G.casas||[]).some(P0=>pontoDentro(c.p,P0));
   if(cx2.some(dentroObra)) aviso.push("Construção encostada na divisa do vizinho: a caixa desse trecho fica dentro da edificação (caixa com tampa no piso), para não passar para o lote vizinho.");
   if(TL&&cx2.some(c=>!dentroObra(c)&&noPasseio(c.p,PS,0))) aviso.push("Construção no alinhamento: caixa de inspeção na calçada, junto da parede (confirmar com a prefeitura).");
-  const fim=cx2.find(c=>c.fim), out=fim&&!fossa?(()=>{ const p=fim.p, v=ED[iF].n; return [p[0]+v[0]*1.6,p[1]+v[1]*1.6]; })():null;
+  const iDe=t=>{ t=((t%PER)+PER)%PER; let i=0; while(i<nC-1&&t>cum[i+1]) i++; return i; };
+  const fim=cx2.find(c=>c.fim), out=fim&&!fossa?(()=>{ const p=fim.p, v=ED[fimMan?iDe(fim.t):iF].n; return [p[0]+v[0]*1.6,p[1]+v[1]*1.6]; })():null;
   // água fria: reservatório sobre o maior banheiro (ou a maior área molhada)
   const VOL=[310,500,750,1000,1500,2000,3000,5000].find(v=>v>=Vn)||5000, DIA={310:1.0,500:1.2,750:1.35,1000:1.5,1500:1.7,2000:1.9,3000:2.2,5000:2.6}[VOL];
   const rb=salas.filter(s=>s.r&&ehBanho(s.r.n)).sort((a,b)=>b.r.area-a.r.area)[0]||salas.slice().sort((a,b)=>b.r.area-a.r.area)[0];
@@ -2591,8 +2619,24 @@ function redeHidro(G,LM){
   // hidrômetro na frente do lote, fora do anel do esgoto
   const noLote=p=>!TL||(pontoDentro(p,TL)&&Math.min(...TL.map((a,i)=>distSeg(p,{x1:a[0],y1:a[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.25);
   const oHdF=p=>dFr>0&&noLote([p[0]+ED[iF].n[0]*1.0,p[1]+ED[iF].n[1]*1.0])?1.0:-dFr;   // sem recuo na frente: hidrômetro no nicho da fachada   // na divisa: hidrômetro no nicho da fachada
-  const hd=fim?(()=>{ const fF=frente, t0=fossa?Math.min(Math.max(fim.t,fF[0]+1),fF[1]-1):fim.t, t=t0+((fF[1]-t0)>2?1.8:-1.8), p=anelP(t), v=ED[iF].n, oHd=oHdF(p); return [p[0]+v[0]*oHd,p[1]+v[1]*oHd]; })():null;
-  return {ap,salas,ramal,trechos,ligs,anelP,anelT,ED,iF,frente,TL,PS,anelCn:cum.slice(0,nC),PER,fossa,caixas:cx2,fim,out,res,desc,ramaisAF,hd,pessoas,cons,Vn,aviso,com}; }
+  const hd=fim?(()=>{ const fF=frente, t0=fossa||fimMan?Math.min(Math.max(fim.t,fF[0]+1),fF[1]-1):fim.t, t=t0+((fF[1]-t0)>2?1.8:-1.8), p=anelP(t), v=ED[iF].n, oHd=oHdF(p); return [p[0]+v[0]*oHd,p[1]+v[1]*oHd]; })():null;
+  // caixas excluídas pelo profissional: o cano continua, só a caixa sai do desenho e da contagem
+  const DEL=S.hidDel||{}; cx2.forEach(c=>{ c.id=idCaixa(c); c.del=!!DEL[c.id]; });
+  ligs=ligs.concat(ligAdd);
+  // caixas sifonadas e ralos acrescentados: cada um liga na caixa mais perto que aceita esse esgoto
+  const extra=[], cxV=cx2.filter(c=>!c.del), amb=p=>{ const C=G.compAt(...p); return C&&!C.ext?C:null; };
+  const csLista=[...salas.filter(sa=>sa.cs).map(sa=>({p:sa.cs,r:sa.r})),...ADD.filter(a=>a.t==="cs").map(a=>({p:a.p,r:amb(a.p),add:1}))];
+  const perto=(p,L0)=>L0.reduce((m,c)=>{ const d=Math.hypot(c.p[0]-p[0],c.p[1]-p[1]); return !m||d<m.d?{c,d}:m; },null);
+  ADD.forEach(a=>{ if(a.t==="ci"||a.t==="cg") return; const r=amb(a.p), o={...a,key:"add|"+a.j,r};
+    if(a.t==="cs"){ const b=perto(a.p,cxV); o.alvo=b?b.c.p:null; o.d=50; }
+    else { const mesmo=csLista.filter(c=>c.r&&r&&c.r===r&&Math.hypot(c.p[0]-a.p[0],c.p[1]-a.p[1])>0.05), b=perto(a.p,mesmo);
+      if(b){ o.alvo=b.c.p; o.d=a.t==="rsc"?40:50; } else if(a.t==="rsc"){ const b2=perto(a.p,csLista); o.alvo=b2?b2.c.p:null; o.d=40; if(b2&&b2.d>3) aviso.push(`Ralo seco${r?` em ${r.n}`:""} sem caixa sifonada no ambiente: ficou ligado na caixa sifonada mais perto, a ${f(b2.d,1)} m. Melhor acrescentar uma caixa sifonada ou usar ralo sifonado.`); if(!b2) aviso.push(`Ralo seco${r?` em ${r.n}`:""} sem caixa sifonada: ralo seco precisa descarregar numa caixa sifonada (acrescente uma).`); }
+      else { const b2=perto(a.p,cxV); o.alvo=b2?b2.c.p:null; o.d=50; } }
+    extra.push(o); });
+  return {ap,salas,ramal,trechos,ligs,anelP,anelT,ED,iF,frente,TL,PS,anelCn:cum.slice(0,nC),PER,fossa,caixas:cxV,caixasTodas:cx2,extra,fim,out,res,desc,ramaisAF,hd,pessoas,cons,Vn,aviso,com}; }
+const idCaixa=c=>"cx|"+(c.key&&c.add?c.key:(c.keys&&c.keys[0])||(c.fim?"fim":"canto|"+c.p[0].toFixed(1)+","+c.p[1].toFixed(1)));
+const NOME_RALO={rs:"Ralo sifonado",rsc:"Ralo seco",rq:"Ralo quadrado (grelha 15x15)",rl:"Ralo linear (retangular)",cs:"Caixa sifonada",ci:"Caixa de inspeção",cg:"Caixa de gordura"};
+const ROT_RALO={rs:"RS",rsc:"RSC",rq:"RQ",rl:"RL",cs:"CS"};
 
 /* ---------------- Águas pluviais (NBR 10844): calha, condutor, caixa de areia e saída para a sarjeta ---------------- */
 // capacidade dos condutores horizontais de seção circular, n = 0,011, lâmina 2/3 do diâmetro (L/min; i = 0,5 / 1 / 2 / 4 %)
@@ -2736,6 +2780,27 @@ function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, ga
       const sc=cl>=afa-1e-9?dd:1e6-cl*1000+dd;
       if(!best||sc<best.sc) best={sc,cl,ct,cf,cs,ax,pr,ent}; } }
   const pos={pos:best,cabe:!!best&&best.cl>=afa-1e-9}; _fossaCache={key,pos}; return pos; }
+// lugar escolhido pelo profissional: S.fossaM = {ct:[x,y] centro do tanque, giro: quartos de volta, f:[x,y] filtro, s:{i:[x,y]} sumidouros}
+function arranjoFossa(FS,ct,ax){ const e=FS.e, gap=FS.passeio&&!FS.gapU?0.50:FS.gap, Lo=FS.L+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e;
+  const oF=FS.fil?Lo/2+gap+rf:Lo/2, cf=[ct[0]+ax[0]*oF,ct[1]+ax[1]*oF], cs=[]; const o0=FS.fil?rf+gap+rs:gap+rs; let c0=[cf[0]+ax[0]*o0,cf[1]+ax[1]*o0];
+  for(let i=0;i<FS.ns;i++){ cs.push(c0); c0=[c0[0]+ax[0]*(2*rs+gap),c0[1]+ax[1]*(2*rs+gap)]; } return {cf,cs}; }
+function ajustaFossa(G,FS){ const M=S.fossaM; if(!M||!FS.pos) return FS; const P0=FS.pos, e=FS.e, Lo=FS.L+2*e, Wo=FS.W+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e;
+  const g=(((+M.giro||0)%4)+4)%4; let ax=P0.ax; for(let i=0;i<g;i++) ax=[-ax[1],ax[0]];
+  const ct=M.ct?[num(M.ct[0]),num(M.ct[1])]:P0.ct; let {cf,cs}=g||M.ct?arranjoFossa(FS,ct,ax):{cf:P0.cf,cs:P0.cs};
+  if(M.f&&FS.fil) cf=[num(M.f[0]),num(M.f[1])]; cs=cs.map((c,i)=>M.s&&M.s[i]?[num(M.s[i][0]),num(M.s[i][1])]:c);
+  const pr=[-ax[1],ax[0]], P={...P0,ct,cf,cs,ax,pr,ent:[ct[0]-ax[0]*Lo/2,ct[1]-ax[1]*Lo/2],man:1}, av=[...(FS.av||[])];
+  // folga até a casa e as divisas (dentro do lote) e distância entre as unidades
+  if(!FS.passeio){ const TL=terreno(G).lote, nT=TL.length, dS=(p,a,b)=>distSeg(p,{x1:a[0],y1:a[1],x2:b[0],y2:b[1]}), casas=G.casas||[];
+    const folga=p=>{ const dl=Math.min(...TL.map((a,i)=>dS(p,a,TL[(i+1)%nT]))), dc=G.contExt.length?Math.min(...G.contExt.map(s0=>dS(p,[s0[0],s0[1]],[s0[2],s0[3]]))):99; return Math.min(pontoDentro(p,TL)?dl:-dl,casas.some(Q=>pontoDentro(p,Q))?-dc:dc); };
+    const pts=[]; [-1,0,1].forEach(a=>[-1,0,1].forEach(b=>{ if(a||b) pts.push([ct[0]+ax[0]*a*Lo/2+pr[0]*b*Wo/2,ct[1]+ax[1]*a*Lo/2+pr[1]*b*Wo/2]); }));
+    [...(FS.fil?[[cf,rf]]:[]),...cs.map(c=>[c,rs])].forEach(([c,r])=>{ for(let i=0;i<12;i++){ const an=i*Math.PI/6; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } });
+    P.cl=Math.min(...pts.map(folga)); FS={...FS,cabe:P.cl>=FS.afast-1e-9}; }
+  // distância livre entre as unidades (tanque como retângulo, filtro e sumidouro como círculos)
+  const aoTanque=c=>{ const v=[c[0]-ct[0],c[1]-ct[1]], a=Math.max(0,Math.abs(v[0]*ax[0]+v[1]*ax[1])-Lo/2), b=Math.max(0,Math.abs(v[0]*pr[0]+v[1]*pr[1])-Wo/2); return Math.hypot(a,b); };
+  const un=[...(FS.fil?[{n:"filtro",c:cf,r:rf}]:[]),...cs.map((c,i)=>({n:FS.ns>1?`sumidouro ${i+1}`:"sumidouro",c,r:rs,sm:1}))];
+  un.forEach(u=>{ const d=aoTanque(u.c)-u.r; if(d<0.05) av.push(`O ${u.n} está encostado ou em cima do tanque séptico: afaste-o.`); else if(u.sm&&d<1.5-1e-9) av.push(`O ${u.n} ficou a ${f(d)} m do tanque séptico; a NBR 7229 pede 1,50 m.`); });
+  un.forEach((u,i)=>un.slice(i+1).forEach(w=>{ const d=Math.hypot(u.c[0]-w.c[0],u.c[1]-w.c[1])-u.r-w.r; if(d<0.05) av.push(`O ${u.n} e o ${w.n} estão encostados ou um em cima do outro: afaste-os.`); }));
+  return {...FS,pos:P,man:1,av}; }
 // conjunto em fila no passeio da rua escolhida, paralelo ao meio-fio, começando o mais perto da caixa final
 function fossaNoPasseio(G,FS,alvo,i){ const PS=passeios(G), q=PS.find(p=>p.i===i)||PS[0]; if(!q) return {pos:null,cabe:false,passeio:true,motivo:"Nenhum lado do lote marcado como rua (ou passeio com menos de 0,60 m)."};
   const e=FS.e, Lo=FS.L+2*e, Wo=FS.W+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, gap=FS.gapU?FS.gap:0.50, t0=q.cal/2, walls=G.contExt.map(s0=>({x1:s0[0],y1:s0[1],x2:s0[2],y2:s0[3]})), casas=G.casas||[];
@@ -2767,10 +2832,12 @@ function desenhaFossaPlanta(D,G,FS,HD){ const k=D.k, P=FS.pos; if(!P) return;
   if(FS.fil){ TX(D,...cf,"FA",2,{b:true,l:"ESGOTO"}); TX(D,cf[0],cf[1]+2.6*k,`Ø${f(FS.Df)}`,1.3,{l:"ESGOTO"}); }
   cs.forEach((c,i)=>{ TX(D,...c,FS.ns>1?`SM${i+1}`:"SM",2,{b:true,l:"ESGOTO"}); TX(D,c[0],c[1]+2.6*k,`Ø${f(FS.Ds)} h=${f(FS.hs)}`,1.3,{l:"ESGOTO"}); });
   const tr=trajetoFossa(G,HD.fim.p,P.ent); PL(D,tr,.5,"ESGOTO"); setaFluxo(D,tr[tr.length-2],tr[tr.length-1],"ESGOTO");
-  const sT=[ct[0]+ax[0]*Lo/2,ct[1]+ax[1]*Lo/2], eF=FS.fil?[cf[0]-ax[0]*(FS.Df/2+0.15),cf[1]-ax[1]*(FS.Df/2+0.15)]:[cs[0][0]-ax[0]*(FS.Ds/2+0.15),cs[0][1]-ax[1]*(FS.Ds/2+0.15)];
-  if(FS.fil){ L(D,...sT,...eF,.5,"ESGOTO"); setaFluxo(D,sT,eF,"ESGOTO"); }
-  let prev=FS.fil?[cf[0]+ax[0]*(FS.Df/2+0.15),cf[1]+ax[1]*(FS.Df/2+0.15)]:sT; cs.forEach(c=>{ const e1=[c[0]-ax[0]*(FS.Ds/2+0.15),c[1]-ax[1]*(FS.Ds/2+0.15)]; L(D,...prev,...e1,.5,"ESGOTO"); setaFluxo(D,prev,e1,"ESGOTO"); prev=[c[0]+ax[0]*(FS.Ds/2+0.15),c[1]+ax[1]*(FS.Ds/2+0.15)]; });
-  rotuloLinha(D,sT,eF,"Ø100","ESGOTO"); }
+  // cano de unidade a unidade: sai da borda virada para a próxima e entra pela borda virada para a anterior
+  const sT=[ct[0]+ax[0]*Lo/2,ct[1]+ax[1]*Lo/2], bor=(c,r,to)=>{ const dx=to[0]-c[0], dy=to[1]-c[1], d=Math.hypot(dx,dy)||1; return [c[0]+dx/d*r,c[1]+dy/d*r]; };
+  const un=[...(FS.fil?[[cf,FS.Df/2+0.15]]:[]),...cs.map(c=>[c,FS.Ds/2+0.15])];
+  let prev=sT, eF=null; un.forEach(([c,r],i)=>{ const e1=bor(c,r,prev); if(!eF) eF=e1; L(D,...prev,...e1,.5,"ESGOTO"); setaFluxo(D,prev,e1,"ESGOTO");
+    const nx=un[i+1]; prev=nx?bor(c,r,nx[0]):[c[0]+ax[0]*r,c[1]+ax[1]*r]; });
+  if(eF) rotuloLinha(D,sT,eF,"Ø100","ESGOTO"); }
 // detalhe: planta do conjunto e corte longitudinal
 function desenhoFossa(k,FS){ const D=Dw(k), e=FS.e, g=FS.gap, Lo=FS.L+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, Y=z=>-z;
   const xT0=0, xT1=Lo, xF=FS.fil?xT1+g+rf:xT1, xS=[]; { let x=FS.fil?xF+rf+g+rs:xT1+g+rs; for(let i=0;i<FS.ns;i++){ xS.push(x); x+=2*rs+g; } } const xEnd=xS[xS.length-1]+rs;
@@ -2913,6 +2980,182 @@ function desenhoForma(G,k,ES){ const D=Dw(k); if(!ES){ TX(D,0,0,"Sem paredes.",3
     TX(D,c[0]+(d[1]?2.5*k:0),c[1]+(d[0]?-2.6*k:0),`${l.nome} h=${l.h||"?"} cm`,1.6,{b:true,l:"LAJE",a:d[1]?"s":"m"}); TX(D,c[0]+(d[1]?2.5*k:0),c[1]+(d[0]?-2.6*k:0)+2.4*k,l.tipo,1.3,{l:"LAJE",a:d[1]?"s":"m"}); });
   ES.pil.forEach(q=>{ PG(D,retPil(q),"CONCRETO"); TX(D,q.c[0]+2.2*k,q.c[1]-2.2*k,ES.simples?`${q.nome} ${q.arm}"`:q.nome,1.6,{b:true,a:"s",l:"VIGA"}); });
   cotasPilares(D,G,ES); return D; }
+/* ---------------- Armadura (pré-dimensionamento NBR 6118): vigas, baldrames, pilares e sapatas; relação e resumo do aço ---------------- */
+const BAR={5.0:0.154,6.3:0.245,8.0:0.395,10.0:0.617,12.5:0.963,16.0:1.578,20.0:2.466};
+const areaBar=fi=>Math.PI*fi*fi/400;   // cm²
+const fiTx=fi=>f(fi,1).replace(",0",",0");
+// escolhe quantidade e bitola numa camada; devolve {n,fi,As,cam}
+function escolheBarras(As,b,cob=0.03,fiE=5.0,minN=2,lista=[8.0,10.0,12.5,16.0]){ const out=[];
+  lista.forEach(fi=>{ const n=Math.max(minN,Math.ceil(As/areaBar(fi)-1e-9)), ah=Math.max(2.0,fi/10,1.2*1.9), livre=(b*100-2*(cob*100+fiE/10)), cabe=n*fi/10+(n-1)*ah<=livre+1e-9;
+    const nC=Math.max(1,Math.floor((livre+ah)/(fi/10+ah))); out.push({n,fi,As:n*areaBar(fi),cam:cabe?1:Math.ceil(n/nC),cabe}); });
+  const ok=out.filter(o=>o.cabe); const L0=ok.length?ok:out; return L0.sort((p,q)=>(p.As-q.As)||(p.n-q.n))[0]; }
+const dobra=fi=>Math.max(0.10,Math.ceil(fi*12/50-1e-9)*0.05);   // gancho de 90° (m), de 5 em 5 cm
+const tras=fi=>Math.ceil(fi*40/50-1e-9)*0.05;                    // traspasse de 40 Ø (m)
+const r5=v=>Math.ceil(v*20-1e-9)/20;
+function compBarra(Lr,fi,gancho=true){ const g=gancho?2*dobra(fi):0; let c=Lr+g; const n=c<=12?1:Math.ceil((c-12)/(12-tras(fi)))+1; return {c:r5(c+(n-1)*tras(fi)),emendas:n-1}; }
+// uma viga contínua: cargas, momentos (coeficientes de viga contínua), armadura, estribos e barras
+function armViga(v,q,b,h,fck,tipo,hpil){ const fcd=fck*1000/1.4, fyd=500000/1.15, c=0.03, d=h-c-0.005-0.005, sp=v.vaos.length?v.vaos:[v.L], n=sp.length, av=[];
+  const Mpos=sp.map((L,i)=>n===1?q*L*L/8:(i===0||i===n-1)?q*L*L/11:q*L*L/16);
+  const Mneg=sp.slice(1).map((L,i)=>{ const La=(sp[i]+L)/2; return q*La*La/(n===2?9:(i===0||i===n-3)?10:11); });
+  const Vmax=Math.max(...sp.map(L=>(n>1?1.15:1)*q*L/2));
+  const asDe=M=>{ const Md=1.4*M; if(Md<=0) return {As:0,xd:0}; const a=0.272*b*fcd, bb=-0.68*b*fcd*d, disc=bb*bb-4*a*Md; if(disc<0) return {As:Infinity,xd:1};
+    const x=(-bb-Math.sqrt(disc))/(2*a); return {As:Md/(fyd*(d-0.4*x))*1e4,xd:x/d}; };
+  const Asmin=0.0015*b*h*1e4, Mp=Math.max(...Mpos), An=asDe(Mp), Ap=Math.max(An.As,Asmin);
+  const Mn=Mneg.length?Math.max(...Mneg):0, Ng=asDe(Mn), Aneg=Mn>0?Math.max(Ng.As,Asmin):0;
+  if(An.xd>0.45||Ng.xd>0.45) av.push(`${v.nome}: seção ${f(b*100,0)}x${f(h*100,0)} no limite (x/d > 0,45): aumentar a altura da viga.`);
+  const inf=escolheBarras(Ap,b,c), fiPE=inf.fi>=12.5?10.0:8.0;   // porta-estribo
+  const sup0=Mn>0?escolheBarras(Aneg,b,c):{n:2,fi:fiPE,As:2*areaBar(fiPE)};
+  const fiS=Math.max(sup0.fi,fiPE), nCont=2, nNeg=Mn>0?Math.max(0,Math.ceil((Aneg-nCont*areaBar(fiS))/areaBar(fiS)-1e-9)):0;
+  // estribos (modelo I): Vsd até 0,67 VRd2 -> s <= 0,6d e 30 cm
+  const fctd=0.21*Math.pow(fck,2/3)/1.4*1000, Vc=0.6*fctd*b*d, Vsd=1.4*Vmax, VRd2=0.27*(1-fck/250)*fcd*b*d, fiE=5.0, Asw=2*areaBar(fiE);
+  if(Vsd>VRd2) av.push(`${v.nome}: cortante acima do limite da biela: aumentar a seção.`);
+  const swMin=0.2*0.3*Math.pow(fck,2/3)/500*b*1e4, swNec=Math.max(0,(Vsd-Vc)/(0.9*d*fyd)*1e4), sw=Math.max(swMin,swNec);   // cm²/m
+  const smax=Vsd<=0.67*VRd2?Math.min(0.6*d,0.30):Math.min(0.3*d,0.20), s=Math.max(0.07,Math.floor(Math.min(Asw/sw,smax)*100/2.5)*0.025);
+  // barras
+  const Lr=v.L-2*c, apoios=[0,...sp.map((x,i)=>sp.slice(0,i+1).reduce((a,y)=>a+y,0))];
+  const B=[]; const add=(o)=>{ B.push({...o,pos:`N${B.length+1}`}); };
+  const ci=compBarra(Lr,inf.fi); add({fi:inf.fi,q:inf.n,c:ci.c,reto:Lr,gancho:dobra(inf.fi),lado:"inf",em:ci.emendas,tx:"embaixo, corrida"});
+  const cs=compBarra(Lr,fiS); add({fi:fiS,q:nCont,c:cs.c,reto:Lr,gancho:dobra(fiS),lado:"sup",em:cs.emendas,tx:Mn>0?"em cima, corrida":"em cima, porta-estribo"});
+  const negs=[]; if(nNeg>0) apoios.slice(1,-1).forEach((x,i)=>{ const Lneg=r5(0.25*sp[i]+0.25*sp[i+1]+hpil); negs.push({x,Lneg}); });
+  if(negs.length){ const grupos={}; negs.forEach(g=>{ (grupos[f(g.Lneg)]=grupos[f(g.Lneg)]||[]).push(g); });
+    Object.values(grupos).forEach(gs=>add({fi:fiS,q:nNeg*gs.length,c:gs[0].Lneg,reto:gs[0].Lneg,gancho:0,lado:"neg",em:0,tx:`em cima, sobre ${gs.length>1?"os apoios":"o apoio"}`,apoios:gs.map(g=>g.x)})); }
+  const bi=b-2*c, hi=h-2*c, cE=r5(2*(bi+hi)+0.10), nE=sp.reduce((a,L)=>a+Math.ceil(Math.max(0.1,L-hpil)/s)+1,0);
+  add({fi:fiE,q:nE,c:cE,lado:"est",bi,hi,s,tx:`estribo c/${f(s*100,0)}`});
+  const ferros=inf.n+nCont+(nNeg>0?nNeg:0), kg=B.reduce((a,x)=>a+x.q*x.c*BAR[x.fi],0);
+  return {v,nome:tipo==="VB"?v.nomeB:v.nome,tipo,b,h,q,sp,apoios,Mpos,Mneg,Vmax,inf,sup:{n:nCont,fi:fiS},nNeg,s,fiE,B,ferros,kg,av,L:v.L}; }
+// carga distribuída na viga: faixa de influência dos ambientes dos dois lados
+function cargaViga(G,ES,v,tipo){ const pd=num(S.pd)||2.8, t=G.t;
+  if(tipo==="VB") return 13*t*pd+25*ES.b*v.hb;
+  const n=[-v.u[1],v.u[0]], m=v.P((v.s0+v.s1)/2); let w=0;
+  [-1,1].forEach(sg=>{ const p=[m[0]+n[0]*0.3*sg,m[1]+n[1]*0.3*sg], C=G.compAt(...p); if(!C||C.ext) return; const lj=ES.lajes.find(l=>l.r===C), lmin=Math.min(C.x1-C.x0,C.y1-C.y0);
+    const qa=ES.temLaje?(lj?lj.pp:2.0)+1.0+1.5:0.3+0.8; w+=qa*Math.min(lmin/2,2.5); });
+  return w+25*ES.b*v.h; }
+function armadura(G,ES){ if(!ES||ES.simples) return null; const fck=ES.fck||25, av=[], hp=ES.hp;
+  const vigas=[]; ES.vigas.forEach(v=>{ vigas.push(armViga(v,cargaViga(G,ES,v,"V"),ES.b,v.h,fck,"V",hp)); });
+  ES.vigas.forEach(v=>{ vigas.push(armViga(v,cargaViga(G,ES,v,"VB"),ES.b,v.hb,fck,"VB",hp)); });
+  vigas.forEach(a=>av.push(...a.av));
+  // pilares: compressão centrada majorada (gamma_n para b < 19 cm), mínimo 0,4 % e 4 Ø10
+  const pd=num(S.pd)||2.8, hV=Math.max(...ES.vigas.map(v=>v.h),0.30), fcd=fck*1000/1.4, fyd=420000;
+  const pil=ES.pil.map(q=>{ const gn=Math.max(1,1.95-0.05*q.b*100), Nd=1.4*gn*q.N, Ac=q.b*q.h, Asc=Math.max(0.004*Ac*1e4,(Nd-0.85*fcd*Ac)/fyd*1e4);
+    let n=4, fi=10.0; if(Asc>4*areaBar(10)) { if(Asc<=4*areaBar(12.5)) fi=12.5; else { n=6; fi=Asc<=6*areaBar(10)?10.0:12.5; } }
+    if(Asc>0.04*Ac*1e4) av.push(`${q.nome}: carga alta para ${f(q.b*100,0)}x${f(q.h*100,0)}: aumentar o pilar.`);
+    const fund=ES.fund==="sapata"?q.f.h:0.40, prof=ES.fund==="sapata"?ES.prof:0.05+0.40;
+    const Ll=r5(prof-0.05+pd+hV-0.03+0.20), sE=Math.min(0.12,Math.floor(Math.min(12*fi/1000,q.b)*100)/100);
+    const vis=prof-fund+pd+hV, nE=Math.ceil(vis/sE)+1, cE=r5(2*(q.b-0.06+q.h-0.06)+0.10);
+    return {q,n,fi,Ll,sE,nE,cE,kg:n*Ll*BAR[fi]+nE*cE*BAR[5.0],tx:`${n}Ø${f(fi,1)} · estribo Ø5,0 c/${f(sE*100,0)}`}; });
+  // sapatas: método das bielas simplificado (flexão na face do pilar), malha nas duas direções
+  const sap=[]; if(ES.fund==="sapata") ES.tipos.forEach(tp=>{ const F=tp.f, B=F.B, h=F.h, d=h-0.05, N=Math.max(...tp.ps.map(q=>q.N)), a=ES.hp;
+      const M=1.4*N*Math.pow(B-a,2)/(8*B), As=Math.max(M/(0.85*d*500000/1.15)*1e4,0.0010*B*h*1e4);
+      let best=null; [8.0,10.0].forEach(fi=>{ const nb=Math.max(Math.ceil(As/areaBar(fi)-1e-9),Math.ceil((B-0.10)/0.20)+1), s=Math.floor((B-0.10)/(nb-1)*100/2.5)*0.025; const o={fi,nb,s,As:nb*areaBar(fi)}; if(!best||o.As<best.As) best=o; });
+      const c=r5(B-0.10+2*(h-0.10)); sap.push({tp,nome:tp.nome,B,h,...best,c,un:tp.ps.length,kg:2*best.nb*c*BAR[best.fi]*tp.ps.length,tx:`Ø${f(best.fi,1)} c/${f(best.s*100,1).replace(",0","")} nas duas direções`}); });
+  else ES.tipos.forEach(tp=>{ const F=tp.f, c=r5(Math.max(F.bx,F.by)-0.10+2*(F.h-0.10)), nb=Math.ceil((Math.min(F.bx,F.by)-0.10)/0.15)+1; sap.push({tp,nome:tp.nome,B:F.bx,h:F.h,fi:10.0,nb,s:0.15,c,un:tp.ps.length,kg:2*nb*c*BAR[10]*tp.ps.length,tx:"Ø10,0 c/15 nas duas direções (bloco)",bloco:1}); });
+  // relação do aço
+  const rel=[];
+  vigas.forEach(a=>a.B.forEach(x=>rel.push({el:a.nome,pos:x.pos,fi:x.fi,q:x.q,c:x.c,obs:x.tx})));
+  const grpP={}; pil.forEach(p=>{ const kk=`${p.n}|${p.fi}|${p.Ll}|${p.sE}|${p.nE}|${p.cE}`; (grpP[kk]=grpP[kk]||[]).push(p); });
+  Object.values(grpP).forEach(ps=>{ const p=ps[0], nm=ps.length>2?`${ps[0].q.nome} a ${ps[ps.length-1].q.nome}`:ps.map(x=>x.q.nome).join(", "), un=ps.length;
+    rel.push({el:nm,pos:"N1",fi:p.fi,q:p.n*un,c:p.Ll,obs:`${p.n} por pilar x ${un} pilares`,grpP:ps}); rel.push({el:nm,pos:"N2",fi:5.0,q:p.nE*un,c:p.cE,obs:`estribo c/${f(p.sE*100,0)}`}); });
+  sap.forEach(s0=>{ rel.push({el:`${s0.nome} (${s0.un}x)`,pos:"N1",fi:s0.fi,q:s0.nb*2*s0.un,c:s0.c,obs:s0.tx}); });
+  rel.forEach(r=>{ r.tot=r.q*r.c; r.kg=r.tot*BAR[r.fi]; });
+  // resumo por bitola
+  const res={}; rel.forEach(r=>{ const o=res[r.fi]=res[r.fi]||{fi:r.fi,m:0,kg:0}; o.m+=r.tot; o.kg+=r.kg; });
+  const resumo=Object.values(res).sort((a,b)=>a.fi-b.fi).map(o=>({...o,kg10:o.kg*1.1,barras:Math.ceil(o.m*1.1/12)}));
+  const porTipo=[["Vigas de cobertura",vigas.filter(a=>a.tipo==="V").reduce((s0,a)=>s0+a.kg,0)],["Vigas baldrame",vigas.filter(a=>a.tipo==="VB").reduce((s0,a)=>s0+a.kg,0)],["Pilares",pil.reduce((s0,p)=>s0+p.kg,0)],[ES.fund==="sapata"?"Sapatas":"Blocos",sap.reduce((s0,x)=>s0+x.kg,0)]];
+  const tot=resumo.reduce((s0,o)=>s0+o.kg,0);
+  return {vigas,pil,sap,rel,resumo,porTipo,tot,tot10:tot*1.1,av,fck}; }
+
+/* ---- desenhos ---- */
+// barra desenhada com ganchos (para cima ou para baixo) e o texto em cima
+function desenhaBarra(D,x0,y,Lr,g,txt,para=-1){ const k=D.k; const pts=[]; if(g>0) pts.push([x0,y+para*g]); pts.push([x0,y],[x0+Lr,y]); if(g>0) pts.push([x0+Lr,y+para*g]); PL(D,pts,.4,"VIGA"); TX(D,x0+Lr/2,y-1.6*k,txt,1.6,{l:"COTAS"}); if(g>0) TX(D,x0-0.8*k,y+para*g/2,f(g*100,0),1.2,{a:"e",l:"COTAS"}); }
+function secaoViga(D,x0,y0,A,esc){ const k=D.k, b=A.b*esc, h=A.h*esc, c=0.03*esc;
+  PG(D,[[x0,y0],[x0+b,y0],[x0+b,y0+h],[x0,y0+h]],"HACHURA"); PL(D,[[x0,y0],[x0+b,y0],[x0+b,y0+h],[x0,y0+h],[x0,y0]],.35,"CONCRETO");
+  PL(D,[[x0+c,y0+c],[x0+b-c,y0+c],[x0+b-c,y0+h-c],[x0+c,y0+h-c],[x0+c,y0+c]],.25,"VIGA");
+  const fila=(n,fi,yy,cheio=true)=>{ const r=Math.max(0.6*k,fi/2000*esc), xa=x0+c+r+0.5*k, xb=x0+b-c-r-0.5*k; for(let i=0;i<n;i++){ const x=n===1?(xa+xb)/2:xa+(xb-xa)*i/(n-1); if(cheio) PG(D,Array.from({length:12},(_,j)=>[x+r*Math.cos(j*Math.PI/6),yy+r*Math.sin(j*Math.PI/6)]),"CONCRETO"); else CI(D,x,yy,r,.25,"VIGA"); } };
+  const ri=Math.max(0.6*k,A.inf.fi/2000*esc), rs=Math.max(0.6*k,A.sup.fi/2000*esc);
+  fila(A.inf.n,A.inf.fi,y0+h-c-ri-0.5*k); fila(A.sup.n,A.sup.fi,y0+c+rs+0.5*k); if(A.nNeg>0) fila(A.nNeg,A.sup.fi,y0+c+3*rs+1.2*k,false);
+  cotaH(D,x0,x0+b,y0+h+5*k,y0+h,f(A.b*100,0)); cotaV(D,y0,y0+h,x0-5*k,x0,f(A.h*100,0));
+  TX(D,x0+b/2,y0-6.5*k,`${A.inf.n}Ø${f(A.inf.fi,1)} emb. + ${A.sup.n+(A.nNeg||0)}Ø${f(A.sup.fi,1)} em cima`,1.4,{l:"COTAS"}); TX(D,x0+b/2,y0-3.8*k,`= ${A.ferros} ferros · est. Ø5,0 c/${f(A.s*100,0)}`,1.4,{l:"COTAS"}); }
+// uma viga: título, cotas dos vãos, elevação com apoios e estribos, barras desenhadas e a seção ao lado
+function desenhaVigaDet(D,A,y){ const k=D.k, Lv=A.L, h=A.h, c=0.03;
+  TX(D,0,y,`${A.nome} · ${f(A.b*100,0)}x${f(A.h*100,0)} · ${A.inf.n}Ø${f(A.inf.fi,1)} embaixo + ${A.sup.n}Ø${f(A.sup.fi,1)} em cima${A.nNeg?` (+${A.nNeg}Ø${f(A.sup.fi,1)} nos apoios)`:""} · ${A.ferros} ferros · ${f(A.kg,1)} kg`,2.0,{a:"s",b:true}); y+=4*k;
+  const yE=y+6*k; for(let i=0;i+1<A.apoios.length;i++) cotaH(D,A.apoios[i],A.apoios[i+1],yE-3.5*k,yE,f(A.apoios[i+1]-A.apoios[i]));
+  PG(D,[[0,yE],[Lv,yE],[Lv,yE+h],[0,yE+h]],"HACHURA"); PL(D,[[0,yE],[Lv,yE],[Lv,yE+h],[0,yE+h],[0,yE]],.35,"CONCRETO");
+  A.apoios.forEach(x=>{ const a=Math.max(0,x-0.10), bq=Math.min(Lv,x+0.10); PG(D,[[a,yE+h],[bq,yE+h],[bq,yE+h+3*k],[a,yE+h+3*k]],"CONCRETO"); });
+  for(let i=0;i+1<A.apoios.length;i++){ const a=A.apoios[i]+0.10, bq=A.apoios[i+1]-0.10; for(let x=a;x<=bq+1e-6;x+=A.s) L(D,x,yE+c,x,yE+h-c,.13,"VIGA"); }
+  L(D,c,yE+h-c-0.01,Lv-c,yE+h-c-0.01,.4,"VIGA"); L(D,c,yE+c+0.01,Lv-c,yE+c+0.01,.4,"VIGA");
+  A.B.filter(x=>x.lado==="neg").forEach(x=>x.apoios.forEach(ax=>L(D,ax-x.c/2,yE+c+0.025,ax+x.c/2,yE+c+0.025,.4,"VIGA",true)));
+  let yb=yE+h+9*k;
+  A.B.forEach(x=>{ if(x.lado==="est") return;
+    if(x.lado==="neg"){ x.apoios.forEach(ax=>desenhaBarra(D,ax-x.c/2,yb,x.c,0,`${x.pos} ${x.apoios.length>1?`${x.q/x.apoios.length}`:x.q}Ø${f(x.fi,1)} C=${f(x.c*100,0)}`)); yb+=6*k; return; }
+    desenhaBarra(D,c,yb,x.reto,x.gancho,`${x.pos} ${x.q}Ø${f(x.fi,1)} C=${f(x.c*100,0)}${x.em?` (${x.em} emenda${x.em>1?"s":""} de ${f(tras(x.fi)*100,0)} cm)`:""}`,x.lado==="inf"?-1:1); yb+=(x.lado==="sup"?x.gancho:0)+6*k; });
+  const E=A.B.find(x=>x.lado==="est"), eh=Math.max(E.hi,0), ew=E.bi; PL(D,[[0,yb],[ew,yb],[ew,yb+eh],[0,yb+eh],[0,yb]],.35,"VIGA");
+  TX(D,ew+1.5*k,yb+eh/2,`${E.pos} ${E.q} estribos Ø${f(E.fi,1)} c/${f(E.s*100,0)} C=${f(E.c*100,0)} (${f(ew*100,0)}x${f(eh*100,0)})`,1.6,{a:"s",l:"COTAS"});
+  yb+=eh+4*k;
+  const esc=Math.max(1,22*k/h); secaoViga(D,Lv+14*k,yE,A,esc); TX(D,Lv+14*k+A.b*esc/2,yE+A.h*esc+10*k,"SEÇÃO (sem escala)",1.3,{l:"COTAS"});
+  return Math.max(yb,yE+A.h*esc+14*k)+8*k; }
+// vigas lado a lado quando cabem na largura (wmm = largura da caixa na folha, em mm); sem wmm, uma embaixo da outra
+function moveD(D,dx,dy){ D.p.forEach(q=>{ if(q.t==="l"){ q.x1+=dx; q.x2+=dx; q.y1+=dy; q.y2+=dy; } else if(q.t==="g") q.pts=q.pts.map(p=>[p[0]+dx,p[1]+dy]); else if(q.t==="c"){ q.cx+=dx; q.cy+=dy; } else if(q.t==="t"){ q.x+=dx; q.y+=dy; } else if(q.t==="r"||q.t==="img"){ q.x0+=dx; q.x1+=dx; q.y0+=dy; q.y1+=dy; } else if(q.t==="a"){ q.x1+=dx; q.x2+=dx; q.y1+=dy; q.y2+=dy; q.cx+=dx; q.cy+=dy; } }); }
+function desenhoVigasDet(k,lista,wmm){ const D=Dw(k); if(!lista.length){ TX(D,0,0,"Sem vigas.",2); return D; }
+  if(!wmm){ let y=0; lista.forEach(A=>{ y=desenhaVigaDet(D,A,y); }); return D; }
+  const W=wmm*k, gap=8*k; let x=0, y=0, hRow=0;
+  lista.forEach(A=>{ const d=Dw(k); desenhaVigaDet(d,A,0); const e=extensao(d), w=e.x1-e.x0, h=e.y1-e.y0;
+    if(x>0&&x+w>W){ x=0; y+=hRow+gap; hRow=0; } moveD(d,x-e.x0,y-e.y0); D.p.push(...d.p); x+=w+gap; hRow=Math.max(hRow,h); });
+  return D; }
+// pilar (elevação e seção) e sapata (planta e corte) de cada tipo
+function desenhoPilSapDet(k,ES,AR){ const D=Dw(k), Y=z=>-z; let x=0;
+  const grupos=[]; AR.pil.forEach(p=>{ let g=grupos.find(o=>o.n===p.n&&o.fi===p.fi&&o.Ll===p.Ll&&o.sE===p.sE); if(!g){ g={n:p.n,fi:p.fi,Ll:p.Ll,sE:p.sE,nE:p.nE,cE:p.cE,ps:[]}; grupos.push(g); } g.ps.push(p); });
+  const pd=num(S.pd)||2.8, prof=ES.fund==="sapata"?ES.prof:0.45;
+  grupos.forEach(g=>{ const q=g.ps[0].q, b=q.b, h=q.h, top=pd+Math.max(...ES.vigas.map(v=>v.h),0.3);
+    PG(D,[[x,Y(-prof+0.3)],[x+b,Y(-prof+0.3)],[x+b,Y(top)],[x,Y(top)]],"HACHURA"); PL(D,[[x,Y(-prof+0.3)],[x,Y(top)]],.35,"CONCRETO"); PL(D,[[x+b,Y(-prof+0.3)],[x+b,Y(top)]],.35,"CONCRETO");
+    PL(D,[[x+0.03+0.20,Y(-prof+0.05)],[x+0.03,Y(-prof+0.05)],[x+0.03,Y(top-0.03)]],.4,"VIGA"); PL(D,[[x+b-0.03-0.20,Y(-prof+0.05)],[x+b-0.03,Y(-prof+0.05)],[x+b-0.03,Y(top-0.03)]],.4,"VIGA");
+    for(let z=-prof+0.35;z<=top-0.05;z+=g.sE) L(D,x+0.03,Y(z),x+b-0.03,Y(z),.13,"VIGA");
+    L(D,x-0.6,Y(0),x+b+0.6,Y(0),.3,"TERRENO");
+    cotaV(D,Y(top),Y(-prof+0.05),x-6*k,x,f(g.Ll-0.20));
+    const nm=g.ps.length>2?`${g.ps[0].q.nome} a ${g.ps[g.ps.length-1].q.nome}`:g.ps.map(p=>p.q.nome).join(", ");
+    TX(D,x+b/2,Y(top)-9*k,`PILARES ${nm} (${g.ps.length}x)`,1.8,{b:true}); TX(D,x+b/2,Y(top)-5.5*k,`${f(b*100,0)}x${f(h*100,0)} · N1 ${g.n}Ø${f(g.fi,1)} C=${f(g.Ll*100,0)} · N2 Ø5,0 c/${f(g.sE*100,0)} C=${f(g.cE*100,0)}`,1.4,{l:"COTAS"});
+    // seção do pilar (sem escala)
+    const esc=Math.max(1,18*k/h), sx=x+b+8*k, sy=Y(top)+6*k, bw=b*esc, hh=h*esc; PG(D,[[sx,sy],[sx+bw,sy],[sx+bw,sy+hh],[sx,sy+hh]],"HACHURA"); PL(D,[[sx,sy],[sx+bw,sy],[sx+bw,sy+hh],[sx,sy+hh],[sx,sy]],.35,"CONCRETO");
+    const cc=0.03*esc; PL(D,[[sx+cc,sy+cc],[sx+bw-cc,sy+cc],[sx+bw-cc,sy+hh-cc],[sx+cc,sy+hh-cc],[sx+cc,sy+cc]],.25,"VIGA");
+    const r=Math.max(0.6*k,g.fi/2000*esc), pos=g.n===4?[[0,0],[1,0],[0,1],[1,1]]:[[0,0],[1,0],[0,0.5],[1,0.5],[0,1],[1,1]];
+    pos.forEach(([a,c0])=>{ const px=sx+cc+r+0.4*k+(bw-2*cc-2*r-0.8*k)*a, py=sy+cc+r+0.4*k+(hh-2*cc-2*r-0.8*k)*c0; PG(D,Array.from({length:12},(_,j)=>[px+r*Math.cos(j*Math.PI/6),py+r*Math.sin(j*Math.PI/6)]),"CONCRETO"); });
+    TX(D,sx+bw/2,sy+hh+4*k,"SEÇÃO (sem escala)",1.3,{l:"COTAS"});
+    x=sx+bw+28*k; });
+  // sapatas / blocos
+  AR.sap.forEach(s0=>{ const B=s0.B, h=s0.h, z0=-prof, y0=Y(z0+h);
+    PG(D,[[x,Y(z0)],[x+B,Y(z0)],[x+B,Y(z0+h)],[x,Y(z0+h)]],"HACHURA"); PL(D,[[x,Y(z0)],[x+B,Y(z0)],[x+B,Y(z0+h)],[x,Y(z0+h)],[x,Y(z0)]],.35,"CONCRETO");
+    PL(D,[[x+0.05,Y(z0+h-0.05)],[x+0.05,Y(z0+0.05)],[x+B-0.05,Y(z0+0.05)],[x+B-0.05,Y(z0+h-0.05)]],.4,"VIGA");
+    cotaH(D,x,x+B,Y(z0)+6*k,Y(z0),f(B)); cotaV(D,Y(z0+h),Y(z0),x+B+5*k,x+B,f(h));
+    TX(D,x+B/2,y0-9*k,`${s0.bloco?"BLOCO":"SAPATA"} ${s0.nome} (${s0.un}x)`,1.8,{b:true}); TX(D,x+B/2,y0-5.5*k,`${f(B)} x ${f(B)} x ${f(h)} · N1 ${s0.nb}+${s0.nb} Ø${f(s0.fi,1)} c/${f(s0.s*100,1).replace(",0","")} C=${f(s0.c*100,0)}`,1.4,{l:"COTAS"});
+    // planta da malha
+    const py=Y(z0)+14*k; PL(D,[[x,py],[x+B,py],[x+B,py+B],[x,py+B],[x,py]],.3,"CONCRETO");
+    for(let i=0;i<s0.nb;i++){ const t=0.05+(B-0.10)*(s0.nb>1?i/(s0.nb-1):0.5); L(D,x+0.05,py+t,x+B-0.05,py+t,.25,"VIGA"); L(D,x+t,py+0.05,x+t,py+B-0.05,.25,"VIGA"); }
+    TX(D,x+B/2,py+B+4*k,"PLANTA DA MALHA",1.3,{l:"COTAS"});
+    x+=B+30*k; });
+  return D; }
+// tabela desenhada (vai dentro da prancha e no DXF)
+function desenhoTabela(k,blocos){ const D=Dw(k); let y=0; const rh=4.2*k;
+  blocos.forEach(bl=>{ const W=bl.cols.reduce((s0,c)=>s0+c[1],0)*k; if(bl.t){ TX(D,0,y,bl.t,2.2,{a:"s",b:true}); y+=3*k; }
+    const linha=yy=>L(D,0,yy,W,yy,.18,"COTAS"); linha(y); let x=0; bl.cols.forEach(c=>{ TX(D,c[2]?x+c[1]*k-1*k:x+1*k,y+rh*0.72,c[0],1.4,{a:c[2]?"e":"s",b:true}); x+=c[1]*k; }); y+=rh; linha(y);
+    bl.rows.forEach((r,ri)=>{ let xx=0; bl.cols.forEach((c,j)=>{ TX(D,c[2]?xx+c[1]*k-1*k:xx+1*k,y+rh*0.72,String(r[j]),1.5,{a:c[2]?"e":"s",b:!!(bl.neg&&ri===bl.rows.length-1)}); xx+=c[1]*k; }); y+=rh; linha(y); });
+    let xx=0; [0,...bl.cols.map(c=>{ xx+=c[1]*k; return xx; })].forEach(xv=>L(D,xv,y-rh*(bl.rows.length+1),xv,y,.18,"COTAS")); y+=7*k; });
+  return D; }
+const linhasRel=rel=>rel.map(r=>[r.el,r.pos,f(r.fi,1),String(r.q),f(r.c*100,0),f(r.tot,2)]);
+const COLS_REL=[["PEÇA",30],["POS.",11],["Ø (mm)",13,1],["QTD",11,1],["C. UNIT (cm)",20,1],["C. TOTAL (m)",21,1]];
+const blocoResumo=AR=>[{t:"RESUMO DO AÇO CA-50 / CA-60",cols:[["Ø (mm)",14],["COMPR. (m)",20,1],["PESO (kg)",18,1],["+10% (kg)",18,1],["BARRAS 12 m",20,1]],neg:1,
+    rows:[...AR.resumo.map(o=>[f(o.fi,1),f(o.m,1),f(o.kg,1),f(o.kg10,1),String(o.barras)]),["TOTAL","",f(AR.tot,1),f(AR.tot10,1),String(AR.resumo.reduce((s0,o)=>s0+o.barras,0))]]},
+  {t:"AÇO POR PEÇA",cols:[["PEÇA",40],["PESO (kg)",20,1]],rows:AR.porTipo.map(([n,v])=>[n,f(v,1)])}];
+
+// estrutura simples: ferros de cada peça e resumo do aço por bitola
+function acoSimples(ES){ const Q=ES.Q, CF=ES.CF, vb=CF.vb, pl=CF.pl, le=g=>(2*(num(g.ga)+num(g.gb))+10)/100, tr=num(CF.trasp)/100;
+  const mVB=(Q.vbMeters+Q.ciMeters)*4+(Q.lBars+Q.cLBars)*2*tr, mPL=Q.plMeters*4, eVB=(Q.vbMeters+Q.ciMeters)*(100/num(vb.s))*le(vb), ePL=Q.plMeters*(100/num(pl.s))*le(pl);
+  const L0={}; const ad=(nm,mm,m,kgm)=>{ const o=L0[nm]=L0[nm]||{nm,mm,m:0,kg:0}; o.m+=m; o.kg+=m*kgm; };
+  ad(`ø ${vb.bit}" (${f(BIT_F[vb.bit].mm,1)} mm)`,BIT_F[vb.bit].mm,mVB,BIT_F[vb.bit].kg); ad(`ø ${pl.bit}" (${f(BIT_F[pl.bit].mm,1)} mm)`,BIT_F[pl.bit].mm,mPL,BIT_F[pl.bit].kg);
+  ad(`ø ${f(EST_F[vb.est].mm,1)} mm (estribos)`,EST_F[vb.est].mm,eVB,EST_F[vb.est].kg); ad(`ø ${f(EST_F[pl.est].mm,1)} mm (estribos)`,EST_F[pl.est].mm,ePL,EST_F[pl.est].kg);
+  const rows=Object.values(L0).sort((a,b)=>b.mm-a.mm), trKg=Q.trM*num(CF.tr.kg), tot=rows.reduce((a,o)=>a+o.kg,0)+trKg;
+  const pecas=[...ES.vigas.map(v=>[v.nomeB,`${vb.b}x${vb.h}`,`4 ferros ø ${vb.bit}"`,`estribo ø${f(EST_F[vb.est].mm,1)} c/${vb.s}`,f(v.L)]),
+    ...(Q.ciOn?ES.vigas.map(v=>[v.nome.replace("VC","CI"),`${CF.ci.b}x${CF.ci.h}`,`4 ferros ø ${vb.bit}"`,`estribo ø${f(EST_F[vb.est].mm,1)} c/${vb.s}`,f(v.L)]):[]),
+    [`${ES.pil[0]?ES.pil[0].nome:"C1"} a ${ES.pil.length?ES.pil[ES.pil.length-1].nome:""} (${ES.pil.length}x)`,`${pl.b}x${pl.h}`,`4 ferros ø ${pl.bit}"`,`estribo ø${f(EST_F[pl.est].mm,1)} c/${pl.s}`,f(Q.cut)]];
+  return {rows,trKg,tot,pecas}; }
 // estrutura simples (igual ao Detalhador de Fundação): quantidades de coluna pronta, aço, concreto e serviços
 function calcSimples(G,R,CF){ const vb=CF.vb, pl=CF.pl, br=CF.br, lp=num(CF.peca)||6, tr=num(CF.trasp)/100, pieces=(L0,l,t0)=>L0<=l?1:Math.ceil((L0-l)/(l-t0))+1;
   const kgm=(g,bit,est)=>{ const le=(2*(num(g.ga)+num(g.gb))+10)/100; return 4*BIT_F[bit].kg+(100/num(g.s))*le*EST_F[est].kg; };
@@ -3017,6 +3260,11 @@ function simbHidro(D,q){ const k=D.k, [x,y]=q.p;
   if(q.t==="cs"){ const e=1.6*k; PL(D,[[x-e,y-e],[x+e,y-e],[x+e,y+e],[x-e,y+e],[x-e,y-e]],.3,"ESGOTO"); CI(D,x,y,1.0*k,.25,"ESGOTO"); return; }
   if(q.t==="ci"||q.t==="cg"){ const e=2.4*k; PL(D,[[x-e,y-e],[x+e,y-e],[x+e,y+e],[x-e,y+e],[x-e,y-e]],.4,"ESGOTO"); if(q.t==="cg"){ L(D,x-e,y-e,x+e,y+e,.18,"ESGOTO"); L(D,x-e,y+e,x+e,y-e,.18,"ESGOTO"); } else L(D,x-e,y-e,x+e,y+e,.18,"ESGOTO"); return; }
   if(q.t==="tv"){ CI(D,x,y,1.3*k,.3,"ESGOTO"); CI(D,x,y,0.5*k,.25,"ESGOTO"); return; }
+  if(q.t==="rs"){ const r=Math.max(0.05,1.2*k); CI(D,x,y,r,.3,"ESGOTO"); CI(D,x,y,r*0.45,.2,"ESGOTO"); return; }
+  if(q.t==="rsc"){ const r=Math.max(0.05,1.2*k); CI(D,x,y,r,.3,"ESGOTO"); L(D,x-r*0.7,y-r*0.7,x+r*0.7,y+r*0.7,.18,"ESGOTO"); L(D,x-r*0.7,y+r*0.7,x+r*0.7,y-r*0.7,.18,"ESGOTO"); return; }
+  if(q.t==="rq"){ const e=Math.max(0.075,1.3*k); PL(D,[[x-e,y-e],[x+e,y-e],[x+e,y+e],[x-e,y+e],[x-e,y-e]],.3,"ESGOTO"); for(let i=-1;i<=1;i++) L(D,x-e*0.7,y+i*e*0.45,x+e*0.7,y+i*e*0.45,.15,"ESGOTO"); return; }
+  if(q.t==="rl"){ const Lr=q.len||Math.max(0.6,8*k), w=Math.max(0.08,1.2*k), u=q.rot?[0,1]:[1,0], n=[-u[1],u[0]], c=(a,b)=>[x+u[0]*a+n[0]*b,y+u[1]*a+n[1]*b];
+    PL(D,[c(-Lr/2,-w/2),c(Lr/2,-w/2),c(Lr/2,w/2),c(-Lr/2,w/2),c(-Lr/2,-w/2)],.3,"ESGOTO"); const nn=Math.max(3,Math.round(Lr/0.08)); for(let i=1;i<nn;i++){ const a=-Lr/2+Lr*i/nn; L(D,...c(a,-w/2),...c(a,w/2),.12,"ESGOTO"); } return; }
   if(q.t==="desc"){ CI(D,x,y,1.5*k,.35,"AGUA"); PG(D,[[x-1*k,y],[x,y-1*k],[x+1*k,y],[x,y+1*k]],"AGUA"); return; }
   if(q.t==="hd"){ const e=2*k; PL(D,[[x-e,y-1.2*k],[x+e,y-1.2*k],[x+e,y+1.2*k],[x-e,y+1.2*k],[x-e,y-1.2*k]],.35,"AGUA"); TX(D,x,y,"HD",1.3,{b:true,l:"AGUA"}); return; } }
 function setaFluxo(D,a,b,l){ const k=D.k, dx=b[0]-a[0], dy=b[1]-a[1], L0=Math.hypot(dx,dy); if(L0<4*k) return; const ux=dx/L0, uy=dy/L0, m=[(a[0]+b[0])/2,(a[1]+b[1])/2], s=1.3*k;
@@ -3046,6 +3294,10 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
   // rótulo do coletor no trecho mais longo
   { let lg=null; HD.trechos.forEach(([a,b])=>{ if(!lg||b-a>lg[1]-lg[0]) lg=[a,b]; }); if(lg){ const p=HD.anelP(lg[0]+(lg[1]-lg[0])*0.3), q=HD.anelP(lg[0]+(lg[1]-lg[0])*0.3+0.3); rotuloLinha(D,p,q,"Ø100 i=1%","ESGOTO",-1); } }
   HD.caixas.forEach(c=>{ simbHidro(D,{t:c.tipo==="CG"?"cg":"ci",p:c.p}); TX(D,c.p[0]+3*k,c.p[1]-3*k,c.tipo==="CG"?"CG":"CI",1.5,{a:"s",b:true,l:"ESGOTO"}); });
+  (HD.extra||[]).forEach(o=>{ const borda=o.t==="rl"?(o.len||0.8)/2:0;
+    if(o.alvo){ let a=o.p; if(borda){ const u=o.rot?[0,1]:[1,0], s0=(o.alvo[0]-o.p[0])*u[0]+(o.alvo[1]-o.p[1])*u[1]; a=[o.p[0]+u[0]*Math.max(-borda,Math.min(borda,s0)),o.p[1]+u[1]*Math.max(-borda,Math.min(borda,s0))]; }
+      L(D,...a,...o.alvo,.35,"ESGOTO"); setaFluxo(D,a,o.alvo,"ESGOTO"); rotuloLinha(D,a,o.alvo,`Ø${o.d} i=2%`,"ESGOTO"); }
+    simbHidro(D,{t:o.t,p:o.p,len:o.len,rot:o.rot}); TX(D,o.p[0]+(borda&&!o.rot?0:2.6*k),o.p[1]-(borda&&!o.rot?2.4*k:2.6*k),ROT_RALO[o.t]+(o.t==="rl"?` ${f((o.len||0.8)*100,0)} cm`:""),1.4,{a:borda&&!o.rot?"m":"s",b:true,l:"ESGOTO"}); });
   const FS=fossaSeptica(G,HD); if(FS&&FS.pos) desenhaFossaPlanta(D,G,FS,HD);
   else if(HD.caixas.some(c=>!(G.casas||[]).some(P=>pontoDentro(c.p,P)))&&passeios(G).length){ const T=terreno(G); PL(D,[...T.lote,T.lote[0]],.25,"LOTE",true); desenhaPasseios(D,G); }
   else if(HD.fim&&HD.out){ L(D,...HD.fim.p,...HD.out,.5,"ESGOTO"); setaFluxo(D,HD.fim.p,HD.out,"ESGOTO"); TX(D,HD.out[0],HD.out[1]+2.5*k*(HD.out[1]>=HD.fim.p[1]?1:-1),"PARA A REDE PÚBLICA / FOSSA",1.5,{b:true,l:"ESGOTO"}); }
@@ -3064,7 +3316,7 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
     item({lin:1,w:.3,l:"AGUA"},"Água fria (ramal na parede)"); item({lin:1,w:.25,l:"AGUA",d:1},"Barrilete / alimentação (na laje)");
     item({t:"desc"},"Coluna de água fria (descida)"); item({t:"af"},"Ponto de água fria");
     item({lin:1,w:.5,l:"ESGOTO"},"Esgoto (sob o piso)"); item({t:"es"},"Saída de esgoto do aparelho");
-    item({t:"cs"},"Caixa sifonada 150x150"); item({t:"ci"},"Caixa de inspeção 60x60"); item({t:"cg"},"Caixa de gordura"); item({t:"tv"},"Tubo de ventilação Ø50"); item({t:"hd"},"Hidrômetro (AL = alimentação do reservatório)"); }
+    item({t:"cs"},"Caixa sifonada 150x150"); item({t:"ci"},"Caixa de inspeção 60x60"); item({t:"cg"},"Caixa de gordura"); { const tps=[...new Set((HD.extra||[]).map(o=>o.t))]; [["rs","Ralo sifonado (RS) Ø100"],["rsc","Ralo seco (RSC) Ø100"],["rq","Ralo quadrado (RQ) grelha 15x15"],["rl","Ralo linear (RL)"]].forEach(([t,tx])=>{ if(tps.includes(t)) item({t,len:t==="rl"?0.6:undefined},tx); }); } item({t:"tv"},"Tubo de ventilação Ø50"); item({t:"hd"},"Hidrômetro (AL = alimentação do reservatório)"); }
   return D;
 }
 const notasHidro=HD=>[`Reservatório: ${HD.pessoas} pessoas x ${HD.cons} L/dia = ${HD.Vn} L; adotado ${HD.res?HD.res.vol:"-"} L (1 dia de consumo).`,`Água fria em PVC soldável: alimentação e colunas Ø25, barrilete Ø32, sub-ramais conforme o quadro.`,`Esgoto em PVC: vaso Ø100 i=1%; ramais Ø40/Ø50 i=2%; coletor Ø100 i=1% até a rede pública ou fossa.`,`Caixa de inspeção a cada mudança de direção e no máximo a cada 25 m; pia da cozinha passa pela caixa de gordura.`,`Ventilação Ø50 junto ao vaso, subindo até 0,30 m acima do telhado.`,`Traçado sugerido pelo app: conferir no projeto hidrossanitário e na obra.`];
@@ -3576,7 +3828,7 @@ const notasReforma=q=>[`Demolição: ${f(q.dem)} m² de alvenaria (${f(q.Ld)} m 
 const PRECO0={fach_porc:180,fach_cer:120,fach_pedra:160,fach_tijolinho:140,fach_ripado:260,fach_acm:420,demolicao:35,retirada:60,entulho:90,limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
   telha_Cerâmica:55,telha_Concreto:60,telha_Fibrocimento:40,telha_Metálica:75,telha_Termoacústica:160,cumeeira:35,calha:90,condutor:45,rufo:40,
   porta:850,porta_vidro:950,porta_fer:1200,porta_aco:1100,porta_pvc:1300,janela_vt:480,janela_mad:700,janela_fer:420,janela_aco:400,janela_pvc:850,vigota:32,caibro:14,janela:650,box:900,contrapiso:45,pint_teto:22,pint_esq:38,piso_arm:70,regulariz:30,piso_car:115,piso_cam:165,piso_porc60:120,piso_porc80:150,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
-  forro_pvc:75,forro_gesso:90,forro_drywall:110,parede_dw:150,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,aterr:180,pt_agua:220,pt_esgoto:180,tubo_ap:55,cx_areia:280,caixa:350,reservatorio:900,fossa:6500,
+  forro_pvc:75,forro_gesso:90,forro_drywall:110,parede_dw:150,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,aterr:180,pt_agua:220,pt_esgoto:180,tubo_ap:55,cx_areia:280,caixa:350,ralo:95,reservatorio:900,fossa:6500,
   vaso:750,lavatorio:350,chuveiro:250,pia:650,tanque:450,pint_int:28,pint_ext:32,limpfinal:8};
 const preco=k=>{ const v=S.orc&&S.orc.p&&S.orc.p[k]; return v!=null&&v!==""&&isFinite(+v)?+v:(PRECO0[k]??0); };
 const money=v=>{ const s=Math.abs(v).toFixed(2).split("."); return (v<0?"-":"")+"R$ "+s[0].replace(/\B(?=(\d{3})+(?!\d))/g,".")+","+s[1]; };
@@ -3625,7 +3877,8 @@ function orcamento(){
     it(E?`Entrada de energia ${nm(U=>U.RE.ent.nome.toLowerCase())} (padrão da concessionária), cabo ${nm(U=>f(U.RE.ent.sEnt,0))} mm²${EL.multi?", um medidor por sala":""}`:"Entrada de energia (padrão da concessionária)","un",G.rooms.length?(E?UE.length:1):0,"padrao");
     if(E) it("Aterramento: haste 5/8\" x 2,40 m, cabo e caixa de inspeção","un",UE.length,"aterr"); }
   if(HD.salas.length){ etapa("INSTALAÇÕES HIDROSSANITÁRIAS"); it("Pontos de água fria","pt",HD.ap.length,"pt_agua"); it("Pontos de esgoto","pt",HD.ap.filter(a=>a.es).length+HD.salas.filter(s=>s.cs).length,"pt_esgoto");
-    it("Caixas de inspeção, gordura e sifonadas","un",HD.caixas.length+HD.salas.filter(s=>s.cs).length,"caixa");
+    it("Caixas de inspeção, gordura e sifonadas","un",HD.caixas.length+HD.salas.filter(s=>s.cs).length+(HD.extra||[]).filter(o=>o.t==="cs").length,"caixa");
+    { const nr=(HD.extra||[]).filter(o=>o.t!=="cs").length; if(nr) it("Ralos (sifonado, seco, quadrado e linear) com grelha","un",nr,"ralo"); }
     { const PV=redePluvial(G,HD); if(PV&&!PV.livre){ const Lt=Object.values(PV.tubos).reduce((a,b)=>a+b,0); it(`Rede de águas pluviais enterrada PVC Ø${Object.keys(PV.tubos).join("/")} até a ${PV.destino==="galeria"?"galeria":"sarjeta"}`,"m",Lt*1.1,"tubo_ap"); it("Caixas de areia e de inspeção pluviais com tampa","un",PV.caixas.length,"cx_areia"); } }
     { const FS=fossaSeptica(G,HD); if(FS) it(`Conjunto tanque séptico ${FS.cil?"cilíndrico ":""}${f(FS.V,0)} L${FS.fil?" + filtro anaeróbio":""} + sumidouro${FS.ns>1?"s":""} Ø${f(FS.Ds)}`,"un",1,"fossa"); } it(`Reservatório ${HD.res?HD.res.vol:""} L com instalação`,"un",HD.res?1:0,"reservatorio");
     etapa("LOUÇAS E METAIS"); const c=t=>HD.ap.filter(a=>a.nome===t).length;
@@ -4645,8 +4898,8 @@ function render(){
     $("tabRefA").innerHTML=`<tr><th>Esquadria</th><th>Parede</th><th class="n">L x H (m)</th><th>Situação</th></tr>`+(G2.abs.length?G2.abs.map(g=>`<tr><td><b>${esc(g.a.n||g.tipo)}</b> <span style="color:var(--muted)">${esc(g.tipo)}</span></td><td>${g.w.i+1}${stW(g.w.i)==="d"?" (demolida)":""}</td><td class="n">${f(g.l)} x ${f(num(g.a.a)||2.1)}</td><td><select data-ra="${g.k}" aria-label="Situação da esquadria"${stW(g.w.i)==="d"?" disabled":""}>${ST_AB.map(([v,t])=>`<option value="${v}"${stA(g.a)===v?" selected":""}>${t}</option>`).join("")}</select></td></tr>`).join(""):`<tr><td colspan="4" style="color:var(--muted)">Sem portas ou janelas.</td></tr>`);
     $("refNotas").innerHTML=ref?notasReforma(q).map(t=>`<li>${esc(t)}</li>`).join(""):""; }
   { const LM=layoutMoveis(G); $("lay").innerHTML=svgDe(desenhoLayout(G,k,LM),"lay"); LAYLM=LM; layBarra(); layMarca();
-    const EL=pontosEletricos(G,LM); $("ele").innerHTML=svgDe(desenhoEletrica(G,k,LM,EL),"ele"); ELV=EL; eleMarca();
-    const HD=redeHidro(G,LM); $("hid").innerHTML=svgDe(desenhoHidro(G,k,LM,HD));
+    const EL=pontosEletricos(G,LM); $("ele").innerHTML=svgDe(desenhoEletrica(G,k,LM,EL),"ele"); ELV=EL; eleMarca(); eleBotoes();
+    const HD=redeHidro(G,LM); $("hid").innerHTML=svgDe(desenhoHidro(G,k,LM,HD),"hid"); HDV=HD; hidMarca(); hidBotoes();
     { const PV=redePluvial(G,HD); $("pluvDes").innerHTML=PV?svgDe(desenhoPluvial(G,k,PV)):"";
       $("pluvChips").innerHTML=PV&&!PV.livre?[`${PV.cond.length} condutores`,`${PV.caixas.filter(c=>c.tipo==="CA").length} caixas de areia`,`${PV.caixas.filter(c=>c.tipo==="CI").length} caixas de inspeção`,`Vazão ${f(PV.Qtot,0)} L/min`,...Object.entries(PV.tubos).map(([d,m])=>`Tubo Ø${d}: ${f(m*1.1,1)} m`),`Condutores: ${f(PV.Lcond,1)} m`].map(t=>`<span class="chip">${esc(t)}</span>`).join(""):"";
       $("pluvAvisos").innerHTML=PV?PV.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join(""):"";
@@ -4681,7 +4934,8 @@ function render(){
     $("forNotas").innerHTML=notasForro(FO).map(t=>`<li>${esc(t)}</li>`).join("");
     $("hidChips").innerHTML=G.vazio||!HD.salas.length?"":[`${HD.ap.length} pontos de água`,`${HD.salas.length} áreas molhadas`,`${HD.caixas.filter(c=>c.tipo==="CI").length} caixas de inspeção`,`Reservatório ${HD.res?HD.res.vol:"-"} L`].map(t=>`<span class="chip">${t}</span>`).join("");
     $("hidAvisos").innerHTML=HD.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join("");
-    $("tabHid").innerHTML=`<tr><th>Ambiente</th><th>Aparelho</th><th class="n">Água fria</th><th class="n">Altura</th><th class="n">Esgoto</th></tr>`+(HD.ap.length?HD.ap.map(a=>`<tr><td>${esc(a.r.n)}</td><td>${esc(a.nome)}</td><td class="n">Ø${a.dAf}</td><td class="n">${a.h} m</td><td class="n">${a.dEs?`Ø${a.dEs}`:"pelo ralo"}</td></tr>`).join(""):`<tr><td colspan="5" style="color:var(--muted)">Sem pontos.</td></tr>`);
+    $("tabHid").innerHTML=`<tr><th>Ambiente</th><th>Aparelho</th><th class="n">Água fria</th><th class="n">Altura</th><th class="n">Esgoto</th></tr>`+(HD.ap.length?HD.ap.map(a=>`<tr><td>${esc(a.r.n)}</td><td>${esc(a.nome)}</td><td class="n">Ø${a.dAf}</td><td class="n">${a.h} m</td><td class="n">${a.dEs?`Ø${a.dEs}`:"pelo ralo"}</td></tr>`).join(""):`<tr><td colspan="5" style="color:var(--muted)">Sem pontos.</td></tr>`)
+      +(HD.extra||[]).map(o=>`<tr><td>${esc(o.r?o.r.n:"Área externa")}</td><td>${esc(NOME_RALO[o.t])}${o.t==="rl"?` ${f((o.len||0.8)*100,0)} cm`:""} (acrescentado)</td><td class="n">-</td><td class="n">piso</td><td class="n">Ø${o.d}</td></tr>`).join("");
     $("hidNotas").innerHTML=notasHidro(HD).map(t=>`<li>${esc(t)}</li>`).join("");
     $("fossa.dt").closest("label").hidden=S.fossa.tanque!=="cil"; $("fossa.wt").closest("label").hidden=S.fossa.tanque==="cil";
     { const sl=$("fossa.local"), PSs=passeios(G); sl.innerHTML=`<option value="lote">Dentro do lote (1,50 m de afastamento)</option>`+PSs.map(q=>`<option value="${q.i+1}">No passeio da ${esc(q.nome)}</option>`).join("");
@@ -4692,7 +4946,7 @@ function render(){
       if(FS){ $("fossaDes").innerHTML=svgDe(desenhoFossa(0.05,FS)); $("tabFossa").innerHTML=`<tr><th>Item</th><th class="n">Valor</th></tr>`+linhasFossa(FS).map(r=>`<tr><td>${esc(r[0])}</td><td class="n">${esc(r[1])}</td></tr>`).join("");
         $("fossaNotas").innerHTML=notasFossa(FS).map(t=>`<li>${esc(t)}</li>`).join("");
         $("fossaAvisos").innerHTML=FS.passeio?(FS.pos?`<div class="alert warn">Conjunto no passeio da ${esc(FS.rua)}: precisa de autorização da prefeitura/concessionária. A NBR 7229 recomenda 1,50 m de afastamento de construções; aqui ele fica junto da parede.${FS.estreito?` O passeio (${f(num(S.terr.calcada))} m) é mais estreito que o conjunto: confira a largura da calçada.`:""}${FS.cabe?"":" Parte do conjunto sai do passeio."}</div>`:`<div class="alert bad">${esc(FS.motivo||"Não achei lugar no passeio.")}</div>`)
-          :FS.cabe?"":`<div class="alert bad">O conjunto não cabe no lote com ${f(FS.afast)} m de afastamento da construção e das divisas (folga máxima encontrada ${f(FS.pos?FS.pos.cl:0)} m). Ele foi colocado no melhor lugar possível; avalie outra solução (unidades mais compactas, tanque e filtro conjugados, vala de infiltração) com a concessionária/prefeitura.</div>`;
+          :FS.cabe?"":FS.man?`<div class="alert bad">${FS.pos&&FS.pos.cl<0?"No lugar escolhido, parte do conjunto sai do lote ou fica em cima da construção.":`No lugar escolhido, o conjunto fica a ${f(FS.pos?FS.pos.cl:0)} m da construção ou da divisa; a NBR 7229 pede ${f(FS.afast)} m.`} Arraste para outro ponto ou toque em <b>Voltar ao lugar automático</b>.</div>`:`<div class="alert bad">O conjunto não cabe no lote com ${f(FS.afast)} m de afastamento da construção e das divisas (folga máxima encontrada ${f(FS.pos?FS.pos.cl:0)} m). Ele foi colocado no melhor lugar possível; avalie outra solução (unidades mais compactas, tanque e filtro conjugados, vala de infiltração) com a concessionária/prefeitura.</div>`;
         if(FS.av&&FS.av.length) $("fossaAvisos").innerHTML+=FS.av.map(t0=>`<div class="alert warn">${esc(t0)}</div>`).join(""); } }
     const nT=t=>EL.pts.filter(q=>q.t===t).length;
     $("eleChips").innerHTML=G.vazio?"":[`${nT("luz")} pontos de luz`,`${nT("int")} interruptores`,`${nT("tug")} tomadas (TUG)`,`${nT("tue")} TUE`,`${EL.C.length} circuitos`,`Potência instalada ${f(EL.tot/1000)} kVA`].map(t=>`<span class="chip">${t}</span>`).join("");
@@ -4719,11 +4973,23 @@ function render(){
       $("estrChips").innerHTML=[`${ES.pil.length} pilares`,`${ES.vigas.length} vigas`,ES.temLaje?`${ES.lajes.length} lajes`:"sem laje",`Carga total ≈ ${f(ES.Ntot,0)} kN`,ES.fund==="sapata"?`Sapatas: ${ES.tipos.map(t0=>t0.nome).join(", ")}`:`Blocos: ${ES.tipos.map(t0=>t0.nome).join(", ")}`].map(t0=>`<span class="chip">${t0}</span>`).join("");
       $("tabPil").innerHTML=`<tr><th>Pilar</th><th class="n">Seção (cm)</th><th class="n">Carga (kN)</th><th>Fundação</th></tr>`+ES.pil.map(q=>`<tr><td><b>${q.nome}</b></td><td class="n">${f(q.b*100,0)}x${f(q.h*100,0)}</td><td class="n">${f(q.N,0)}</td><td>${q.fn} · ${esc(q.f.tx)}</td></tr>`).join("");
       $("tabVig").innerHTML=`<tr><th>Peça</th><th class="n">Seção / h</th><th class="n">Vão máx. (m)</th></tr>`+ES.vigas.map(v=>`<tr><td><b>${v.nome}</b> / ${v.nomeB}</td><td class="n">${f(v.b*100,0)}x${f(v.h*100,0)} / ${f(v.b*100,0)}x${f(v.hb*100,0)}</td><td class="n">${f(v.Lm)}</td></tr>`).join("")+ES.lajes.map(l=>`<tr><td><b>${l.nome}</b> ${esc(l.r.n)}</td><td class="n">${l.h?`h=${l.h} cm`:"-"} (${esc(l.tipo)})</td><td class="n">${f(l.lmin)}</td></tr>`).join("");
-      $("estrNotas").innerHTML=notasEstr(ES).map(t0=>`<li>${esc(t0)}</li>`).join(""); } }
+      $("estrNotas").innerHTML=notasEstr(ES).map(t0=>`<li>${esc(t0)}</li>`).join("");
+      if(!$("tab-estr").hidden){ const AR=armadura(G,ES), tb=(cols,rows)=>`<tr>${cols.map(c=>`<th${c[1]?' class="n"':""}>${c[0]}</th>`).join("")}</tr>`+rows.map(r=>`<tr>${r.map((v,j)=>`<td${cols[j][1]?' class="n"':""}>${v}</td>`).join("")}</tr>`).join("");
+        $("armChips").innerHTML=[`Aço total ${f(AR.tot,0)} kg (${f(AR.tot10,0)} kg com 10% de perda)`,...AR.porTipo.map(([n,v])=>`${n}: ${f(v,0)} kg`)].map(t0=>`<span class="chip">${t0}</span>`).join("");
+        $("armAvisos").innerHTML=AR.av.map(t0=>`<div class="alert warn">${esc(t0)}</div>`).join("");
+        $("tabArmV").innerHTML=tb([["Viga"],["Seção (cm)",1],["Embaixo"],["Em cima"],["Nos apoios"],["Ferros",1],["Estribos"],["Aço (kg)",1]],AR.vigas.map(a=>[`<b>${a.nome}</b>`,`${f(a.b*100,0)}x${f(a.h*100,0)}`,`${a.inf.n}Ø${f(a.inf.fi,1)}`,`${a.sup.n}Ø${f(a.sup.fi,1)}`,a.nNeg?`+${a.nNeg}Ø${f(a.sup.fi,1)}`:"-",`<b>${a.ferros}</b>`,`Ø5,0 c/${f(a.s*100,0)}`,f(a.kg,1)]));
+        $("tabArmP").innerHTML=tb([["Peça"],["Seção / tamanho",1],["Armadura"],["Aço (kg)",1]],[...AR.pil.map(p=>[`<b>${p.q.nome}</b>`,`${f(p.q.b*100,0)}x${f(p.q.h*100,0)}`,`${p.n} ferros Ø${f(p.fi,1)} (C=${f(p.Ll*100,0)} cm) · estribo Ø5,0 c/${f(p.sE*100,0)}`,f(p.kg,1)]),...AR.sap.map(x=>[`<b>${x.nome}</b> (${x.un}x)`,`${f(x.B)} x ${f(x.B)} x ${f(x.h)}`,`${x.nb}+${x.nb} Ø${f(x.fi,1)} c/${f(x.s*100,1).replace(",0","")} (C=${f(x.c*100,0)} cm)`,f(x.kg,1)])]);
+        const larg=(sv,px)=>sv.replace(/^<svg viewBox="0 0 ([\d.]+) ([\d.]+)"/,(m0,w,h)=>`<svg style="width:${(+w*px).toFixed(0)}px;max-width:100%;margin-bottom:10px" viewBox="0 0 ${w} ${h}"`);
+        $("armVigas").innerHTML=AR.vigas.map(a=>larg(svgDe(desenhoVigasDet(0.05,[a])),3.4)).join(""); $("armPil").innerHTML=larg(svgDe(desenhoPilSapDet(0.05,ES,AR)),3.4);
+        $("tabRel").innerHTML=tb([["Peça"],["Pos."],["Ø (mm)",1],["Qtd",1],["C. unit (cm)",1],["C. total (m)",1],["Peso (kg)",1]],AR.rel.map(r=>[esc(r.el),r.pos,f(r.fi,1),r.q,f(r.c*100,0),f(r.tot,2),f(r.kg,1)]));
+        $("tabRes").innerHTML=tb([["Ø (mm)"],["Compr. (m)",1],["Peso (kg)",1],["+10% (kg)",1],["Barras de 12 m",1]],[...AR.resumo.map(o=>[f(o.fi,1),f(o.m,1),f(o.kg,1),f(o.kg10,1),o.barras]),["<b>Total</b>","",`<b>${f(AR.tot,1)}</b>`,`<b>${f(AR.tot10,1)}</b>`,`<b>${AR.resumo.reduce((a,o)=>a+o.barras,0)}</b>`]]);
+        $("tabResP").innerHTML=tb([["Aço por peça"],["Peso (kg)",1]],AR.porTipo.map(([n,v])=>[n,f(v,1)])); } } }
   { const ES=estrutural(G,true); if(ES){ const kk=Math.max(0.04,kTela(G)); $("estSForma").innerHTML=svgDe(desenhoForma(G,kk,ES)); $("estSFund").innerHTML=svgDe(desenhoFundacao(G,kk,ES)); $("estSDet").innerHTML=svgDe(desenhoDetColunas(0.012,ES));
       const Q=ES.Q, CF=ES.CF; $("estSChips").innerHTML=[`${ES.pil.length} pilares (coluninhas)`,`${Q.nbr} brocas ø${CF.br.d}`,`${Q.vbPieces+Q.ciPieces} peças ø ${CF.vb.bit}"`,`${Q.plPieces} peças ø ${CF.pl.bit}"`,`Aço ${f(Q.acoTot,0)} kg`,`Concreto ${f(Q.Vbr+Q.Vvb+Q.Vci+Q.Vvg,2)} m³`,(S.estr.sis==="simples"||(S.estr.sis==="auto"&&!(num(S.laje)>0.04)))?"vai no PDF":"não vai no PDF (veja a aba Estrutural)"].map(t0=>`<span class="chip">${t0}</span>`).join("")+(ES.avisos||[]).map(t0=>`<div class="alert warn">${esc(t0)}</div>`).join("");
       $("tabEstS").innerHTML=`<tr><th>Item</th><th class="n">Un</th><th class="n">Qtd</th><th>Obs.</th></tr>`+linhasEstS(ES).map(r=>r[0]==="grp"?`<tr><td colspan="4"><b>${esc(r[1])}</b></td></tr>`:`<tr><td>${esc(r[0])}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td><td style="color:var(--muted);font-size:12px">${esc(r[3])}</td></tr>`).join("");
-      $("estSNotas").innerHTML=notasEstrS(ES).map(t0=>`<li>${esc(t0)}</li>`).join(""); } }
+      $("estSNotas").innerHTML=notasEstrS(ES).map(t0=>`<li>${esc(t0)}</li>`).join("");
+      { const AS=acoSimples(ES); $("tabEstSFer").innerHTML=`<tr><th>Peça</th><th class="n">Seção (cm)</th><th>Ferros</th><th>Estribos</th><th class="n">Compr. (m)</th></tr>`+AS.pecas.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td class="n">${r[1]}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td class="n">${r[4]}</td></tr>`).join("");
+        $("tabEstSRes").innerHTML=`<tr><th>Bitola</th><th class="n">Compr. (m)</th><th class="n">Peso (kg)</th><th class="n">Barras 12 m</th></tr>`+AS.rows.map(o=>`<tr><td>${esc(o.nm)}</td><td class="n">${f(o.m,1)}</td><td class="n">${f(o.kg,1)}</td><td class="n">${Math.ceil(o.m*1.1/12)}</td></tr>`).join("")+`<tr><td>Treliça ${esc(ES.CF.tr.nome)}</td><td class="n">${f(ES.Q.trM,1)}</td><td class="n">${f(AS.trKg,1)}</td><td class="n">-</td></tr><tr class="tot"><td>Total</td><td></td><td class="n">${f(AS.tot,1)}</td><td></td></tr>`; } } }
   { const PQ=pintura(G); if(PQ){ $("pintDes").innerHTML=svgDe(desenhoPintura(G,Math.max(0.035,kTela(G)),PQ));
       const tb=$("tabPint"); if(!(document.activeElement&&tb.contains(document.activeElement))) tb.innerHTML=`<tr><th>Ambiente</th><th>Paredes</th><th>Cor das paredes</th><th class="n">m²</th><th>Teto</th><th>Cor do teto</th></tr>`+PQ.amb.map(a=>`<tr><td><b>${esc(a.r.n)}</b></td><td><select data-pp="${a.r.labIdx}" aria-label="Tinta de ${esc(a.r.n)}">${PINT.map(([v,t0])=>`<option value="${v}"${v===a.rp?" selected":""}>${t0}</option>`).join("")}</select></td><td><input type="text" data-pc="${a.r.labIdx}" value="${esc(a.corP)}" aria-label="Cor das paredes de ${esc(a.r.n)}"></td><td class="n">${f(a.area)}</td><td>${a.teto==="pva"?"Látex PVA":a.teto==="verniz"?"Verniz":a.ft==="pvc"?"Forro PVC":"-"}</td><td>${a.teto?`<input type="text" data-pt="${a.r.labIdx}" value="${esc(a.corT)}" aria-label="Cor do teto de ${esc(a.r.n)}">`:"-"}</td></tr>`).join("");
       $("tabPintM").innerHTML=`<tr><th>Produto</th><th class="n">Quantidade</th><th>Comprar</th><th>Onde</th></tr>`+PQ.M.map(m=>`<tr><td>${esc(m.prod)}</td><td class="n">${f(m.qtd,1)} ${m.un}</td><td>${esc(m.emb)}</td><td style="color:var(--muted);font-size:12px">${esc(m.onde)}</td></tr>`).join("");
@@ -4773,6 +5039,13 @@ function eleAchar(p){ if(!ELV) return null; let b=null; ELV.pts.forEach(q=>{ con
 function eleGrava(q,o){ if(q.add){ const j=+q.key.split("|")[1]; Object.assign(S.eleAdd[j],o); } else { S.eleM=S.eleM||{}; S.eleM[q.key]=Object.assign({},S.eleM[q.key]||{},o); } ELESEL=q.key; save(); render(); elePainel(); }
 function eleMarca(){ const svg=$("ele").querySelector("svg"), v=VIEW.ele; if(!svg||!v||!ELV) return; const q=ELV.pts.find(x=>x.key===ELESEL); if(!q){ return; }
   const cx=v.pad+(q.p[0]-v.e.x0)/v.k, cy=v.pad+(q.p[1]-v.e.y0)/v.k; svg.insertAdjacentHTML("beforeend",`<circle cx="${cx}" cy="${cy}" r="3.2" fill="none" stroke="#d33" stroke-width="0.5" stroke-dasharray="1 0.6"/>`); }
+// excluir um ponto (o acrescentado some; o automático fica marcado como apagado e pode ser restaurado)
+function eleExclui(q){ if(!q||q.t==="qd") return; if(q.add){ S.eleAdd.splice(+q.key.split("|")[1],1); } else { S.eleM=S.eleM||{}; S.eleM[q.key]={del:true}; }
+  ELESEL=null; ELEMOVE=false; save(); render(); $("elePanel").hidden=true; const m=$("eleDelMsg"); if(m) m.textContent=`${NOME_PT(q)} excluído(a).`; }
+let ELEDEL=false;
+function eleBotoes(){ const a=$("eleApagar"), r=$("eleRestaura"); if(!a) return; a.setAttribute("aria-pressed",ELEDEL?"true":"false"); a.className=ELEDEL?"btn dng":"btn";
+  a.textContent=ELEDEL?"Apagando: toque nos pontos (toque aqui para parar)":"Apagar pontos";
+  const n=Object.values(S.eleM||{}).filter(o=>o&&o.del).length; r.hidden=!n; r.textContent=`Restaurar excluídos (${n})`; }
 function elePainel(p0){ const P=$("elePanel"), q=ELV&&ELV.pts.find(x=>x.key===ELESEL);
   if(!q&&!p0){ P.hidden=true; return; } P.hidden=false;
   if(!q){ const lugar=GG.compAt(...p0); P.innerHTML=`<h4>Acrescentar aqui${lugar&&!lugar.ext?` · ${esc(lugar.n)}`:""}</h4><div class="row" style="margin:0;flex-wrap:wrap">
@@ -4789,11 +5062,13 @@ function elePainel(p0){ const P=$("elePanel"), q=ELV&&ELV.pts.find(x=>x.key===EL
   P.querySelector("[data-m]").onclick=()=>{ ELEMOVE=!ELEMOVE; elePainel(); };
   P.querySelectorAll("[data-pa]").forEach(b=>b.onclick=()=>{ const N=q.N||[0,-1], u=[-N[1],N[0]], d=+b.dataset.pa, E=eleEncaixa(q.t,[q.p[0]+u[0]*d-N[0]*0.02,q.p[1]+u[1]*d-N[1]*0.02]); if(E) eleGrava(q,{x:E.x,y:E.y,N:E.N}); });
   const sa=P.querySelector("[data-alt]"); if(sa) sa.onchange=()=>eleGrava(q,{alt:sa.value});
-  const dl=P.querySelector("[data-del]"); if(dl) dl.onclick=()=>{ if(q.add){ S.eleAdd.splice(+q.key.split("|")[1],1); } else { S.eleM=S.eleM||{}; S.eleM[q.key]={del:true}; } ELESEL=null; ELEMOVE=false; save(); render(); P.hidden=true; };
+  const dl=P.querySelector("[data-del]"); if(dl) dl.onclick=()=>eleExclui(q);
   const au=P.querySelector("[data-auto]"); if(au) au.onclick=()=>{ delete S.eleM[q.key]; ELEMOVE=false; save(); render(); elePainel(); };
   P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; ELESEL=null; ELEMOVE=false; render(); }; }
 { const cont=$("ele"); let arr=null, tArr=0;
-  cont.addEventListener("pointerdown",ev=>{ const p=ptVista(ev,"ele"); if(!p||ELEMOVE) return; const q=eleAchar(p); if(!q) return; arr={id:ev.pointerId,q,p0:p,moveu:false}; ELESEL=q.key; try{ cont.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); });
+  cont.addEventListener("pointerdown",ev=>{ const p=ptVista(ev,"ele"); if(!p||ELEMOVE) return; const q=eleAchar(p); if(!q) return;
+    if(ELEDEL){ ev.preventDefault(); tArr=Date.now(); if(q.t==="qd"){ $("eleDelMsg").textContent="O quadro não pode ser excluído: arraste-o para outro lugar."; return; } eleExclui(q); return; }
+    arr={id:ev.pointerId,q,p0:p,moveu:false}; ELESEL=q.key; try{ cont.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); });
   cont.addEventListener("pointermove",ev=>{ if(!arr||ev.pointerId!==arr.id) return; const p=ptVista(ev,"ele"); if(!p) return; if(!arr.moveu&&Math.hypot(p[0]-arr.p0[0],p[1]-arr.p0[1])<0.08) return; arr.moveu=true; arr.p=p;
     const svg=cont.querySelector("svg"), v=VIEW.ele; let g=svg.querySelector("#eleFantasma"); if(!g){ svg.insertAdjacentHTML("beforeend",`<circle id="eleFantasma" r="2.6" fill="rgba(220,50,50,.25)" stroke="#d33" stroke-width="0.4"/>`); g=svg.querySelector("#eleFantasma"); }
     g.setAttribute("cx",v.pad+(p[0]-v.e.x0)/v.k); g.setAttribute("cy",v.pad+(p[1]-v.e.y0)/v.k); });
@@ -4802,7 +5077,94 @@ function elePainel(p0){ const P=$("elePanel"), q=ELV&&ELV.pts.find(x=>x.key===EL
   cont.addEventListener("click",ev=>{ if(Date.now()-tArr<400) return; const p=ptVista(ev,"ele"); if(!p||!GG||GG.vazio) return;
     if(ELEMOVE){ const q=ELV&&ELV.pts.find(x=>x.key===ELESEL); ELEMOVE=false; if(q){ const E=eleEncaixa(q.t,p); if(E){ eleGrava(q,{x:E.x,y:E.y,N:E.N}); return; } } elePainel(); return; }
     if(eleAchar(p)) return;   // tratado no pointerdown/up
-    ELESEL=null; render(); elePainel(p); }); }
+    if(ELEDEL) return;
+    ELESEL=null; render(); elePainel(p); });
+  $("eleApagar").onclick=()=>{ ELEDEL=!ELEDEL; ELESEL=null; ELEMOVE=false; $("elePanel").hidden=true; $("eleDelMsg").textContent=""; eleBotoes(); render(); };
+  $("eleRestaura").onclick=()=>{ const M=S.eleM||{}; Object.keys(M).forEach(k=>{ if(M[k]&&M[k].del) delete M[k]; }); save(); render(); $("eleDelMsg").textContent="Pontos excluídos voltaram para a planta."; };
+  document.addEventListener("keydown",ev=>{ if((ev.key==="Delete"||ev.key==="Backspace")&&!$("elePanel").hidden&&ELESEL&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){ const q=ELV&&ELV.pts.find(x=>x.key===ELESEL); if(q&&q.t!=="qd"){ ev.preventDefault(); eleExclui(q); } } }); }
+/* ---------------- Planta hidrossanitária: mover caixas e o conjunto fossa/filtro/sumidouro ---------------- */
+let HDV=null, HIDSEL=null, HIDMOVE=false;
+function hidItens(){ const H=HDV; if(!H) return []; const out=[], com=(S.fossa||{}).on==="sim";
+  H.caixas.forEach((c,i)=>{ if(c.add){ const j=+c.key.split("|")[1]; out.push({id:c.id,tp:"add",j,p:c.p,r:0.45,movel:1,nome:NOME_RALO[c.tipo==="CG"?"cg":"ci"]+" (acrescentada)"}); return; }
+    const keys=(c.keys||[]).slice().filter(k=>!/^add\|/.test(k)), movel=keys.length||c.fim;
+    out.push({id:c.id,tp:"cx",p:c.p,r:0.45,c,keys,fim:!!c.fim&&!com,movel,man:c.man,
+      nome:c.tipo==="CG"?"Caixa de gordura":c.fim?"Caixa de inspeção final":keys.length?"Caixa de inspeção":"Caixa de inspeção de canto",amb:c.r?c.r.n:""}); });
+  (H.extra||[]).forEach(o=>out.push({id:o.key,tp:"add",j:o.j,t:o.t,p:o.p,r:o.t==="rl"?(o.len||0.8)/2:0.3,movel:1,nome:NOME_RALO[o.t]+(o.t==="cs"?" (acrescentada)":""),amb:o.r?o.r.n:""}));
+  H.salas.forEach(sa=>{ if(sa.cs) out.push({id:"cs|"+sa.r.n,tp:"cs",p:sa.cs,r:0.35,keys:["cs|"+sa.r.n],movel:1,man:!!(S.hidM||{})["cs|"+sa.r.n],nome:"Caixa sifonada",amb:sa.r.n}); });
+  const FS=H.fossa; if(FS&&FS.pos){ const P=FS.pos, M=S.fossaM||{};
+    out.push({id:"fs|t",tp:"ft",p:P.ct,r:Math.max(FS.L,FS.W)/2+0.15,movel:1,man:!!(M.ct||M.giro),nome:"Tanque séptico (move o conjunto)"});
+    if(FS.fil) out.push({id:"fs|f",tp:"ff",p:P.cf,r:FS.Df/2+0.15,movel:1,man:!!M.f,nome:"Filtro anaeróbio"});
+    P.cs.forEach((c,i)=>out.push({id:"fs|s"+i,tp:"fsm",i,p:c,r:FS.Ds/2+0.15,movel:1,man:!!(M.s&&M.s[i]),nome:FS.ns>1?`Sumidouro ${i+1}`:"Sumidouro"})); }
+  return out; }
+function hidAchar(p){ let b=null; hidItens().forEach(q=>{ const d=Math.hypot(q.p[0]-p[0],q.p[1]-p[1]), lim=Math.max(0.40,q.r); if(d<=lim&&(!b||d-q.r<b.d)) b={q,d:d-q.r}; }); return b&&b.q; }
+function hidSel(){ return HIDSEL&&hidItens().find(q=>q.id===HIDSEL||q.id==="cx|"+HIDSEL); }
+function hidGrava(q,p){ const x=+p[0].toFixed(3), y=+p[1].toFixed(3);
+  if(q.tp==="add"){ Object.assign(S.hidAdd[q.j],{x,y}); }
+  else if(q.tp==="cx"||q.tp==="cs"){ if(!q.movel){ $("hidMsg")&&($("hidMsg").textContent="Caixa de canto: ela aparece sozinha onde o coletor faz curva. Mude as outras caixas que ela acompanha."); return; }
+    S.hidM=S.hidM||{}; q.keys.forEach(k=>S.hidM[k]={x,y}); if(q.fim) S.hidM.fim={x,y}; }
+  else { const M=S.fossaM=S.fossaM||{}, P=HDV.fossa.pos;
+    if(q.tp==="ft"){ const d=[x-P.ct[0],y-P.ct[1]], mv=a=>[+(num(a[0])+d[0]).toFixed(3),+(num(a[1])+d[1]).toFixed(3)]; M.ct=[x,y]; M.giro=M.giro||0; if(M.f) M.f=mv(M.f); if(M.s) Object.keys(M.s).forEach(i=>M.s[i]=mv(M.s[i])); }
+    else if(q.tp==="ff") M.f=[x,y]; else { M.s=M.s||{}; M.s[q.i]=[x,y]; } }
+  save(); render(); hidPainel(); }
+function hidMarca(){ const svg=$("hid").querySelector("svg"), v=VIEW.hid, q=hidSel(); if(!svg||!v||!q) return;
+  const cx=v.pad+(q.p[0]-v.e.x0)/v.k, cy=v.pad+(q.p[1]-v.e.y0)/v.k, r=Math.max(3.2,q.r/v.k+1); svg.insertAdjacentHTML("beforeend",`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#d33" stroke-width="0.5" stroke-dasharray="1 0.6"/>`); }
+function fossaGira(){ const P=HDV&&HDV.fossa&&HDV.fossa.pos; if(!P) return; const M=S.fossaM=S.fossaM||{}, c=P.ct, rot=a=>{ const v=[num(a[0])-c[0],num(a[1])-c[1]]; return [+(c[0]-v[1]).toFixed(3),+(c[1]+v[0]).toFixed(3)]; };
+  M.ct=M.ct||[+c[0].toFixed(3),+c[1].toFixed(3)]; M.giro=((+M.giro||0)+1)%4; if(M.f) M.f=rot(M.f); if(M.s) Object.keys(M.s).forEach(i=>M.s[i]=rot(M.s[i])); save(); render(); hidPainel(); }
+function fossaAuto(){ delete S.fossaM; save(); render(); hidPainel(); }
+// excluir: o acrescentado some; o automático fica marcado e pode ser restaurado
+function hidExclui(q){ if(!q) return; const fos=q.tp==="ft"||q.tp==="ff"||q.tp==="fsm";
+  if(fos){ $("hidDelMsg").textContent="O conjunto fossa/filtro/sumidouro sai trocando o destino do esgoto para Rede pública, no quadro da fossa."; return; }
+  if(q.tp==="add") S.hidAdd.splice(q.j,1); else { S.hidDel=S.hidDel||{}; S.hidDel[q.id]=1; }
+  HIDSEL=null; HIDMOVE=false; save(); render(); $("hidPanel").hidden=true; $("hidDelMsg").textContent=`${q.nome.replace(/ \(.*\)$/,"")} excluído(a).`; }
+let HIDDEL=false;
+function hidBotoes(){ const a=$("hidApagar"), r=$("hidRestaura"); if(!a) return; a.setAttribute("aria-pressed",HIDDEL?"true":"false"); a.className=HIDDEL?"btn dng":"btn";
+  a.textContent=HIDDEL?"Apagando: toque nas caixas e ralos (toque aqui para parar)":"Apagar itens";
+  const n=Object.keys(S.hidDel||{}).length; r.hidden=!n; r.textContent=`Restaurar excluídos (${n})`; }
+function hidAcrescenta(p0){ const P=$("hidPanel"), lugar=GG.compAt(...p0); P.hidden=false;
+  P.innerHTML=`<h4>Acrescentar aqui${lugar&&!lugar.ext?` · ${esc(lugar.n)}`:" · área externa"}</h4><div class="row" style="margin:0;flex-wrap:wrap">
+    <button class="btn" data-add="ci">Caixa de inspeção</button><button class="btn" data-add="cg">Caixa de gordura</button><button class="btn" data-add="cs">Caixa sifonada</button>
+    <button class="btn" data-add="rs">Ralo sifonado</button><button class="btn" data-add="rsc">Ralo seco</button><button class="btn" data-add="rq">Ralo quadrado 15x15</button><button class="btn" data-add="rl">Ralo linear (retangular)</button>
+    <button class="btn x" data-close aria-label="Fechar">×</button></div>`;
+  P.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ const t=b.dataset.add; S.hidAdd=S.hidAdd||[]; S.hidAdd.push({t,x:+p0[0].toFixed(3),y:+p0[1].toFixed(3),...(t==="rl"?{len:0.8,rot:0}:{})});
+    HIDSEL="add|"+(S.hidAdd.length-1); HIDMOVE=false; save(); render(); hidPainel(); });
+  P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; }; }
+function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(!q){ P.hidden=true; return; } P.hidden=false;
+  const fos=q.tp==="ft"||q.tp==="ff"||q.tp==="fsm", com=(S.fossa||{}).on==="sim";
+  const dica=!q.movel?"Esta caixa fica sozinha na curva do coletor; ela muda quando você muda as outras caixas.":HIDMOVE?"<b>Toque no lugar novo</b> na planta.":q.tp==="cx"&&!com?"Arraste para o lado que quiser: a caixa corre pelo coletor em volta da obra.":q.tp==="add"?"Arraste para mudar de lugar; o cano até a caixa mais perto se refaz.":q.tp==="ft"?"Arraste para levar o tanque, o filtro e o sumidouro juntos.":fos?"Arraste para mudar só esta unidade; o cano se refaz.":"Arraste na planta, ou toque em Mover e depois no lugar novo.";
+  P.innerHTML=`<h4>${esc(q.nome)}${q.amb?` · ${esc(q.amb)}`:""}</h4><p class="cap" style="margin:0 0 8px">${dica}${q.man?" (posição escolhida por você)":""}</p>
+    <div class="row" style="margin:0;flex-wrap:wrap">${q.movel?`<button class="btn pri" data-m>${HIDMOVE?"Cancelar":"Mover"}</button><button class="btn" data-d="-1,0" aria-label="10 cm para a esquerda">◀</button><button class="btn" data-d="0,-1" aria-label="10 cm para cima">▲</button><button class="btn" data-d="0,1" aria-label="10 cm para baixo">▼</button><button class="btn" data-d="1,0" aria-label="10 cm para a direita">▶</button>`:""}
+    ${q.t==="rl"?`<button class="btn" data-rlg>Girar 90°</button><select data-rll aria-label="Comprimento do ralo linear" style="width:auto">${[0.4,0.5,0.6,0.7,0.8,0.9,1,1.2,1.5,2].map(v=>`<option value="${v}"${Math.abs(v-(S.hidAdd[q.j].len||0.8))<1e-6?" selected":""}>${f(v*100,0)} cm</option>`).join("")}</select>`:""}
+    ${fos?`<button class="btn" data-gira>Girar o conjunto 90°</button>`:`<button class="btn dng" data-del>Excluir</button>`}${q.man&&q.tp!=="add"?`<button class="btn" data-auto>Voltar ao automático</button>`:""}${fos&&S.fossaM?`<button class="btn" data-fauto>Conjunto todo no automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" id="hidMsg" style="margin:6px 0 0"></p>`;
+  const b=P.querySelector("[data-m]"); if(b) b.onclick=()=>{ HIDMOVE=!HIDMOVE; hidPainel(); };
+  P.querySelectorAll("[data-d]").forEach(x=>x.onclick=()=>{ const [dx,dy]=x.dataset.d.split(",").map(Number); let p=[q.p[0]+dx*0.10,q.p[1]+dy*0.10];
+    if(q.tp==="cx"&&!com){ const t0=HDV.anelT(q.p), cand=[HDV.anelP(t0+0.10),HDV.anelP(t0-0.10)]; p=cand.reduce((m,c)=>((c[0]-q.p[0])*dx+(c[1]-q.p[1])*dy)>((m[0]-q.p[0])*dx+(m[1]-q.p[1])*dy)?c:m); }
+    hidGrava(q,p); });
+  const gi=P.querySelector("[data-gira]"); if(gi) gi.onclick=fossaGira;
+  const dl=P.querySelector("[data-del]"); if(dl) dl.onclick=()=>hidExclui(q);
+  const rg=P.querySelector("[data-rlg]"); if(rg) rg.onclick=()=>{ const a=S.hidAdd[q.j]; a.rot=a.rot?0:1; save(); render(); hidPainel(); };
+  const rl=P.querySelector("[data-rll]"); if(rl) rl.onchange=()=>{ S.hidAdd[q.j].len=+rl.value; save(); render(); hidPainel(); };
+  const au=P.querySelector("[data-auto]"); if(au) au.onclick=()=>{ if(fos){ const M=S.fossaM||{}; if(q.tp==="ft"){ delete M.ct; delete M.giro; } else if(q.tp==="ff") delete M.f; else if(M.s) delete M.s[q.i]; if(!Object.keys(M).some(k=>k!=="s"||Object.keys(M.s).length)) delete S.fossaM; }
+    else { (q.keys||[]).forEach(k=>delete S.hidM[k]); if(q.fim) delete S.hidM.fim; } HIDMOVE=false; save(); render(); hidPainel(); };
+  const fa=P.querySelector("[data-fauto]"); if(fa) fa.onclick=fossaAuto;
+  P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; HIDSEL=null; HIDMOVE=false; render(); }; }
+{ const cont=$("hid"); let arr=null, tArr=0;
+  cont.addEventListener("pointerdown",ev=>{ const p=ptVista(ev,"hid"); if(!p||HIDMOVE) return; const q=hidAchar(p); if(!q) return;
+    if(HIDDEL){ ev.preventDefault(); tArr=Date.now(); hidExclui(q); return; }
+    arr={id:ev.pointerId,q,p0:p,moveu:false}; HIDSEL=q.id; try{ cont.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); });
+  cont.addEventListener("pointermove",ev=>{ if(!arr||ev.pointerId!==arr.id||!arr.q.movel) return; const p=ptVista(ev,"hid"); if(!p) return; if(!arr.moveu&&Math.hypot(p[0]-arr.p0[0],p[1]-arr.p0[1])<0.08) return; arr.moveu=true;
+    const pp=[arr.q.p[0]+p[0]-arr.p0[0],arr.q.p[1]+p[1]-arr.p0[1]]; arr.p=pp;
+    const svg=cont.querySelector("svg"), v=VIEW.hid; let g=svg.querySelector("#hidFantasma"); if(!g){ svg.insertAdjacentHTML("beforeend",`<circle id="hidFantasma" r="${Math.max(2.6,arr.q.r/v.k)}" fill="rgba(220,50,50,.25)" stroke="#d33" stroke-width="0.4"/>`); g=svg.querySelector("#hidFantasma"); }
+    g.setAttribute("cx",v.pad+(pp[0]-v.e.x0)/v.k); g.setAttribute("cy",v.pad+(pp[1]-v.e.y0)/v.k); });
+  const fim=ev=>{ if(!arr||ev.pointerId!==arr.id) return; const a=arr; arr=null; if(a.moveu) tArr=Date.now(); if(a.moveu&&a.p){ hidGrava(a.q,a.p); return; } render(); hidPainel(); };
+  cont.addEventListener("pointerup",fim); cont.addEventListener("pointercancel",ev=>{ arr=null; });
+  cont.addEventListener("click",ev=>{ if(Date.now()-tArr<400) return; const p=ptVista(ev,"hid"); if(!p||!GG||GG.vazio) return;
+    if(HIDMOVE){ const q=hidSel(); HIDMOVE=false; if(q){ hidGrava(q,p); return; } hidPainel(); return; }
+    if(hidAchar(p)||HIDDEL) return;
+    if(HIDSEL){ HIDSEL=null; render(); } hidAcrescenta(p); });
+  $("hidApagar").onclick=()=>{ HIDDEL=!HIDDEL; HIDSEL=null; HIDMOVE=false; $("hidPanel").hidden=true; $("hidDelMsg").textContent=""; hidBotoes(); render(); };
+  $("hidRestaura").onclick=()=>{ delete S.hidDel; save(); render(); $("hidDelMsg").textContent="Caixas excluídas voltaram para a planta."; };
+  $("fossaGira").onclick=()=>{ fossaGira(); $("fossaPosMsg").textContent="Conjunto girado 90°."; };
+  $("fossaAuto").onclick=()=>{ fossaAuto(); $("fossaPosMsg").textContent="Conjunto de volta ao lugar automático."; }; }
 /* ---------------- Unir paredes alinhadas (ex.: chanfro importado em pedaços) ---------------- */
 // o buraco entre duas paredes na mesma linha vira abertura de verdade
 function paresAlinhados(maxGap=6){ const W=S.walls.map((w,i)=>({i,a:[num(w.x1),num(w.y1)],b:[num(w.x2),num(w.y2)],st:w.st})).filter(w=>w.st!=="d"&&Math.hypot(w.b[0]-w.a[0],w.b[1]-w.a[1])>0.05);
@@ -5242,6 +5604,7 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="mem") renderMemorial();
   if(b.dataset.tab==="orc") renderOrc();
   if(b.dataset.tab==="pag") render();
+  if(b.dataset.tab==="estr") render();
   if(b.dataset.tab==="persp") renderPersp();
 });
 
@@ -5373,6 +5736,12 @@ function pranchas(fmt){
   const QD=quadra(G), sep=fmt==="A4", wQ=sep?aw:aw*0.42, sq=QD?encaixar(k=>desenhoQuadra(G,k,QD),wQ,ah-TT):null, si=encaixar(k=>desenhoSituacao(G,k),sq&&!sep?aw-wQ-8:aw,ah-TT);   // no A4 a situação vai numa folha só dela
   const LC=locacao(G), lo=LC?encaixar(k=>desenhoLocacao(G,k,LC),aw,ah-TT):null;
   const sis0=(S.estr||{}).sis||"auto", sis=sis0==="auto"?(num(S.laje)>0.04?"conv":"simples"):sis0, ES=sis==="nenhum"?null:estrutural(G,sis==="simples"), efo=ES?encaixar(k=>desenhoForma(G,k,ES),aw,ah-TT):null, efu=ES?encaixar(k=>desenhoFundacao(G,k,ES),aw*0.68,ah-TT):null, edf=ES?(ES.simples?(()=>{ let u=null; for(const s0 of [5,10,20,25,50]){ const k=s0/1000, D=desenhoDetColunas(k,ES), e=extensao(D); u={D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:kk=>desenhoDetColunas(kk,ES)}; if(u.w<=aw*0.32-8&&u.h<=ah-TT) break; } return u; })():encaixar(k=>desenhoDetFund(k,ES),aw*0.32-8,ah-TT)):null;
+  // armadura (sistema com pilares e vigas): vigas agrupadas por folha, relação ao lado; pilares, sapatas e resumo na última
+  const AR=ES&&!ES.simples?armadura(G,ES):null, armF=[];
+  if(AR){ const bwV=aw*0.64, bwT=aw*0.36-8, maxL=Math.max(8,Math.floor((ah-TT-24)/4.2)), tabRel=(lst,tit)=>encaixar(k=>desenhoTabela(k,[{t:tit,cols:COLS_REL,rows:linhasRel(lst)}]),bwT,ah-TT);
+    let grp=[]; const fecha=()=>{ if(!grp.length) return; const g=grp.slice(), dv=encaixar(k=>desenhoVigasDet(k,g,bwV),bwV,ah-TT), rel=AR.rel.filter(r=>g.some(a=>a.nome===r.el)); armF.push({g,dv,dt:tabRel(rel,"")}); grp=[]; };
+    AR.vigas.forEach(a=>{ const t=[...grp,a], d=encaixar(k=>desenhoVigasDet(k,t,bwV),bwV,ah-TT), nr=AR.rel.filter(r=>t.some(x=>x.nome===r.el)).length;
+      if(grp.length&&(d.s>100||d.w>bwV||d.h>ah-TT||nr>maxL)) fecha(); grp.push(a); }); fecha(); }
   const EC=escada(), eP=S.esc.on==="sim"?encaixar(k=>desenhoEscadaPlanta(k,EC),aw*0.42,ah-TT):null, eC=eP?encaixar(k=>desenhoEscadaCorte(k,EC),aw*0.58-8,ah-TT):null;
   const bans=G.rooms.filter(r=>ehBanho(r.n)&&retUtil(r)).map(r=>{ const bwP=aw*0.42, pl=encaixar(k=>desenhoBanheiro(G,r,k),bwP,ah-TT), bwV=(aw-bwP-8-6)/2, bhV=(ah-6)/2;
     let vs=[]; for(const s0 of [20,25,50,75,100]){ const k=s0/1000; vs=["A","B","C","D"].map(l=>{ const D=vistaBanheiro(G,r,k,l), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:kk=>vistaBanheiro(G,r,kk,l)}; }); if(vs.every(d=>d.w<=bwV&&d.h<=bhV-TT)) break; }
@@ -5415,6 +5784,9 @@ function pranchas(fmt){
     :[{n:"05/05",conteudo:sq?"PLANTA DE SITUAÇÃO E IMPLANTAÇÃO":"PLANTA DE IMPLANTAÇÃO",escala:sq?`1:${sq.s} / 1:${si.s}`:`1:${si.s}`,itens:[...(sq?[{d:sq,titulo:"PLANTA DE SITUAÇÃO",box:[area.x0,area.y0,wQ,ah]}]:[]),{d:si,titulo:"PLANTA DE IMPLANTAÇÃO",box:sq?[area.x0+wQ+8,area.y0,aw-wQ-8,ah]:[area.x0,area.y0,aw,ah]}],lado:"situacao",QD}]),
     ...(efo?[{n:"",conteudo:ES.simples?"PLANTA DE COLUNINHAS E CINTA":"PLANTA DE FORMA (ESTRUTURA)",escala:`1:${efo.s}`,itens:[{d:efo,titulo:ES.simples?"PLANTA DE COLUNINHAS E CINTA":"PLANTA DE FORMA",box:[area.x0,area.y0,aw,ah]}],lado:ES.simples?"formaS":"forma",ES}]:[]),
     ...(efu?[{n:"",conteudo:ES.simples?"LOCAÇÃO DAS COLUNINHAS E FUNDAÇÃO":"LOCAÇÃO DE PILARES E FUNDAÇÃO",escala:`1:${efu.s} / 1:${edf.s}`,itens:[{d:efu,titulo:ES.simples?"LOCAÇÃO DAS COLUNINHAS E FUNDAÇÃO":"LOCAÇÃO DE PILARES E FUNDAÇÃO",box:[area.x0,area.y0,aw*0.68,ah]},{d:edf,titulo:ES.simples?"SEÇÕES":ES.fund==="sapata"?"DETALHE TÍPICO DA SAPATA":"DETALHE TÍPICO DO BLOCO",box:[area.x0+aw*0.68+8,area.y0,aw*0.32-8,ah]}],lado:"fundacao",ES}]:[]),
+    ...armF.map((g,i)=>({n:"",conteudo:`DETALHAMENTO DAS VIGAS${armF.length>1?` (${i+1}/${armF.length})`:""}`,escala:`1:${g.dv.s}`,itens:[{d:g.dv,titulo:`VIGAS ${g.g[0].nome} A ${g.g[g.g.length-1].nome}`,box:[area.x0,area.y0,aw*0.64,ah]},{d:g.dt,sem:1,titulo:"RELAÇÃO DO AÇO",box:[area.x0+aw*0.64+8,area.y0,aw*0.36-8,ah]}],lado:"armadura",ES,AR})),
+    ...(AR?(()=>{ const dp=encaixar(k=>desenhoPilSapDet(k,ES,AR),aw*0.55,ah-TT), rel=AR.rel.filter(r=>!AR.vigas.some(a=>a.nome===r.el)), dt=encaixar(k=>desenhoTabela(k,[{t:"RELAÇÃO DO AÇO - PILARES E FUNDAÇÃO",cols:COLS_REL,rows:linhasRel(rel)},...blocoResumo(AR)]),aw*0.45-8,ah-TT);
+      return [{n:"",conteudo:"DETALHE DE PILARES E FUNDAÇÃO · RESUMO DO AÇO",escala:`1:${dp.s}`,itens:[{d:dp,titulo:"PILARES E FUNDAÇÃO",box:[area.x0,area.y0,aw*0.55,ah]},{d:dt,sem:1,titulo:"RELAÇÃO E RESUMO DO AÇO",box:[area.x0+aw*0.55+8,area.y0,aw*0.45-8,ah]}],lado:"armadura",ES,AR}]; })():[]),
     ...(eP?[{n:"",conteudo:"DETALHE DA ESCADA",escala:`1:${eP.s} / 1:${eC.s}`,itens:[{d:eP,titulo:"PLANTA DA ESCADA",box:[area.x0,area.y0,aw*0.42,ah]},{d:eC,titulo:"CORTE DA ESCADA",box:[area.x0+aw*0.42+8,area.y0,aw*0.58-8,ah]}],lado:"escada",EC}]:[]),
     ...(lo?[{n:"",conteudo:LC.pil?"PLANTA DE LOCAÇÃO DOS EIXOS DOS PILARES":"PLANTA DE LOCAÇÃO DA OBRA",escala:`1:${lo.s}`,itens:[{d:lo,titulo:LC.pil?"LOCAÇÃO DOS EIXOS DOS PILARES":"PLANTA DE LOCAÇÃO DA OBRA",box:[area.x0,area.y0,aw,ah]}],lado:"locacao",LC}]:[]),
     ...bans.map(b=>({n:"",conteudo:`DETALHE DO ${b.r.n.toUpperCase()}`,escala:`1:${b.pl.s} / 1:${b.vs[0].s}`,itens:[{d:b.pl,titulo:`PLANTA - ${b.r.n.toUpperCase()}`,box:[area.x0,area.y0,b.bwP,ah]},
@@ -5454,9 +5826,13 @@ function textosLado(P,lado,fl){
   if(lado==="piso") return [{t:"QUADRO DE PISOS",pc:[0.28,0.42,0.15,0.15],cols:[["AMBIENTE",0],["PISO",0],["ÁREA",1],["RODAPÉ",1]],rows:fl.PI.map(F=>[F.r.n,infoPiso(F.pt)[1],f(F.area),F.rod?f(F.rod):"-"])},{t:"QUANTITATIVO E NOTAS",linhas:notasPiso(fl.PI,fl.SO)}];
   if(lado==="forro") return [{t:"QUADRO DE FORROS",pc:[0.30,0.42,0.13,0.15],cols:[["AMBIENTE",0],["FORRO",0],["H (m)",1],["ÁREA",1]],rows:fl.FO.map(F=>[F.r.n,nomeForro(F.ft),F.ft==="sem"?"-":f(F.h),f(F.area)])},{t:"QUANTITATIVO E NOTAS",linhas:notasForro(fl.FO)}];
   if(lado==="formaS"){ const E0=fl.ES, Lh=linhasEstS(E0), gi=Lh.findIndex(r=>r[0]==="grp"&&r[1]==="Concreto"), aco=Lh.slice(1,gi), resto=Lh.slice(gi+1).filter(r=>r[0]!=="grp");
-    return [{t:"AÇO",cols:[["ITEM",0],["UN",1],["QTD",1]],pc:[0.74,0.11,0.15],rows:aco.map(r=>[r[0],r[1],String(r[2])])},{t:"CONCRETO E SERVIÇOS",cols:[["ITEM",0],["UN",1],["QTD",1]],pc:[0.70,0.12,0.18],rows:resto.map(r=>[r[0],r[1],String(r[2])])}]; }
+    const AS=acoSimples(E0);
+    return [{t:"AÇO",cols:[["ITEM",0],["UN",1],["QTD",1]],pc:[0.74,0.11,0.15],rows:aco.map(r=>[r[0],r[1],String(r[2])])},
+      {t:"RESUMO DO AÇO",cols:[["BITOLA",0],["m",1],["kg",1]],pc:[0.56,0.22,0.22],rows:[...AS.rows.map(o=>[o.nm,f(o.m,0),f(o.kg,1)]),[`Treliça ${E0.CF.tr.nome}`,f(E0.Q.trM,0),f(AS.trKg,1)],["TOTAL","",f(AS.tot,1)]]},{t:"CONCRETO E SERVIÇOS",cols:[["ITEM",0],["UN",1],["QTD",1]],pc:[0.70,0.12,0.18],rows:resto.map(r=>[r[0],r[1],String(r[2])])}]; }
   if(lado==="forma"){ const E0=fl.ES; return [{t:"QUADRO DE VIGAS",cols:[["VIGA",0],["SEÇÃO",1],["VÃO MÁX.",1]],rows:E0.vigas.map(v=>[v.nome,`${f(v.b*100,0)}x${f(v.h*100,0)}`,f(v.Lm)])},
     ...(E0.temLaje?[{t:"QUADRO DE LAJES",cols:[["LAJE",0],["TIPO",0],["h (cm)",1],["MENOR VÃO",1]],pc:[0.16,0.40,0.18,0.26],rows:E0.lajes.map(l=>[l.nome,l.tipo,l.h?String(l.h):"-",f(l.lmin)])}]:[]),{t:"NOTAS",linhas:(N0=>[N0[0],N0[3],...N0.slice(6)])(notasEstr(E0))}]; }
+  if(lado==="armadura"){ const A0=fl.AR; return [{t:"AÇO",cols:[["",0],["kg",1]],pc:[0.7,0.3],rows:[["Total (sem perda)",f(A0.tot,1)],["Total com 10% de perda",f(A0.tot10,1)],...A0.porTipo.map(([n,v])=>[n,f(v,1)])]},
+    {t:"NOTAS",linhas:[`Armadura de pré-dimensionamento (NBR 6118), concreto fck ${A0.fck} MPa, aço CA-50 e estribos CA-60. Conferir no projeto estrutural, com ART.`,"Cobrimento: viga e pilar 3 cm; fundação 5 cm (sobre lastro). Ganchos de 90° nas pontas; emendas por traspasse de 40 Ø, desencontradas.","Ferros nos apoios (negativos) centrados no pilar. Pilar: ferros com pé de 20 cm na fundação, subindo até o topo da viga.",...(A0.av.length?[A0.av.slice(0,2).join(" ")]:[])]}]; }
   if(lado==="fundacao"){ const E0=fl.ES, N0=notasEstr(E0); return [{t:E0.fund==="sapata"?"QUADRO DE SAPATAS":E0.fund==="brocaS"?"QUADRO DE BROCAS":"QUADRO DE BLOCOS",cols:[["TIPO",0],["DIMENSÕES (m)",0],["PILARES",0],["N máx",1]],pc:[0.10,0.36,0.38,0.16],
       rows:E0.tipos.map(tp=>[tp.nome,E0.fund==="sapata"?`${tp.f.tx} x ${f(tp.f.h)}`:E0.fund==="brocaS"?tp.f.tx:`${tp.f.n}Ø25 · ${f(tp.f.bx)}x${f(tp.f.by)}x${f(tp.f.h)}`,tp.ps.length>4?`${tp.ps.slice(0,3).map(q=>q.nome).join(", ")} +${tp.ps.length-3}`:tp.ps.map(q=>q.nome).join(", "),`${f(Math.max(...tp.ps.map(q=>q.N)),0)} kN`])},
     {t:E0.simples?"COLUNINHAS E BALDRAMES":"PILARES E BALDRAMES",linhas:[`${E0.simples?"Coluninhas":"Pilares"} ${f(E0.b*100,0)}x${f(E0.hp*100,0)} cm (${E0.pil.length} un); carga total de cerca de ${f(E0.Ntot,0)} kN.`,`Vigas baldrame: ${[...new Set(E0.vigas.map(v=>`${f((v.bb||v.b)*100,0)}x${f(v.hb*100,0)}`))].join(", ")} cm (${E0.vigas.map(v=>v.nomeB).join(", ")}).`]},
