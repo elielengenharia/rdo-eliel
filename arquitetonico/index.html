@@ -760,7 +760,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.69 · prancha única do arquitetônico e DXF da prancha com carimbo", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.70 · fachada sem linha no meio da parede única", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1763,18 +1763,27 @@ function desenhoFachada(G,k,lado,pag=null){
   const topo=(p,bd)=>TI.plat?(TI.topoAt?TI.topoAt(p[0],p[1]):TI.topoPlat):bd?Math.max(pd+lj,TI.z(p[0],p[1])):pd+lj;   // com volumes: a platibanda de cada um
   // paredes externas viradas para quem olha (as mais longe primeiro: as da frente cobrem as de trás)
   let uMin=1e9, uMax=-1e9;
+  // faixas dos volumes mais altos (parte acima da platibanda dos outros), com a face e o trecho em u
+  const FX=[]; if(TI.vols) TI.vols.forEach(tv=>{ const P=paraFora(tv.vol.polyAx,h); P.forEach((a,i)=>{ const b=P[(i+1)%P.length], dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy); if(l<0.05) return;
+      let out=[dy/l,-dx/l]; const m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; if(pip(P,m[0]+out[0]*0.05,m[1]+out[1]*0.05)) out=[-out[0],-out[1]]; if(dot(out)<0.01) return;
+      const zt=tv.topoPlat, zb=Math.min(tv.pd,...TI.vols.filter(o=>o!==tv).map(o=>o.topoPlat)); if(zt-zb<0.02) return; FX.push({a,b,d0:(dot(a)+dot(b))/2,u0:Math.min(U(...a),U(...b)),u1:Math.max(U(...a),U(...b)),zt,zb}); }); });
   G.contExt.forEach(([x1,y1,x2,y2])=>{ const dx=x2-x1, dy=y2-y1, l=Math.hypot(dx,dy); if(l<0.01) return;
     const out=[dy/l,-dx/l]; if(dot(out)<0.01) return;
-    const bd=naBorda([x1,y1],[x2,y2]), top=[]; for(let n=0;n<=24;n++){ const t=n/24, q=[x1+dx*t,y1+dy*t]; top.push([U(...q),Y(topo(q,bd))]); }
+    const bd=naBorda([x1,y1],[x2,y2]), top=[], dS=(dot([x1,y1])+dot([x2,y2]))/2, uA=U(x1,y1), uB=U(x2,y2);
+    if(TI.plat){   // platibanda: topo em degraus retos; na mesma face de um volume mais alto a parede sobe inteira até o topo dele (parede única, sem linha no meio)
+      const FXs=FX.filter(F=>Math.abs(F.d0-dS)<0.08&&Math.min(F.u1,Math.max(uA,uB))-Math.max(F.u0,Math.min(uA,uB))>0.5*(F.u1-F.u0)), ts=new Set([0,1]); for(let n=1;n<48;n++) ts.add(n/48); FXs.forEach(F=>[F.u0,F.u1].forEach(uu=>{ const t=(uu-uA)/((uB-uA)||1); if(t>1e-6&&t<1-1e-6) ts.add(t); }));
+      const T=[...ts].sort((p,q)=>p-q), zAt=t=>{ const q=[x1+dx*t,y1+dy*t], uu=U(...q); let z=topo(q,bd); FXs.forEach(F=>{ if(uu>F.u0+1e-6&&uu<F.u1-1e-6) z=Math.max(z,F.zt); }); return z; };
+      for(let i=0;i+1<T.length;i++){ const z=zAt((T[i]+T[i+1])/2), pa=[U(x1+dx*T[i],y1+dy*T[i]),Y(z)], pb=[U(x1+dx*T[i+1],y1+dy*T[i+1]),Y(z)]; const lt=top[top.length-1]; if(lt&&Math.abs(lt[1]-pa[1])<1e-9) lt[0]=pb[0]; else top.push(pa,pb); }
+      for(let i=top.length-2;i>0;i--){ if(Math.abs(top[i][1]-top[i+1][1])<1e-9&&Math.abs(top[i][1]-top[i-1][1])<1e-9) top.splice(i,1); } }
+    else for(let n=0;n<=24;n++){ const t=n/24, q=[x1+dx*t,y1+dy*t]; top.push([U(...q),Y(topo(q,bd))]); }
     const ua=U(x1,y1), ub=U(x2,y2); uMin=Math.min(uMin,ua,ub); uMax=Math.max(uMax,ua,ub);
     itens.push({seg:{x1,y1,x2,y2},d:(dot([x1,y1])+dot([x2,y2]))/2,f:()=>{ const pol=[[ua,Y(-ps)],...top,[ub,Y(-ps)]]; PG(D,pol,"FUNDO");
       if(pag){ const zb=pag.base==="nenhum"?-ps:-ps+pag.hb; if(pag.base!=="nenhum"){ juntasMat(D,faixaY(pol,Y(zb),1e9),pag.base,0,Y(-ps)); naLinha(pol,"A",Y(zb)).forEach(([a,b])=>L(D,a,Y(zb),b,Y(zb),.25,"PAGINA")); } juntasMat(D,faixaY(pol,-1e9,Y(zb)),pag.corpo,0,Y(zb)); }
       PL(D,[...pol,pol[0]],.35,"PAREDE"); }}); });
-  // volume mais alto atrás do mais baixo: a parte dele acima da platibanda da frente aparece (a frente cobre o resto)
-  if(TI.vols) TI.vols.forEach(tv=>{ const P=paraFora(tv.vol.polyAx,h); P.forEach((a,i)=>{ const b=P[(i+1)%P.length], dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy); if(l<0.05) return;
-      let out=[dy/l,-dx/l]; const m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; if(pip(P,m[0]+out[0]*0.05,m[1]+out[1]*0.05)) out=[-out[0],-out[1]]; if(dot(out)<0.01) return;
-      const ua=U(...a), ub=U(...b), zt=tv.topoPlat, zb=Math.min(tv.pd,...TI.vols.filter(o=>o!==tv).map(o=>o.topoPlat)); if(zt-zb<0.02) return; uMin=Math.min(uMin,ua,ub); uMax=Math.max(uMax,ua,ub);   // só a faixa de cima: embaixo a parede de verdade (ou a garagem aberta)
-      itens.push({d:(dot(a)+dot(b))/2-0.001,f:()=>{ const pol=[[ua,Y(zb)],[ua,Y(zt)],[ub,Y(zt)],[ub,Y(zb)]]; PG(D,pol,"FUNDO"); PL(D,[...pol,pol[0]],.35,"PAREDE"); }}); }); });
+  // volume mais alto atrás do mais baixo: a parte dele acima da platibanda da frente aparece (a frente cobre o resto); na mesma face de uma parede ela já entrou no topo da parede
+  FX.forEach(F=>{ const {u0,u1,zt,zb,d0}=F, mesma=itens.some(it=>it.seg&&Math.abs(it.d-d0)<0.08&&Math.min(u1,Math.max(U(it.seg.x1,it.seg.y1),U(it.seg.x2,it.seg.y2)))-Math.max(u0,Math.min(U(it.seg.x1,it.seg.y1),U(it.seg.x2,it.seg.y2)))>0.5*(u1-u0));
+    uMin=Math.min(uMin,u0); uMax=Math.max(uMax,u1); if(mesma) return;
+    itens.push({d:d0-0.001,f:()=>{ const pol=[[u0,Y(zb)],[u0,Y(zt)],[u1,Y(zt)],[u1,Y(zb)]]; PG(D,pol,"FUNDO"); PL(D,[...pol,pol[0]],.35,"PAREDE"); }}); });
   // portas e janelas das paredes externas viradas para quem olha
   G.abs.forEach(g=>{ if(!g.externa) return; const w=g.w, mx=(g.p0[0]+g.p1[0])/2, my=(g.p0[1]+g.p1[1])/2, C=G.compAt(mx+w.nX*(h+0.12),my+w.nY*(h+0.12)), sg=(!C||C.ext)?1:-1, out=[w.nX*sg,w.nY*sg];
     if(dot(out)<0.01) return;
