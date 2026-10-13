@@ -763,7 +763,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.77 · código do projeto completo", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.78 · porta abre com a dobradiça no lado menor; vaso afastado do box", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1018,6 +1018,10 @@ function geom(todas=false){
     const prio=C=>{ const n=String(C.n||""); return /banh|lavabo|\bwc\b|sanit/i.test(n)?3:/quarto|su[ií]te|closet|dormit|escrit|home|dep[oó]sito|despensa|estudo/i.test(n)?2:/hall|corredor|circula|varanda|garagem|sala|estar|cozinha|jantar|copa/i.test(n)?0:1; };   /* abre para dentro do quarto/banheiro, nunca para o corredor */
     if(ea&&!eb) s=-1; else if(eb&&!ea) s=1; else if(!ea&&!eb){ const pa=prio(A), pb=prio(B); s=pa!==pb?(pa>pb?1:-1):A.area<=B.area?1:-1; }
     if(g.a.inv) s=-s; g.lado=s; g.externa=ea||eb;
+    // dobradiça no lado menor (junto da parede mais perto), folha aberta encostada nela e passagem para o lado maior (pedido do Eliel); escolha manual (a.dob) manda
+    let dobA=false; { const C=G.compAt(mx+g.nX*off*s,my+g.nY*off*s); if(C&&!C.ext&&C.poly){ const w=g.w, pt=(t)=>[w.x1+w.ux*t+g.nX*s*(h+0.25),w.y1+w.uy*t+g.nY*s*(h+0.25)], vao=(t0,dir)=>{ let d=0; while(d<4&&pip(C.poly,...pt(t0+dir*(d+0.02)))) d+=0.02; return d; };
+        const gA=vao(g.d,-1), gB=vao(g.d+g.l,1); if(gB+0.05<gA) dobA=true; } }
+    g.dobAuto=dobA; g.dob=(g.a.dob===true||g.a.dob===false)?g.a.dob:dobA;
   });
   return G;
 }
@@ -1322,7 +1326,7 @@ function desenhaAberturas(D,G,lista){ const h=G.h, k=D.k;
       if(m==="embutir"){ const a=vd<0?s0-g.l:s1, b=vd<0?s0:s1+g.l; L(D,...ln(a,0),...ln(b,0),.3,"ESQUADRIA",true); }   /* folha recolhida dentro da parede */
       mv.forEach(([i,vai])=>{ const c=s0+(i+0.5)*wf, d=wf*0.3, p1=ln(c-vai*d,-g.lado*0), p2=ln(c+vai*d,0), o=g.lado*(h+1.6*k), a=ln(c-vai*d,o), b=ln(c+vai*d,o); L(D,...a,...b,.18,"ESQUADRIA");
         const ux=(b[0]-a[0]), uy=(b[1]-a[1]), ul=Math.hypot(ux,uy)||1, s2=1.1*k; PG(D,[b,[b[0]-ux/ul*s2*1.6-uy/ul*s2*0.6,b[1]-uy/ul*s2*1.6+ux/ul*s2*0.6],[b[0]-ux/ul*s2*1.6+uy/ul*s2*0.6,b[1]-uy/ul*s2*1.6-ux/ul*s2*0.6]],"ESQUADRIA"); }); }
-    else { const m=modPadrao(g.a), sH=g.a.dob?s1:s0, sO=g.a.dob?s0:s1, ld=g.lado, face=ld*h, dS=Math.sign(sO-sH);
+    else { const m=modPadrao(g.a), sH=g.dob?s1:s0, sO=g.dob?s0:s1, ld=g.lado, face=ld*h, dS=Math.sign(sO-sH);
       const folha=(a,b,lado,trac)=>{ const f0=lado*h, hinge=ln(a,f0), fim=ln(a,f0+lado*Math.abs(b-a)), outro=ln(b,f0); L(D,...hinge,...fim,.35,"ESQUADRIA",trac); AR(D,...hinge,...fim,...outro,.18,"ESQUADRIA"); };
       if(m==="giro2"||(m==="giro"&&g.l>=1.2)){ folha(s0,sm,ld); folha(s1,sm,ld); }   // duas folhas, uma em cada batente
       else if(m==="vaivem"){ if(g.l>=1.2){ [ld,-ld].forEach(lv=>{ folha(s0,sm,lv,lv!==ld); folha(s1,sm,lv,lv!==ld); }); } else { folha(sH,sO,ld); folha(sH,sO,-ld,true); } }
@@ -1910,6 +1914,10 @@ function layoutBanheiro(G,r){
     vaso={c:R(M.vaso.c),n:R(M.vaso.n),a:aDe(M.vaso.n),larg:0.38,prof:0.65};
     lav={c:R(M.lav.c),n:R(M.lav.n),a:aDe(M.lav.n),larg:Math.max(0.35,Math.min(1.5,num(M.lav.larg)||0.5)),prof:0.42};
     box=M.box?{x0:+M.box.x0,x1:+M.box.x1,y0:+M.box.y0,y1:+M.box.y1}:null; chuv=box?chuvDoBox(box,{x0,x1,y0,y1},M.chuv):null; lavabo=!box; }
+  if(box&&vaso){ const a=vaso.a, c=vaso.c, n=vaso.n;   // vaso encostado no box: afasta no sentido da parede até 40 cm do eixo (pedido do Eliel)
+    const pa=Math.abs(a[0])>0.5?[box.x0-c[0],box.x1-c[0]].map(v=>v*Math.sign(a[0])):[box.y0-c[1],box.y1-c[1]].map(v=>v*Math.sign(a[1])), lo=Math.min(...pa), hi=Math.max(...pa);
+    const fr0=Math.abs(n[0])>0.5?[box.x0-c[0],box.x1-c[0]].map(v=>v*Math.sign(n[0])):[box.y0-c[1],box.y1-c[1]].map(v=>v*Math.sign(n[1])), naFrente=Math.min(...fr0)<0.65&&Math.max(...fr0)>-0.05;
+    if(naFrente&&!(lo>=0.40-1e-6||hi<=-0.40+1e-6)){ const m1=lo-0.40, m2=hi+0.40, mv=Math.abs(m1)<Math.abs(m2)?m1:m2; vaso={...vaso,c:[c[0]+a[0]*mv,c[1]+a[1]*mv]}; } }
   return {box,vaso,lav,porta,cb,sx,sy,lavabo,...(fr?{fr,rL:r}:{}),chuv,manual:!!(M&&M.vaso&&M.lav)};
 }
 // chuveiro no meio do lado do box que encosta numa parede (o lado escolhido, ou o primeiro que encosta)
@@ -2299,11 +2307,11 @@ function pontosEletricos(G,LM){
     const Ls=luz.map(p=>add({t:"luz",p,va:vaU,cmd:cm}));
     const portas=ABS.filter(o=>o.g.tipo!=="Janela").sort((a,b)=>(b.g.externa?1:0)-(a.g.externa?1:0));
     let it=null;
-    for(const o of portas){ const dob=!!o.g.a.dob, cand=[dob?-0.15:o.g.l+0.15,dob?o.g.l+0.15:-0.15];
+    for(const o of portas){ const dob=!!o.g.dob, cand=[dob?-0.15:o.g.l+0.15,dob?o.g.l+0.15:-0.15];
       for(const s of cand){ const p=o.F(s); if(livre(p,o.N,0.10,1.10)){ it={p,N:o.N,u:o.u,o,s}; break; } } if(it) break; }
     if(it) add({t:"int",p:it.p,N:it.N,cmd:cm,liga:Ls.map(l=>l.p)}); else if(portas.length) aviso.push(`${r.n}: não achei parede livre ao lado da porta para o interruptor.`);
     R.qd=()=>{ // quadro de distribuição perto da porta de entrada (depois do interruptor)
-      for(const o of portas.filter(o=>o.g.externa&&o.g.tipo==="Porta")){ const dob=!!o.g.a.dob, fora=o.g.lado!==o.sg, lt=dob?-1:1, l0=dob?0:o.g.l;
+      for(const o of portas.filter(o=>o.g.externa&&o.g.tipo==="Porta")){ const dob=!!o.g.dob, fora=o.g.lado!==o.sg, lt=dob?-1:1, l0=dob?0:o.g.l;
         const cs=[0.60,0.90,1.20].map(d=>l0+lt*d).concat((fora?[0.30,0.60]:[0.40,0.70]).map(d=>(dob?o.g.l:0)-lt*d));
         const ok=(p,N)=>livre(p,N,0.10,1.50)&&!R.sol.some(q=>pip(q,p[0]+N[0]*0.05,p[1]+N[1]*0.05))&&!pts.some(q=>q.r===r&&q.t!=="luz"&&Math.hypot(q.p[0]-p[0],q.p[1]-p[1])<0.45);
         for(const s of cs){ const p=o.F(s); if(ok(p,o.N)){ add({t:"qd",p,N:o.N}); return true; } }
@@ -5358,9 +5366,9 @@ let SELAB=-1;
 function girarPorta(i){ const a=S.ab[i]; if(!a) return; const m=modPadrao(a);
   if(ehCorrer(m)){ const st=(a.dob?1:0)+(a.inv?2:0), nx=["correr","embutir"].includes(m)?(st+1)%4:(st^2); a.dob=!!(nx&1); a.inv=!!(nx&2); }
   else if(m==="enrolar"||m==="basculante"){ a.inv=!a.inv; }
-  else { const ordem=[[0,0],[1,0],[1,1],[0,1]], at=ordem.findIndex(([d,v])=>d===(a.dob?1:0)&&v===(a.inv?1:0)), [d,v]=ordem[(at+1)%4]; a.dob=!!d; a.inv=!!v; }
+  else { const g0=GG&&GG.abs.find(x=>x.k===i), d0=g0?!!g0.dob:!!a.dob, ordem=[[0,0],[1,0],[1,1],[0,1]], at=ordem.findIndex(([d,v])=>d===(d0?1:0)&&v===(a.inv?1:0)), [d,v]=ordem[(at+1)%4]; a.dob=!!d; a.inv=!!v; }
   render(); painelAbertura(i); }
-function posPorta(a){ const ordem=[[0,0],[1,0],[1,1],[0,1]]; return ordem.findIndex(([d,v])=>d===(a.dob?1:0)&&v===(a.inv?1:0))+1; }
+function posPorta(a){ const g0=GG&&GG.abs.find(x=>x.a===a), d0=g0?!!g0.dob:!!a.dob, ordem=[[0,0],[1,0],[1,1],[0,1]]; return ordem.findIndex(([d,v])=>d===(d0?1:0)&&v===(a.inv?1:0))+1; }
 function painelAbertura(i){
   const a=S.ab[i], P=$("selPanel"); if(!a){ P.hidden=true; return; } P.hidden=false;
   const g=GG.abs.find(x=>x.k===i);
