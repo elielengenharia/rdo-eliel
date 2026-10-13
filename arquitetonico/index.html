@@ -6810,7 +6810,7 @@ loadForm(); render();
       if(ja!==String(h)){ if(PJ.lista[nome]&&ja){ const ant=pjRenomear(nome,pjNomeLivre(nome+" (versão anterior)",nome)); if(PJ.lista[ant]) PJ.lista[ant].pjManual=true; }   // o arquivo trouxe uma versão nova do projeto: a salva fica guardada com outro nome
         pjUsar(PJ.lista[nome]?pjNome(nome):nome,est); } } }catch(e){} } }
 /* projeto que veio pelo link do botão Instalar (arquivo baixado / página do Claude -> site): #importar=<json gzip em base64url> */
-async function pjPacote(){ const txt=JSON.stringify({nome:PJ.atual,estado:S}); let by=new TextEncoder().encode(txt), z="j";
+async function pjPacote(){ const E0=JSON.parse(JSON.stringify(S)); if(E0.perspImg) delete E0.perspImg; const txt=JSON.stringify({nome:PJ.atual,estado:E0});   /* sem a imagem do 3D: link curto (o Safari do iPhone não cola link enorme) */ let by=new TextEncoder().encode(txt), z="j";
   try{ if(window.CompressionStream){ by=new Uint8Array(await new Response(new Blob([by]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer()); z="z"; } }catch(e){ by=new TextEncoder().encode(txt); z="j"; }
   let b=""; for(let i=0;i<by.length;i+=0x8000) b+=String.fromCharCode.apply(null,by.subarray(i,i+0x8000)); return z+btoa(b).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
 (async()=>{ const m=/^#importar=([jz])([A-Za-z0-9_-]+)$/.exec(location.hash||""); if(!m) return;
@@ -6849,7 +6849,13 @@ if(deFundacao&&Array.isArray(deFundacao.walls)&&deFundacao.walls.length&&Date.no
   b.onclick=async()=>{
     if(pedido){ pedido.prompt(); const r=await pedido.userChoice.catch(()=>null); pedido=null; if(r&&r.outcome==="accepted") return; }
     aj.hidden=false;
-    let lk=URL_APP; if(arquivo){ try{ lk=URL_APP+"#importar="+await pjPacote(); }catch(e){} }
+    let lk=URL_APP; if(arquivo||ios){ try{ lk=URL_APP+"#importar="+await pjPacote(); }catch(e){} }
+    const copia=async()=>{ let ok=false; try{ await navigator.clipboard.writeText(lk); ok=true; }catch(e){} if(!ok){ try{ const t=document.createElement("textarea"); t.value=lk; document.body.appendChild(t); t.select(); ok=document.execCommand("copy"); t.remove(); }catch(e){} } return ok; };
+    if(ios){ const ok=await copia();   // iPhone: a Apple só instala pelo Safari, no menu Compartilhar; o link (com o projeto) vai copiado para colar lá
+      alert(`Para instalar no iPhone:\n\n1. Abra o SAFARI (não o Claude, não o Chrome).\n2. ${ok?"Toque na barra de endereço e COLE o link (já copiado).":"Digite: elielengenharia.github.io/rdo-eliel/arquitetonico"}\n3. Toque em Compartilhar (quadrado com seta para cima).\n4. Toque em "Adicionar à Tela de Início" e em Adicionar.`);
+      aj.hidden=false; aj.innerHTML=`<b>Instalar no iPhone:</b> abra o <b>Safari</b>, ${ok?"cole o link que acabei de copiar":`digite <b>${URL_APP.replace("https://","")}</b>`} na barra de endereço, toque em <b>Compartilhar</b> (quadrado com a seta para cima) e em <b>Adicionar à Tela de Início</b>.${ok?" O link já leva o projeto aberto.":""}<div class="row" style="margin-top:8px"><button class="btn pri" type="button" data-copia>Copiar o link de novo</button><button class="btn" type="button" data-fecha>Fechar</button></div>`;
+      aj.querySelector("[data-copia]").onclick=async()=>{ const ok2=await copia(); if(!ok2) prompt("Copie este link e cole no Safari:",lk); };
+      aj.querySelector("[data-fecha]").onclick=()=>aj.hidden=true; aj.scrollIntoView({block:"nearest"}); return; }
     if(arquivo) aj.innerHTML=`<b>Para instalar, abra o app pelo endereço da internet</b> (aqui ele está aberto como arquivo ou dentro de outra página, e o navegador só instala pelo endereço do site):<p style="margin:8px 0"><a class="btn pri" href="${lk}" target="_blank" rel="noopener">Abrir no site com o projeto “${esc(PJ.atual)}”</a></p>O site abre já com este projeto. Lá, toque de novo em <b>Instalar no computador / celular</b>. Para levar outro projeto, abra ele aqui e toque em Instalar de novo.`+fechar;
     else if(ios) aj.innerHTML=`<b>No iPhone / iPad (Safari):</b> toque no botão <b>Compartilhar</b> (quadrado com a seta para cima), depois em <b>Adicionar à Tela de Início</b> e em <b>Adicionar</b>.`+fechar;
     else aj.innerHTML=`<b>Instalar:</b> no <b>computador</b> (Chrome ou Edge), clique no ícone de instalar no fim da barra de endereço (monitor com seta) ou no menu ⋮ → <b>Instalar Projeto Arquitetônico</b> / Aplicativos → Instalar este site como aplicativo. No <b>celular Android</b> (Chrome), menu ⋮ → <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.`+fechar;

@@ -4,6 +4,7 @@ App: https://elielengenharia.github.io/rdo-eliel/arquitetonico/ (arquivo único 
 Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
 
 ## No ar (main)
+- 5.79: instalar no iPhone (reclamação do Eliel: o botão não fazia nada). No iPhone o botão copia o link do site já com o projeto (#importar, sem a imagem do 3D para o link ficar curto), mostra um alerta com o passo a passo do Safari (Compartilhar → Adicionar à Tela de Início) e deixa o painel com "Copiar o link de novo".
 - 5.78: pedidos do Eliel. Portas de abrir: dobradiça automática no lado menor (geom: vão livre de parede dos dois lados da porta, do lado em que ela abre; folha aberta encosta na parede mais perto e a passagem fica para o lado maior) em g.dobAuto/g.dob; a.dob true/false continua mandando; girar/posPorta partem do que está na tela. Banheiro: vaso a pelo menos 40 cm (eixo) do box no sentido da parede, também quando arrastado. Dr. Tarcio: vaso do social a 45 cm do box, mesa de jantar alinhada com a J4 da sala de jantar.
 - 5.77: "Copiar código do projeto" leva o projeto inteiro (antes só os campos de defaults(): perdia volumes, limites de piso, perspectiva, pdfDisc...) e o colar abre tudo (estadoDe sobre o projeto atual). Dr. Tarcio: ajustes do Eliel (banheiros, TV do quarto 2, portas) juntados.
 - 5.76: garagem na planta de forro (pedido do Eliel): forrosExt(G) põe os pisos externos cobertos por volume com Forro próprio (v.hForro) na planta e no quadro de forros (garagem gesso 2,45; nome do ambiente vem da base, só tipo e H no rótulo). Dr. Tarcio: viga 15x25.
