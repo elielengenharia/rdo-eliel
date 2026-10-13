@@ -754,7 +754,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.65 · fossa no canto da frente, ralo no tubo do vaso com suspiro", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.66 · fossa conferida: fora da casa, muro e garagem, entrada virada para a caixa", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2595,8 +2595,10 @@ function redeHidro(G,LM){
   // o coletor corre reto pelo corredor até a frente (rede pública) ou até a fossa
   const modoCol=String((S.fossa||{}).coletor||"auto"), perpF=[-VF[1],VF[0]];
   const corr=modoCol==="anel"||!salas.length?null:(()=>{ let best=null;
+    const temCorr=ED.some((e,i)=>{ const A=AE.R[i], B=AE.R[(i+1)%nC]; return e.dd>0&&Math.hypot(B[0]-A[0],B[1]-A[1])>=1.5&&Math.abs(e.n[0]*VF[0]+e.n[1]*VF[1])<=0.35&&(modoCol==="auto"||((e.n[0]*perpF[0]+e.n[1]*perpF[1])>0?"esq":"dir")===modoCol); });
+    const modo=temCorr?modoCol:"auto"; if(!temCorr&&modoCol!=="auto") aviso.push(`Não há corredor do lado ${modoCol==="esq"?"esquerdo":"direito"} (a construção encosta na divisa): o coletor foi para o outro lado.`);
     ED.forEach((e,i)=>{ const A=AE.R[i], B=AE.R[(i+1)%nC], Ls=Math.hypot(B[0]-A[0],B[1]-A[1]); if(Ls<1.5||Math.abs(e.n[0]*VF[0]+e.n[1]*VF[1])>0.35) return;
-      const lado=(e.n[0]*perpF[0]+e.n[1]*perpF[1])>0?"esq":"dir"; if(modoCol!=="auto"&&lado!==modoCol) return;
+      const lado=(e.n[0]*perpF[0]+e.n[1]*perpF[1])>0?"esq":"dir"; if(modo!=="auto"&&lado!==modo) return;
       const sc=salas.reduce((s0,sa)=>s0+distSeg(sa.saida.p,{x1:A[0],y1:A[1],x2:B[0],y2:B[1]}),0)+(e.dd>0?0:1000)-Ls*0.05;
       if(!best||sc<best.sc) best={sc,i,A,B,lado}; });
     if(!best) return null; const i=best.i, fA=best.A[0]*VF[0]+best.A[1]*VF[1], fB=best.B[0]*VF[0]+best.B[1]*VF[1];
@@ -2627,7 +2629,11 @@ function redeHidro(G,LM){
   const qts=G.rooms.filter(r=>/su[ií]te|quarto|dormit/i.test(r.n)).length, com=S.uso==="comercial";
   const pessoas=com?Math.max(2,Math.ceil(LM.filter(R=>R.tipo==="escrit").reduce((s,R)=>s+R.r.area,0)/7.5)):Math.max(2,2*qts), cons=com?50:150, Vn=pessoas*cons;
   // sem rede pública: o conjunto fossa/filtro/sumidouro é colocado no lote e a caixa final fica no lado virado para ele
-  const fossa=(S.fossa||{}).on==="sim"&&caixas.length?(()=>{ const FSd=dimFossa({pessoas,com}), al=corr?anelP(corr.tFim):[caixas.reduce((s0,c)=>s0+c.p[0],0)/caixas.length,caixas.reduce((s0,c)=>s0+c.p[1],0)/caixas.length]; return ajustaFossa(G,{...FSd,...posFossa(G,FSd,al)}); })():null;
+  const fossa=(S.fossa||{}).on==="sim"&&caixas.length?(()=>{ const FSd=dimFossa({pessoas,com}), al=corr?anelP(corr.tFim):anelP(anelT(caixas.reduce((m,c)=>!m||c.p[0]*VF[0]+c.p[1]*VF[1]>m[0]*VF[0]+m[1]*VF[1]?c.p:m,null))); const tenta=a0=>({...FSd,...posFossa(G,FSd,a0),alvo:a0}), longe=r=>!r.pos||Math.hypot(r.pos.ent[0]-r.alvo[0],r.pos.ent[1]-r.alvo[1])>7;
+    let r=tenta(al);
+    // não coube na frente: tenta a outra ponta do corredor (o coletor passa a correr para os fundos)
+    if(corr&&longe(r)){ const tO=Math.abs(corr.tFim-corr.t1)<1e-9?corr.t0:corr.t1, r2=tenta(anelP(tO)); if(!longe(r2)){ corr.tFim=tO; r2.av=[...(r2.av||[]),`O conjunto${FSd.fil?" com filtro anaeróbio":""} não coube no canto da frente sem encostar na casa, na garagem ou no muro; ficou no fundo do corredor e o coletor corre para os fundos.${FSd.fil?" Sem o filtro ele cabe na frente.":""}`]; r=r2; } }
+    return ajustaFossa(G,r); })():null;
   // caixa final no lado da frente (ou do lado da fossa), na posição mais perto das outras
   const dist=(a,b)=>{ const x=Math.abs(a-b)%PER; return Math.min(x,PER-x); };
   let fr=frente;
@@ -2638,6 +2644,7 @@ function redeHidro(G,LM){
   caixas.forEach(c=>{ const tt=naFrente(c.t); const v=caixas.reduce((s,o)=>s+dist(o.t,tt),0); if(v<best){ best=v; tf=tt; } });
   if(tf===null) tf=(fr[0]+fr[1])/2;
   if(corr) tf=corr.tFim;   // caixa final no fim do corredor, do lado da rua
+  else if(fossa&&fossa.alvo) tf=anelT(fossa.alvo);   // em volta da casa com fossa: a caixa final é a que o tanque mira
   const fimMan=(!comFossa||corr)&&ovP("fim"); if(fimMan) tf=anelT(fimMan);
   // coletor pelo anel, sempre pelo caminho mais curto até a caixa final
   const trechos=[]; caixas.forEach(c=>{ let a=c.t, b=tf; let dd=((b-a)%PER+PER)%PER; if(dd>PER/2){ [a,b]=[b,a]; dd=PER-dd; } if(dd>0.05) trechos.push([a,a+dd]); });
@@ -2650,13 +2657,14 @@ function redeHidro(G,LM){
   const cx2=[]; ci.forEach(c=>{ const o=c.add?null:cx2.find(q=>!q.add&&dist(q.t,c.t)<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; o.fim=o.fim||c.fim; if(c.key) o.keys.push(c.key); o.man=o.man||c.man; } else cx2.push({...c,keys:c.key?[c.key]:[]}); });
   if(fimMan){ const o=cx2.find(c=>c.fim); if(o) o.man=1; }
   // com fossa: só as caixas das saídas; a mais perto do tanque é a final e as outras ligam direto nela
-  let ligs=[]; if(fossa&&fossa.pos&&!corr){ trechos.length=0; const ent=fossa.pos.ent, cs1=[];
+  let ligs=[]; if(false){ trechos.length=0;   // (modo antigo: caixas soltas ligadas direto na final) — hoje o coletor sempre vai pelo anel ou pelo corredor const ent=fossa.pos.ent, cs1=[];
     // a caixa de cada saída vai para a parede de fora que fica no caminho do tanque (menor cano no total)
     salas.forEach((sa,i)=>{ const q=caixaFora(sa.saida.p,ent); if(q){ caixas[i].p=q; ramal[i].b=q; } });
     caixas.forEach(c=>{ const o=ovP(c.key); if(!o||c.ri==null) return; c.p=o; c.t=anelT(o); c.man=1; ramal[c.ri].b=o; });   // com fossa a caixa fica onde o profissional soltou
     caixas.forEach(c=>{ const o=c.add?null:cs1.find(q=>!q.add&&Math.hypot(q.p[0]-c.p[0],q.p[1]-c.p[1])<0.6); if(o){ if(c.tipo==="CG") o.tipo="CG"; if(c.key) o.keys.push(c.key); o.man=o.man||c.man; } else cs1.push({...c,fim:false,keys:c.key?[c.key]:[]}); });
-    const f0=cs1.reduce((m,c)=>!m||Math.hypot(c.p[0]-ent[0],c.p[1]-ent[1])<Math.hypot(m.p[0]-ent[0],m.p[1]-ent[1])?c:m,null); if(f0) f0.fim=true;
-    cs1.forEach(c=>{ if(c!==f0) ligs.push([c.p,f0.p]); }); cx2.length=0; cx2.push(...cs1); }
+    const axT=fossa.pos.ax, ctT=fossa.pos.ct, Lt=fossa.L+0.3, ladoOk=c=>((c.p[0]-ctT[0])*axT[0]+(c.p[1]-ctT[1])*axT[1])<=-Lt/2+0.15;
+    const f0=cs1.reduce((m,c)=>{ const v=Math.hypot(c.p[0]-ent[0],c.p[1]-ent[1])+(ladoOk(c)?0:100); return !m||v<m.v?{c,v}:m; },null); if(f0) f0.c.fim=true;
+    cs1.forEach(c=>{ if(f0&&c!==f0.c) ligs.push([c.p,f0.c.p]); }); cx2.length=0; cx2.push(...cs1); }
   const dentroObra=c=>naObra(c.p);
   if(cx2.some(dentroObra)) aviso.push("Construção encostada na divisa do vizinho: a caixa desse trecho fica dentro da edificação (caixa com tampa no piso), para não passar para o lote vizinho.");
   if(TL&&cx2.some(c=>!dentroObra(c)&&noPasseio(c.p,PS,0))) aviso.push("Construção no alinhamento: caixa de inspeção na calçada, junto da parede (confirmar com a prefeitura).");
@@ -2729,6 +2737,8 @@ function redePluvial(G,HD0){ if(G.vazio||!HD0||!HD0.anelP) return null;
   // caixa de inspeção nas mudanças de direção (cantos do anel que a rede usa)
   HD.anelCn.forEach(cn=>{ const c0=nt(cn); if(arcs.some(x=>c0>x.a+0.05&&c0<x.b-0.05||c0+PER>x.a+0.05&&c0+PER<x.b-0.05)&&!caixas.some(q=>dist(q.t,c0)<0.6)&&!(HD.naObra&&HD.naObra(HD.anelP(c0)))) caixas.push({t:c0,p:HD.anelP(c0),Q:0,cond:[],tipo:"CI"}); });
   let fim=caixas.find(q=>dist(q.t,tf)<0.6); if(!fim){ fim={t:nt(tf),p:HD.anelP(tf),Q:0,cond:[],tipo:"CI"}; caixas.push(fim); } fim.fim=true;
+  { const ES0=(HD0.caixas||[]).map(c=>c.p), perto=p=>ES0.some(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<0.60);
+    caixas.forEach(c=>{ if(!perto(c.p)) return; for(const d of [0.3,-0.3,0.6,-0.6,0.9,-0.9,1.2,-1.2]){ const p=HD.anelP(c.t+d); if(!perto(p)&&!(HD.naObra&&HD.naObra(p))){ c.t=nt(c.t+d); c.p=p; break; } } }); }
   // profundidade: 0,30 m na caixa mais alta e o caimento até a final
   const Lmax=Math.max(0,...caixas.map(c=>dist(c.t,tf))), hF=0.30+i/100*Lmax; caixas.forEach(c=>{ c.h=Math.max(0.30,hF-i/100*dist(c.t,tf)); c.lado=c.h>0.60?0.60:0.40; });
   caixas.sort((a,b)=>dist(b.t,tf)-dist(a.t,tf)).forEach((c,j)=>c.nome=`${c.tipo}${j+1}`);
@@ -2821,10 +2831,10 @@ function passeios(G){ if(G.vazio) return []; const T=terreno(G), L0=T.lote, n=L0
 const noPasseio=(p,PS,m=0.05)=>PS.some(q=>{ const dx=p[0]-q.a[0], dy=p[1]-q.a[1], s0=dx*q.u[0]+dy*q.u[1], t0=dx*q.n[0]+dy*q.n[1]; return t0>=m&&t0<=q.cal-m&&s0>=-q.cal&&s0<=q.L+q.cal; });
 function fossaSeptica(G,HD){ return HD&&HD.fossa||null; }
 function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, gap=FS.gap, afa=FS.afast, loc=String((S.fossa||{}).local||"lote");
-  const key=JSON.stringify([TL,G.contExt,(G.pisos||[]).map(q=>q.n),S.frente,FS.L,FS.W,FS.cil,FS.fil,FS.Df,FS.Ds,FS.ns,alvo,loc,S.terr.calcada,gap,afa]); if(_fossaCache&&_fossaCache.key===key) return _fossaCache.pos;
-  if(loc!=="lote"){ const pos=fossaNoPasseio(G,FS,alvo,+loc-1); _fossaCache={key,pos}; return pos; }
+  const key=JSON.stringify([TL,G.contExt,G.walls.length,(G.pisos||[]).map(q=>q.n),S.frente,FS.L,FS.W,FS.cil,FS.fil,FS.Df,FS.Ds,FS.ns,alvo,loc,S.terr.calcada,gap,afa]); const CH=(_fossaCache&&_fossaCache.m)?_fossaCache:(_fossaCache={m:new Map()}); if(CH.m.has(key)) return CH.m.get(key); const guarda=pos=>{ CH.m.set(key,pos); if(CH.m.size>6) CH.m.delete(CH.m.keys().next().value); return pos; };
+  if(loc!=="lote"){ return guarda(fossaNoPasseio(G,FS,alvo,+loc-1)); }
   const segs=[...TL.map((a,i)=>({a,b:TL[(i+1)%nT],lote:1}))], dS=(p,s0)=>distSeg(p,{x1:s0.a[0],y1:s0.a[1],x2:s0.b[0],y2:s0.b[1]});
-  const PZ=(G.pisos||[]).map(q=>q.poly).filter(Boolean), casas=[...(G.casas||[]),...PZ], walls=[...G.contExt.map(s0=>({a:[s0[0],s0[1]],b:[s0[2],s0[3]]})),...PZ.flatMap(P0=>P0.map((p,i)=>({a:p,b:P0[(i+1)%P0.length]})))];   // garagem e varanda contam como construção
+  const PZ=(G.pisos||[]).map(q=>q.poly).filter(Boolean), casas=[...(G.casas||[]),...PZ], walls=[...G.contExt.map(s0=>({a:[s0[0],s0[1]],b:[s0[2],s0[3]]})),...PZ.flatMap(P0=>P0.map((p,i)=>({a:p,b:P0[(i+1)%P0.length]}))),...G.walls.filter(w=>!w.dw).map(w=>({a:[w.x1,w.y1],b:[w.x2,w.y2]}))];   // muro desenhado também   // garagem e varanda contam como construção
   const folga=p=>{ const dl=Math.min(...segs.map(s0=>dS(p,s0))), dc=walls.length?Math.min(...walls.map(s0=>dS(p,s0))):99;
     return Math.min(pontoDentro(p,TL)?dl:-dl,casas.some(P=>pontoDentro(p,P))?-dc:dc); };
   const Lo=FS.L+2*e, Wo=FS.W+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e;
@@ -2837,30 +2847,30 @@ function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, ga
   const gs=0.1, nx=Math.ceil((x1-x0)/gs)+1, ny=Math.ceil((y1-y0)/gs)+1, GF=new Float32Array(nx*ny);
   for(let i=0;i<nx;i++) for(let j=0;j<ny;j++) GF[i*ny+j]=folga([x0+i*gs,y0+j*gs]);
   const folgaG=p=>{ const i=Math.round((p[0]-x0)/gs), j=Math.round((p[1]-y0)/gs); return i<0||j<0||i>=nx||j>=ny?-1:GF[i*ny+j]-0.05; };
-  const busca=(gap,thr=0.30)=>{ let best=null;
-  for(const ax of [[1,0],[-1,0],[0,1],[0,-1]]) for(const turn of [0,1,-1]){ const pr=[-ax[1],ax[0]], ax2=turn?[-ax[1]*turn,ax[0]*turn]:ax; if(!FS.fil&&turn) continue;
-    for(let x=x0;x<=x1;x+=0.5) for(let y=y0;y<=y1;y+=0.5){
-      const ct=[x,y], A=arranjoFossa(FS,ct,ax,turn,gap), cf=A.cf, cs=A.cs;
-      const pts=[]; [-1,0,1].forEach(a=>[-1,0,1].forEach(b=>{ if(a||b) pts.push([ct[0]+ax[0]*a*Lo/2+pr[0]*b*Wo/2,ct[1]+ax[1]*a*Lo/2+pr[1]*b*Wo/2]); }));
-      [...(FS.fil?[[cf,rf]]:[]),...cs.map(c=>[c,rs])].forEach(([c,r])=>{ for(let i=0;i<12;i++){ const an=i*Math.PI/6; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } });
-      let cl=99; for(const q of pts){ const v=folgaG(q); if(v<cl) cl=v; }
-      const ent=[ct[0]-ax[0]*Lo/2,ct[1]-ax[1]*Lo/2], dd=Math.hypot(ent[0]-alvo[0],ent[1]-alvo[1]);
-      const ent0=naEntrada(ct)||pts.some(naEntrada), sc=thr<0?(ent0?1e7:0)+(Math.hypot(ent[0]-alvo[0],ent[1]-alvo[1])>7?1e6:0)-cl*100+dd*0.5:(ent0?1e7:0)+(cl>=afa-1e-9?dd:cl>=thr?1000+dd+(afa-cl)*3:1e6-cl*1000+dd)+(turn?0.3:0);   // thr<0: no canto, com a maior folga que der   // não cabe com 1,50 m: perto da caixa final, sem encostar na casa nem na divisa
-      if(!best||sc<best.sc) best={sc,cl,ct,cf,cs,ax,pr,ent,turn,entrada:ent0}; } }
-    if(best) best.cl=Math.min(...[best.ct,...[-1,1].flatMap(a=>[-1,1].map(b=>[best.ct[0]+best.ax[0]*a*Lo/2+best.pr[0]*b*Wo/2,best.ct[1]+best.ax[1]*a*Lo/2+best.pr[1]*b*Wo/2]))].map(folga).concat([...(FS.fil?[[best.cf,rf]]:[]),...best.cs.map(c=>[c,rs])].flatMap(([c,r])=>Array.from({length:12},(_,i)=>folga([c[0]+r*Math.cos(i*Math.PI/6),c[1]+r*Math.sin(i*Math.PI/6)])))));
-    return best; };
-  // não coube no canto (fora da entrada do carro, com 30 cm de folga): aproxima as unidades até caber (só com a distância automática)
-  // prioridade: perto da caixa final (canto da frente, do lado do corredor), fora da entrada do carro
-  const perto=b=>Math.hypot(b.ent[0]-alvo[0],b.ent[1]-alvo[1])<=7, gaps=FS.gapU?[gap]:[gap,1.2,1.0,0.8,0.6,0.5];
-  let best=null, gapU=gap;
-  for(const [thr,exigePerto] of [[0.30,true],[0.10,true],[0.0,true],[-1,true],[0.30,false],[0.10,false]]){
-    if(thr<0){ let bb=null, gg=gap; for(const g of gaps){ const b=busca(g,thr); if(b&&!b.entrada&&perto(b)&&(!bb||b.cl>bb.cl+0.05)){ bb=b; gg=g; } } if(bb){ best=bb; gapU=gg; break; } continue; }
-    for(const g of gaps){ const b=busca(g,thr); if(b&&!b.entrada&&b.cl>=thr-0.02&&(!exigePerto||perto(b))){ best=b; gapU=g; break; } } if(best) break; }
-  if(!best) best=busca(gap);
-  const av=[...(FS.av||[])]; if(gapU<gap) av.push(`Para o conjunto caber fora da entrada do carro, tanque, filtro e sumidouro ficaram a ${f(gapU)} m um do outro; a NBR 7229 pede 1,50 m entre o tanque e o sumidouro. Confirme com a prefeitura ou aumente o lote disponível.`);
-  if(best&&best.entrada) av.push("Não achei lugar para o conjunto fora da entrada do carro: arraste o tanque para o lugar certo na planta hidrossanitária.");
-  if(best&&!best.entrada&&best.cl<0) av.push(`O conjunto${FS.fil?" com filtro anaeróbio":""} não cabe inteiro no canto da frente, do lado do corredor: passa ${f(-best.cl)} m da construção ou da divisa. ${FS.fil?"Sem o filtro (tanque direto no sumidouro) ele cabe melhor; ":""}também dá para diminuir o tanque/sumidouro ou arrastar o conjunto na planta.`);
-  const pos={pos:best,cabe:!!best&&best.cl>=afa-1e-9,gap:gapU,av}; _fossaCache={key,pos}; return pos; }
+  // regras (como o profissional faz): nenhuma unidade em cima da casa, da garagem, do muro ou fora do lote; nunca na entrada do carro;
+  // a entrada do tanque virada para a caixa final (o cano chega pelo lado da entrada, sem passar por cima do tanque); o mais perto possível da caixa final
+  const ptsDe=(ct,ax,pr,cf,cs)=>{ const pts=[]; [-1,0,1].forEach(a=>[-1,0,1].forEach(b=>{ if(a||b) pts.push([ct[0]+ax[0]*a*Lo/2+pr[0]*b*Wo/2,ct[1]+ax[1]*a*Lo/2+pr[1]*b*Wo/2]); }));
+    [...(FS.fil?[[cf,rf]]:[]),...cs.map(c=>[c,rs])].forEach(([c,r])=>{ for(let i=0;i<16;i++){ const an=i*Math.PI/8; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } }); pts.push(ct,cf,...cs); return pts; };
+  const busca=(gap,thr,perto)=>{ let best=null;
+    for(const ax of [[1,0],[-1,0],[0,1],[0,-1]]) for(const turn of [0,1,-1]){ const pr=[-ax[1],ax[0]]; if(!FS.fil&&turn) continue;
+      for(let x=x0;x<=x1;x+=0.25) for(let y=y0;y<=y1;y+=0.25){
+        const ct=[x,y], ent=[ct[0]-ax[0]*Lo/2,ct[1]-ax[1]*Lo/2], dd=Math.hypot(ent[0]-alvo[0],ent[1]-alvo[1]);
+        if(perto&&dd>7) continue; if(((alvo[0]-ct[0])*ax[0]+(alvo[1]-ct[1])*ax[1])>-Lo/2+0.15) continue;   // a caixa final tem de ficar do lado da entrada do tanque
+        const A=arranjoFossa(FS,ct,ax,turn,gap), pts=ptsDe(ct,ax,pr,A.cf,A.cs); let cl=99, ruim=false;
+        for(const q of pts){ const v=folgaG(q); if(v<cl) cl=v; if(cl<thr){ ruim=true; break; } } if(ruim||pts.some(naEntrada)||pts.some(q=>Math.hypot(q[0]-alvo[0],q[1]-alvo[1])<0.45)) continue;
+        const sc=dd+(turn?0.4:0)+(cl<afa?(afa-cl)*1.5:0); if(!best||sc<best.sc) best={sc,cl,ct,cf:A.cf,cs:A.cs,ax,pr,ent,turn,entrada:false}; } }
+    if(best) best.cl=Math.min(...ptsDe(best.ct,best.ax,best.pr,best.cf,best.cs).map(folga)); return best; };
+  const gaps=FS.gapU?[gap]:[gap,1.2,1.0,0.8,0.6,0.5];
+  let best=null, gapU=gap, fora=false;
+  for(const [thr,perto] of [[0.30,true],[0.15,true],[0.30,false],[0.15,false]]){ for(const g of gaps){ const b=busca(g,thr,perto); if(b){ best=b; gapU=g; break; } } if(best) break; }
+  if(!best){ fora=true;   // não cabe em lugar nenhum respeitando as regras: fica onde invade menos e avisa
+    let bb=null; for(const ax of [[1,0],[-1,0],[0,1],[0,-1]]) for(const turn of [0,1,-1]){ if(!FS.fil&&turn) continue; const pr=[-ax[1],ax[0]];
+      for(let x=x0;x<=x1;x+=0.5) for(let y=y0;y<=y1;y+=0.5){ const ct=[x,y], A=arranjoFossa(FS,ct,ax,turn,gaps[gaps.length-1]), pts=ptsDe(ct,ax,pr,A.cf,A.cs); let cl=99; for(const q of pts){ const v=folgaG(q); if(v<cl) cl=v; }
+        const ent=[ct[0]-ax[0]*Lo/2,ct[1]-ax[1]*Lo/2], sc=(pts.some(naEntrada)?100:0)-cl*10+Math.hypot(ent[0]-alvo[0],ent[1]-alvo[1])*0.1; if(!bb||sc<bb.sc) bb={sc,cl,ct,cf:A.cf,cs:A.cs,ax,pr,ent,turn,entrada:pts.some(naEntrada)}; } }
+    best=bb; gapU=gaps[gaps.length-1]; if(best) best.cl=Math.min(...ptsDe(best.ct,best.ax,best.pr,best.cf,best.cs).map(folga)); }
+  const av=[...(FS.av||[])]; if(gapU<gap) av.push(`Para o conjunto caber no lote, tanque, filtro e sumidouro ficaram a ${f(gapU)} m um do outro; a NBR 7229 pede 1,50 m entre o tanque e o sumidouro. Confirme com a prefeitura.`);
+  if(fora) av.push(`O conjunto${FS.fil?" com filtro anaeróbio":""} não cabe no lote sem encostar na casa, na garagem, no muro ou na divisa (falta ${f(Math.max(0,-best.cl)+0.15)} m). ${FS.fil?"Tire o filtro (tanque direto no sumidouro), ":""}diminua o tanque ou o sumidouro (diâmetro maior e mais fundo ocupa menos área) ou leve o conjunto para o passeio.`);
+  return guarda({pos:best,cabe:!!best&&best.cl>=afa-1e-9,gap:gapU,av}); }
 // lugar escolhido pelo profissional: S.fossaM = {ct:[x,y] centro do tanque, giro: quartos de volta, f:[x,y] filtro, s:{i:[x,y]} sumidouros}
 // tanque, filtro e sumidouro em fila (turn 0) ou em L: depois do filtro a fila vira 90° (turn ±1) para caber no canto do lote
 function arranjoFossa(FS,ct,ax,turn=0,gap0){ const e=FS.e, gap=gap0!=null?gap0:(FS.passeio&&!FS.gapU?0.50:FS.gap), Lo=FS.L+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, ax2=turn?[-ax[1]*turn,ax[0]*turn]:ax;
