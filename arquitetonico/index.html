@@ -763,7 +763,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.86 · testeira da garagem rente com a parede", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.87 · ralo do box móvel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1904,9 +1904,14 @@ function retUtil(r){ if(r.ret) return r; if(r._util!==undefined) return r._util;
   const {x0,x1,y0,y1}=best; r._util={...r,x0,x1,y0,y1,poly:[[x0,y0],[x1,y0],[x1,y1],[x0,y1]],areaUtil:best.ar,cx:(x0+x1)/2,cy:(y0+y1)/2,ret:true,util:true,real:r,...(fr?{fr}:{})}; return r._util; }
 // arranjo do banheiro girado levado para a planta (o box fica como polígono)
 function lbMundo(Lb){ if(!Lb||!Lb.fr||Lb.mundo) return Lb; const fr=Lb.fr, W=p=>frMundo(fr,p), it=o=>o&&{...o,c:W(o.c),a:W(o.a),n:W(o.n)}, b=Lb.box;
-  return {...Lb,vaso:it(Lb.vaso),lav:it(Lb.lav),chuv:Lb.chuv&&{...Lb.chuv,c:W(Lb.chuv.c),n:W(Lb.chuv.n)},cb:W(Lb.cb),boxP:b?[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]].map(W):null,boxC:b?W([(b.x0+b.x1)/2,(b.y0+b.y1)/2]):null,loc:Lb,mundo:true}; }
+  return {...Lb,vaso:it(Lb.vaso),lav:it(Lb.lav),chuv:Lb.chuv&&{...Lb.chuv,c:W(Lb.chuv.c),n:W(Lb.chuv.n)},cb:W(Lb.cb),boxP:b?[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]].map(W):null,boxC:b?W([(b.x0+b.x1)/2,(b.y0+b.y1)/2]):null,raloW:Lb.ralo?W(Lb.ralo):null,loc:Lb,mundo:true}; }
 const boxPoly=Lb=>Lb&&Lb.box?(Lb.boxP||[[Lb.box.x0,Lb.box.y0],[Lb.box.x1,Lb.box.y0],[Lb.box.x1,Lb.box.y1],[Lb.box.x0,Lb.box.y1]]):null;
 const boxCentro=Lb=>Lb&&Lb.box?(Lb.boxC||[(Lb.box.x0+Lb.box.x1)/2,(Lb.box.y0+Lb.box.y1)/2]):null;
+// ralo do box: no centro (automático) ou onde o profissional pôs (lab.lb.ralo = distância ao canto x0,y0 do box); fica 8 cm longe do vidro/parede
+const RALO_M=0.08;
+function raloNoBox(b,rel){ if(!b) return null; const w=b.x1-b.x0, h=b.y1-b.y0, cl=(v,L)=>L<=2*RALO_M?L/2:Math.max(RALO_M,Math.min(L-RALO_M,v));
+  return rel?[b.x0+cl(num(rel.x),w),b.y0+cl(num(rel.y),h)]:[b.x0+w/2,b.y0+h/2]; }
+const raloDe=Lb=>Lb&&Lb.box?(Lb.raloW||Lb.ralo||boxCentro(Lb)):null;
 // primitivas desenhadas no sistema do banheiro girado, levadas para a planta
 function rodaPrims(ps,fr){ const W=(x,y)=>frMundo(fr,[x,y]), dg=fr.th*180/Math.PI; return ps.map(q=>{ const o={...q};
   if(q.t==="l"){ [o.x1,o.y1]=W(q.x1,q.y1); [o.x2,o.y2]=W(q.x2,q.y2); }
@@ -1956,7 +1961,8 @@ function layoutBanheiro(G,r){
     const pa=Math.abs(a[0])>0.5?[box.x0-c[0],box.x1-c[0]].map(v=>v*Math.sign(a[0])):[box.y0-c[1],box.y1-c[1]].map(v=>v*Math.sign(a[1])), lo=Math.min(...pa), hi=Math.max(...pa);
     const fr0=Math.abs(n[0])>0.5?[box.x0-c[0],box.x1-c[0]].map(v=>v*Math.sign(n[0])):[box.y0-c[1],box.y1-c[1]].map(v=>v*Math.sign(n[1])), naFrente=Math.min(...fr0)<0.65&&Math.max(...fr0)>-0.05;
     if(naFrente&&!(lo>=0.40-1e-6||hi<=-0.40+1e-6)){ const m1=lo-0.40, m2=hi+0.40, mv=Math.abs(m1)<Math.abs(m2)?m1:m2; vaso={...vaso,c:[c[0]+a[0]*mv,c[1]+a[1]*mv]}; } }
-  return {box,vaso,lav,porta,cb,sx,sy,lavabo,...(fr?{fr,rL:r}:{}),chuv,manual:!!(M&&M.vaso&&M.lav)};
+  const raloMan=!!(box&&M&&M.vaso&&M.lav&&M.ralo), ralo=box?raloNoBox(box,raloMan?M.ralo:null):null;
+  return {box,vaso,lav,porta,cb,sx,sy,lavabo,...(fr?{fr,rL:r}:{}),chuv,ralo,raloMan,manual:!!(M&&M.vaso&&M.lav)};
 }
 // chuveiro no meio do lado do box que encosta numa parede (o lado escolhido, ou o primeiro que encosta)
 function chuvDoBox(b,R,lado){ const t=0.03, L=[["A",Math.abs(b.y0-R.y0)<t,{c:[(b.x0+b.x1)/2,b.y0],n:[0,1]}],["C",Math.abs(b.y1-R.y1)<t,{c:[(b.x0+b.x1)/2,b.y1],n:[0,-1]}],["D",Math.abs(b.x0-R.x0)<t,{c:[b.x0,(b.y0+b.y1)/2],n:[1,0]}],["B",Math.abs(b.x1-R.x1)<t,{c:[b.x1,(b.y0+b.y1)/2],n:[-1,0]}]];
@@ -2234,11 +2240,13 @@ function desenhaLoucas(D,r,Lb,k,txt){
   if(Lb.box){ const b=Lb.box, e=0.02;
     [[b.x0,b.y0,b.x1,b.y0],[b.x1,b.y0,b.x1,b.y1],[b.x1,b.y1,b.x0,b.y1],[b.x0,b.y1,b.x0,b.y0]].forEach(([xa,ya,xb,yb])=>{ const naParede=(Math.abs(ya-yb)<1e-6&&(Math.abs(ya-r.y0)<1e-6||Math.abs(ya-r.y1)<1e-6))||(Math.abs(xa-xb)<1e-6&&(Math.abs(xa-r.x0)<1e-6||Math.abs(xa-r.x1)<1e-6));
       if(naParede) return; const nx=Math.abs(ya-yb)<1e-6?0:e, ny=Math.abs(ya-yb)<1e-6?e:0; L(D,xa-nx,ya-ny,xb-nx,yb-ny,.25,"ESQUADRIA"); L(D,xa+nx,ya+ny,xb+nx,yb+ny,.25,"ESQUADRIA"); });
-    const cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, rr=0.06; PL(D,[[cx-rr,cy-rr],[cx+rr,cy-rr],[cx+rr,cy+rr],[cx-rr,cy+rr],[cx-rr,cy-rr]],.25,"ESQUADRIA"); L(D,cx-rr,cy-rr,cx+rr,cy+rr,.13,"ESQUADRIA"); L(D,cx-rr,cy+rr,cx+rr,cy-rr,.13,"ESQUADRIA");
+    const bx=(b.x0+b.x1)/2, by=(b.y0+b.y1)/2, [cx,cy]=Lb.ralo||[bx,by], rr=0.06; PL(D,[[cx-rr,cy-rr],[cx+rr,cy-rr],[cx+rr,cy+rr],[cx-rr,cy+rr],[cx-rr,cy-rr]],.25,"ESQUADRIA"); L(D,cx-rr,cy-rr,cx+rr,cy+rr,.13,"ESQUADRIA"); L(D,cx-rr,cy+rr,cx+rr,cy-rr,.13,"ESQUADRIA");
     const ch=Lb.chuv; CI(D,ch.c[0]+ch.n[0]*0.12,ch.c[1]+ch.n[1]*0.12,0.07,.25,"ESQUADRIA");
-    if(txt){ TX(D,cx,cy+rr+2.2*k,"RALO",1.4,{l:"COTAS"}); TX(D,cx,cy-rr-4.5*k,"BOX",2,{b:true});
-      // caimento para o ralo
-      seta(D,b.x0+(b.x1-b.x0)*0.18,cy,cx-rr-0.03,cy,"COTAS"); TX(D,b.x0+(b.x1-b.x0)*0.2,cy-2*k,"i=1%",1.4,{a:"s",l:"COTAS",mv:"l"}); } }
+    if(txt){ const noMeio=Math.hypot(cx-bx,cy-by)<0.10, emBaixo=cy>by+0.02;
+      TX(D,cx,emBaixo?cy-rr-2.2*k:cy+rr+2.2*k,"RALO",1.4,{l:"COTAS"}); if(noMeio) TX(D,cx,cy-rr-4.5*k,"BOX",2,{b:true}); else TX(D,bx,by,"BOX",2,{b:true});
+      // caimento para o ralo: seta vinda do lado oposto do box
+      const dir=cx>=bx+0.02?1:-1, x0=dir>0?b.x0+(b.x1-b.x0)*0.18:b.x1-(b.x1-b.x0)*0.18;
+      if(Math.abs(cx-x0)>rr+0.10){ seta(D,x0,cy,cx-dir*(rr+0.03),cy,"COTAS"); TX(D,x0+dir*(b.x1-b.x0)*0.02,cy-2*k,"i=1%",1.4,{a:"s",l:"COTAS",mv:"l"}); } } }
   // vaso
   const V=Lb.vaso; ret(V,-V.larg/2,V.larg/2,0,0.18,.35); elipse(V,0,0.18+0.24,0.18,0.24,.35); elipse(V,0,0.18+0.25,0.12,0.17,.18);
   // lavatório (bancada com cuba)
@@ -2602,13 +2610,13 @@ function redeHidro(G,LM){
   LM=LM||layoutMoveis(G);
   const ap=[], salas=[], aviso=[], bb=G.bb, d=0.80;
   const loc=(it,s0,t0)=>[it.c[0]+it.a[0]*s0+it.n[0]*t0,it.c[1]+it.a[1]*s0+it.n[1]*t0];
-  LM.forEach(R=>{ const r=R.r, A=[]; let cs=null, saida=null;
+  LM.forEach(R=>{ const r=R.r, A=[]; let cs=null, saida=null, csMan=false;
     const novo=(nome,af,dAf,h,es,dEs,vai)=>{ const o={r,nome,af,dAf,h,es,dEs,vai}; A.push(o); ap.push(o); return o; };
     if(R.banho){ const Lb=R.banho, V=Lb.vaso, Lv=Lb.lav;
       const vaso=novo("Bacia com caixa acoplada",{p:loc(V,-0.15,0),N:V.n},20,"0,20",loc(V,0,0.30),100,"saida");
       novo("Lavatório",{p:loc(Lv,0,0),N:Lv.n},20,"0,60",loc(Lv,0,0.12),50,"cs");
       if(Lb.chuv){ const ch=Lb.chuv; novo("Chuveiro",{p:ch.c,N:ch.n},25,"2,10",null,0,"cs"); }
-      const b=Lb.box; cs=b?boxCentro(Lb):[(vaso.es[0]+r.cx)/2,(vaso.es[1]+r.cy)/2];
+      const b=Lb.box; cs=b?raloDe(Lb):[(vaso.es[0]+r.cx)/2,(vaso.es[1]+r.cy)/2]; csMan=!!(b&&Lb.raloMan);
       saida={p:vaso.es,d:100,vaso:true,tv:{p:loc(V,0.38,0),N:V.n}}; }
     R.pos.forEach(c=>{ const T=c.T, pc=c.pc, w=(s,t)=>trf(T,s,t);
       if(pc.nome==="cozinha"){ const cb=(pc.cuba[0]+pc.cuba[2])/2; const o=novo("Pia da cozinha",{p:w(cb,0),N:T.N},20,"0,60",w(cb,0.25),50,"cg"); saida=saida||{p:o.es,d:50,cg:true}; }
@@ -2619,7 +2627,7 @@ function redeHidro(G,LM){
     { const o=(S.hidM||{})["cs|"+r.n]; if(cs&&o) cs=[num(o.x),num(o.y)]; }   // caixa sifonada mudada pelo profissional
     if(cs&&!saida) saida={p:cs,d:50};
     if((S.hidDel||{})["cs|"+r.n]) cs=null;   // caixa sifonada excluída: os aparelhos vão direto para a saída
-    salas.push({r,A,cs,saida}); });
+    salas.push({r,A,cs,saida,csMan}); });
   // anel das caixas de inspeção: a 0,80 m da casa, por fora; no lado em que isso cai fora do lote
   // (construção na divisa ou no alinhamento) as caixas ficam dentro da edificação, a 0,60 m da parede
   // o anel acompanha o contorno da construção (inclusive parede chanfrada), lado a lado
@@ -2696,7 +2704,7 @@ function redeHidro(G,LM){
   if(!comFossa||corr) caixas.forEach(c=>{ const o=ovP(c.key); if(!o) return; c.man=1;
     if(c.solta){ c.p=o; c.lig[0]=o; ramal[c.ri].b=o; return; } c.t=anelT(o); c.p=anelP(c.t); if(c.ri!=null) ramal[c.ri].b=c.p; });
   // caixa sifonada em cima do tubo do vaso: afasta 35 cm para o lado de dentro do banheiro, para o ralo entrar no tubo do vaso por uma junção
-  salas.forEach(sa=>{ if(!sa.cs||!sa.saida.vaso||(S.hidM||{})["cs|"+sa.r.n]) return; const rm=ramal.find(r0=>r0.r===sa.r); if(!rm) return;
+  salas.forEach(sa=>{ if(!sa.cs||!sa.saida.vaso||sa.csMan||(S.hidM||{})["cs|"+sa.r.n]) return; const rm=ramal.find(r0=>r0.r===sa.r); if(!rm) return;
     const a=rm.a, b0=rm.b, dx=b0[0]-a[0], dy=b0[1]-a[1], Lr=Math.hypot(dx,dy)||1, ux=dx/Lr, uy=dy/Lr, s0=(sa.cs[0]-a[0])*ux+(sa.cs[1]-a[1])*uy, dP=(sa.cs[0]-a[0])*(-uy)+(sa.cs[1]-a[1])*ux;
     if(s0<-0.2||s0>Lr+0.2||Math.abs(dP)>=0.30) return; let sg=Math.sign(dP)||1; const c0=[sa.r.cx,sa.r.cy], dC=(c0[0]-a[0])*(-uy)+(c0[1]-a[1])*ux; if(Math.abs(dP)<0.05&&dC) sg=Math.sign(dC);
     const novo=[sa.cs[0]+(-uy)*sg*(0.35-Math.abs(dP)),sa.cs[1]+ux*sg*(0.35-Math.abs(dP))]; if(G.compAt(...novo)===sa.r) sa.cs=novo; });
@@ -5659,14 +5667,14 @@ function banMoveBox(u,b,p){ const w=b.x1-b.x0, h=b.y1-b.y0; let x0=p[0]-w/2, y0=
   x0=Math.max(u.x0,Math.min(u.x1-w,x0)); y0=Math.max(u.y0,Math.min(u.y1-h,y0)); const r3=v=>+v.toFixed(3); return {x0:r3(x0),y0:r3(y0),x1:r3(x0+w),y1:r3(y0+h)}; }
 // contorno de cada peça (para tocar, marcar a escolhida e avisar quando uma pisa na outra)
 function banCont(it,larg,prof){ const a=[-it.n[1],it.n[0]], P=(s0,t0)=>[it.c[0]+a[0]*s0+it.n[0]*t0,it.c[1]+a[1]*s0+it.n[1]*t0]; return [P(-larg/2,0),P(larg/2,0),P(larg/2,prof),P(-larg/2,prof)]; }
-function banPecas(Lb){ const o={vaso:banCont(Lb.vaso,0.38,0.65),lav:banCont(Lb.lav,Lb.lav.larg,Lb.lav.prof)}; if(Lb.box){ const b=Lb.box; o.box=[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]]; } return o; }
+function banPecas(Lb){ const o={vaso:banCont(Lb.vaso,0.38,0.65),lav:banCont(Lb.lav,Lb.lav.larg,Lb.lav.prof)}; if(Lb.box){ const b=Lb.box; o.box=[[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]]; if(Lb.ralo){ const [x,y]=Lb.ralo, q=0.11; o.ralo=[[x-q,y-q],[x+q,y-q],[x+q,y+q],[x-q,y+q]]; } } return o; }
 function banBarra(li){ const L=S.rooms[li]||{}, M=L.lb, sel=BANSEL[li]||"vaso", bx=M&&M.box?`${f(M.box.x1-M.box.x0)}x${f(M.box.y1-M.box.y0)}`:"";
   const BOX=["0,80x0,80","0,90x0,90","0,80x1,00","0,90x1,20","1,00x1,20","0,90x1,40","1,00x1,50"];
-  return `<p class="cap" style="margin:0 0 6px">Toque numa peça na planta e arraste: ela encosta sozinha na parede. A posição vale para o layout, as vistas, a hidráulica (pontos de água e esgoto), a elétrica e o orçamento.${M?" <b>Arranjo seu (manual).</b>":" Arranjo automático."}</p>
+  return `<p class="cap" style="margin:0 0 6px">Toque numa peça na planta e arraste: ela encosta sozinha na parede. O ralo do box também arrasta (gruda no centro e nos cantos, a 15 cm das paredes). A posição vale para o layout, as vistas, a hidráulica (pontos de água e esgoto), a elétrica e o orçamento.${M?" <b>Arranjo seu (manual).</b>":" Arranjo automático."}</p>
   <div class="row" data-banbar="${li}" style="gap:6px;flex-wrap:wrap;margin:0 0 8px">
-    <select data-banpeca aria-label="Peça"><option value="vaso"${sel==="vaso"?" selected":""}>Vaso</option><option value="lav"${sel==="lav"?" selected":""}>Lavatório</option><option value="box"${sel==="box"?" selected":""}>Box e chuveiro</option></select>
-    ${(()=>{ const it=M&&(sel==="box"?(M.box?chuvDoBox(M.box,(banGeo(li)||{}).u||M.box,M.chuv):null):M[sel]), vt=it&&it.n&&Math.abs(it.n[0])>0.5; return `<select data-banpasso aria-label="Passo">${[[0.01,"1 cm"],[0.02,"2 cm"],[0.05,"5 cm"],[0.10,"10 cm"]].map(([v,t])=>`<option value="${v}"${Math.abs(v-LAYPASSO)<1e-6?" selected":""}>passo ${t}</option>`).join("")}</select><button class="btn" data-banacao="menos">${vt?"▲":"◀"}</button><button class="btn" data-banacao="mais">${vt?"▼":"▶"}</button>`; })()}
-    <button class="btn" data-banacao="girar">${sel==="box"?"Chuveiro na outra parede":"Outra parede"}</button>
+    <select data-banpeca aria-label="Peça"><option value="vaso"${sel==="vaso"?" selected":""}>Vaso</option><option value="lav"${sel==="lav"?" selected":""}>Lavatório</option><option value="box"${sel==="box"?" selected":""}>Box e chuveiro</option>${M&&!M.box?"":`<option value="ralo"${sel==="ralo"?" selected":""}>Ralo do box</option>`}</select>
+    ${sel==="ralo"?`<span class="cap">Ralo:</span>${[["c","No centro"],["ce","Canto ↖"],["cd","Canto ↗"],["be","Canto ↙"],["bd","Canto ↘"]].map(([v,t])=>`<button class="btn" data-banralo="${v}">${t}</button>`).join("")}${[["e","◀"],["d","▶"],["c2","▲"],["b2","▼"]].map(([v,t])=>`<button class="btn" data-banralo="${v}">${t}</button>`).join("")}<select data-banpasso aria-label="Passo">${[[0.01,"1 cm"],[0.02,"2 cm"],[0.05,"5 cm"],[0.10,"10 cm"]].map(([v,t])=>`<option value="${v}"${Math.abs(v-LAYPASSO)<1e-6?" selected":""}>passo ${t}</option>`).join("")}</select>`:(()=>{ const it=M&&(sel==="box"?(M.box?chuvDoBox(M.box,(banGeo(li)||{}).u||M.box,M.chuv):null):M[sel]), vt=it&&it.n&&Math.abs(it.n[0])>0.5; return `<select data-banpasso aria-label="Passo">${[[0.01,"1 cm"],[0.02,"2 cm"],[0.05,"5 cm"],[0.10,"10 cm"]].map(([v,t])=>`<option value="${v}"${Math.abs(v-LAYPASSO)<1e-6?" selected":""}>passo ${t}</option>`).join("")}</select><button class="btn" data-banacao="menos">${vt?"▲":"◀"}</button><button class="btn" data-banacao="mais">${vt?"▼":"▶"}</button>`; })()}
+    ${sel==="ralo"?"":`<button class="btn" data-banacao="girar">${sel==="box"?"Chuveiro na outra parede":"Outra parede"}</button>`}
     ${sel==="lav"?`<select data-banlarg aria-label="Largura do lavatório">${[0.4,0.45,0.5,0.6,0.8,1,1.2].map(v=>`<option value="${v}"${M&&Math.abs((M.lav.larg||0.5)-v)<0.01?" selected":""}>bancada ${f(v)} m</option>`).join("")}</select>`:""}
     ${sel==="box"?`<select data-banbox aria-label="Tamanho do box"><option value="">${M&&!M.box?"sem box":"tamanho do box"}</option>${BOX.map(v=>`<option value="${v}"${v===bx?" selected":""}>box ${v}</option>`).join("")}<option value="sem">sem box (lavabo)</option></select>`:""}
     ${M?`<button class="btn" data-banacao="auto">Voltar ao automático</button>`:""}
@@ -5677,7 +5685,7 @@ function banMarca(li,X){ X=X||banGeo(li); const el=document.querySelector(`[data
   const Lb=layoutBanheiro(X.G,X.u); if(!Lb) return; const P=banPecas(Lb), sel=BANSEL[li]||"vaso", W=p=>X.u.fr?frMundo(X.u.fr,p):p, m=p=>{ const q=W(p); return [V.pad+(q[0]-V.e.x0)/V.k,V.pad+(q[1]-V.e.y0)/V.k]; };
   if(P[sel]) svg.insertAdjacentHTML("beforeend",`<polygon points="${P[sel].map(p=>m(p).map(v=>v.toFixed(2)).join(",")).join(" ")}" fill="rgba(37,99,235,.12)" stroke="#2563eb" stroke-width="0.5" stroke-dasharray="1.5 1"/>`);
   // aviso: peça em cima de outra
-  const msg=document.querySelector(`[data-banmsg="${li}"]`); if(msg){ const nomes={vaso:"vaso",lav:"lavatório",box:"box"}, ks=Object.keys(P), av=[];
+  const msg=document.querySelector(`[data-banmsg="${li}"]`); if(msg){ const nomes={vaso:"vaso",lav:"lavatório",box:"box"}, ks=Object.keys(P).filter(k0=>k0!=="ralo"), av=[];
     for(let i=0;i<ks.length;i++) for(let j=i+1;j<ks.length;j++) if(sobrepoe(encolhe(P[ks[i]]),encolhe(P[ks[j]]))) av.push(`${nomes[ks[i]]} e ${nomes[ks[j]]} se encostam`);
     msg.innerHTML=av.length?`<span style="color:var(--bad)">Atenção: ${av.join("; ")}. Confira a posição.</span>`:""; } }
 const encolhe=Q=>{ const c=[Q.reduce((s,p)=>s+p[0],0)/Q.length,Q.reduce((s,p)=>s+p[1],0)/Q.length]; return Q.map(p=>[c[0]+(p[0]-c[0])*0.97,c[1]+(p[1]-c[1])*0.97]); };
@@ -5686,7 +5694,17 @@ function banPonto(ev,li,X){ const el=document.querySelector(`[data-banplan="${li
 function banAplica(li,X,peca,p){ const M=banLb(li,X); if(!M) return; const u=X.u;
   if(peca==="vaso"){ const e=banEncosta(u,p,0.38); M.vaso={c:e.c,n:e.n}; }
   else if(peca==="lav"){ const e=banEncosta(u,p,num(M.lav.larg)||0.5); M.lav={...M.lav,c:e.c,n:e.n}; }
-  else if(peca==="box"&&M.box) M.box=banMoveBox(u,M.box,p); }
+  else if(peca==="box"&&M.box) M.box=banMoveBox(u,M.box,p);
+  else if(peca==="ralo"&&M.box) banPoeRalo(M,X,[p[0]-M.box.x0,p[1]-M.box.y0],true); }
+// ralo do box: guarda a distância ao canto x0,y0 do box (anda junto com o box); perto do centro ou de um canto, gruda nele
+const RALO_CANTO=0.15;
+function banPoeRalo(M,X,rel,gruda){ const b=M.box; if(!b) return; const w=b.x1-b.x0, h=b.y1-b.y0, cl=(v,L)=>L<=2*RALO_M?L/2:Math.max(RALO_M,Math.min(L-RALO_M,v));
+  let x=cl(rel[0],w), y=cl(rel[1],h);
+  if(gruda){ const g=(v,L)=>[L/2,cl(RALO_CANTO,L),cl(L-RALO_CANTO,L)].find(a=>Math.abs(v-a)<0.04); const gx=g(x,w), gy=g(y,h); if(gx!=null) x=gx; if(gy!=null) y=gy; }
+  M.ralo={x:+x.toFixed(3),y:+y.toFixed(3)}; if(S.hidM&&X&&X.r) delete S.hidM["cs|"+X.r.n]; }   // a caixa sifonada da hidráulica passa a seguir o ralo
+// box trocado de tamanho: o ralo fica na mesma distância do lado mais perto (canto continua canto, centro continua centro)
+function banRaloNovoBox(M,b0,b1){ if(!M.ralo||!b0||!b1) return; const w0=b0.x1-b0.x0, h0=b0.y1-b0.y0, w1=b1.x1-b1.x0, h1=b1.y1-b1.y0, ax=(v,L0,L1)=>Math.abs(v-L0/2)<0.02?L1/2:v>L0/2?L1-(L0-v):v;
+  M.ralo={x:+ax(num(M.ralo.x),w0,w1).toFixed(3),y:+ax(num(M.ralo.y),h0,h1).toFixed(3)}; }
 { let arr=null, pend=null;
   const cont=$("banhos");
   cont.addEventListener("pointerdown",ev=>{ const el=ev.target.closest("[data-banplan]"); if(!el) return; const li=+el.dataset.banplan, X=banGeo(li); if(!X) return; const p=banPonto(ev,li,X); if(!p) return;
@@ -5704,9 +5722,14 @@ function banAplica(li,X,peca,p){ const M=banLb(li,X); if(!M) return; const u=X.u
     if(e.target.matches("[data-banlarg]")){ const l=num(e.target.value); M.lav.larg=l; const e2=banEncosta(X.u,M.lav.c,l,banParede(X.u,M.lav.n)); M.lav.c=e2.c; }
     if(e.target.matches("[data-banbox]")){ const v=e.target.value; if(v==="sem") M.box=null; else if(v){ const [w,h]=v.split("x").map(num), u=X.u, b=M.box||{x0:u.x0,y0:u.y0,x1:u.x0+w,y1:u.y0+h};
         const cx=(b.x0+b.x1)/2<(u.x0+u.x1)/2?"e":"d", cy=(b.y0+b.y1)/2<(u.y0+u.y1)/2?"c":"b", W0=Math.min(w,u.x1-u.x0), H0=Math.min(h,u.y1-u.y0);   // fica no mesmo canto
-        const x0=cx==="e"?u.x0:u.x1-W0, y0=cy==="c"?u.y0:u.y1-H0; M.box={x0,y0,x1:x0+W0,y1:y0+H0}; } }
+        const x0=cx==="e"?u.x0:u.x1-W0, y0=cy==="c"?u.y0:u.y1-H0, b1={x0,y0,x1:x0+W0,y1:y0+H0}; if(M.box) banRaloNovoBox(M,M.box,b1); M.box=b1; } }
+    if(e.target.matches("[data-banbox]")&&!M.box) delete M.ralo;
     save(); render(); });
-  cont.addEventListener("click",e=>{ const b=e.target.closest("[data-banacao]"); if(!b) return; const bar=b.closest("[data-banbar]"), li=+bar.dataset.banbar, X=banGeo(li); if(!X) return; const ac=b.dataset.banacao, sel=BANSEL[li]||"vaso";
+  cont.addEventListener("click",e=>{ const br=e.target.closest("[data-banralo]"); if(br){ const bar=br.closest("[data-banbar]"), li=+bar.dataset.banbar, X=banGeo(li); if(!X) return; const M=banLb(li,X); if(!M||!M.box) return;
+      const b=M.box, w=b.x1-b.x0, h=b.y1-b.y0, Lb=layoutBanheiro(X.G,X.u), at=Lb&&Lb.ralo?[Lb.ralo[0]-b.x0,Lb.ralo[1]-b.y0]:[w/2,h/2], v=br.dataset.banralo, ps=LAYPASSO, K=RALO_CANTO;
+      const alvo={c:[w/2,h/2],ce:[K,K],cd:[w-K,K],be:[K,h-K],bd:[w-K,h-K],e:[at[0]-ps,at[1]],d:[at[0]+ps,at[1]],c2:[at[0],at[1]-ps],b2:[at[0],at[1]+ps]}[v];
+      if(alvo){ banPoeRalo(M,X,alvo,false); save(); render(); } return; }
+    const b=e.target.closest("[data-banacao]"); if(!b) return; const bar=b.closest("[data-banbar]"), li=+bar.dataset.banbar, X=banGeo(li); if(!X) return; const ac=b.dataset.banacao, sel=BANSEL[li]||"vaso";
     if(ac==="auto"){ delete S.rooms[li].lb; save(); render(); return; }
     const M=banLb(li,X); if(!M) return; const u=X.u;
     if(ac==="menos"||ac==="mais"){ const sg=ac==="mais"?1:-1, dirDe=n=>Math.abs(n[1])>0.5?[1,0]:[0,1];   // setas como na tela: ◀ ▶ em parede deitada, ▲ ▼ em parede em pé
