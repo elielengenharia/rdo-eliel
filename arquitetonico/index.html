@@ -763,7 +763,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.84 · corte AA longitudinal", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.85 · garagem não some ao mexer na parede", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -908,7 +908,19 @@ function pontoTexto(P){
    a área exata (retângulo, trapézio, chanfro, L...).
    ====================================================================== */
 // áreas de piso externas: faces fechadas pelo contorno de fora das paredes e pelas linhas de limite de piso
+// linha de limite com ponta solta perto da parede (parede mexida depois): encosta a linha na parede, até 40 cm.
+// Linha reta: se a parede está de lado, a linha inteira anda (e leva junto as outras linhas presas naquela ponta); se está na frente, a linha estica ou encurta.
+function encostaLims(ext,lims){ const L=lims.map(s=>s.slice()), tol=0.015, lim=0.40;
+  const dSeg=(p,s)=>distSeg(p,{x1:s[0],y1:s[1],x2:s[2],y2:s[3]}), perto=(p,j)=>ext.some(s=>dSeg(p,s)<tol)||L.some((s,k)=>k!==j&&dSeg(p,s)<tol);
+  const maisPerto=p=>{ let best=null; ext.forEach(s=>{ const dx=s[2]-s[0], dy=s[3]-s[1], l2=dx*dx+dy*dy; if(l2<1e-9) return; let t=((p[0]-s[0])*dx+(p[1]-s[1])*dy)/l2; t=Math.max(0,Math.min(1,t)); const q=[s[0]+dx*t,s[1]+dy*t], d=Math.hypot(q[0]-p[0],q[1]-p[1]); if(!best||d<best.d) best={q,d}; }); return best; };
+  for(let pass=0;pass<2;pass++) L.forEach((s,j)=>[0,1].forEach(e=>{ const p=[s[e*2],s[e*2+1]]; if(perto(p,j)) return; const b=maisPerto(p); if(!b||b.d>lim) return;
+    const l0=Math.hypot(s[2]-s[0],s[3]-s[1]); if(l0<1e-6) return; const u=[(s[2]-s[0])/l0,(s[3]-s[1])/l0], d=[b.q[0]-p[0],b.q[1]-p[1]], al=d[0]*u[0]+d[1]*u[1], pe=[d[0]-u[0]*al,d[1]-u[1]*al];
+    if(Math.hypot(...pe)>Math.abs(al)){ const o=[s[(1-e)*2],s[(1-e)*2+1]]; L.forEach(t=>t!==s&&[0,1].forEach(f=>{ if(Math.hypot(t[f*2]-o[0],t[f*2+1]-o[1])<0.008){ t[f*2]+=pe[0]; t[f*2+1]+=pe[1]; } })); s[0]+=pe[0]; s[1]+=pe[1]; s[2]+=pe[0]; s[3]+=pe[1];
+      // a outra ponta andou junto: as linhas presas nela também
+    } else { s[e*2]+=u[0]*al; s[e*2+1]+=u[1]*al; } }));
+  return L; }
 function pisosExt(ext,lims,casas){
+  lims=encostaLims(ext,lims);
   const segs=[...ext,...lims].map(s=>[[s[0],s[1]],[s[2],s[3]]]).filter(([a,b])=>Math.hypot(b[0]-a[0],b[1]-a[1])>0.005), tol=0.015;
   const ehLim=new Set(); const limS=lims.map(s=>[[s[0],s[1]],[s[2],s[3]]]);
   // parte cada segmento nas pontas dos outros e nos cruzamentos
