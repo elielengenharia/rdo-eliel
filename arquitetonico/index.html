@@ -362,6 +362,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
         <label>Largura do tanque retangular<select id="fossa.wt"><option value="auto">Automática</option><option value="0.8">0,80 m</option><option value="1">1,00 m</option><option value="1.2">1,20 m</option><option value="1.5">1,50 m</option><option value="1.8">1,80 m</option><option value="2">2,00 m</option></select></label>
         <label>Filtro anaeróbio<select id="fossa.filtro"><option value="sim">Com filtro</option><option value="não">Sem filtro (tanque direto no sumidouro)</option></select></label>
         <label>Diâmetro do sumidouro<select id="fossa.ds"><option value="auto">Automático</option><option value="1">1,00 m</option><option value="1.2">1,20 m</option><option value="1.5">1,50 m</option><option value="2">2,00 m</option><option value="2.5">2,50 m</option></select></label>
+        <label>Número de sumidouros<select id="fossa.ns"><option value="auto">Automático</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
         <label>Distância entre tanque, filtro e sumidouro<select id="fossa.gap"><option value="auto">1,50 m (NBR 7229)</option><option value="0.5">0,50 m</option><option value="0.8">0,80 m</option><option value="1">1,00 m</option><option value="1.2">1,20 m</option><option value="2">2,00 m</option><option value="2.5">2,50 m</option><option value="3">3,00 m</option></select></label>
         <label>Afastamento da casa e das divisas<select id="fossa.afast"><option value="auto">1,50 m (NBR 7229)</option><option value="2">2,00 m</option><option value="2.5">2,50 m</option><option value="3">3,00 m</option></select></label>
         <label>Local do conjunto<select id="fossa.local"><option value="lote">Dentro do lote</option></select></label>
@@ -764,7 +765,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.90 · cortar pedaço de tubo (trim)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.91 · excluir/acrescentar sumidouro, tubos seguem as peças", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2901,7 +2902,10 @@ function dimFossa(HD){ const F=S.fossa||{}, N=Math.max(1,HD.pessoas), com=!!HD.c
   // sumidouro: área de infiltração = contribuição / coeficiente de infiltração do solo
   const ci=num(F.ci)>0?num(F.ci):60, Ai=Q/ci; let ns=1, Ds=1.2, hs=0;
   const dsF=num(F.ds)>0?num(F.ds):0;   // diâmetro escolhido: mais unidades só se passar de 3 m de altura útil
-  if(dsF){ Ds=dsF; for(;;){ const a=Ai/ns, hh=(a-Math.PI*Ds*Ds/4)/(Math.PI*Ds); if(hh<=3||ns>=6){ hs=Math.max(1.0,up5(hh)); break; } ns++; } }
+  const nsF=Math.min(6,Math.max(0,Math.round(num(F.ns))||0));   // número de sumidouros escolhido (excluir/acrescentar na planta)
+  if(nsF){ ns=nsF; const a=Ai/ns, hh=d=>(a-Math.PI*d*d/4)/(Math.PI*d); Ds=dsF||[1.2,1.5,2.0,2.5].find(d=>hh(d)<=3)||2.5; hs=Math.max(1.0,up5(hh(Ds)));
+    if(hs>3+1e-9) av.push(`Com ${ns} sumidouro${ns>1?"s":""} de Ø${f(Ds)} m a altura útil fica ${f(hs)} m (mais de 3 m). Confira o lençol freático (fundo a 1,50 m acima dele, NBR 13969) ou acrescente outro sumidouro.`); }
+  else if(dsF){ Ds=dsF; for(;;){ const a=Ai/ns, hh=(a-Math.PI*Ds*Ds/4)/(Math.PI*Ds); if(hh<=3||ns>=6){ hs=Math.max(1.0,up5(hh)); break; } ns++; } }
   else for(;;){ const a=Ai/ns; const ok=[1.2,1.5,2.0,2.5].find(d=>(a-Math.PI*d*d/4)/(Math.PI*d)<=3); if(ok){ Ds=ok; hs=Math.max(1.0,up5((a-Math.PI*ok*ok/4)/(Math.PI*ok))); break; } ns++; if(ns>6){ Ds=2.5; hs=3; break; } }
   const gap=num(F.gap)>0?num(F.gap):1.5, afast=num(F.afast)>0?Math.max(1.5,num(F.afast)):1.5, gapU=num(F.gap)>0;
   if(gap<1.5-1e-9) av.push(`Distância de ${f(gap)} m entre tanque, filtro e sumidouro: a NBR 7229 pede 1,50 m entre o tanque e o sumidouro. Use só se o solo e a prefeitura permitirem.`);
@@ -5302,10 +5306,12 @@ function tubPoePts(key,pts){ const o=tubObj(key,true); if(o) o.pts=pts.map(q=>[t
 function distSegAB(p,a,b){ const dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1e-12, t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2)); return Math.hypot(a[0]+dx*t-p[0],a[1]+dy*t-p[1]); }
 function tubAchar(p){ let b=null; HIDTUB.forEach(t=>{ for(let i=0;i+1<t.pts.length;i++){ const d=distSegAB(p,t.pts[i],t.pts[i+1]); const L=tubCompr(t.pts); if(d<0.20&&(!b||d<b.d-0.02||(Math.abs(d-b.d)<=0.02&&L<b.L))) b={t,d,L}; } }); return b&&b.t; }
 // pontos onde o tubo gruda: caixas, ralos, fossa, saídas dos aparelhos, pontas e dobras dos tubos
-function hidPontosLiga(ign){ const P=[]; hidItens().forEach(q=>P.push(q.p)); (HDV?HDV.salas:[]).forEach(sa=>sa.A.forEach(a=>{ if(a.es) P.push(a.es); }));
+function hidPontosLiga(ign){ const P=[]; hidItens().forEach(q=>P.push(hidPontoPeca(q))); (HDV?HDV.salas:[]).forEach(sa=>sa.A.forEach(a=>{ if(a.es) P.push(a.es); }));
   HIDTUB.forEach(t=>{ if(t.key!==ign) t.pts.forEach(q=>P.push(q)); }); return P; }
 function snap45(a,p){ const dx=p[0]-a[0], dy=p[1]-a[1], an=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*(Math.PI/4), u=[Math.cos(an),Math.sin(an)], L=dx*u[0]+dy*u[1]; return [a[0]+u[0]*L,a[1]+u[1]*L]; }
-function hidEncaixa(p,prev,ign){ let b=null; hidPontosLiga(ign).forEach(q=>{ const d=Math.hypot(q[0]-p[0],q[1]-p[1]); if(d<0.25&&(!b||d<b.d)) b={q,d}; }); if(b) return [b.q[0],b.q[1]]; return prev&&hidTrava()?snap45(prev,p):p; }
+function hidEncaixa(p,prev,ign){ let b=null; hidPontosLiga(ign).forEach(q=>{ const d=Math.hypot(q[0]-p[0],q[1]-p[1]); if(d<0.25&&(!b||d<b.d)) b={q,d}; }); if(b) return [b.q[0],b.q[1]];
+  const pc=hidAchar(p); if(pc) return hidPontoPeca(pc).slice();   // toque em cima da caixa, ralo, tanque ou sumidouro: o cano vai até ela (as peças são as guias)
+  return prev&&hidTrava()?snap45(prev,p):p; }
 // cada trecho fora do reto/45° vira reto + 45° (alt: 45° primeiro)
 function poe45(pts,alt){ const out=[pts[0]];
   for(let i=0;i+1<pts.length;i++){ const a=pts[i], b=pts[i+1], dx=b[0]-a[0], dy=b[1]-a[1], ax=Math.abs(dx), ay=Math.abs(dy);
@@ -5361,7 +5367,7 @@ function hidUnir(A,B){ const pa=A.t.pts, pb=B.t.pts, a0=pa[A.j], a1=pa[A.j+1], b
     const Lb=Math.hypot(b1[0]-b0[0],b1[1]-b0[1])||1, fora=I.u<0||I.u>1, perto=Math.min(Math.abs(I.u),Math.abs(1-I.u))*Lb<0.30; if(fora||perto) nb=tubLeva(pb,B.j,I.X,I.u); }
   if(A.t.key===B.t.key) return "Toque em dois tubos diferentes.";
   tubPoePts(A.t.key,na); if(nb) tubPoePts(B.t.key,nb); save(); render(); return I?(nb?"Tubos unidos no canto.":"Tubo ligado no outro (ligação em T)."):"Tubos paralelos: a ponta foi ligada na ponta do outro."; }
-function hidUnirCaixa(A,q){ const pa=A.t.pts, i=Math.hypot(pa[0][0]-q.p[0],pa[0][1]-q.p[1])<Math.hypot(pa[pa.length-1][0]-q.p[0],pa[pa.length-1][1]-q.p[1])?0:pa.length-1, na=pa.map(c=>c.slice()); na[i]=[q.p[0],q.p[1]];
+function hidUnirCaixa(A,q){ const pa=A.t.pts, Q=hidPontoPeca(q), i=Math.hypot(pa[0][0]-Q[0],pa[0][1]-Q[1])<Math.hypot(pa[pa.length-1][0]-Q[0],pa[pa.length-1][1]-Q[1])?0:pa.length-1, na=pa.map(c=>c.slice()); na[i]=[Q[0],Q[1]];
   tubPoePts(A.t.key,na); save(); render(); return `Ponta do tubo ligada na ${q.nome.toLowerCase()}.`; }
 function hidPainelUnir(msg){ const P=$("hidPanel"); P.hidden=false;
   P.innerHTML=`<h4>Unir tubos (fillet)</h4><p class="cap" style="margin:0 0 8px">${msg?`${esc(msg)} `:""}${HIDUNIR.A?"<b>Agora toque no segundo tubo</b> (ou numa caixa, ralo ou sumidouro).":"<b>Toque no primeiro tubo</b>, perto da ponta que vai unir."}</p>
@@ -5416,29 +5422,50 @@ function hidItens(){ const H=HDV; if(!H) return []; const out=[], com=(S.fossa||
     if(FS.fil) out.push({id:"fs|f",tp:"ff",p:P.cf,r:FS.Df/2+0.15,movel:1,man:!!M.f,nome:"Filtro anaeróbio"});
     P.cs.forEach((c,i)=>out.push({id:"fs|s"+i,tp:"fsm",i,p:c,r:FS.Ds/2+0.15,movel:1,man:!!(M.s&&M.s[i]),nome:FS.ns>1?`Sumidouro ${i+1}`:"Sumidouro"})); }
   return out; }
+// ponto onde o cano liga na peça (no tanque séptico, a entrada)
+function hidPontoPeca(q){ const P=q.tp==="ft"&&HDV&&HDV.fossa&&HDV.fossa.pos; return P&&P.ent?P.ent:q.p; }
+// tubos seguem as peças: vértice de tubo em cima de uma peça que mudou de lugar vai junto (antes = hidPosItens() antes da mudança)
+function hidPosItens(){ const m={}; hidItens().forEach(q=>{ m[q.id]=hidPontoPeca(q).slice(); m[q.id+"@c"]=q.p.slice(); }); return m; }
+function hidSegue(antes,mapa){ const depois=hidPosItens(), ids=Object.keys(antes); let n=0;
+  const move=pts=>{ let mud=false; const out=pts.map(q=>{ let b=null; ids.forEach(id=>{ const a=antes[id], d=Math.hypot(+q[0]-a[0],+q[1]-a[1]); if(d<0.12&&(!b||d<b.d)) b={id,d}; }); if(!b) return q;
+      const nid=mapa&&b.id.replace(/@c$/,"") in mapa?(mapa[b.id.replace(/@c$/,"")]==null?null:mapa[b.id.replace(/@c$/,"")]+(/@c$/.test(b.id)?"@c":"")):b.id, a=antes[b.id], c=nid&&depois[nid]; if(!c||Math.hypot(c[0]-a[0],c[1]-a[1])<0.001) return q;
+      mud=true; return [tr3(+q[0]+c[0]-a[0]),tr3(+q[1]+c[1]-a[1])]; }); return mud?out:null; };
+  (S.hidTubM||[]).forEach(t=>{ const r=move(t.pts||[]); if(r){ t.pts=r; n++; } });
+  Object.values(S.hidTub||{}).forEach(o=>{ if(o&&o.pts&&!o.del){ const r=move(o.pts); if(r){ o.pts=r; n++; } } });
+  if(n){ save(); render(); } return n; }
+// excluir / acrescentar sumidouro (S.fossa.ns = número escolhido; a altura útil dos que ficam é recalculada)
+function fossaNs(n,tira){ const FS=HDV&&HDV.fossa; if(!FS) return; S.fossa=S.fossa||{}; const antes=hidPosItens(), M=S.fossaM, mapa={};
+  if(tira!=null){ if(FS.ns<=1){ $("hidMsg")&&($("hidMsg").textContent="O conjunto precisa de pelo menos um sumidouro. Para tirar a fossa, troque o destino do esgoto para Rede pública."); $("hidDelMsg").textContent="O conjunto precisa de pelo menos um sumidouro."; return; }
+    for(let i=0;i<FS.ns;i++) mapa["fs|s"+i]=i<tira?"fs|s"+i:i===tira?null:"fs|s"+(i-1);
+    if(M&&M.s){ const ns={}; Object.keys(M.s).forEach(k=>{ const i=+k; if(i<tira) ns[i]=M.s[k]; else if(i>tira) ns[i-1]=M.s[k]; }); M.s=ns; } }
+  S.fossa.ns=String(Math.min(6,Math.max(1,n))); const el=$("fossa.ns"); if(el) el.value=S.fossa.ns;
+  HIDSEL=null; HIDMOVE=false; save(); render(); hidSegue(antes,mapa); $("hidPanel").hidden=true;
+  $("hidDelMsg").textContent=tira!=null?`Sumidouro excluído: ficou${n>1?"m":""} ${n}. A altura útil foi recalculada (quadro da fossa). Volta em Número de sumidouros: Automático.`:`Sumidouro acrescentado: agora são ${n}. Arraste para o lugar certo.`; }
 function hidAchar(p){ let b=null; hidItens().forEach(q=>{ const d=Math.hypot(q.p[0]-p[0],q.p[1]-p[1]), lim=Math.max(0.40,q.r); if(d<=lim&&(!b||d-q.r<b.d)) b={q,d:d-q.r}; }); return b&&b.q; }
 function hidSel(){ return HIDSEL&&hidItens().find(q=>q.id===HIDSEL||q.id==="cx|"+HIDSEL); }
-function hidGrava(q,p){ const x=+p[0].toFixed(3), y=+p[1].toFixed(3);
+function hidGrava(q,p){ const antes=hidPosItens(); hidGrava0(q,p); hidSegue(antes); hidPainel(); }
+function hidGrava0(q,p){ const x=+p[0].toFixed(3), y=+p[1].toFixed(3);
   if(q.tp==="add"){ Object.assign(S.hidAdd[q.j],{x,y}); }
   else if(q.tp==="cx"||q.tp==="cs"){ if(!q.movel){ $("hidMsg")&&($("hidMsg").textContent="Caixa de canto: ela aparece sozinha onde o coletor faz curva. Mude as outras caixas que ela acompanha."); return; }
     S.hidM=S.hidM||{}; q.keys.forEach(k=>S.hidM[k]={x,y}); if(q.fim) S.hidM.fim={x,y}; }
   else { const M=S.fossaM=S.fossaM||{}, P=HDV.fossa.pos;
     if(q.tp==="ft"){ const d=[x-P.ct[0],y-P.ct[1]], mv=a=>[+(num(a[0])+d[0]).toFixed(3),+(num(a[1])+d[1]).toFixed(3)]; M.ct=[x,y]; M.giro=M.giro||0; if(M.f) M.f=mv(M.f); if(M.s) Object.keys(M.s).forEach(i=>M.s[i]=mv(M.s[i])); }
     else if(q.tp==="ff") M.f=[x,y]; else { M.s=M.s||{}; M.s[q.i]=[x,y]; } }
-  save(); render(); hidPainel(); }
+  save(); render(); }
 function hidMarca(){ const svg=$("hid").querySelector("svg"), v=VIEW.hid, q=hidSel(); if(svg&&v) hidMarcaTubo(svg,v); if(!svg||!v||!q) return;
   const cx=v.pad+(q.p[0]-v.e.x0)/v.k, cy=v.pad+(q.p[1]-v.e.y0)/v.k, r=Math.max(3.2,q.r/v.k+1); svg.insertAdjacentHTML("beforeend",`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#d33" stroke-width="0.5" stroke-dasharray="1 0.6"/>`); }
-function fossaGira(){ const P=HDV&&HDV.fossa&&HDV.fossa.pos; if(!P) return; const M=S.fossaM=S.fossaM||{}, c=P.ct, rot=a=>{ const v=[num(a[0])-c[0],num(a[1])-c[1]]; return [+(c[0]-v[1]).toFixed(3),+(c[1]+v[0]).toFixed(3)]; };
-  M.ct=M.ct||[+c[0].toFixed(3),+c[1].toFixed(3)]; M.giro=((+M.giro||0)+1)%4; if(M.f) M.f=rot(M.f); if(M.s) Object.keys(M.s).forEach(i=>M.s[i]=rot(M.s[i])); save(); render(); hidPainel(); }
-function fossaAuto(){ delete S.fossaM; save(); render(); hidPainel(); }
+function fossaGira(){ const P=HDV&&HDV.fossa&&HDV.fossa.pos; if(!P) return; const antes=hidPosItens(), M=S.fossaM=S.fossaM||{}, c=P.ct, rot=a=>{ const v=[num(a[0])-c[0],num(a[1])-c[1]]; return [+(c[0]-v[1]).toFixed(3),+(c[1]+v[0]).toFixed(3)]; };
+  M.ct=M.ct||[+c[0].toFixed(3),+c[1].toFixed(3)]; M.giro=((+M.giro||0)+1)%4; if(M.f) M.f=rot(M.f); if(M.s) Object.keys(M.s).forEach(i=>M.s[i]=rot(M.s[i])); save(); render(); hidSegue(antes); hidPainel(); }
+function fossaAuto(){ const antes=hidPosItens(); delete S.fossaM; save(); render(); hidSegue(antes); hidPainel(); }
 // excluir: o acrescentado some; o automático fica marcado e pode ser restaurado
 function hidExclui(q){ if(!q) return; const fos=q.tp==="ft"||q.tp==="ff"||q.tp==="fsm";
+  if(q.tp==="fsm"){ fossaNs(HDV.fossa.ns-1,q.i); return; }
   if(fos){ $("hidDelMsg").textContent="O conjunto fossa/filtro/sumidouro sai trocando o destino do esgoto para Rede pública, no quadro da fossa."; return; }
   if(q.tp==="add") S.hidAdd.splice(q.j,1); else { S.hidDel=S.hidDel||{}; S.hidDel[q.id]=1; }
   HIDSEL=null; HIDMOVE=false; save(); render(); $("hidPanel").hidden=true; $("hidDelMsg").textContent=`${q.nome.replace(/ \(.*\)$/,"")} excluído(a).`; }
 let HIDDEL=false;
 function hidBotoes(){ const a=$("hidApagar"), r=$("hidRestaura"); if(!a) return; a.setAttribute("aria-pressed",HIDDEL?"true":"false"); a.className=HIDDEL?"btn dng":"btn";
-  a.textContent=HIDDEL?"Apagando: toque nas caixas e ralos (toque aqui para parar)":"Apagar itens";
+  a.textContent=HIDDEL?"Apagando: toque nas caixas, ralos, sumidouros e tubos (toque aqui para parar)":"Apagar itens";
   const n=Object.keys(S.hidDel||{}).length+Object.values(S.hidTub||{}).filter(o=>o&&o.del).length; r.hidden=!n; r.textContent=`Restaurar excluídos (${n})`;
   const cb=$("hidTrimBt"); if(cb){ cb.textContent=HIDTRIM?"Cortando… (toque aqui para parar)":"Cortar pedaço (trim)"; cb.className=HIDTRIM?"btn dng":"btn"; }
   const ub=$("hidUnirBt"); if(ub){ ub.textContent=HIDUNIR?"Unindo… (toque aqui para parar)":"Unir tubos (fillet)"; ub.className=HIDUNIR?"btn dng":"btn"; }
@@ -5448,7 +5475,11 @@ function hidAcrescenta(p0){ const P=$("hidPanel"), lugar=GG.compAt(...p0); P.hid
     <button class="btn" data-add="ci">Caixa de inspeção</button><button class="btn" data-add="cg">Caixa de gordura</button><button class="btn" data-add="cs">Caixa sifonada</button>
     <button class="btn" data-add="rs">Ralo sifonado</button><button class="btn" data-add="rsc">Ralo seco</button><button class="btn" data-add="rq">Ralo quadrado 15x15</button><button class="btn" data-add="rl">Ralo linear (retangular)</button>
     <button class="btn x" data-close aria-label="Fechar">×</button></div>`;
-  P.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ const t=b.dataset.add; S.hidAdd=S.hidAdd||[]; S.hidAdd.push({t,x:+p0[0].toFixed(3),y:+p0[1].toFixed(3),...(t==="rl"?{len:0.8,rot:0}:{})});
+  P.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ const t=b.dataset.add; S.hidAdd=S.hidAdd||[]; let pp=p0;
+    if(t!=="rl"){ const A=tubAcharSeg(p0); if(A){ const a=A.t.pts[A.j], c=A.t.pts[A.j+1], dx=c[0]-a[0], dy=c[1]-a[1], L2=dx*dx+dy*dy||1e-12, u=Math.max(0,Math.min(1,((p0[0]-a[0])*dx+(p0[1]-a[1])*dy)/L2)); pp=[a[0]+dx*u,a[1]+dy*u];
+      // caixa em cima do tubo: o tubo ganha uma dobra nela, para seguir a caixa quando ela for arrastada
+      if(u>0.02&&u<0.98&&(tubManual(A.t.key)||(tubObj(A.t.key)||{}).pts)){ const pts=A.t.pts.map(q=>q.slice()); pts.splice(A.j+1,0,pp); tubPoePts(A.t.key,pts); } } }
+    S.hidAdd.push({t,x:+pp[0].toFixed(3),y:+pp[1].toFixed(3),...(t==="rl"?{len:0.8,rot:0}:{})});
     HIDSEL="add|"+(S.hidAdd.length-1); HIDMOVE=false; save(); render(); hidPainel(); });
   P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; }; }
 function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidPainelTrim(); if(HIDUNIR) return hidPainelUnir(); if(HIDTUBO) return hidPainelDesenho(); if(!q&&HIDSELT) return hidPainelTubo(); if(!q){ P.hidden=true; return; } P.hidden=false;
@@ -5457,17 +5488,18 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidP
   P.innerHTML=`<h4>${esc(q.nome)}${q.amb?` · ${esc(q.amb)}`:""}</h4><p class="cap" style="margin:0 0 8px">${dica}${q.man?" (posição escolhida por você)":""}</p>
     <div class="row" style="margin:0;flex-wrap:wrap">${q.movel?`<button class="btn pri" data-m>${HIDMOVE?"Cancelar":"Mover"}</button><button class="btn" data-d="-1,0" aria-label="10 cm para a esquerda">◀</button><button class="btn" data-d="0,-1" aria-label="10 cm para cima">▲</button><button class="btn" data-d="0,1" aria-label="10 cm para baixo">▼</button><button class="btn" data-d="1,0" aria-label="10 cm para a direita">▶</button>`:""}
     ${q.t==="rl"?`<button class="btn" data-rlg>Girar 90°</button><select data-rll aria-label="Comprimento do ralo linear" style="width:auto">${[0.4,0.5,0.6,0.7,0.8,0.9,1,1.2,1.5,2].map(v=>`<option value="${v}"${Math.abs(v-(S.hidAdd[q.j].len||0.8))<1e-6?" selected":""}>${f(v*100,0)} cm</option>`).join("")}</select>`:""}
-    ${fos?`<button class="btn" data-gira>Girar o conjunto 90°</button>`:`<button class="btn dng" data-del>Excluir</button>`}${q.man&&q.tp!=="add"?`<button class="btn" data-auto>Voltar ao automático</button>`:""}${fos&&S.fossaM?`<button class="btn" data-fauto>Conjunto todo no automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" id="hidMsg" style="margin:6px 0 0"></p>`;
+    ${fos?`<button class="btn" data-gira>Girar o conjunto 90°</button><button class="btn" data-sadd>Acrescentar sumidouro</button>`:""}${!fos||q.tp==="fsm"?`<button class="btn dng" data-del>${q.tp==="fsm"?"Excluir este sumidouro":"Excluir"}</button>`:""}${q.man&&q.tp!=="add"?`<button class="btn" data-auto>Voltar ao automático</button>`:""}${fos&&S.fossaM?`<button class="btn" data-fauto>Conjunto todo no automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" id="hidMsg" style="margin:6px 0 0"></p>`;
   const b=P.querySelector("[data-m]"); if(b) b.onclick=()=>{ HIDMOVE=!HIDMOVE; hidPainel(); };
   P.querySelectorAll("[data-d]").forEach(x=>x.onclick=()=>{ const [dx,dy]=x.dataset.d.split(",").map(Number); let p=[q.p[0]+dx*0.10,q.p[1]+dy*0.10];
     if(q.tp==="cx"&&!com){ const t0=HDV.anelT(q.p), cand=[HDV.anelP(t0+0.10),HDV.anelP(t0-0.10)]; p=cand.reduce((m,c)=>((c[0]-q.p[0])*dx+(c[1]-q.p[1])*dy)>((m[0]-q.p[0])*dx+(m[1]-q.p[1])*dy)?c:m); }
     hidGrava(q,p); });
   const gi=P.querySelector("[data-gira]"); if(gi) gi.onclick=fossaGira;
+  const sa=P.querySelector("[data-sadd]"); if(sa) sa.onclick=()=>{ const n=HDV.fossa.ns; if(n>=6){ $("hidMsg").textContent="No máximo 6 sumidouros."; return; } fossaNs(n+1); };
   const dl=P.querySelector("[data-del]"); if(dl) dl.onclick=()=>hidExclui(q);
   const rg=P.querySelector("[data-rlg]"); if(rg) rg.onclick=()=>{ const a=S.hidAdd[q.j]; a.rot=a.rot?0:1; save(); render(); hidPainel(); };
   const rl=P.querySelector("[data-rll]"); if(rl) rl.onchange=()=>{ S.hidAdd[q.j].len=+rl.value; save(); render(); hidPainel(); };
-  const au=P.querySelector("[data-auto]"); if(au) au.onclick=()=>{ if(fos){ const M=S.fossaM||{}; if(q.tp==="ft"){ delete M.ct; delete M.giro; } else if(q.tp==="ff") delete M.f; else if(M.s) delete M.s[q.i]; if(!Object.keys(M).some(k=>k!=="s"||Object.keys(M.s).length)) delete S.fossaM; }
-    else { (q.keys||[]).forEach(k=>delete S.hidM[k]); if(q.fim) delete S.hidM.fim; } HIDMOVE=false; save(); render(); hidPainel(); };
+  const au=P.querySelector("[data-auto]"); if(au) au.onclick=()=>{ const antes0=hidPosItens(); if(fos){ const M=S.fossaM||{}; if(q.tp==="ft"){ delete M.ct; delete M.giro; } else if(q.tp==="ff") delete M.f; else if(M.s) delete M.s[q.i]; if(!Object.keys(M).some(k=>k!=="s"||Object.keys(M.s).length)) delete S.fossaM; }
+    else { (q.keys||[]).forEach(k=>delete S.hidM[k]); if(q.fim) delete S.hidM.fim; } HIDMOVE=false; save(); render(); hidSegue(antes0); hidPainel(); };
   const fa=P.querySelector("[data-fauto]"); if(fa) fa.onclick=fossaAuto;
   P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; HIDSEL=null; HIDMOVE=false; render(); }; }
 { const cont=$("hid"); let arr=null, tArr=0;
@@ -5600,8 +5632,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["forro.reb","cpf","tel.vigMat","tel.hVig","tel.hCaib","est.fLarg","cAcost","cBcost","cAamb2","cBamb2","est.tCota","est.tNome","est.tArea","est.lPar","est.lCota","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.coletor","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["cpf","tel.vigMat","cAcost","cBcost","cAamb2","cBamb2","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.coletor","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["forro.reb","cpf","tel.vigMat","tel.hVig","tel.hCaib","est.fLarg","cAcost","cBcost","cAamb2","cBamb2","est.tCota","est.tNome","est.tArea","est.lPar","est.lCota","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.coletor","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.prof","estS.cinta","estr.fund","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","fossa.ns","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["cpf","tel.vigMat","cAcost","cBcost","cAamb2","cBamb2","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.coletor","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","fossa.ns","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
   const tb=$("ladosTab"), foco=document.activeElement&&tb.contains(document.activeElement)?[document.activeElement.dataset.li,document.activeElement.dataset.lc]:null;
