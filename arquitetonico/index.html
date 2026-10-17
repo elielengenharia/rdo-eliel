@@ -786,7 +786,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.02 · inverter o sentido do fluxo do tubo", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.03 · trocar o tipo da caixa (gordura, sifonada, inspeção, ralo)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2822,6 +2822,9 @@ function redeHidro(G,LM){
 const idCaixa=c=>"cx|"+(c.key&&c.add?c.key:(c.keys&&c.keys[0])||(c.fim?"fim":"canto|"+c.p[0].toFixed(1)+","+c.p[1].toFixed(1)));
 const NOME_RALO={rs:"Ralo sifonado",rsc:"Ralo seco",rq:"Ralo quadrado (grelha 15x15)",rl:"Ralo linear (retangular)",cs:"Caixa sifonada",ci:"Caixa de inspeção",cg:"Caixa de gordura"};
 const ROT_RALO={rs:"RS",rsc:"RSC",rq:"RQ",rl:"RL",cs:"CS"};
+const ROT_CX={ci:"CI",cg:"CG",cs:"CS",rs:"RS",rsc:"RSC",rq:"RQ",rl:"RL"};
+// tipo trocado pelo profissional numa caixa automática (os canos continuam como estão; muda símbolo, nome, legenda e orçamento)
+const tipoCx=(id,def)=>{ const t=(S.hidTipo||{})[id]; return t&&ROT_CX[t]&&t!=="rl"?t:def; };
 
 /* ---------------- Águas pluviais (NBR 10844): calha, condutor, caixa de areia e saída para a sarjeta ---------------- */
 // capacidade dos condutores horizontais de seção circular, n = 0,011, lâmina 2/3 do diâmetro (L/min; i = 0,5 / 1 / 2 / 4 %)
@@ -3643,7 +3646,7 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
     // banheiro: o ralo (caixa sifonada) nunca entra dentro do vaso; sai em Ø50 e entra no tubo de saída do vaso (Ø100) por uma junção com redução 100x50,
     // com o suspiro (tubo de ventilação Ø50) no trecho entre o ralo e a junção
     const rmV=sa.saida.vaso?HD.ramal.find(rm=>rm.r===sa.r&&rm.d>=100):null;
-    if(sa.cs){ simbHidro(D,{t:"cs",p:sa.cs}); TX(D,sa.cs[0]+2.2*k,sa.cs[1]-2.2*k,"CS",1.5,{a:"s",b:true,l:"ESGOTO"});
+    if(sa.cs){ const tc=tipoCx("cs|"+sa.r.n,"cs"); simbHidro(D,{t:tc,p:sa.cs}); TX(D,sa.cs[0]+2.2*k,sa.cs[1]-2.2*k,ROT_CX[tc],1.5,{a:"s",b:true,l:"ESGOTO"});
       let J=sd; if(rmV){ const a=rmV.a, b=rmV.b, dx=b[0]-a[0], dy=b[1]-a[1], Lr=Math.hypot(dx,dy)||1, s0=((sa.cs[0]-a[0])*dx+(sa.cs[1]-a[1])*dy)/Lr, dP=Math.abs((sa.cs[0]-a[0])*dy-(sa.cs[1]-a[1])*dx)/Lr, sJ=Math.max(Math.min(0.40,Lr*0.5),Math.min(Math.max(Lr-0.60,Lr*0.5),s0+Math.max(0.30,dP))); J=[a[0]+dx/Lr*sJ,a[1]+dy/Lr*sJ]; }
       if(Math.hypot(sa.cs[0]-J[0],sa.cs[1]-J[1])>0.05){ tuboHid(D,"csj|"+sa.r.n,[sa.cs,J],50);
         if(rmV){ const v=[J[0]-sa.cs[0],J[1]-sa.cs[1]], lv=Math.hypot(...v)||1, t=Math.min(0.30,lv*0.4), pT=[J[0]-v[0]/lv*t,J[1]-v[1]/lv*t];
@@ -3660,7 +3663,7 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
       for(let i=0;i+1<ts.length;i++){ if(ts[i+1]-ts[i]<0.01) continue; const p=HD.anelP(ts[i]), q=HD.anelP(ts[i+1]); tuboHid(D,"col|"+(n++),[p,q],100,{lab:false}); } }); }
   // rótulo do coletor no trecho mais longo
   { let lg=null; HD.trechos.forEach(([a,b])=>{ if(!lg||b-a>lg[1]-lg[0]) lg=[a,b]; }); if(lg){ const p=HD.anelP(lg[0]+(lg[1]-lg[0])*0.3), q=HD.anelP(lg[0]+(lg[1]-lg[0])*0.3+0.3); rotuloLinha(D,p,q,"Ø100 i=1%","ESGOTO",-1); } }
-  HD.caixas.forEach(c=>{ simbHidro(D,{t:c.tipo==="CG"?"cg":"ci",p:c.p}); TX(D,c.p[0]+3*k,c.p[1]-3*k,c.tipo==="CG"?"CG":"CI",1.5,{a:"s",b:true,l:"ESGOTO"}); });
+  HD.caixas.forEach(c=>{ const tc=c.add?(c.tipo==="CG"?"cg":"ci"):tipoCx(c.id,c.tipo==="CG"?"cg":"ci"); simbHidro(D,{t:tc,p:c.p}); TX(D,c.p[0]+3*k,c.p[1]-3*k,ROT_CX[tc],1.5,{a:"s",b:true,l:"ESGOTO"}); });
   (HD.extra||[]).forEach(o=>{ const borda=o.t==="rl"?(o.len||0.8)/2:0;
     if(o.alvo){ let a=o.p; if(borda){ const u=o.rot?[0,1]:[1,0], s0=(o.alvo[0]-o.p[0])*u[0]+(o.alvo[1]-o.p[1])*u[1]; a=[o.p[0]+u[0]*Math.max(-borda,Math.min(borda,s0)),o.p[1]+u[1]*Math.max(-borda,Math.min(borda,s0))]; }
       tuboHid(D,"x|"+o.key,[a,o.alvo],o.d); }
@@ -3686,7 +3689,7 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
     item({lin:1,w:.3,l:"AGUA"},"Água fria (ramal na parede)"); item({lin:1,w:.25,l:"AGUA",d:1},"Barrilete / alimentação (na laje)");
     item({t:"desc"},"Coluna de água fria (descida)"); item({t:"af"},"Ponto de água fria");
     item({lin:1,w:.5,l:"ESGOTO"},"Esgoto (sob o piso)"); item({t:"es"},"Saída de esgoto do aparelho");
-    item({t:"cs"},"Caixa sifonada 150x150"); item({t:"ci"},"Caixa de inspeção 60x60"); item({t:"cg"},"Caixa de gordura"); { const tps=[...new Set((HD.extra||[]).map(o=>o.t))]; [["rs","Ralo sifonado (RS) Ø100"],["rsc","Ralo seco (RSC) Ø100"],["rq","Ralo quadrado (RQ) grelha 15x15"],["rl","Ralo linear (RL)"]].forEach(([t,tx])=>{ if(tps.includes(t)) item({t,len:t==="rl"?0.6:undefined},tx); }); } item({t:"tv"},"Tubo de ventilação (suspiro) Ø50"); item({t:"jn"},"Junção com redução 100x50 no tubo do vaso"); item({t:"hd"},`Hidrômetro no muro${HD.agua&&HD.agua.forn?` (${HD.agua.forn})`:""} · AL = alimentação do reservatório`); }
+    item({t:"cs"},"Caixa sifonada 150x150"); item({t:"ci"},"Caixa de inspeção 60x60"); item({t:"cg"},"Caixa de gordura"); { const tps=[...new Set([...(HD.extra||[]).map(o=>o.t),...Object.values(S.hidTipo||{})])]; [["rs","Ralo sifonado (RS) Ø100"],["rsc","Ralo seco (RSC) Ø100"],["rq","Ralo quadrado (RQ) grelha 15x15"],["rl","Ralo linear (RL)"]].forEach(([t,tx])=>{ if(tps.includes(t)) item({t,len:t==="rl"?0.6:undefined},tx); }); } item({t:"tv"},"Tubo de ventilação (suspiro) Ø50"); item({t:"jn"},"Junção com redução 100x50 no tubo do vaso"); item({t:"hd"},`Hidrômetro no muro${HD.agua&&HD.agua.forn?` (${HD.agua.forn})`:""} · AL = alimentação do reservatório`); }
   return D;
 }
 const notasHidro=HD=>[`Reservatório: ${HD.pessoas} pessoas x ${HD.cons} L/dia = ${HD.Vn} L; adotado ${HD.res?HD.res.vol:"-"} L (1 dia de consumo).`,`Água fria em PVC soldável: alimentação e colunas Ø25, barrilete Ø32, sub-ramais conforme o quadro.`,`Esgoto em PVC: vaso Ø100 i=1%; ramais Ø50 i=2% (lavatório, tanque e ralos); o ralo (caixa sifonada) liga no tubo do vaso por junção com redução 100x50, nunca dentro do vaso, com suspiro Ø50 entre o ralo e a junção; coletor Ø100 i=1% até a rede pública ou fossa.`,`Caixa de inspeção a cada mudança de direção e no máximo a cada 25 m; pia da cozinha passa pela caixa de gordura.`,`Ventilação Ø50 junto ao vaso, subindo até 0,30 m acima do telhado.`,`Traçado sugerido pelo app: conferir no projeto hidrossanitário e na obra.`];
@@ -5622,10 +5625,11 @@ function hidMarcaTubo(svg,v,ptsOver){ const m=p=>`${(v.pad+(p[0]-v.e.x0)/v.k).to
 function hidItens(){ const H=HDV; if(!H) return []; const out=[], com=(S.fossa||{}).on==="sim";
   H.caixas.forEach((c,i)=>{ if(c.add){ const j=+c.key.split("|")[1]; out.push({id:c.id,tp:"add",j,p:c.p,r:0.45,movel:1,nome:NOME_RALO[c.tipo==="CG"?"cg":"ci"]+" (acrescentada)"}); return; }
     const keys=(c.keys||[]).slice().filter(k=>!/^add\|/.test(k)), movel=keys.length||c.fim;
-    out.push({id:c.id,tp:"cx",p:c.p,r:0.45,c,keys,fim:!!c.fim&&!com,movel,man:c.man,
-      nome:c.tipo==="CG"?"Caixa de gordura":c.fim?"Caixa de inspeção final":keys.length?"Caixa de inspeção":"Caixa de inspeção de canto",amb:c.r?c.r.n:""}); });
+    const tc=tipoCx(c.id,c.tipo==="CG"?"cg":"ci");
+    out.push({id:c.id,tp:"cx",p:c.p,r:0.45,c,keys,fim:!!c.fim&&!com,movel,man:c.man,tAt:tc,tDef:c.tipo==="CG"?"cg":"ci",
+      nome:tc!==(c.tipo==="CG"?"cg":"ci")?NOME_RALO[tc]+(c.fim?" (final)":""):c.tipo==="CG"?"Caixa de gordura":c.fim?"Caixa de inspeção final":keys.length?"Caixa de inspeção":"Caixa de inspeção de canto",amb:c.r?c.r.n:""}); });
   (H.extra||[]).forEach(o=>out.push({id:o.key,tp:"add",j:o.j,t:o.t,p:o.p,r:o.t==="rl"?(o.len||0.8)/2:0.3,movel:1,nome:NOME_RALO[o.t]+(o.t==="cs"?" (acrescentada)":""),amb:o.r?o.r.n:""}));
-  H.salas.forEach(sa=>{ if(sa.cs) out.push({id:"cs|"+sa.r.n,tp:"cs",p:sa.cs,r:0.35,keys:["cs|"+sa.r.n],movel:1,man:!!(S.hidM||{})["cs|"+sa.r.n],nome:"Caixa sifonada",amb:sa.r.n}); });
+  H.salas.forEach(sa=>{ if(sa.cs){ const tc=tipoCx("cs|"+sa.r.n,"cs"); out.push({id:"cs|"+sa.r.n,tp:"cs",p:sa.cs,r:0.35,keys:["cs|"+sa.r.n],movel:1,man:!!(S.hidM||{})["cs|"+sa.r.n],tAt:tc,tDef:"cs",nome:NOME_RALO[tc],amb:sa.r.n}); } });
   if(H.hd) out.push({id:"agua|hd",tp:"hd",p:H.hd,r:0.30,keys:["hd"],movel:1,man:!!(S.hidM||{}).hd,nome:"Hidrômetro (padrão da água)"});
   if(H.res) out.push({id:"agua|res",tp:"res",p:H.res.p,r:0.30,keys:["res"],movel:1,man:!!(S.hidM||{}).res,nome:`Reservatório ${H.res.vol} L (caixa d'água)`});
   const FS=H.fossa; if(FS&&FS.pos){ const P=FS.pos, M=S.fossaM||{};
@@ -5715,6 +5719,7 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidP
   const dica=!q.movel?"Esta caixa fica sozinha na curva do coletor; ela muda quando você muda as outras caixas.":HIDMOVE?"<b>Toque no lugar novo</b> na planta.":q.tp==="cx"&&!com?"Arraste para o lado que quiser: a caixa corre pelo coletor em volta da obra.":q.tp==="add"?"Arraste para mudar de lugar; o cano até a caixa mais perto se refaz.":q.tp==="hd"?"Arraste para o lugar do padrão (no muro da frente, junto da rua). A alimentação (AL) até o reservatório e o ramal predial se refazem.":q.tp==="res"?"Arraste para o lugar da caixa d'água (em cima da laje ou do forro). A alimentação e o barrilete se refazem.":q.tp==="ft"?"Arraste para levar o tanque, o filtro e o sumidouro juntos.":fos?"Arraste para mudar só esta unidade; o cano se refaz.":"Arraste na planta, ou toque em Mover e depois no lugar novo.";
   P.innerHTML=`<h4>${esc(q.nome)}${q.amb?` · ${esc(q.amb)}`:""}</h4><p class="cap" style="margin:0 0 8px">${dica}${q.man?" (posição escolhida por você)":""}</p>
     <div class="row" style="margin:0;flex-wrap:wrap">${q.movel?`<button class="btn pri" data-m>${HIDMOVE?"Cancelar":"Mover"}</button><button class="btn" data-d="-1,0" aria-label="10 cm para a esquerda">◀</button><button class="btn" data-d="0,-1" aria-label="10 cm para cima">▲</button><button class="btn" data-d="0,1" aria-label="10 cm para baixo">▼</button><button class="btn" data-d="1,0" aria-label="10 cm para a direita">▶</button>`:""}
+    ${q.tp==="cx"||q.tp==="cs"||(q.tp==="add"&&S.hidAdd[q.j])?`<select data-tipo aria-label="Trocar o tipo" style="width:auto">${["ci","cg","cs","rs","rsc","rq",...(q.tp==="add"?["rl"]:[])].map(t=>{ const at=q.tp==="add"?S.hidAdd[q.j].t:q.tAt; return `<option value="${t}"${t===at?" selected":""}>Trocar por: ${NOME_RALO[t]}</option>`; }).join("")}</select>`:""}
     ${q.t==="rl"?`<button class="btn" data-rlg>Girar 90°</button><select data-rll aria-label="Comprimento do ralo linear" style="width:auto">${[0.4,0.5,0.6,0.7,0.8,0.9,1,1.2,1.5,2].map(v=>`<option value="${v}"${Math.abs(v-(S.hidAdd[q.j].len||0.8))<1e-6?" selected":""}>${f(v*100,0)} cm</option>`).join("")}</select>`:""}
     ${fos?`<button class="btn" data-gira>Girar o conjunto 90°</button>${HDV.fossa&&HDV.fossa.conj?"":`<button class="btn" data-sadd>Acrescentar sumidouro</button>`}`:""}${(!fos||q.tp==="fsm")&&q.tp!=="hd"&&q.tp!=="res"?`<button class="btn dng" data-del>${q.tp==="fsm"?"Excluir este sumidouro":"Excluir"}</button>`:""}${q.man&&q.tp!=="add"?`<button class="btn" data-auto>Voltar ao automático</button>`:""}${fos&&S.fossaM?`<button class="btn" data-fauto>Conjunto todo no automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" id="hidMsg" style="margin:6px 0 0"></p>`;
   const b=P.querySelector("[data-m]"); if(b) b.onclick=()=>{ HIDMOVE=!HIDMOVE; hidPainel(); };
@@ -5724,6 +5729,10 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidP
   const gi=P.querySelector("[data-gira]"); if(gi) gi.onclick=fossaGira;
   const sa=P.querySelector("[data-sadd]"); if(sa) sa.onclick=()=>{ const n=HDV.fossa.ns; if(n>=6){ $("hidMsg").textContent="No máximo 6 sumidouros."; return; } fossaNs(n+1); };
   const dl=P.querySelector("[data-del]"); if(dl) dl.onclick=()=>hidExclui(q);
+  const tp0=P.querySelector("[data-tipo]"); if(tp0) tp0.onchange=()=>{ const t=tp0.value;
+    if(q.tp==="add"){ const a=S.hidAdd[q.j]; a.t=t; if(t==="rl"){ a.len=a.len||0.8; a.rot=a.rot||0; } else { delete a.len; delete a.rot; } }
+    else { S.hidTipo=S.hidTipo||{}; if(t===q.tDef) delete S.hidTipo[q.id]; else S.hidTipo[q.id]=t; }
+    if(q.tp==="add") HIDSEL="add|"+q.j; save(); render(); hidPainel(); $("hidDelMsg").textContent=`Trocada por ${NOME_RALO[t].toLowerCase()}.`; };
   const rg=P.querySelector("[data-rlg]"); if(rg) rg.onclick=()=>{ const a=S.hidAdd[q.j]; a.rot=a.rot?0:1; save(); render(); hidPainel(); };
   const rl=P.querySelector("[data-rll]"); if(rl) rl.onchange=()=>{ S.hidAdd[q.j].len=+rl.value; save(); render(); hidPainel(); };
   const au=P.querySelector("[data-auto]"); if(au) au.onclick=()=>{ const antes0=hidPosItens(); if(fos){ const M=S.fossaM||{}; if(q.tp==="ft"){ delete M.ct; delete M.giro; } else if(q.tp==="ff") delete M.f; else if(M.s) delete M.s[q.i]; if(!Object.keys(M).some(k=>k!=="s"||Object.keys(M.s).length)) delete S.fossaM; }
