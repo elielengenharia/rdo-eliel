@@ -348,8 +348,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <p class="cap">Água fria e esgoto traçados sozinhos a partir das louças do Banheiro e dos móveis do Layout (pia, tanque, máquina). Água: reservatório sobre o banheiro, coluna (AF1, AF2…) em cada área molhada e ramal pela parede até cada ponto. Esgoto: aparelhos para a caixa sifonada, vaso direto em Ø100, pia para a caixa de gordura, saída para caixas de inspeção do lado de fora (ou dentro da edificação no lado em que ela encosta na divisa ou no alinhamento, para nada cair no lote vizinho) e coletor até a rede ou fossa na frente do lote.</p>
       <p class="cap" style="margin:6px 0"><b>Mudar uma caixa:</b> toque na caixa de inspeção (CI), de gordura (CG) ou sifonada (CS) e <b>arraste</b>, ou toque em <b>Mover</b> e depois no lugar novo. Ligado na rede pública, a CI e a CG correm pelo coletor em volta da obra (vão para o lado onde você soltar); com fossa elas ficam onde você soltar. Com fossa, arraste o <b>tanque (TS)</b> para levar o conjunto todo, ou o <b>filtro (FA)</b> e o <b>sumidouro (SM)</b> para mudar só aquela unidade. Toque num <b>lugar vazio</b> para <b>acrescentar</b> caixa de inspeção, caixa de gordura, caixa sifonada ou ralo (sifonado, seco, quadrado ou linear). Para <b>tirar</b> uma caixa ou ralo, toque nele e em <b>Excluir</b>, ou ligue <b>Apagar itens</b>. Os canos, o coletor e as conferências se refazem sozinhos.</p>
       <div class="form wide" style="margin:0 0 8px"><label>Coletor de esgoto (caixas de inspeção)<select id="fossa.coletor"><option value="auto">Num corredor só, o lado das áreas molhadas (automático)</option><option value="esq">Corredor do lado esquerdo da planta</option><option value="dir">Corredor do lado direito da planta</option><option value="anel">Em volta da casa</option></select></label></div>
-      <p class="cap" style="margin:6px 0"><b>Tubos:</b> toque em <b>Desenhar tubo</b> e vá tocando do começo (ex.: saída da pia) até o fim (ex.: caixa de gordura); o tubo gruda nas caixas, ralos e saídas perto do dedo. Toque num <b>tubo</b> para trocar o diâmetro (40, 50, 75, 100), pôr em 45°, dobrar, arrastar as bolinhas do caminho ou apagar. Vale também para os tubos automáticos e os da fossa. <b>Unir tubos</b> funciona como o fillet do AutoCAD: toque num tubo e depois no outro (ou numa caixa) e eles se encontram no canto, esticando ou cortando o que sobra; se o encontro cair no meio do outro tubo, ele fica inteiro (ligação em T).</p>
-      <div class="row" style="margin:0 0 8px"><button class="btn pri" id="hidTuboBt" type="button">Desenhar tubo</button><button class="btn" id="hidUnirBt" type="button">Unir tubos (fillet)</button><label class="cap" style="display:flex;align-items:center;gap:4px;margin:0"><input type="checkbox" id="hidTrava" checked style="width:auto">Travar em 45°</label><button class="btn" id="hidApagar" type="button" aria-pressed="false">Apagar itens</button><button class="btn" id="hidRestaura" type="button" hidden></button><span class="toast" id="hidDelMsg" role="status"></span></div>
+      <p class="cap" style="margin:6px 0"><b>Tubos:</b> toque em <b>Desenhar tubo</b> e vá tocando do começo (ex.: saída da pia) até o fim (ex.: caixa de gordura); o tubo gruda nas caixas, ralos e saídas perto do dedo. Toque num <b>tubo</b> para trocar o diâmetro (40, 50, 75, 100), pôr em 45°, dobrar, arrastar as bolinhas do caminho ou apagar. Vale também para os tubos automáticos e os da fossa. <b>Unir tubos</b> funciona como o fillet do AutoCAD: toque num tubo e depois no outro (ou numa caixa) e eles se encontram no canto, esticando ou cortando o que sobra; se o encontro cair no meio do outro tubo, ele fica inteiro (ligação em T). <b>Cortar pedaço</b> funciona como o trim: toque no pedaço que sobra e só ele some, até o cruzamento com outro tubo ou caixa mais perto de cada lado (sem cruzamento, some até a ponta).</p>
+      <div class="row" style="margin:0 0 8px"><button class="btn pri" id="hidTuboBt" type="button">Desenhar tubo</button><button class="btn" id="hidUnirBt" type="button">Unir tubos (fillet)</button><button class="btn" id="hidTrimBt" type="button">Cortar pedaço (trim)</button><label class="cap" style="display:flex;align-items:center;gap:4px;margin:0"><input type="checkbox" id="hidTrava" checked style="width:auto">Travar em 45°</label><button class="btn" id="hidApagar" type="button" aria-pressed="false">Apagar itens</button><button class="btn" id="hidRestaura" type="button" hidden></button><span class="toast" id="hidDelMsg" role="status"></span></div>
       <div class="draw" id="hid" style="touch-action:pan-y"></div><div id="hidPanel" class="panel" hidden></div>
       <div class="chips" id="hidChips"></div><div id="hidAvisos"></div>
     </div>
@@ -764,7 +764,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.89 · unir tubos (fillet)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.90 · cortar pedaço de tubo (trim)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -3484,9 +3484,12 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
     else if(sa.saida.tv){ const tv=sa.saida.tv; simbHidro(D,{t:"tv",p:[tv.p[0]+tv.N[0]*0.08,tv.p[1]+tv.N[1]*0.08]}); TX(D,tv.p[0]+tv.N[0]*(0.08+4*k),tv.p[1]+tv.N[1]*(0.08+4*k),"TV",1.3,{b:true,l:"ESGOTO"}); } });
   (HD.ligs||[]).forEach(([a,b],i)=>tuboHid(D,"lg|"+i,[a,b],100));
   { const nR={}; HD.ramal.forEach(rm=>{ const nm=rm.r?rm.r.n:"ext", j=nR[nm]=(nR[nm]||0)+1; tuboHid(D,`rm|${nm}|${j}`,[rm.a,rm.b],rm.d); }); }
-  { const cn=HD.anelCn, PER=HD.PER;
-    HD.trechos.forEach(([a,b])=>{ const ts=[a]; [0,PER].forEach(v=>cn.forEach(c=>{ const x=c+v; if(x>a+1e-6&&x<b-1e-6) ts.push(x); })); ts.sort((p,q)=>p-q); ts.push(b);
-      for(let i=0;i+1<ts.length;i++){ const p=HD.anelP(ts[i]), q=HD.anelP(ts[i+1]); L(D,...p,...q,.5,"ESGOTO"); if(Math.hypot(q[0]-p[0],q[1]-p[1])>0.8) setaFluxo(D,p,q,"ESGOTO"); } }); }
+  // coletor: trechos juntados (sem pedaço repetido) e partidos nos cantos e nas caixas, cada pedaço um tubo editável
+  { const cn=HD.anelCn, PER=HD.PER, iv=HD.trechos.map(([a,b])=>[a,b]).sort((p,q)=>p[0]-q[0]), M=[];
+    iv.forEach(([a,b])=>{ const u=M[M.length-1]; if(u&&a<=u[1]+1e-6) u[1]=Math.max(u[1],b); else M.push([a,b]); });
+    const cortes=[...cn]; HD.caixas.forEach(c=>{ try{ const t=HD.anelT(c.p); if(isFinite(t)) cortes.push(t); }catch(e){} });
+    let n=0; M.forEach(([a,b])=>{ const ts=[a]; [0,PER,-PER].forEach(v=>cortes.forEach(c=>{ const x=c+v; if(x>a+0.02&&x<b-0.02) ts.push(x); })); ts.sort((p,q)=>p-q); ts.push(b);
+      for(let i=0;i+1<ts.length;i++){ if(ts[i+1]-ts[i]<0.01) continue; const p=HD.anelP(ts[i]), q=HD.anelP(ts[i+1]); tuboHid(D,"col|"+(n++),[p,q],100,{lab:false}); } }); }
   // rótulo do coletor no trecho mais longo
   { let lg=null; HD.trechos.forEach(([a,b])=>{ if(!lg||b-a>lg[1]-lg[0]) lg=[a,b]; }); if(lg){ const p=HD.anelP(lg[0]+(lg[1]-lg[0])*0.3), q=HD.anelP(lg[0]+(lg[1]-lg[0])*0.3+0.3); rotuloLinha(D,p,q,"Ø100 i=1%","ESGOTO",-1); } }
   HD.caixas.forEach(c=>{ simbHidro(D,{t:c.tipo==="CG"?"cg":"ci",p:c.p}); TX(D,c.p[0]+3*k,c.p[1]-3*k,c.tipo==="CG"?"CG":"CI",1.5,{a:"s",b:true,l:"ESGOTO"}); });
@@ -5369,6 +5372,31 @@ function hidUnirToque(p){ if(!HIDUNIR.A){ const A=tubAcharSeg(p); if(!A){ hidPai
   const B=tubAcharSeg(p), q=hidAchar(p); let msg;
   if(B&&B.t.key!==HIDUNIR.A.t.key) msg=hidUnir(HIDUNIR.A,B); else if(q) msg=hidUnirCaixa(HIDUNIR.A,q); else { hidPainelUnir(B?"Esse é o mesmo tubo.":"Nenhum tubo aí."); return; }
   HIDUNIR={A:null}; HIDSELT=null; render(); hidPainelUnir(msg); }
+
+// CORTAR PEDAÇO (como o TRIM do AutoCAD): some só o pedaço tocado, entre os cortes mais perto (cruzamento com outro tubo, caixa, ralo ou sumidouro em cima do tubo)
+let HIDTRIM=false;
+function polS(pts){ const S0=[0]; for(let i=1;i<pts.length;i++) S0.push(S0[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1])); return S0; }
+function polProj(pts,p){ const S0=polS(pts); let b=null; for(let i=0;i+1<pts.length;i++){ const a=pts[i], c=pts[i+1], dx=c[0]-a[0], dy=c[1]-a[1], L2=dx*dx+dy*dy||1e-12, t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2)), d=Math.hypot(a[0]+dx*t-p[0],a[1]+dy*t-p[1]); if(!b||d<b.d) b={d,s:S0[i]+t*Math.sqrt(L2)}; } return b; }
+function polPt(pts,s){ const S0=polS(pts); for(let i=0;i+1<pts.length;i++) if(s<=S0[i+1]+1e-9){ const L=S0[i+1]-S0[i]||1, t=(s-S0[i])/L; return [pts[i][0]+(pts[i+1][0]-pts[i][0])*t,pts[i][1]+(pts[i+1][1]-pts[i][1])*t]; } return pts[pts.length-1].slice(); }
+function polSub(pts,s0,s1){ const S0=polS(pts), out=[polPt(pts,s0)]; for(let i=1;i+1<pts.length;i++) if(S0[i]>s0+1e-6&&S0[i]<s1-1e-6) out.push(pts[i].slice()); out.push(polPt(pts,s1)); return out; }
+function tubCortes(t){ const pts=t.pts, C=[];
+  HIDTUB.forEach(o=>{ if(o.key===t.key) return; for(let i=0;i+1<pts.length;i++) for(let j=0;j+1<o.pts.length;j++){ const I=cruzaLinhas(pts[i],pts[i+1],o.pts[j],o.pts[j+1]); if(!I) continue;
+      const Lo=Math.hypot(o.pts[j+1][0]-o.pts[j][0],o.pts[j+1][1]-o.pts[j][1])||1, tol=0.03/Lo, Li=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1])||1;
+      if(I.t>=-0.03/Li&&I.t<=1+0.03/Li&&I.u>=-tol&&I.u<=1+tol){ const q=polProj(pts,I.X); C.push(q.s); } } });
+  hidItens().forEach(q=>{ const pr=polProj(pts,q.p); if(pr.d<0.10) C.push(pr.s); });
+  return C; }
+function hidTrimToque(p){ const A=tubAcharSeg(p); if(!A) return "Nenhum tubo aí.";
+  const t=A.t, pts=t.pts, Ltot=polS(pts).slice(-1)[0], s=polProj(pts,p).s, C=tubCortes(t).filter(c=>c>0.02&&c<Ltot-0.02).sort((a,b)=>a-b);
+  const antes=C.filter(c=>c<s-0.01).pop(), depois=C.find(c=>c>s+0.01), pedacos=[];
+  if(antes!=null) pedacos.push(polSub(pts,0,antes)); if(depois!=null) pedacos.push(polSub(pts,depois,Ltot));
+  if(!pedacos.length){ tubExclui(t.key); return `Pedaço de ${f(Ltot)} m cortado (de ponta a ponta). Volta em Restaurar excluídos.`; }
+  tubPoePts(t.key,pedacos[0]);
+  if(pedacos[1]){ const d=t.d; S.hidTubM=S.hidTubM||[]; S.hidTubM.push({pts:pedacos[1].map(q=>[tr3(q[0]),tr3(q[1])]),d}); }
+  HIDSELT=null; save(); render(); return `Pedaço de ${f((depois??Ltot)-(antes??0))} m cortado.`; }
+function hidPainelTrim(msg){ const P=$("hidPanel"); P.hidden=false;
+  P.innerHTML=`<h4>Cortar pedaço (trim)</h4><p class="cap" style="margin:0 0 8px">${msg?`${esc(msg)} `:""}<b>Toque no pedaço de tubo que vai sair.</b> Ele some até o cruzamento com outro tubo ou caixa mais perto de cada lado. Para tirar o tubo inteiro, use Apagar itens.</p>
+    <div class="row" style="margin:0;flex-wrap:wrap"><button class="btn" data-tfim>Parar de cortar</button></div>`;
+  P.querySelector("[data-tfim]").onclick=()=>{ HIDTRIM=false; P.hidden=true; hidBotoes(); render(); }; }
 // desenha por cima da planta: tubo escolhido (com as bolinhas) e o tubo sendo desenhado
 function hidMarcaTubo(svg,v,ptsOver){ const m=p=>`${(v.pad+(p[0]-v.e.x0)/v.k).toFixed(2)},${(v.pad+(p[1]-v.e.y0)/v.k).toFixed(2)}`;
   const desenha=(pts,cor,id)=>{ if(!pts||!pts.length) return; svg.insertAdjacentHTML("beforeend",`<g id="${id}"><polyline points="${pts.map(m).join(" ")}" fill="none" stroke="${cor}" stroke-width="1.1" stroke-opacity=".55" stroke-linejoin="round"/>${pts.map(q=>{ const [x,y]=m(q).split(","); return `<circle cx="${x}" cy="${y}" r="1.6" fill="#fff" stroke="${cor}" stroke-width="0.5"/>`; }).join("")}</g>`); };
@@ -5412,6 +5440,7 @@ let HIDDEL=false;
 function hidBotoes(){ const a=$("hidApagar"), r=$("hidRestaura"); if(!a) return; a.setAttribute("aria-pressed",HIDDEL?"true":"false"); a.className=HIDDEL?"btn dng":"btn";
   a.textContent=HIDDEL?"Apagando: toque nas caixas e ralos (toque aqui para parar)":"Apagar itens";
   const n=Object.keys(S.hidDel||{}).length+Object.values(S.hidTub||{}).filter(o=>o&&o.del).length; r.hidden=!n; r.textContent=`Restaurar excluídos (${n})`;
+  const cb=$("hidTrimBt"); if(cb){ cb.textContent=HIDTRIM?"Cortando… (toque aqui para parar)":"Cortar pedaço (trim)"; cb.className=HIDTRIM?"btn dng":"btn"; }
   const ub=$("hidUnirBt"); if(ub){ ub.textContent=HIDUNIR?"Unindo… (toque aqui para parar)":"Unir tubos (fillet)"; ub.className=HIDUNIR?"btn dng":"btn"; }
   const tb=$("hidTuboBt"); if(tb){ tb.textContent=HIDTUBO?"Desenhando… (toque aqui para cancelar)":"Desenhar tubo"; tb.className=HIDTUBO?"btn dng":"btn pri"; } }
 function hidAcrescenta(p0){ const P=$("hidPanel"), lugar=GG.compAt(...p0); P.hidden=false;
@@ -5422,7 +5451,7 @@ function hidAcrescenta(p0){ const P=$("hidPanel"), lugar=GG.compAt(...p0); P.hid
   P.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ const t=b.dataset.add; S.hidAdd=S.hidAdd||[]; S.hidAdd.push({t,x:+p0[0].toFixed(3),y:+p0[1].toFixed(3),...(t==="rl"?{len:0.8,rot:0}:{})});
     HIDSEL="add|"+(S.hidAdd.length-1); HIDMOVE=false; save(); render(); hidPainel(); });
   P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; }; }
-function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDUNIR) return hidPainelUnir(); if(HIDTUBO) return hidPainelDesenho(); if(!q&&HIDSELT) return hidPainelTubo(); if(!q){ P.hidden=true; return; } P.hidden=false;
+function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidPainelTrim(); if(HIDUNIR) return hidPainelUnir(); if(HIDTUBO) return hidPainelDesenho(); if(!q&&HIDSELT) return hidPainelTubo(); if(!q){ P.hidden=true; return; } P.hidden=false;
   const fos=q.tp==="ft"||q.tp==="ff"||q.tp==="fsm", com=(S.fossa||{}).on==="sim";
   const dica=!q.movel?"Esta caixa fica sozinha na curva do coletor; ela muda quando você muda as outras caixas.":HIDMOVE?"<b>Toque no lugar novo</b> na planta.":q.tp==="cx"&&!com?"Arraste para o lado que quiser: a caixa corre pelo coletor em volta da obra.":q.tp==="add"?"Arraste para mudar de lugar; o cano até a caixa mais perto se refaz.":q.tp==="ft"?"Arraste para levar o tanque, o filtro e o sumidouro juntos.":fos?"Arraste para mudar só esta unidade; o cano se refaz.":"Arraste na planta, ou toque em Mover e depois no lugar novo.";
   P.innerHTML=`<h4>${esc(q.nome)}${q.amb?` · ${esc(q.amb)}`:""}</h4><p class="cap" style="margin:0 0 8px">${dica}${q.man?" (posição escolhida por você)":""}</p>
@@ -5442,7 +5471,7 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDUNIR) return hidP
   const fa=P.querySelector("[data-fauto]"); if(fa) fa.onclick=fossaAuto;
   P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; HIDSEL=null; HIDMOVE=false; render(); }; }
 { const cont=$("hid"); let arr=null, tArr=0;
-  cont.addEventListener("pointerdown",ev=>{ const p=ptVista(ev,"hid"); if(!p||HIDMOVE||HIDTUBO||HIDUNIR) return;
+  cont.addEventListener("pointerdown",ev=>{ const p=ptVista(ev,"hid"); if(!p||HIDMOVE||HIDTUBO||HIDUNIR||HIDTRIM) return;
     if(HIDSELT&&!HIDDEL){ const t=tubAtual(HIDSELT); if(t){ let vi=-1, dm=0.25; t.pts.forEach((c,i)=>{ const d=Math.hypot(c[0]-p[0],c[1]-p[1]); if(d<dm){ dm=d; vi=i; } });
       if(vi>=0){ arr={id:ev.pointerId,tub:t,vi,p0:p,moveu:false,pts:t.pts.map(c=>c.slice())}; try{ cont.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); return; } } }
     const q=hidAchar(p); if(!q) return; HIDSELT=null;
@@ -5459,6 +5488,7 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDUNIR) return hidP
     if(a.moveu&&a.p){ hidGrava(a.q,a.p); return; } render(); hidPainel(); };
   cont.addEventListener("pointerup",fim); cont.addEventListener("pointercancel",ev=>{ arr=null; });
   cont.addEventListener("click",ev=>{ if(Date.now()-tArr<400) return; const p=ptVista(ev,"hid"); if(!p||!GG||GG.vazio) return;
+    if(HIDTRIM){ const m=hidTrimToque(p); hidBotoes(); hidPainelTrim(m); return; }
     if(HIDUNIR){ hidUnirToque(p); return; }
     if(HIDTUBO){ hidTuboPonto(p); return; }
     if(HIDMOVE){ const q=hidSel(); HIDMOVE=false; if(q){ hidGrava(q,p); return; } hidPainel(); return; }
@@ -5466,9 +5496,10 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDUNIR) return hidP
     { const t=tubAchar(p); if(t){ if(HIDDEL){ tubExclui(t.key); return; } HIDSELT=t.key; HIDSEL=null; HIDMOVE=false; render(); hidPainel(); return; } }
     if(HIDDEL) return;
     if(HIDSEL||HIDSELT){ HIDSEL=null; HIDSELT=null; render(); } hidAcrescenta(p); });
-  $("hidUnirBt").onclick=()=>{ HIDUNIR=HIDUNIR?null:{A:null}; HIDTUBO=null; HIDSEL=null; HIDSELT=null; HIDMOVE=false; HIDDEL=false; hidBotoes(); render(); hidPainel(); };
-  $("hidTuboBt").onclick=()=>{ HIDTUBO=HIDTUBO?null:{pts:[]}; HIDUNIR=null; HIDSEL=null; HIDSELT=null; HIDMOVE=false; HIDDEL=false; hidBotoes(); render(); hidPainel(); };
-  $("hidApagar").onclick=()=>{ HIDDEL=!HIDDEL; HIDSEL=null; HIDMOVE=false; $("hidPanel").hidden=true; $("hidDelMsg").textContent=""; hidBotoes(); render(); };
+  $("hidTrimBt").onclick=()=>{ HIDTRIM=!HIDTRIM; HIDUNIR=null; HIDTUBO=null; HIDSEL=null; HIDSELT=null; HIDMOVE=false; HIDDEL=false; hidBotoes(); render(); hidPainel(); };
+  $("hidUnirBt").onclick=()=>{ HIDUNIR=HIDUNIR?null:{A:null}; HIDTRIM=false; HIDTUBO=null; HIDSEL=null; HIDSELT=null; HIDMOVE=false; HIDDEL=false; hidBotoes(); render(); hidPainel(); };
+  $("hidTuboBt").onclick=()=>{ HIDTUBO=HIDTUBO?null:{pts:[]}; HIDUNIR=null; HIDTRIM=false; HIDSEL=null; HIDSELT=null; HIDMOVE=false; HIDDEL=false; hidBotoes(); render(); hidPainel(); };
+  $("hidApagar").onclick=()=>{ HIDDEL=!HIDDEL; HIDTRIM=false; HIDUNIR=null; HIDTUBO=null; HIDSELT=null; HIDSEL=null; HIDMOVE=false; $("hidPanel").hidden=true; $("hidDelMsg").textContent=""; hidBotoes(); render(); };
   $("hidRestaura").onclick=()=>{ delete S.hidDel; Object.keys(S.hidTub||{}).forEach(k=>{ const o=S.hidTub[k]; if(o&&o.del){ delete o.del; if(!Object.keys(o).length) delete S.hidTub[k]; } }); save(); render(); $("hidDelMsg").textContent="Caixas excluídas voltaram para a planta."; };
   $("fossaGira").onclick=()=>{ fossaGira(); $("fossaPosMsg").textContent="Conjunto girado 90°."; };
   $("fossaAuto").onclick=()=>{ fossaAuto(); $("fossaPosMsg").textContent="Conjunto de volta ao lugar automático."; }; }
