@@ -786,7 +786,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.98 · lado do sumidouro, tubo liga em qualquer ponto da fossa", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.99 · tubo ajustado só com dobras de 45°", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -5485,13 +5485,20 @@ function fossaBorda(p){ const FS=HDV&&HDV.fossa, P=FS&&FS.pos; if(!P) return nul
     if(d<0.40&&(!best||d<best.d)) best={d,q}; });
   return best&&best.q; }
 // trava ligada: depois de mexer, cada trecho torto vira reto + 45° (os cantos de 90° e 45° saem sozinhos)
-// ponta ligada na parede da fossa/sumidouro: o último trecho chega em 90° com a parede (canto em L antes dela)
-function tubAjusta(pts){ if(!hidTrava()||pts.length<2) return pts; let P=pts.map(q=>[q[0],q[1]]);
-  const canto=(e,pv)=>{ const fb=fossaBorda(e); if(!fb||!fb.n||Math.hypot(fb[0]-e[0],fb[1]-e[1])>0.01) return null; const n=fb.n, d=(pv[0]-e[0])*n[0]+(pv[1]-e[1])*n[1]; if(d<=0.05) return null;
-    const X=[e[0]+n[0]*d,e[1]+n[1]*d]; return Math.hypot(X[0]-pv[0],X[1]-pv[1])<0.005?null:X; };
-  { const X=canto(P[P.length-1],P[P.length-2]); if(X) P.splice(P.length-1,0,X); }
-  { const X=canto(P[0],P[1]); if(X) P.splice(1,0,X); }
-  return poe45(P).filter((q,i,a)=>i===0||Math.hypot(q[0]-a[i-1][0],q[1]-a[i-1][1])>0.005); }
+// trava ligada: trecho torto vira reto + 45° (só dobra de 45°, nada de canto de 90° automático); a dobra vai para o lado que
+// continua o trecho vizinho (menos curvas, menos risco de entupir) e pontos no meio de um trecho reto somem
+function tubAjusta(pts){ if(!hidTrava()||pts.length<2) return pts; const P=pts.map(q=>[+q[0],+q[1]]), un=(a,b)=>{ const dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy); return l<1e-6?null:[dx/l,dy/l]; };
+  const par=(u,v)=>u&&v&&u[0]*v[0]+u[1]*v[1]>0.999, out=[P[0]];
+  for(let i=0;i+1<P.length;i++){ const a=P[i], b=P[i+1], dx=b[0]-a[0], dy=b[1]-a[1], ax=Math.abs(dx), ay=Math.abs(dy);
+    if(ax<0.005||ay<0.005||Math.abs(ax-ay)<0.005){ out.push(b); continue; }
+    const sd=Math.min(ax,ay), dg=[Math.sign(dx)*sd,Math.sign(dy)*sd], ops=[[b[0]-dg[0],b[1]-dg[1]],[a[0]+dg[0],a[1]+dg[1]]];   // reto e depois 45° / 45° e depois reto
+    const dP=out.length>=2?un(out[out.length-2],a):null, dN=P[i+2]?un(b,P[i+2]):null;
+    const nota=m=>(par(un(a,m),dP)?1:0)+(par(un(m,b),dN)?1:0)-(dP&&un(a,m)&&dP[0]*un(a,m)[0]+dP[1]*un(a,m)[1]<0.70?0.5:0);   // evita curva fechada (mais de 45°) no começo
+    const m=nota(ops[1])>nota(ops[0])?ops[1]:ops[0]; out.push(m,b); }
+  // tira pontos repetidos e pontos no meio de trecho reto
+  const R=[out[0]]; for(let i=1;i<out.length;i++){ const q=out[i]; if(Math.hypot(q[0]-R[R.length-1][0],q[1]-R[R.length-1][1])<0.005) continue;
+    if(R.length>=2&&par(un(R[R.length-2],R[R.length-1]),un(R[R.length-1],q))) R[R.length-1]=q; else R.push(q); }
+  return R; }
 function hidEncaixa(p,prev,ign){ const fb=fossaBorda(p); if(fb) return fb;
   let b=null; hidPontosLiga(ign).forEach(q=>{ const d=Math.hypot(q[0]-p[0],q[1]-p[1]); if(d<0.25&&(!b||d<b.d)) b={q,d}; }); if(b) return [b.q[0],b.q[1]];
   const pc=hidAchar(p); if(pc) return hidPontoPeca(pc).slice();   // toque em cima da caixa, ralo, tanque ou sumidouro: o cano vai até ela (as peças são as guias)
