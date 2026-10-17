@@ -378,7 +378,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
         <label>Limpeza do tanque a cada<select id="fossa.lim"><option value="1">1 ano</option><option value="2">2 anos</option><option value="3">3 anos</option><option value="4">4 anos</option><option value="5">5 anos</option></select></label>
         <label>Coeficiente de infiltração do solo (L/m²·dia)<input type="number" step="5" id="fossa.ci"></label>
       </div>
-      <div id="fossaBox" hidden><div class="row" style="margin-top:10px"><button class="btn" id="fossaGira" type="button">Girar o conjunto 90°</button><button class="btn" id="fossaAuto" type="button">Voltar ao lugar automático</button><span class="toast" id="fossaPosMsg" role="status"></span></div>
+      <div id="fossaBox" hidden><div class="row" style="margin-top:10px"><button class="btn" id="fossaGira" type="button">Girar o conjunto 90°</button><button class="btn" id="fossaAuto" type="button">Voltar ao lugar automático</button><button class="btn pri" id="fossaNorma" type="button">Ligar a fossa na norma</button><span class="toast" id="fossaPosMsg" role="status"></span></div>
         <p class="cap" style="margin:6px 0 0">Para mudar o lugar do conjunto, arraste o tanque, o filtro ou o sumidouro na planta hidrossanitária acima.</p><div class="draw" id="fossaDes" style="margin-top:10px"></div><div id="fossaAvisos"></div><div class="tbl"><table id="tabFossa"></table></div><ol class="notes" id="fossaNotas" style="margin-top:12px"></ol></div>
     </div>
     <div class="sheet"><h2>Águas pluviais</h2>
@@ -786,7 +786,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.99 · tubo ajustado só com dobras de 45°", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.00 · ligação da fossa na norma", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2986,13 +2986,13 @@ function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, ga
     [...(FS.fil?[[cf,rf]]:[]),...cs.map(c=>[c,rs])].forEach(([c,r])=>{ for(let i=0;i<16;i++){ const an=i*Math.PI/8; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } }); pts.push(ct,cf,...cs); return pts; };
   const frenteM=FS.lugar==="frente", cF=Math.max(...(G.casas||[]).flat().map(p=>dot(p,VFf)),-1e9), lF=Math.max(...TL.map(p=>dot(p,VFf)));
   let dirF=FS.dirC&&FS.dirC!=="auto"?FS.dirC:null, ladoS=FS.ladoS&&FS.ladoS!=="auto"?FS.ladoS:null; const RtF=[VFf[1],-VFf[0]];
-  const busca=(gap,thr,perto,fm)=>{ let best=null;
+  let entTol=0.15; const busca=(gap,thr,perto,fm)=>{ let best=null;
     for(const ax of [[1,0],[-1,0],[0,1],[0,-1]]) for(const turn of [0,1,-1]){ const pr=[-ax[1],ax[0]]; if(!FS.fil&&turn) continue;
       if(dirF&&(turn||(Math.abs(dot(ax,VFf))>0.1)!==(dirF==="lado"))) continue;   // fila reta paralela ao muro escolhido
       if(ladoS&&dot(ax,RtF)*(ladoS==="dir"?1:-1)<0.5) continue;   // sumidouro do lado escolhido (olhando da rua)
       for(let x=x0;x<=x1;x+=0.25) for(let y=y0;y<=y1;y+=0.25){
         const ct=[x,y], ent=[ct[0]-ax[0]*Lo/2,ct[1]-ax[1]*Lo/2], dd=Math.hypot(ent[0]-alvo[0],ent[1]-alvo[1]);
-        if(perto&&dd>7) continue; if(!ladoS&&((alvo[0]-ct[0])*ax[0]+(alvo[1]-ct[1])*ax[1])>-Lo/2+0.15) continue;   // a caixa final tem de ficar do lado da entrada do tanque
+        if(perto&&dd>7) continue; if(!ladoS&&((alvo[0]-ct[0])*ax[0]+(alvo[1]-ct[1])*ax[1])>-Lo/2+entTol) continue;   // a caixa final tem de ficar do lado da entrada do tanque
         if(fm&&dot(ct,VFf)<cF+0.3) continue;   // na frente da casa: o conjunto entre a fachada e o muro da frente
         const A=arranjoFossa(FS,ct,ax,turn,gap), pts=ptsDe(ct,ax,pr,A.cf,A.cs); let cl=99, ruim=false;
         for(const q of pts){ const v=folgaG(q); if(v<cl) cl=v; if(cl<thr){ ruim=true; break; } } if(ruim||pts.some(naEntrada)||pts.some(q=>Math.hypot(q[0]-alvo[0],q[1]-alvo[1])<0.45)) continue;
@@ -3001,8 +3001,9 @@ function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, ga
   const gaps=FS.gapU?[gap]:[gap,1.2,1.0,0.8,0.6,0.5];
   let best=null, gapU=gap, fora=false;
   let semFrente=false;
-  if(frenteM&&isFinite(cF)){ for(const thr of [0.30,0.15]){ for(const g of gaps){ const b=busca(g,thr,false,true); if(b){ best=b; gapU=g; break; } } if(best) break; } if(!best) semFrente=true; }
-  if(!best) for(const [thr,perto] of [[0.30,true],[0.15,true],[0.30,false],[0.15,false]]){ for(const g of gaps){ const b=busca(g,thr,perto); if(b){ best=b; gapU=g; break; } } if(best) break; }
+  // entrada do tanque de frente para a caixa final, com folga para o cano chegar reto (NBR 8160); se não der, aceita a caixa quase no alinhamento da entrada
+  if(frenteM&&isFinite(cF)){ for(const tol of [-0.60,0.15]){ entTol=tol; for(const thr of [0.30,0.15]){ for(const g of gaps){ const b=busca(g,thr,false,true); if(b){ best=b; gapU=g; break; } } if(best) break; } if(best) break; } if(!best) semFrente=true; }
+  if(!best) for(const tol of [-0.60,0.15]){ entTol=tol; for(const [thr,perto] of [[0.30,true],[0.15,true],[0.30,false],[0.15,false]]){ for(const g of gaps){ const b=busca(g,thr,perto); if(b){ best=b; gapU=g; break; } } if(best) break; } if(best) break; }
   let semDir=false; if(!best&&(dirF||ladoS)){ semDir=true; dirF=null; ladoS=null;   // não coube alinhado: tenta livre
     if(frenteM&&isFinite(cF)){ for(const thr of [0.30,0.15]){ for(const g of gaps){ const b=busca(g,thr,false,true); if(b){ best=b; gapU=g; break; } } if(best) break; } if(best) semFrente=false; }
     if(!best) for(const [thr,perto] of [[0.30,true],[0.15,true],[0.30,false],[0.15,false]]){ for(const g of gaps){ const b=busca(g,thr,perto); if(b){ best=b; gapU=g; break; } } if(best) break; } }
@@ -3057,6 +3058,21 @@ function fossaNoPasseio(G,FS,alvo,i){ const PS=passeios(G), q=PS.find(p=>p.i===i
 function trajetoFossa(G,a,b){ const c1=[b[0],a[1]], c2=[a[0],b[1]], dentro=p=>(G.casas||[]).some(P=>pontoDentro(p,P)), meio=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];
   if(![0.2,0.4,0.6,0.8].some(t=>dentro([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]))) return [a,b];   // cano reto, se não passa por dentro da obra
   const bad=c=>[meio(a,c),meio(c,b),c].filter(dentro).length; return bad(c1)<=bad(c2)?[a,c1,b]:[a,c2,b]; }
+// caixa final → entrada do tanque como pede a NBR 8160: últimos 40 cm retos no eixo do tanque (entrada de frente, com o T),
+// mudanças de direção só de 45°; se precisar virar mais que 45° (caixa final do outro lado), caixa de inspeção em cada canto
+function trajetoFossaN(G,a,b,ax,pr,Wo){ const dentro=p=>(G.casas||[]).some(P=>pontoDentro(p,P)), cruza=pts=>pts.some((q,i)=>i&&[0.25,0.5,0.75].some(t=>dentro([pts[i-1][0]+(q[0]-pts[i-1][0])*t,pts[i-1][1]+(q[1]-pts[i-1][1])*t])));
+  if(!ax) return {pts:trajetoFossa(G,a,b),cis:[]}; const Pe=[b[0]-ax[0]*0.40,b[1]-ax[1]*0.40], d=[Pe[0]-a[0],Pe[1]-a[1]], da=d[0]*ax[0]+d[1]*ax[1], dp=d[0]*pr[0]+d[1]*pr[1], at=(s0,t0)=>[a[0]+ax[0]*s0+pr[0]*t0,a[1]+ax[1]*s0+pr[1]*t0];
+  const limpa=pts=>pts.filter((q,i)=>i===0||Math.hypot(q[0]-pts[i-1][0],q[1]-pts[i-1][1])>0.01);
+  if(da>0.05){ let pts;
+    if(Math.abs(dp)<=da*Math.tan(Math.PI/8)+0.02) pts=[a,Pe,b];   // chega quase reto: uma deflexão pequena
+    else if(Math.abs(dp)>=da) pts=[a,at(0,dp-Math.sign(dp)*da),Pe,b];   // anda de lado, 45° e entra reto
+    else pts=[a,at(da-Math.abs(dp),0),Pe,b];   // anda reto, 45° e entra reto
+    pts=limpa(pts); if(!cruza(pts)) return {pts,cis:[]}; }
+  // caixa final do outro lado do tanque (ou o caminho passa pela casa): contorna em L com caixa de inspeção no canto
+  const lado=Math.sign(dp)||1, tL=lado*(Wo/2+0.60), K1=at(0,Math.abs(dp)>Wo/2+0.6?0:dp-tL), C=[Pe[0]-ax[0]*0.6,Pe[1]-ax[1]*0.6];
+  const c1=[b[0],a[1]], c2=[a[0],b[1]], o1=limpa([a,c1,b]), o2=limpa([a,c2,b]);
+  if(da>-0.05&&!cruza(o1)) return {pts:o1,cis:o1.length>2?[c1]:[]}; if(da>-0.05&&!cruza(o2)) return {pts:o2,cis:o2.length>2?[c2]:[]};
+  const K2=[K1[0]+ax[0]*(da-0.6),K1[1]+ax[1]*(da-0.6)], C2=[C[0],C[1]], pts=limpa([a,K1,K2,C2,b]); return {pts,cis:pts.slice(1,-1)}; }
 function desenhaPasseios(D,G){ passeios(G).forEach(q=>{ const ex=q.cal; L(D,q.a[0]+q.n[0]*q.cal-q.u[0]*ex,q.a[1]+q.n[1]*q.cal-q.u[1]*ex,q.b[0]+q.n[0]*q.cal+q.u[0]*ex,q.b[1]+q.n[1]*q.cal+q.u[1]*ex,.18,"LOTE");
   if(q.L>3){ const m=[(q.a[0]+q.b[0])/2+q.n[0]*q.cal/2,(q.a[1]+q.b[1])/2+q.n[1]*q.cal/2]; let an=Math.atan2(q.u[1],q.u[0])*180/Math.PI; if(an>90) an-=180; if(an<-90) an+=180; TX(D,m[0]+q.u[0]*q.L*0.3,m[1]+q.u[1]*q.L*0.3,`PASSEIO · ${q.nome.toUpperCase()}`,1.3,{l:"COTAS",mv:"l",rot:an}); } }); }
 function desenhaFossaPlanta(D,G,FS,HD){ const k=D.k, P=FS.pos; if(!P) return;
@@ -3067,14 +3083,14 @@ function desenhaFossaPlanta(D,G,FS,HD){ const k=D.k, P=FS.pos; if(!P) return;
     PL(D,[q(-Lo/2,-Wo/2),q(Lo/2,-Wo/2),q(Lo/2,Wo/2),q(-Lo/2,Wo/2),q(-Lo/2,-Wo/2)],.4,"ESGOTO"); PL(D,[q(a0,-w),q(a1,-w),q(a1,w),q(a0,w),q(a0,-w)],.2,"ESGOTO"); PL(D,[q(a2,-w),q(a3,-w),q(a3,w),q(a2,w),q(a2,-w)],.2,"ESGOTO",true);
     TX(D,...q((a0+a1)/2,0),"TS",2,{b:true,l:"ESGOTO"}); TX(D,...q((a0+a1)/2,0).map((v,j)=>v+(j?2.6*k:0)),`${f(FS.W)}x${f(FS.Lt)} h=${f(FS.h)}`,1.3,{l:"ESGOTO"});
     TX(D,...q((a2+a3)/2,0),"SM",2,{b:true,l:"ESGOTO"}); TX(D,...q((a2+a3)/2,0).map((v,j)=>v+(j?2.6*k:0)),`${f(FS.W)}x${f(FS.Ls)} h=${f(FS.hs)}`,1.3,{l:"ESGOTO"});
-    tuboHid(D,"fs|ent",trajetoFossa(G,HD.fim.p,P.ent),100,{lab:false}); return; }
+    { const T0=trajetoFossaN(G,HD.fim.p,P.ent,P.ax,P.pr,Wo); tuboHid(D,"fs|ent",T0.pts,100,{lab:false}); if(!(S.hidTub||{})["fs|ent"]) T0.cis.forEach(c=>simbHidro(D,{t:"ci",p:c})); } return; }
   if(FS.cil){ cir(ct,FS.L/2+0.15,.4); cir(ct,FS.L/2,.2); }
   else { PL(D,[q(-Lo/2,-Wo/2),q(Lo/2,-Wo/2),q(Lo/2,Wo/2),q(-Lo/2,Wo/2),q(-Lo/2,-Wo/2)],.4,"ESGOTO"); PL(D,[q(-FS.L/2,-FS.W/2),q(FS.L/2,-FS.W/2),q(FS.L/2,FS.W/2),q(-FS.L/2,FS.W/2),q(-FS.L/2,-FS.W/2)],.2,"ESGOTO"); }
   if(FS.fil){ cir(cf,FS.Df/2+0.15,.4); cir(cf,FS.Df/2,.2); } cs.forEach(c=>{ cir(c,FS.Ds/2+0.15,.4); cir(c,FS.Ds/2,.2,true); });
   TX(D,...ct,"TS",2,{b:true,l:"ESGOTO"}); TX(D,ct[0],ct[1]+2.6*k,FS.cil?`Ø${f(FS.L)} h=${f(FS.h)}`:`${f(FS.W)}x${f(FS.L)} h=${f(FS.h)}`,1.3,{l:"ESGOTO"});
   if(FS.fil){ TX(D,...cf,"FA",2,{b:true,l:"ESGOTO"}); TX(D,cf[0],cf[1]+2.6*k,`Ø${f(FS.Df)}`,1.3,{l:"ESGOTO"}); }
   cs.forEach((c,i)=>{ TX(D,...c,FS.ns>1?`SM${i+1}`:"SM",2,{b:true,l:"ESGOTO"}); TX(D,c[0],c[1]+2.6*k,`Ø${f(FS.Ds)} h=${f(FS.hs)}`,1.3,{l:"ESGOTO"}); });
-  const tr=trajetoFossa(G,HD.fim.p,P.ent); tuboHid(D,"fs|ent",tr,100,{lab:false});
+  { const T0=trajetoFossaN(G,HD.fim.p,P.ent,P.ax,P.pr,Wo); tuboHid(D,"fs|ent",T0.pts,100,{lab:false}); if(!(S.hidTub||{})["fs|ent"]) T0.cis.forEach(c=>simbHidro(D,{t:"ci",p:c})); }
   // cano de unidade a unidade: sai da borda virada para a próxima e entra pela borda virada para a anterior
   const sT=[ct[0]+ax[0]*Lo/2,ct[1]+ax[1]*Lo/2], bor=(c,r,to)=>{ const dx=to[0]-c[0], dy=to[1]-c[1], d=Math.hypot(dx,dy)||1; return [c[0]+dx/d*r,c[1]+dy/d*r]; };
   const un=[...(FS.fil?[[cf,FS.Df/2+0.15]]:[]),...cs.map(c=>[c,FS.Ds/2+0.15])];
@@ -5729,6 +5745,9 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidP
   $("hidApagar").onclick=()=>{ HIDDEL=!HIDDEL; HIDTRIM=false; HIDUNIR=null; HIDTUBO=null; HIDSELT=null; HIDSEL=null; HIDMOVE=false; $("hidPanel").hidden=true; $("hidDelMsg").textContent=""; hidBotoes(); render(); };
   $("hidRestaura").onclick=()=>{ delete S.hidDel; Object.keys(S.hidTub||{}).forEach(k=>{ const o=S.hidTub[k]; if(o&&o.del){ delete o.del; if(!Object.keys(o).length) delete S.hidTub[k]; } }); save(); render(); $("hidDelMsg").textContent="Caixas excluídas voltaram para a planta."; };
   $("fossaGira").onclick=()=>{ fossaGira(); $("fossaPosMsg").textContent="Conjunto girado 90°."; };
+  $("fossaNorma").onclick=()=>{ const o=S.hidTub||{}, ks=Object.keys(o).filter(k=>/^fs\|/.test(k)&&o[k]); ks.forEach(k=>delete o[k]); save(); render();
+    const man=(S.hidTubM||[]).filter(t=>(t.pts||[]).some(q=>{ const fb=fossaBorda([+q[0],+q[1]]); return fb&&Math.hypot(fb[0]-q[0],fb[1]-q[1])<0.05; })).length;
+    $("fossaPosMsg").textContent=`Canos da fossa refeitos pela norma: entrada reta no eixo do tanque, curvas de 45° e caixa de inspeção onde precisa virar mais.${ks.length?` (${ks.length} cano${ks.length>1?"s":""} mudado${ks.length>1?"s":""} à mão voltou ao automático.)`:""}${man?` Você tem ${man} tubo${man>1?"s":""} desenhado${man>1?"s":""} à mão ligado${man>1?"s":""} na fossa: eles ficaram como estão.`:""}`; };
   $("fossaAuto").onclick=()=>{ fossaAuto(); $("fossaPosMsg").textContent="Conjunto de volta ao lugar automático."; }; }
 /* ---------------- Unir paredes alinhadas (ex.: chanfro importado em pedaços) ---------------- */
 // o buraco entre duas paredes na mesma linha vira abertura de verdade
