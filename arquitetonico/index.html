@@ -348,7 +348,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <p class="cap">Água fria e esgoto traçados sozinhos a partir das louças do Banheiro e dos móveis do Layout (pia, tanque, máquina). Água: reservatório sobre o banheiro, coluna (AF1, AF2…) em cada área molhada e ramal pela parede até cada ponto. Esgoto: aparelhos para a caixa sifonada, vaso direto em Ø100, pia para a caixa de gordura, saída para caixas de inspeção do lado de fora (ou dentro da edificação no lado em que ela encosta na divisa ou no alinhamento, para nada cair no lote vizinho) e coletor até a rede ou fossa na frente do lote.</p>
       <p class="cap" style="margin:6px 0"><b>Mudar uma caixa:</b> toque na caixa de inspeção (CI), de gordura (CG) ou sifonada (CS) e <b>arraste</b>, ou toque em <b>Mover</b> e depois no lugar novo. Ligado na rede pública, a CI e a CG correm pelo coletor em volta da obra (vão para o lado onde você soltar); com fossa elas ficam onde você soltar. Com fossa, arraste o <b>tanque (TS)</b> para levar o conjunto todo, ou o <b>filtro (FA)</b> e o <b>sumidouro (SM)</b> para mudar só aquela unidade. Toque num <b>lugar vazio</b> para <b>acrescentar</b> caixa de inspeção, caixa de gordura, caixa sifonada ou ralo (sifonado, seco, quadrado ou linear). Para <b>tirar</b> uma caixa ou ralo, toque nele e em <b>Excluir</b>, ou ligue <b>Apagar itens</b>. Os canos, o coletor e as conferências se refazem sozinhos.</p>
       <div class="form wide" style="margin:0 0 8px"><label>Coletor de esgoto (caixas de inspeção)<select id="fossa.coletor"><option value="auto">Num corredor só, o lado das áreas molhadas (automático)</option><option value="esq">Corredor do lado esquerdo da planta</option><option value="dir">Corredor do lado direito da planta</option><option value="anel">Em volta da casa</option></select></label></div>
-      <div class="row" style="margin:0 0 8px"><button class="btn" id="hidApagar" type="button" aria-pressed="false">Apagar itens</button><button class="btn" id="hidRestaura" type="button" hidden></button><span class="toast" id="hidDelMsg" role="status"></span></div>
+      <p class="cap" style="margin:6px 0"><b>Tubos:</b> toque em <b>Desenhar tubo</b> e vá tocando do começo (ex.: saída da pia) até o fim (ex.: caixa de gordura); o tubo gruda nas caixas, ralos e saídas perto do dedo. Toque num <b>tubo</b> para trocar o diâmetro (40, 50, 75, 100), pôr em 45°, dobrar, arrastar as bolinhas do caminho ou apagar. Vale também para os tubos automáticos e os da fossa.</p>
+      <div class="row" style="margin:0 0 8px"><button class="btn pri" id="hidTuboBt" type="button">Desenhar tubo</button><label class="cap" style="display:flex;align-items:center;gap:4px;margin:0"><input type="checkbox" id="hidTrava" checked style="width:auto">Travar em 45°</label><button class="btn" id="hidApagar" type="button" aria-pressed="false">Apagar itens</button><button class="btn" id="hidRestaura" type="button" hidden></button><span class="toast" id="hidDelMsg" role="status"></span></div>
       <div class="draw" id="hid" style="touch-action:pan-y"></div><div id="hidPanel" class="panel" hidden></div>
       <div class="chips" id="hidChips"></div><div id="hidAvisos"></div>
     </div>
@@ -763,7 +764,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.87 · ralo do box móvel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.88 · tubos de esgoto editáveis", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -3009,13 +3010,13 @@ function desenhaFossaPlanta(D,G,FS,HD){ const k=D.k, P=FS.pos; if(!P) return;
   TX(D,...ct,"TS",2,{b:true,l:"ESGOTO"}); TX(D,ct[0],ct[1]+2.6*k,FS.cil?`Ø${f(FS.L)} h=${f(FS.h)}`:`${f(FS.W)}x${f(FS.L)} h=${f(FS.h)}`,1.3,{l:"ESGOTO"});
   if(FS.fil){ TX(D,...cf,"FA",2,{b:true,l:"ESGOTO"}); TX(D,cf[0],cf[1]+2.6*k,`Ø${f(FS.Df)}`,1.3,{l:"ESGOTO"}); }
   cs.forEach((c,i)=>{ TX(D,...c,FS.ns>1?`SM${i+1}`:"SM",2,{b:true,l:"ESGOTO"}); TX(D,c[0],c[1]+2.6*k,`Ø${f(FS.Ds)} h=${f(FS.hs)}`,1.3,{l:"ESGOTO"}); });
-  const tr=trajetoFossa(G,HD.fim.p,P.ent); PL(D,tr,.5,"ESGOTO"); setaFluxo(D,tr[tr.length-2],tr[tr.length-1],"ESGOTO");
+  const tr=trajetoFossa(G,HD.fim.p,P.ent); tuboHid(D,"fs|ent",tr,100,{lab:false});
   // cano de unidade a unidade: sai da borda virada para a próxima e entra pela borda virada para a anterior
   const sT=[ct[0]+ax[0]*Lo/2,ct[1]+ax[1]*Lo/2], bor=(c,r,to)=>{ const dx=to[0]-c[0], dy=to[1]-c[1], d=Math.hypot(dx,dy)||1; return [c[0]+dx/d*r,c[1]+dy/d*r]; };
   const un=[...(FS.fil?[[cf,FS.Df/2+0.15]]:[]),...cs.map(c=>[c,FS.Ds/2+0.15])];
-  let prev=sT, eF=null; un.forEach(([c,r],i)=>{ const e1=bor(c,r,prev); if(!eF) eF=e1; L(D,...prev,...e1,.5,"ESGOTO"); setaFluxo(D,prev,e1,"ESGOTO");
+  let prev=sT, eF=null; un.forEach(([c,r],i)=>{ const e1=bor(c,r,prev); if(!eF) eF=e1; tuboHid(D,"fs|u"+i,[prev,e1],100,{lab:false});
     const nx=un[i+1]; prev=nx?bor(c,r,nx[0]):[c[0]+ax[0]*r,c[1]+ax[1]*r]; });
-  if(eF) rotuloLinha(D,sT,eF,"Ø100","ESGOTO"); }
+  if(eF&&!(S.hidTub||{})["fs|u0"]) rotuloLinha(D,sT,eF,"Ø100","ESGOTO"); }
 // detalhe: planta do conjunto e corte longitudinal
 function desenhoFossa(k,FS){ const D=Dw(k), e=FS.e, g=FS.gap, Lo=FS.L+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, Y=z=>-z;
   const xT0=0, xT1=Lo, xF=FS.fil?xT1+g+rf:xT1, xS=[]; { let x=FS.fil?xF+rf+g+rs:xT1+g+rs; for(let i=0;i<FS.ns;i++){ xS.push(x); x+=2*rs+g; } } const xEnd=xS[xS.length-1]+rs;
@@ -3448,6 +3449,15 @@ function simbHidro(D,q){ const k=D.k, [x,y]=q.p;
   if(q.t==="hd"){ const e=2*k; PL(D,[[x-e,y-1.2*k],[x+e,y-1.2*k],[x+e,y+1.2*k],[x-e,y+1.2*k],[x-e,y-1.2*k]],.35,"AGUA"); TX(D,x,y,"HD",1.3,{b:true,l:"AGUA"}); return; } }
 function setaFluxo(D,a,b,l){ const k=D.k, dx=b[0]-a[0], dy=b[1]-a[1], L0=Math.hypot(dx,dy); if(L0<4*k) return; const ux=dx/L0, uy=dy/L0, m=[(a[0]+b[0])/2,(a[1]+b[1])/2], s=1.3*k;
   PG(D,[[m[0]+ux*s,m[1]+uy*s],[m[0]-ux*s-uy*s*0.6,m[1]-uy*s+ux*s*0.6],[m[0]-ux*s+uy*s*0.6,m[1]-uy*s-ux*s*0.6]],l); }
+// tubo de esgoto da planta hidrossanitária: o profissional pode trocar o diâmetro, mudar o caminho (pontos) ou apagar (S.hidTub[chave] = {d, pts, del});
+// os tubos desenhados à mão ficam em S.hidTubM = [{pts, d}] (chave "m|i"). Tudo que é desenhado fica em D.tubos (para tocar e editar).
+const DIAM_ESG=[40,50,75,100];
+function tuboHid(D,key,pts,d,o={}){ const M=o.manual?null:(S.hidTub||{})[key]; if(M&&M.del) return;
+  if(M&&M.d) d=+M.d; if(M&&Array.isArray(M.pts)&&M.pts.length>1) pts=M.pts.map(q=>[+q[0],+q[1]]); if(!pts||pts.length<2) return;
+  const i=d>=100?1:2, lw=d>=100?.5:.35; PL(D,pts,lw,"ESGOTO");
+  const n=pts.length; setaFluxo(D,pts[n-2],pts[n-1],"ESGOTO");
+  if(o.lab!==false||M||o.manual){ let j=0, lm=-1; for(let q=0;q+1<n;q++){ const l=Math.hypot(pts[q+1][0]-pts[q][0],pts[q+1][1]-pts[q][1]); if(l>lm){ lm=l; j=q; } } rotuloLinha(D,pts[j],pts[j+1],o.txt&&!(M&&M.d)?o.txt:`Ø${d} i=${i}%`,"ESGOTO"); }
+  (D.tubos=D.tubos||[]).push({key,pts,d,man:!!M,manual:!!o.manual}); }
 function rotuloLinha(D,a,b,txt,l,lado=1){ const k=D.k, dx=b[0]-a[0], dy=b[1]-a[1], L0=Math.hypot(dx,dy); if(L0<10*k) return; const m=[(a[0]+b[0])/2,(a[1]+b[1])/2], n=[-dy/L0*lado,dx/L0*lado];
   let rot=Math.atan2(dy,dx)*180/Math.PI; if(rot>=90) rot-=180; if(rot<-90) rot+=180; TX(D,m[0]+n[0]*2.2*k,m[1]+n[1]*2.2*k,txt,1.4,{rot,l}); }
 function desenhoHidro(G,k,LM,HD,legenda=true){
@@ -3460,20 +3470,20 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
   // esgoto
   HD.salas.forEach(sa=>{ const sd=sa.saida.p;
     sa.A.forEach(a=>{ if(!a.es) return; simbHidro(D,{t:"es",p:a.es});
-      const alvo=a.vai==="cs"&&sa.cs?sa.cs:a.vai==="saida"||a.vai==="cg"?null:sd; if(alvo&&Math.hypot(alvo[0]-a.es[0],alvo[1]-a.es[1])>0.05){ L(D,...a.es,...alvo,.35,"ESGOTO"); setaFluxo(D,a.es,alvo,"ESGOTO"); }
+      const alvo=a.vai==="cs"&&sa.cs?sa.cs:a.vai==="saida"||a.vai==="cg"?null:sd; if(alvo&&Math.hypot(alvo[0]-a.es[0],alvo[1]-a.es[1])>0.05) tuboHid(D,`ap|${sa.r.n}|${sa.A.indexOf(a)}`,[a.es,alvo],a.dEs,{lab:false});
       TX(D,a.es[0],a.es[1]+2.6*k,`Ø${a.dEs}`,1.3,{l:"ESGOTO"}); });
     // banheiro: o ralo (caixa sifonada) nunca entra dentro do vaso; sai em Ø50 e entra no tubo de saída do vaso (Ø100) por uma junção com redução 100x50,
     // com o suspiro (tubo de ventilação Ø50) no trecho entre o ralo e a junção
     const rmV=sa.saida.vaso?HD.ramal.find(rm=>rm.r===sa.r&&rm.d>=100):null;
     if(sa.cs){ simbHidro(D,{t:"cs",p:sa.cs}); TX(D,sa.cs[0]+2.2*k,sa.cs[1]-2.2*k,"CS",1.5,{a:"s",b:true,l:"ESGOTO"});
       let J=sd; if(rmV){ const a=rmV.a, b=rmV.b, dx=b[0]-a[0], dy=b[1]-a[1], Lr=Math.hypot(dx,dy)||1, s0=((sa.cs[0]-a[0])*dx+(sa.cs[1]-a[1])*dy)/Lr, dP=Math.abs((sa.cs[0]-a[0])*dy-(sa.cs[1]-a[1])*dx)/Lr, sJ=Math.max(Math.min(0.40,Lr*0.5),Math.min(Math.max(Lr-0.60,Lr*0.5),s0+Math.max(0.30,dP))); J=[a[0]+dx/Lr*sJ,a[1]+dy/Lr*sJ]; }
-      if(Math.hypot(sa.cs[0]-J[0],sa.cs[1]-J[1])>0.05){ L(D,...sa.cs,...J,.4,"ESGOTO"); setaFluxo(D,sa.cs,J,"ESGOTO"); rotuloLinha(D,sa.cs,J,"Ø50 i=2%","ESGOTO");
+      if(Math.hypot(sa.cs[0]-J[0],sa.cs[1]-J[1])>0.05){ tuboHid(D,"csj|"+sa.r.n,[sa.cs,J],50);
         if(rmV){ const v=[J[0]-sa.cs[0],J[1]-sa.cs[1]], lv=Math.hypot(...v)||1, t=Math.min(0.30,lv*0.4), pT=[J[0]-v[0]/lv*t,J[1]-v[1]/lv*t];
           simbHidro(D,{t:"tv",p:pT}); TX(D,pT[0]-2.4*k,pT[1]+0.6*k,"TV Ø50",1.3,{a:"e",b:true,l:"ESGOTO"});
           simbHidro(D,{t:"jn",p:J}); TX(D,J[0]-1.5*k,J[1]-2.4*k,"JUNÇÃO 100x50",1.2,{a:"e",l:"ESGOTO"}); } } }
     else if(sa.saida.tv){ const tv=sa.saida.tv; simbHidro(D,{t:"tv",p:[tv.p[0]+tv.N[0]*0.08,tv.p[1]+tv.N[1]*0.08]}); TX(D,tv.p[0]+tv.N[0]*(0.08+4*k),tv.p[1]+tv.N[1]*(0.08+4*k),"TV",1.3,{b:true,l:"ESGOTO"}); } });
-  (HD.ligs||[]).forEach(([a,b])=>{ L(D,...a,...b,.5,"ESGOTO"); setaFluxo(D,a,b,"ESGOTO"); rotuloLinha(D,a,b,"Ø100 i=1%","ESGOTO"); });
-  HD.ramal.forEach(rm=>{ L(D,...rm.a,...rm.b,.5,"ESGOTO"); setaFluxo(D,rm.a,rm.b,"ESGOTO"); rotuloLinha(D,rm.a,rm.b,`Ø${rm.d} i=${rm.d>=100?1:2}%`,"ESGOTO"); });
+  (HD.ligs||[]).forEach(([a,b],i)=>tuboHid(D,"lg|"+i,[a,b],100));
+  { const nR={}; HD.ramal.forEach(rm=>{ const nm=rm.r?rm.r.n:"ext", j=nR[nm]=(nR[nm]||0)+1; tuboHid(D,`rm|${nm}|${j}`,[rm.a,rm.b],rm.d); }); }
   { const cn=HD.anelCn, PER=HD.PER;
     HD.trechos.forEach(([a,b])=>{ const ts=[a]; [0,PER].forEach(v=>cn.forEach(c=>{ const x=c+v; if(x>a+1e-6&&x<b-1e-6) ts.push(x); })); ts.sort((p,q)=>p-q); ts.push(b);
       for(let i=0;i+1<ts.length;i++){ const p=HD.anelP(ts[i]), q=HD.anelP(ts[i+1]); L(D,...p,...q,.5,"ESGOTO"); if(Math.hypot(q[0]-p[0],q[1]-p[1])>0.8) setaFluxo(D,p,q,"ESGOTO"); } }); }
@@ -3482,11 +3492,12 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
   HD.caixas.forEach(c=>{ simbHidro(D,{t:c.tipo==="CG"?"cg":"ci",p:c.p}); TX(D,c.p[0]+3*k,c.p[1]-3*k,c.tipo==="CG"?"CG":"CI",1.5,{a:"s",b:true,l:"ESGOTO"}); });
   (HD.extra||[]).forEach(o=>{ const borda=o.t==="rl"?(o.len||0.8)/2:0;
     if(o.alvo){ let a=o.p; if(borda){ const u=o.rot?[0,1]:[1,0], s0=(o.alvo[0]-o.p[0])*u[0]+(o.alvo[1]-o.p[1])*u[1]; a=[o.p[0]+u[0]*Math.max(-borda,Math.min(borda,s0)),o.p[1]+u[1]*Math.max(-borda,Math.min(borda,s0))]; }
-      L(D,...a,...o.alvo,.35,"ESGOTO"); setaFluxo(D,a,o.alvo,"ESGOTO"); rotuloLinha(D,a,o.alvo,`Ø${o.d} i=2%`,"ESGOTO"); }
+      tuboHid(D,"x|"+o.key,[a,o.alvo],o.d); }
     simbHidro(D,{t:o.t,p:o.p,len:o.len,rot:o.rot}); TX(D,o.p[0]+(borda&&!o.rot?0:2.6*k),o.p[1]-(borda&&!o.rot?2.4*k:2.6*k),ROT_RALO[o.t]+(o.t==="rl"?` ${f((o.len||0.8)*100,0)} cm`:""),1.4,{a:borda&&!o.rot?"m":"s",b:true,l:"ESGOTO"}); });
+  (S.hidTubM||[]).forEach((t,j)=>tuboHid(D,"m|"+j,(t.pts||[]).map(q=>[+q[0],+q[1]]),+t.d||100,{manual:true}));
   const FS=fossaSeptica(G,HD); if(FS&&FS.pos) desenhaFossaPlanta(D,G,FS,HD);
   else if(HD.caixas.some(c=>!(G.casas||[]).some(P=>pontoDentro(c.p,P)))&&passeios(G).length){ const T=terreno(G); PL(D,[...T.lote,T.lote[0]],.25,"LOTE",true); desenhaPasseios(D,G); }
-  else if(HD.fim&&HD.out){ L(D,...HD.fim.p,...HD.out,.5,"ESGOTO"); setaFluxo(D,HD.fim.p,HD.out,"ESGOTO"); TX(D,HD.out[0],HD.out[1]+2.5*k*(HD.out[1]>=HD.fim.p[1]?1:-1),"PARA A REDE PÚBLICA / FOSSA",1.5,{b:true,l:"ESGOTO"}); }
+  else if(HD.fim&&HD.out){ tuboHid(D,"fim|out",[HD.fim.p,HD.out],100,{lab:false}); TX(D,HD.out[0],HD.out[1]+2.5*k*(HD.out[1]>=HD.fim.p[1]?1:-1),"PARA A REDE PÚBLICA / FOSSA",1.5,{b:true,l:"ESGOTO"}); }
   // água fria
   HD.ramaisAF.forEach(rm=>PL(D,rm.pts,.3,"AGUA"));
   HD.salas.forEach(sa=>sa.A.forEach(a=>{ const p=a.afPipe; L(D,...p,...a.af.p,.3,"AGUA"); simbHidro(D,{t:"af",p}); const n=a.af.N; TX(D,p[0]+n[0]*2.8*k,p[1]+n[1]*2.8*k,`Ø${a.dAf}`,1.3,{l:"AGUA"}); }));
@@ -5092,7 +5103,7 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
     $("refNotas").innerHTML=ref?notasReforma(q).map(t=>`<li>${esc(t)}</li>`).join(""):""; }
   { const LM=layoutMoveis(G); $("lay").innerHTML=svgDe(desenhoLayout(G,k,LM),"lay"); LAYLM=LM; layBarra(); layMarca();
     const EL=pontosEletricos(G,LM); $("ele").innerHTML=svgDe(desenhoEletrica(G,k,LM,EL),"ele"); ELV=EL; eleMarca(); eleBotoes();
-    const HD=redeHidro(G,LM); $("hid").innerHTML=svgDe(desenhoHidro(G,k,LM,HD),"hid"); HDV=HD; hidMarca(); hidBotoes();
+    const HD=redeHidro(G,LM); const DH=desenhoHidro(G,k,LM,HD); $("hid").innerHTML=svgDe(DH,"hid"); HDV=HD; HIDTUB=DH.tubos||[]; hidMarca(); hidBotoes();
     { const PV=redePluvial(G,HD); $("pluvDes").innerHTML=PV?svgDe(desenhoPluvial(G,k,PV)):"";
       $("pluvChips").innerHTML=PV&&!PV.livre?[`${PV.cond.length} condutores`,`${PV.caixas.filter(c=>c.tipo==="CA").length} caixas de areia`,`${PV.caixas.filter(c=>c.tipo==="CI").length} caixas de inspeção`,`Vazão ${f(PV.Qtot,0)} L/min`,...Object.entries(PV.tubos).map(([d,m])=>`Tubo Ø${d}: ${f(m*1.1,1)} m`),`Condutores: ${f(PV.Lcond,1)} m`].map(t=>`<span class="chip">${esc(t)}</span>`).join(""):"";
       $("pluvAvisos").innerHTML=PV?PV.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join(""):"";
@@ -5277,6 +5288,63 @@ function elePainel(p0){ const P=$("elePanel"), q=ELV&&ELV.pts.find(x=>x.key===EL
   document.addEventListener("keydown",ev=>{ if((ev.key==="Delete"||ev.key==="Backspace")&&!$("elePanel").hidden&&ELESEL&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){ const q=ELV&&ELV.pts.find(x=>x.key===ELESEL); if(q&&q.t!=="qd"){ ev.preventDefault(); eleExclui(q); } } }); }
 /* ---------------- Planta hidrossanitária: mover caixas e o conjunto fossa/filtro/sumidouro ---------------- */
 let HDV=null, HIDSEL=null, HIDMOVE=false;
+/* ---------------- Planta hidrossanitária: tubos editáveis (desenhar, diâmetro, 45°, caminho, apagar) ---------------- */
+let HIDTUB=[], HIDSELT=null, HIDTUBO=null, HIDD=100; const HIDALT={};
+const hidTrava=()=>{ const c=$("hidTrava"); return !c||c.checked; };
+const tubManual=k=>/^m\|/.test(k);
+function tubObj(key,cria){ if(tubManual(key)) return (S.hidTubM||[])[+key.slice(2)]||null; S.hidTub=S.hidTub||{}; if(!S.hidTub[key]&&cria) S.hidTub[key]={}; return S.hidTub[key]||null; }
+const tubAtual=key=>HIDTUB.find(t=>t.key===key)||null;
+const tr3=v=>+(+v).toFixed(3);
+function tubPoePts(key,pts){ const o=tubObj(key,true); if(o) o.pts=pts.map(q=>[tr3(q[0]),tr3(q[1])]); }
+function distSegAB(p,a,b){ const dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1e-12, t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2)); return Math.hypot(a[0]+dx*t-p[0],a[1]+dy*t-p[1]); }
+function tubAchar(p){ let b=null; HIDTUB.forEach(t=>{ for(let i=0;i+1<t.pts.length;i++){ const d=distSegAB(p,t.pts[i],t.pts[i+1]); const L=tubCompr(t.pts); if(d<0.20&&(!b||d<b.d-0.02||(Math.abs(d-b.d)<=0.02&&L<b.L))) b={t,d,L}; } }); return b&&b.t; }
+// pontos onde o tubo gruda: caixas, ralos, fossa, saídas dos aparelhos, pontas e dobras dos tubos
+function hidPontosLiga(ign){ const P=[]; hidItens().forEach(q=>P.push(q.p)); (HDV?HDV.salas:[]).forEach(sa=>sa.A.forEach(a=>{ if(a.es) P.push(a.es); }));
+  HIDTUB.forEach(t=>{ if(t.key!==ign) t.pts.forEach(q=>P.push(q)); }); return P; }
+function snap45(a,p){ const dx=p[0]-a[0], dy=p[1]-a[1], an=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*(Math.PI/4), u=[Math.cos(an),Math.sin(an)], L=dx*u[0]+dy*u[1]; return [a[0]+u[0]*L,a[1]+u[1]*L]; }
+function hidEncaixa(p,prev,ign){ let b=null; hidPontosLiga(ign).forEach(q=>{ const d=Math.hypot(q[0]-p[0],q[1]-p[1]); if(d<0.25&&(!b||d<b.d)) b={q,d}; }); if(b) return [b.q[0],b.q[1]]; return prev&&hidTrava()?snap45(prev,p):p; }
+// cada trecho fora do reto/45° vira reto + 45° (alt: 45° primeiro)
+function poe45(pts,alt){ const out=[pts[0]];
+  for(let i=0;i+1<pts.length;i++){ const a=pts[i], b=pts[i+1], dx=b[0]-a[0], dy=b[1]-a[1], ax=Math.abs(dx), ay=Math.abs(dy);
+    if(!(ax<0.005||ay<0.005||Math.abs(ax-ay)<0.005)){ const sd=Math.min(ax,ay), dg=[Math.sign(dx)*sd,Math.sign(dy)*sd]; out.push(alt?[a[0]+dg[0],a[1]+dg[1]]:[b[0]-dg[0],b[1]-dg[1]]); }
+    out.push(b); } return out; }
+const tubCompr=pts=>pts.reduce((s0,q,i)=>i?s0+Math.hypot(q[0]-pts[i-1][0],q[1]-pts[i-1][1]):0,0);
+function tubExclui(key){ if(tubManual(key)) S.hidTubM.splice(+key.slice(2),1); else tubObj(key,true).del=1; HIDSELT=null; save(); render(); hidPainel(); $("hidDelMsg").textContent="Tubo apagado."; }
+function hidPainelTubo(){ const P=$("hidPanel"), t=tubAtual(HIDSELT); if(!t){ HIDSELT=null; P.hidden=true; return; } P.hidden=false; const key=t.key, man=tubManual(key), o=man?null:(S.hidTub||{})[key];
+  P.innerHTML=`<h4>Tubo de esgoto Ø${t.d} · ${f(tubCompr(t.pts))} m${man?" (desenhado por você)":o?" (mudado por você)":" (automático)"}</h4>
+    <p class="cap" style="margin:0 0 8px">Arraste as bolinhas vermelhas para mudar o caminho${hidTrava()?" (trava em 45°)":""}; elas grudam nas caixas e saídas.</p>
+    <div class="row" style="margin:0;flex-wrap:wrap"><select data-td aria-label="Diâmetro" style="width:auto">${DIAM_ESG.map(d=>`<option value="${d}"${d===t.d?" selected":""}>Ø${d} mm</option>`).join("")}</select>
+    <button class="btn" data-t45>Pôr em 45°</button><button class="btn" data-tdob>Acrescentar dobra</button>${t.pts.length>2?`<button class="btn" data-treto>Tirar dobras (reto)</button>`:""}
+    <button class="btn dng" data-tdel>Apagar tubo</button>${o?`<button class="btn" data-tauto>Voltar ao automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" style="margin:6px 0 0">Tocar em Pôr em 45° de novo troca o lado da dobra.</p>`;
+  P.querySelector("[data-td]").onchange=e=>{ const d=+e.target.value; tubObj(key,true).d=d; save(); render(); hidPainel(); };
+  P.querySelector("[data-t45]").onclick=()=>{ const st=HIDALT[key], pts=t.pts; let base=pts, alt=false; if(st&&JSON.stringify(st.res)===JSON.stringify(pts.map(q=>[tr3(q[0]),tr3(q[1])]))){ base=st.orig; alt=!st.alt; }
+    const res=poe45(base,alt).map(q=>[tr3(q[0]),tr3(q[1])]); HIDALT[key]={orig:base,alt,res}; tubPoePts(key,res); save(); render(); hidPainel(); };
+  P.querySelector("[data-tdob]").onclick=()=>{ const pts=t.pts.slice(); let j=0, lm=-1; for(let i=0;i+1<pts.length;i++){ const l=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]); if(l>lm){ lm=l; j=i; } }
+    pts.splice(j+1,0,[(pts[j][0]+pts[j+1][0])/2,(pts[j][1]+pts[j+1][1])/2]); tubPoePts(key,pts); save(); render(); hidPainel(); };
+  const rt=P.querySelector("[data-treto]"); if(rt) rt.onclick=()=>{ tubPoePts(key,[t.pts[0],t.pts[t.pts.length-1]]); save(); render(); hidPainel(); };
+  P.querySelector("[data-tdel]").onclick=()=>tubExclui(key);
+  const au=P.querySelector("[data-tauto]"); if(au) au.onclick=()=>{ delete S.hidTub[key]; save(); render(); hidPainel(); };
+  P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; HIDSELT=null; render(); }; }
+function hidPainelDesenho(){ const P=$("hidPanel"), n=HIDTUBO.pts.length; P.hidden=false;
+  P.innerHTML=`<h4>Desenhar tubo de esgoto</h4><p class="cap" style="margin:0 0 8px">${n?`<b>Toque no próximo ponto</b> (cada toque é uma dobra). Toque de novo no último ponto ou em Concluir para terminar. ${f(tubCompr(HIDTUBO.pts))} m até aqui.`:"<b>Toque no começo do tubo</b> (ex.: saída da pia)."}</p>
+    <div class="row" style="margin:0;flex-wrap:wrap"><select data-nd aria-label="Diâmetro" style="width:auto">${DIAM_ESG.map(d=>`<option value="${d}"${d===HIDD?" selected":""}>Ø${d} mm</option>`).join("")}</select>
+    ${n>=2?`<button class="btn pri" data-ok>Concluir tubo</button>`:""}${n?`<button class="btn" data-undo>Desfazer ponto</button>`:""}<button class="btn" data-cancel>Cancelar</button></div>`;
+  P.querySelector("[data-nd]").onchange=e=>{ HIDD=+e.target.value; };
+  const ok=P.querySelector("[data-ok]"); if(ok) ok.onclick=hidTuboConclui;
+  const un=P.querySelector("[data-undo]"); if(un) un.onclick=()=>{ HIDTUBO.pts.pop(); render(); hidPainel(); };
+  P.querySelector("[data-cancel]").onclick=()=>{ HIDTUBO=null; P.hidden=true; hidBotoes(); render(); }; }
+function hidTuboConclui(){ const pts=HIDTUBO.pts; HIDTUBO=null; if(pts.length>=2){ S.hidTubM=S.hidTubM||[]; S.hidTubM.push({pts:pts.map(q=>[tr3(q[0]),tr3(q[1])]),d:HIDD}); HIDSELT="m|"+(S.hidTubM.length-1); HIDSEL=null; save(); }
+  hidBotoes(); render(); hidPainel(); }
+function hidTuboPonto(p){ const pts=HIDTUBO.pts, last=pts[pts.length-1], q=hidEncaixa(p,last);
+  if(last&&(Math.hypot(p[0]-last[0],p[1]-last[1])<0.15||Math.hypot(q[0]-last[0],q[1]-last[1])<0.08)){ if(pts.length>=2) hidTuboConclui(); return; }
+  pts.push(q); render(); hidPainel(); }
+// desenha por cima da planta: tubo escolhido (com as bolinhas) e o tubo sendo desenhado
+function hidMarcaTubo(svg,v,ptsOver){ const m=p=>`${(v.pad+(p[0]-v.e.x0)/v.k).toFixed(2)},${(v.pad+(p[1]-v.e.y0)/v.k).toFixed(2)}`;
+  const desenha=(pts,cor,id)=>{ if(!pts||!pts.length) return; svg.insertAdjacentHTML("beforeend",`<g id="${id}"><polyline points="${pts.map(m).join(" ")}" fill="none" stroke="${cor}" stroke-width="1.1" stroke-opacity=".55" stroke-linejoin="round"/>${pts.map(q=>{ const [x,y]=m(q).split(","); return `<circle cx="${x}" cy="${y}" r="1.6" fill="#fff" stroke="${cor}" stroke-width="0.5"/>`; }).join("")}</g>`); };
+  const old=svg.querySelector("#hidTubSel"); if(old) old.remove();
+  if(HIDTUBO) desenha(ptsOver||HIDTUBO.pts,"#2563eb","hidTubSel");
+  else if(HIDSELT){ const t=tubAtual(HIDSELT); if(t) desenha(ptsOver||t.pts,"#d33","hidTubSel"); } }
+
 function hidItens(){ const H=HDV; if(!H) return []; const out=[], com=(S.fossa||{}).on==="sim";
   H.caixas.forEach((c,i)=>{ if(c.add){ const j=+c.key.split("|")[1]; out.push({id:c.id,tp:"add",j,p:c.p,r:0.45,movel:1,nome:NOME_RALO[c.tipo==="CG"?"cg":"ci"]+" (acrescentada)"}); return; }
     const keys=(c.keys||[]).slice().filter(k=>!/^add\|/.test(k)), movel=keys.length||c.fim;
@@ -5299,7 +5367,7 @@ function hidGrava(q,p){ const x=+p[0].toFixed(3), y=+p[1].toFixed(3);
     if(q.tp==="ft"){ const d=[x-P.ct[0],y-P.ct[1]], mv=a=>[+(num(a[0])+d[0]).toFixed(3),+(num(a[1])+d[1]).toFixed(3)]; M.ct=[x,y]; M.giro=M.giro||0; if(M.f) M.f=mv(M.f); if(M.s) Object.keys(M.s).forEach(i=>M.s[i]=mv(M.s[i])); }
     else if(q.tp==="ff") M.f=[x,y]; else { M.s=M.s||{}; M.s[q.i]=[x,y]; } }
   save(); render(); hidPainel(); }
-function hidMarca(){ const svg=$("hid").querySelector("svg"), v=VIEW.hid, q=hidSel(); if(!svg||!v||!q) return;
+function hidMarca(){ const svg=$("hid").querySelector("svg"), v=VIEW.hid, q=hidSel(); if(svg&&v) hidMarcaTubo(svg,v); if(!svg||!v||!q) return;
   const cx=v.pad+(q.p[0]-v.e.x0)/v.k, cy=v.pad+(q.p[1]-v.e.y0)/v.k, r=Math.max(3.2,q.r/v.k+1); svg.insertAdjacentHTML("beforeend",`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#d33" stroke-width="0.5" stroke-dasharray="1 0.6"/>`); }
 function fossaGira(){ const P=HDV&&HDV.fossa&&HDV.fossa.pos; if(!P) return; const M=S.fossaM=S.fossaM||{}, c=P.ct, rot=a=>{ const v=[num(a[0])-c[0],num(a[1])-c[1]]; return [+(c[0]-v[1]).toFixed(3),+(c[1]+v[0]).toFixed(3)]; };
   M.ct=M.ct||[+c[0].toFixed(3),+c[1].toFixed(3)]; M.giro=((+M.giro||0)+1)%4; if(M.f) M.f=rot(M.f); if(M.s) Object.keys(M.s).forEach(i=>M.s[i]=rot(M.s[i])); save(); render(); hidPainel(); }
@@ -5312,7 +5380,8 @@ function hidExclui(q){ if(!q) return; const fos=q.tp==="ft"||q.tp==="ff"||q.tp==
 let HIDDEL=false;
 function hidBotoes(){ const a=$("hidApagar"), r=$("hidRestaura"); if(!a) return; a.setAttribute("aria-pressed",HIDDEL?"true":"false"); a.className=HIDDEL?"btn dng":"btn";
   a.textContent=HIDDEL?"Apagando: toque nas caixas e ralos (toque aqui para parar)":"Apagar itens";
-  const n=Object.keys(S.hidDel||{}).length; r.hidden=!n; r.textContent=`Restaurar excluídos (${n})`; }
+  const n=Object.keys(S.hidDel||{}).length+Object.values(S.hidTub||{}).filter(o=>o&&o.del).length; r.hidden=!n; r.textContent=`Restaurar excluídos (${n})`;
+  const tb=$("hidTuboBt"); if(tb){ tb.textContent=HIDTUBO?"Desenhando… (toque aqui para cancelar)":"Desenhar tubo"; tb.className=HIDTUBO?"btn dng":"btn pri"; } }
 function hidAcrescenta(p0){ const P=$("hidPanel"), lugar=GG.compAt(...p0); P.hidden=false;
   P.innerHTML=`<h4>Acrescentar aqui${lugar&&!lugar.ext?` · ${esc(lugar.n)}`:" · área externa"}</h4><div class="row" style="margin:0;flex-wrap:wrap">
     <button class="btn" data-add="ci">Caixa de inspeção</button><button class="btn" data-add="cg">Caixa de gordura</button><button class="btn" data-add="cs">Caixa sifonada</button>
@@ -5321,7 +5390,7 @@ function hidAcrescenta(p0){ const P=$("hidPanel"), lugar=GG.compAt(...p0); P.hid
   P.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ const t=b.dataset.add; S.hidAdd=S.hidAdd||[]; S.hidAdd.push({t,x:+p0[0].toFixed(3),y:+p0[1].toFixed(3),...(t==="rl"?{len:0.8,rot:0}:{})});
     HIDSEL="add|"+(S.hidAdd.length-1); HIDMOVE=false; save(); render(); hidPainel(); });
   P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; }; }
-function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(!q){ P.hidden=true; return; } P.hidden=false;
+function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTUBO) return hidPainelDesenho(); if(!q&&HIDSELT) return hidPainelTubo(); if(!q){ P.hidden=true; return; } P.hidden=false;
   const fos=q.tp==="ft"||q.tp==="ff"||q.tp==="fsm", com=(S.fossa||{}).on==="sim";
   const dica=!q.movel?"Esta caixa fica sozinha na curva do coletor; ela muda quando você muda as outras caixas.":HIDMOVE?"<b>Toque no lugar novo</b> na planta.":q.tp==="cx"&&!com?"Arraste para o lado que quiser: a caixa corre pelo coletor em volta da obra.":q.tp==="add"?"Arraste para mudar de lugar; o cano até a caixa mais perto se refaz.":q.tp==="ft"?"Arraste para levar o tanque, o filtro e o sumidouro juntos.":fos?"Arraste para mudar só esta unidade; o cano se refaz.":"Arraste na planta, ou toque em Mover e depois no lugar novo.";
   P.innerHTML=`<h4>${esc(q.nome)}${q.amb?` · ${esc(q.amb)}`:""}</h4><p class="cap" style="margin:0 0 8px">${dica}${q.man?" (posição escolhida por você)":""}</p>
@@ -5341,21 +5410,32 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(!q){ P.hidden=true; 
   const fa=P.querySelector("[data-fauto]"); if(fa) fa.onclick=fossaAuto;
   P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; HIDSEL=null; HIDMOVE=false; render(); }; }
 { const cont=$("hid"); let arr=null, tArr=0;
-  cont.addEventListener("pointerdown",ev=>{ const p=ptVista(ev,"hid"); if(!p||HIDMOVE) return; const q=hidAchar(p); if(!q) return;
+  cont.addEventListener("pointerdown",ev=>{ const p=ptVista(ev,"hid"); if(!p||HIDMOVE||HIDTUBO) return;
+    if(HIDSELT&&!HIDDEL){ const t=tubAtual(HIDSELT); if(t){ let vi=-1, dm=0.25; t.pts.forEach((c,i)=>{ const d=Math.hypot(c[0]-p[0],c[1]-p[1]); if(d<dm){ dm=d; vi=i; } });
+      if(vi>=0){ arr={id:ev.pointerId,tub:t,vi,p0:p,moveu:false,pts:t.pts.map(c=>c.slice())}; try{ cont.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); return; } } }
+    const q=hidAchar(p); if(!q) return; HIDSELT=null;
     if(HIDDEL){ ev.preventDefault(); tArr=Date.now(); hidExclui(q); return; }
     arr={id:ev.pointerId,q,p0:p,moveu:false}; HIDSEL=q.id; try{ cont.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); });
-  cont.addEventListener("pointermove",ev=>{ if(!arr||ev.pointerId!==arr.id||!arr.q.movel) return; const p=ptVista(ev,"hid"); if(!p) return; if(!arr.moveu&&Math.hypot(p[0]-arr.p0[0],p[1]-arr.p0[1])<0.08) return; arr.moveu=true;
+  cont.addEventListener("pointermove",ev=>{ if(arr&&arr.tub&&ev.pointerId===arr.id){ const p=ptVista(ev,"hid"); if(!p) return; if(!arr.moveu&&Math.hypot(p[0]-arr.p0[0],p[1]-arr.p0[1])<0.05) return; arr.moveu=true;
+      const vi=arr.vi, viz=vi>0?arr.pts[vi-1]:arr.pts[vi+1]; arr.pts[vi]=hidEncaixa(p,viz,arr.tub.key); const svg=cont.querySelector("svg"); if(svg) hidMarcaTubo(svg,VIEW.hid,arr.pts); return; }
+    if(!arr||ev.pointerId!==arr.id||!arr.q.movel) return; const p=ptVista(ev,"hid"); if(!p) return; if(!arr.moveu&&Math.hypot(p[0]-arr.p0[0],p[1]-arr.p0[1])<0.08) return; arr.moveu=true;
     const pp=[arr.q.p[0]+p[0]-arr.p0[0],arr.q.p[1]+p[1]-arr.p0[1]]; arr.p=pp;
     const svg=cont.querySelector("svg"), v=VIEW.hid; let g=svg.querySelector("#hidFantasma"); if(!g){ svg.insertAdjacentHTML("beforeend",`<circle id="hidFantasma" r="${Math.max(2.6,arr.q.r/v.k)}" fill="rgba(220,50,50,.25)" stroke="#d33" stroke-width="0.4"/>`); g=svg.querySelector("#hidFantasma"); }
     g.setAttribute("cx",v.pad+(pp[0]-v.e.x0)/v.k); g.setAttribute("cy",v.pad+(pp[1]-v.e.y0)/v.k); });
-  const fim=ev=>{ if(!arr||ev.pointerId!==arr.id) return; const a=arr; arr=null; if(a.moveu) tArr=Date.now(); if(a.moveu&&a.p){ hidGrava(a.q,a.p); return; } render(); hidPainel(); };
+  const fim=ev=>{ if(!arr||ev.pointerId!==arr.id) return; const a=arr; arr=null; if(a.moveu) tArr=Date.now();
+    if(a.tub){ if(a.moveu){ tubPoePts(a.tub.key,a.pts); save(); render(); hidPainel(); } return; }
+    if(a.moveu&&a.p){ hidGrava(a.q,a.p); return; } render(); hidPainel(); };
   cont.addEventListener("pointerup",fim); cont.addEventListener("pointercancel",ev=>{ arr=null; });
   cont.addEventListener("click",ev=>{ if(Date.now()-tArr<400) return; const p=ptVista(ev,"hid"); if(!p||!GG||GG.vazio) return;
+    if(HIDTUBO){ hidTuboPonto(p); return; }
     if(HIDMOVE){ const q=hidSel(); HIDMOVE=false; if(q){ hidGrava(q,p); return; } hidPainel(); return; }
-    if(hidAchar(p)||HIDDEL) return;
-    if(HIDSEL){ HIDSEL=null; render(); } hidAcrescenta(p); });
+    if(hidAchar(p)) return;
+    { const t=tubAchar(p); if(t){ if(HIDDEL){ tubExclui(t.key); return; } HIDSELT=t.key; HIDSEL=null; HIDMOVE=false; render(); hidPainel(); return; } }
+    if(HIDDEL) return;
+    if(HIDSEL||HIDSELT){ HIDSEL=null; HIDSELT=null; render(); } hidAcrescenta(p); });
+  $("hidTuboBt").onclick=()=>{ HIDTUBO=HIDTUBO?null:{pts:[]}; HIDSEL=null; HIDSELT=null; HIDMOVE=false; HIDDEL=false; hidBotoes(); render(); hidPainel(); };
   $("hidApagar").onclick=()=>{ HIDDEL=!HIDDEL; HIDSEL=null; HIDMOVE=false; $("hidPanel").hidden=true; $("hidDelMsg").textContent=""; hidBotoes(); render(); };
-  $("hidRestaura").onclick=()=>{ delete S.hidDel; save(); render(); $("hidDelMsg").textContent="Caixas excluídas voltaram para a planta."; };
+  $("hidRestaura").onclick=()=>{ delete S.hidDel; Object.keys(S.hidTub||{}).forEach(k=>{ const o=S.hidTub[k]; if(o&&o.del){ delete o.del; if(!Object.keys(o).length) delete S.hidTub[k]; } }); save(); render(); $("hidDelMsg").textContent="Caixas excluídas voltaram para a planta."; };
   $("fossaGira").onclick=()=>{ fossaGira(); $("fossaPosMsg").textContent="Conjunto girado 90°."; };
   $("fossaAuto").onclick=()=>{ fossaAuto(); $("fossaPosMsg").textContent="Conjunto de volta ao lugar automático."; }; }
 /* ---------------- Unir paredes alinhadas (ex.: chanfro importado em pedaços) ---------------- */
