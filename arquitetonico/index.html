@@ -786,7 +786,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.01 · tubos acompanham a fossa", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.02 · inverter o sentido do fluxo do tubo", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -5531,7 +5531,7 @@ function hidPainelTubo(){ const P=$("hidPanel"), t=tubAtual(HIDSELT); if(!t){ HI
   P.innerHTML=`<h4>Tubo de esgoto Ø${t.d} · ${f(tubCompr(t.pts))} m${man?" (desenhado por você)":o?" (mudado por você)":" (automático)"}</h4>
     <p class="cap" style="margin:0 0 8px">Arraste as bolinhas vermelhas para mudar o caminho${hidTrava()?" (trava em 45°)":""}; elas grudam nas caixas e saídas.</p>
     <div class="row" style="margin:0;flex-wrap:wrap"><select data-td aria-label="Diâmetro" style="width:auto">${DIAM_ESG.map(d=>`<option value="${d}"${d===t.d?" selected":""}>Ø${d} mm</option>`).join("")}</select>
-    <button class="btn" data-t45>Pôr em 45°</button><button class="btn" data-tdob>Acrescentar dobra</button>${t.pts.length>2?`<button class="btn" data-treto>Tirar dobras (reto)</button>`:""}
+    <button class="btn" data-tinv>Inverter sentido do fluxo</button><button class="btn" data-t45>Pôr em 45°</button><button class="btn" data-tdob>Acrescentar dobra</button>${t.pts.length>2?`<button class="btn" data-treto>Tirar dobras (reto)</button>`:""}
     <button class="btn dng" data-tdel>Apagar tubo</button>${o?`<button class="btn" data-tauto>Voltar ao automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" style="margin:6px 0 0">Tocar em Pôr em 45° de novo troca o lado da dobra.</p>`;
   P.querySelector("[data-td]").onchange=e=>{ const d=+e.target.value; tubObj(key,true).d=d; save(); render(); hidPainel(); };
   P.querySelector("[data-t45]").onclick=()=>{ const st=HIDALT[key], pts=t.pts; let base=pts, alt=false; if(st&&JSON.stringify(st.res)===JSON.stringify(pts.map(q=>[tr3(q[0]),tr3(q[1])]))){ base=st.orig; alt=!st.alt; }
@@ -5540,6 +5540,7 @@ function hidPainelTubo(){ const P=$("hidPanel"), t=tubAtual(HIDSELT); if(!t){ HI
     pts.splice(j+1,0,[(pts[j][0]+pts[j+1][0])/2,(pts[j][1]+pts[j+1][1])/2]); tubPoePts(key,pts); save(); render(); hidPainel(); };
   const rt=P.querySelector("[data-treto]"); if(rt) rt.onclick=()=>{ tubPoePts(key,[t.pts[0],t.pts[t.pts.length-1]]); save(); render(); hidPainel(); };
   P.querySelector("[data-tdel]").onclick=()=>tubExclui(key);
+  P.querySelector("[data-tinv]").onclick=()=>{ tubPoePts(key,t.pts.slice().reverse()); delete HIDALT[key]; save(); render(); hidPainel(); $("hidDelMsg").textContent="Sentido do fluxo invertido (a seta virou)."; };
   const au=P.querySelector("[data-tauto]"); if(au) au.onclick=()=>{ delete S.hidTub[key]; save(); render(); hidPainel(); };
   P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; HIDSELT=null; render(); }; }
 function hidPainelDesenho(){ const P=$("hidPanel"), n=HIDTUBO.pts.length; P.hidden=false;
