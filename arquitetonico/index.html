@@ -357,7 +357,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <p class="cap">Para onde não tem rede pública de esgoto. Tanque séptico pela NBR 7229, filtro anaeróbio e sumidouro pela NBR 13969, dimensionados pelo número de pessoas da planta hidrossanitária. O app procura o lugar no lote com 1,50 m de afastamento da construção, das divisas e entre as unidades, o mais perto da última caixa de inspeção.</p>
       <div class="form wide">
         <label>Destino do esgoto<select id="fossa.on"><option value="não">Rede pública</option><option value="sim">Fossa séptica + sumidouro</option></select></label>
-        <label>Tanque séptico<select id="fossa.tanque"><option value="ret">Retangular</option><option value="cil">Redondo (cilíndrico)</option></select></label>
+        <label>Tanque séptico<select id="fossa.tanque"><option value="ret">Retangular</option><option value="cil">Redondo (cilíndrico)</option><option value="conj">Fossa e sumidouro juntos (caixa retangular com parede divisória)</option></select></label>
         <label>Diâmetro do tanque redondo<select id="fossa.dt"><option value="auto">Automático</option><option value="1.1">1,10 m</option><option value="1.2">1,20 m</option><option value="1.4">1,40 m</option><option value="1.5">1,50 m</option><option value="1.6">1,60 m</option><option value="1.8">1,80 m</option><option value="2">2,00 m</option><option value="2.2">2,20 m</option><option value="2.5">2,50 m</option></select></label>
         <label>Largura do tanque retangular<select id="fossa.wt"><option value="auto">Automática</option><option value="0.8">0,80 m</option><option value="1">1,00 m</option><option value="1.2">1,20 m</option><option value="1.5">1,50 m</option><option value="1.8">1,80 m</option><option value="2">2,00 m</option></select></label>
         <label>Filtro anaeróbio<select id="fossa.filtro"><option value="sim">Com filtro</option><option value="não">Sem filtro (tanque direto no sumidouro)</option></select></label>
@@ -780,7 +780,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.94 · fossa alinhada com o muro da frente", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.95 · fossa e sumidouro juntos (caixa única com parede divisória)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2920,7 +2920,7 @@ function dimFossa(HD){ const F=S.fossa||{}, N=Math.max(1,HD.pessoas), com=!!HD.c
     if(dtF){ Dt=dtF; h=up5(Math.max(hmin,Vm/(Math.PI*Dt*Dt/4),Dt/2)); if(h>hmax+1e-9) av.push(`Com ${f(Dt)} m de diâmetro o tanque precisa de ${f(h)} m de profundidade útil, acima do máximo de ${f(hmax)} m da NBR 7229 para ${f(Vm,2)} m³: escolha um diâmetro maior.`); }
     else { Dt=Math.max(1.1,up5(Math.sqrt(4*Vm/(Math.PI*h)))); while(Dt>2*h&&h<hmax){ h=Math.min(hmax,h+0.1); Dt=Math.max(1.1,up5(Math.sqrt(4*Vm/(Math.PI*h)))); } h=up5(Math.max(hmin,Vm/(Math.PI*Dt*Dt/4))); }
     W=Dt; Lt=Dt; }
-  const fil=F.filtro!=="não";
+  const conj=F.tanque==="conj", fil=F.filtro!=="não"&&!conj;
   // filtro anaeróbio (esgoto acima de 25 °C)
   const Tf=[0.92,0.83,0.75,0.67,0.58,0.5,0.5][fx<0?6:fx], Vf=fil?Math.max(1000,1.6*N*C*Tf):0, Df=fil?Math.max(0.95,up5(Math.sqrt(4*(Vf/1000)/1.2/Math.PI))):0;
   // sumidouro: área de infiltração = contribuição / coeficiente de infiltração do solo
@@ -2931,9 +2931,14 @@ function dimFossa(HD){ const F=S.fossa||{}, N=Math.max(1,HD.pessoas), com=!!HD.c
     if(hs>3+1e-9) av.push(`Com ${ns} sumidouro${ns>1?"s":""} de Ø${f(Ds)} m a altura útil fica ${f(hs)} m (mais de 3 m). Confira o lençol freático (fundo a 1,50 m acima dele, NBR 13969) ou acrescente outro sumidouro.`); }
   else if(dsF){ Ds=dsF; for(;;){ const a=Ai/ns, hh=(a-Math.PI*Ds*Ds/4)/(Math.PI*Ds); if(hh<=3||ns>=6){ hs=Math.max(1.0,up5(hh)); break; } ns++; } }
   else for(;;){ const a=Ai/ns; const ok=[1.2,1.5,2.0,2.5].find(d=>(a-Math.PI*d*d/4)/(Math.PI*d)<=3); if(ok){ Ds=ok; hs=Math.max(1.0,up5((a-Math.PI*ok*ok/4)/(Math.PI*ok))); break; } ns++; if(ns>6){ Ds=2.5; hs=3; break; } }
+  // fossa e sumidouro juntos: mesma caixa retangular, parede divisória; o sumidouro infiltra pelo fundo e pelas 3 paredes de fora
+  let Ls=0, Lc=0;
+  if(conj){ ns=1; let hh=1.5; for(;;){ Ls=Math.max(0.80,up5((Ai-W*hh)/(W+2*hh))); if(Ls<=Math.max(1.5,2*W)||hh>=3) break; hh=Math.min(3,hh+0.25); }
+    hs=Math.max(1.0,up5((Ai-W*Ls)/(2*Ls+W))); Ds=Ls; Lc=Lt+0.15+Ls;
+    av.push(`Fossa e sumidouro juntos numa caixa só: a NBR 7229 pede 1,50 m entre o tanque e o sumidouro. A parede divisória e as paredes do lado do tanque têm de ser impermeáveis; use só se a prefeitura aceitar.`); }
   const gap=num(F.gap)>0?num(F.gap):1.5, afast=num(F.afast)>0?Math.max(1.5,num(F.afast)):1.5, gapU=num(F.gap)>0, afF=num(F.afF)>0?num(F.afF):afast, lugar=F.lugar==="frente"?"frente":"auto", dirC=F.dir==="frente"||F.dir==="lado"?F.dir:"auto";
   if(gap<1.5-1e-9) av.push(`Distância de ${f(gap)} m entre tanque, filtro e sumidouro: a NBR 7229 pede 1,50 m entre o tanque e o sumidouro. Use só se o solo e a prefeitura permitirem.`);
-  return {N,C,Lf,Q,T,lim,K,V,h,W,L:Lt,cil,fil,Tf,Vf,Df,ci,Ai,ns,Ds,hs,com,e:0.15,afast,afF,lugar,dirC,gap,gapU,av}; }
+  return {N,C,Lf,Q,T,lim,K,V,h,W,L:conj?Lc:Lt,Lt,Ls,conj,cil,fil,Tf,Vf,Df,ci,Ai,ns,Ds,hs,com,e:0.15,afast,afF,lugar,dirC,gap,gapU,av}; }
 let _fossaCache=null;
 // passeios (calçadas) dos lados do lote que dão para rua: faixa entre o alinhamento e o meio-fio
 function passeios(G){ if(G.vazio) return []; const T=terreno(G), L0=T.lote, n=L0.length, cal=Math.max(0,num(S.terr.calcada)); if(cal<0.6) return [];
@@ -2979,7 +2984,7 @@ function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, ga
         if(fm&&dot(ct,VFf)<cF+0.3) continue;   // na frente da casa: o conjunto entre a fachada e o muro da frente
         const A=arranjoFossa(FS,ct,ax,turn,gap), pts=ptsDe(ct,ax,pr,A.cf,A.cs); let cl=99, ruim=false;
         for(const q of pts){ const v=folgaG(q); if(v<cl) cl=v; if(cl<thr){ ruim=true; break; } } if(ruim||pts.some(naEntrada)||pts.some(q=>Math.hypot(q[0]-alvo[0],q[1]-alvo[1])<0.45)) continue;
-        const sc=(fm?(lF-dot(ct,VFf))*1.5+dd*0.3:dd)+(turn?0.4:0)+(cl<afa?(afa-cl)*1.5:0); if(!best||sc<best.sc) best={sc,cl,ct,cf:A.cf,cs:A.cs,ax,pr,ent,turn,entrada:false}; } }
+        const sc=(fm?(lF-dot(ct,VFf))*1.5+dd*0.3:dd)+(turn?0.4:0)+(cl<afa?(afa-cl)*(fm?6:1.5):0); if(!best||sc<best.sc) best={sc,cl,ct,cf:A.cf,cs:A.cs,ax,pr,ent,turn,entrada:false}; } }
     if(best) best.cl=Math.min(...ptsDe(best.ct,best.ax,best.pr,best.cf,best.cs).map(folga)); return best; };
   const gaps=FS.gapU?[gap]:[gap,1.2,1.0,0.8,0.6,0.5];
   let best=null, gapU=gap, fora=false;
@@ -3003,7 +3008,7 @@ function posFossa(G,FS,alvo){ const TL=terreno(G).lote, nT=TL.length, e=FS.e, ga
 // tanque, filtro e sumidouro em fila (turn 0) ou em L: depois do filtro a fila vira 90° (turn ±1) para caber no canto do lote
 function arranjoFossa(FS,ct,ax,turn=0,gap0){ const e=FS.e, gap=gap0!=null?gap0:(FS.passeio&&!FS.gapU?0.50:FS.gap), Lo=FS.L+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, ax2=turn?[-ax[1]*turn,ax[0]*turn]:ax;
   const oF=FS.fil?Lo/2+gap+rf:Lo/2, cf=[ct[0]+ax[0]*oF,ct[1]+ax[1]*oF], cs=[]; const d2=FS.fil?ax2:ax, o0=FS.fil?rf+gap+rs:gap+rs; let c0=[cf[0]+d2[0]*o0,cf[1]+d2[1]*o0];
-  for(let i=0;i<FS.ns;i++){ cs.push(c0); c0=[c0[0]+d2[0]*(2*rs+gap),c0[1]+d2[1]*(2*rs+gap)]; } return {cf,cs}; }
+  for(let i=0;i<(FS.conj?0:FS.ns);i++){ cs.push(c0); c0=[c0[0]+d2[0]*(2*rs+gap),c0[1]+d2[1]*(2*rs+gap)]; } return {cf,cs}; }
 function ajustaFossa(G,FS){ const M=S.fossaM; if(!M||!FS.pos) return FS; const P0=FS.pos, e=FS.e, Lo=FS.L+2*e, Wo=FS.W+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e;
   const g=(((+M.giro||0)%4)+4)%4; let ax=P0.ax; for(let i=0;i<g;i++) ax=[-ax[1],ax[0]];
   const ct=M.ct?[num(M.ct[0]),num(M.ct[1])]:P0.ct; let {cf,cs}=g||M.ct?arranjoFossa(FS,ct,ax,P0.turn||0):{cf:P0.cf,cs:P0.cs};
@@ -3029,7 +3034,7 @@ function fossaNoPasseio(G,FS,alvo,i){ const PS=passeios(G), q=PS.find(p=>p.i===i
   for(const sg of [1,-1]){ const ax=[q.u[0]*sg,q.u[1]*sg], pr=q.n;
     for(let s0=-q.cal;s0<=q.L+q.cal;s0+=0.25){ const base=[q.a[0]+q.u[0]*s0+q.n[0]*t0,q.a[1]+q.u[1]*s0+q.n[1]*t0], ct=[base[0]+ax[0]*Lo/2,base[1]+ax[1]*Lo/2];
       const oF=FS.fil?Lo/2+gap+rf:Lo/2, cf=[ct[0]+ax[0]*oF,ct[1]+ax[1]*oF], cs=[]; const o0=FS.fil?rf+gap+rs:gap+rs; let c0=[cf[0]+ax[0]*o0,cf[1]+ax[1]*o0];
-      for(let k=0;k<FS.ns;k++){ cs.push(c0); c0=[c0[0]+ax[0]*(2*rs+gap),c0[1]+ax[1]*(2*rs+gap)]; }
+      for(let k=0;k<(FS.conj?0:FS.ns);k++){ cs.push(c0); c0=[c0[0]+ax[0]*(2*rs+gap),c0[1]+ax[1]*(2*rs+gap)]; }
       const pts=[]; [-1,0,1].forEach(a=>[-1,1].forEach(b=>pts.push([ct[0]+ax[0]*a*Lo/2+pr[0]*b*Wo/2,ct[1]+ax[1]*a*Lo/2+pr[1]*b*Wo/2])));
       [...(FS.fil?[[cf,rf]]:[]),...cs.map(c=>[c,rs])].forEach(([c,r])=>{ for(let k=0;k<8;k++){ const an=k*Math.PI/4; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } });
       const fora=pts.filter(p=>!noPasseio(p,PS,0)).length, bate=pts.some(p=>casas.some(P=>pontoDentro(p,P))||walls.some(w=>distSeg(p,w)<0.05));
@@ -3046,6 +3051,11 @@ function desenhaFossaPlanta(D,G,FS,HD){ const k=D.k, P=FS.pos; if(!P) return;
   const T=terreno(G); PL(D,[...T.lote,T.lote[0]],.25,"LOTE",true); desenhaPasseios(D,G);
   const {ct,cf,cs,ax,pr}=P, Lo=FS.L+0.3, Wo=FS.W+0.3, q=(a,b)=>[ct[0]+ax[0]*a+pr[0]*b,ct[1]+ax[1]*a+pr[1]*b];
   const cir=(c,r,w,dash)=>{ const pts=[]; for(let i=0;i<=36;i++){ const an=i/36*2*Math.PI; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } PL(D,pts,w,"ESGOTO",dash); };
+  if(FS.conj){ const a0=-FS.L/2, a1=a0+FS.Lt, a2=a1+0.15, a3=FS.L/2, w=FS.W/2;
+    PL(D,[q(-Lo/2,-Wo/2),q(Lo/2,-Wo/2),q(Lo/2,Wo/2),q(-Lo/2,Wo/2),q(-Lo/2,-Wo/2)],.4,"ESGOTO"); PL(D,[q(a0,-w),q(a1,-w),q(a1,w),q(a0,w),q(a0,-w)],.2,"ESGOTO"); PL(D,[q(a2,-w),q(a3,-w),q(a3,w),q(a2,w),q(a2,-w)],.2,"ESGOTO",true);
+    TX(D,...q((a0+a1)/2,0),"TS",2,{b:true,l:"ESGOTO"}); TX(D,...q((a0+a1)/2,0).map((v,j)=>v+(j?2.6*k:0)),`${f(FS.W)}x${f(FS.Lt)} h=${f(FS.h)}`,1.3,{l:"ESGOTO"});
+    TX(D,...q((a2+a3)/2,0),"SM",2,{b:true,l:"ESGOTO"}); TX(D,...q((a2+a3)/2,0).map((v,j)=>v+(j?2.6*k:0)),`${f(FS.W)}x${f(FS.Ls)} h=${f(FS.hs)}`,1.3,{l:"ESGOTO"});
+    tuboHid(D,"fs|ent",trajetoFossa(G,HD.fim.p,P.ent),100,{lab:false}); return; }
   if(FS.cil){ cir(ct,FS.L/2+0.15,.4); cir(ct,FS.L/2,.2); }
   else { PL(D,[q(-Lo/2,-Wo/2),q(Lo/2,-Wo/2),q(Lo/2,Wo/2),q(-Lo/2,Wo/2),q(-Lo/2,-Wo/2)],.4,"ESGOTO"); PL(D,[q(-FS.L/2,-FS.W/2),q(FS.L/2,-FS.W/2),q(FS.L/2,FS.W/2),q(-FS.L/2,FS.W/2),q(-FS.L/2,-FS.W/2)],.2,"ESGOTO"); }
   if(FS.fil){ cir(cf,FS.Df/2+0.15,.4); cir(cf,FS.Df/2,.2); } cs.forEach(c=>{ cir(c,FS.Ds/2+0.15,.4); cir(c,FS.Ds/2,.2,true); });
@@ -3060,7 +3070,30 @@ function desenhaFossaPlanta(D,G,FS,HD){ const k=D.k, P=FS.pos; if(!P) return;
     const nx=un[i+1]; prev=nx?bor(c,r,nx[0]):[c[0]+ax[0]*r,c[1]+ax[1]*r]; });
   if(eF&&!(S.hidTub||{})["fs|u0"]) rotuloLinha(D,sT,eF,"Ø100","ESGOTO"); }
 // detalhe: planta do conjunto e corte longitudinal
-function desenhoFossa(k,FS){ const D=Dw(k), e=FS.e, g=FS.gap, Lo=FS.L+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, Y=z=>-z;
+function desenhoFossaConj(k,FS){ const D=Dw(k), e=FS.e, Y=z=>-z, Lo=FS.L+2*e, W=FS.W, xa=e, xb=e+FS.Lt, xc=xb+0.15, xd=Lo-e;
+  const box=(x0,y0,x1,y1,w,l="ESGOTO",d)=>PL(D,[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]],w,l,d);
+  // planta
+  const yP=-2.4-W/2-e; TX(D,-1.0,yP-W/2-e-6*k,"PLANTA",1.8,{b:true,a:"s"});
+  box(0,yP-W/2-e,Lo,yP+W/2+e,.4); box(xa,yP-W/2,xb,yP+W/2,.2); box(xc,yP-W/2,xd,yP+W/2,.2,"ESGOTO",true); PG(D,[[xb,yP-W/2],[xc,yP-W/2],[xc,yP+W/2],[xb,yP+W/2]],"HACHURA");
+  L(D,xa+FS.Lt*2/3,yP-W/2,xa+FS.Lt*2/3,yP+W/2,.18,"ESGOTO",true); L(D,-1.0,yP,0,yP,.5,"ESGOTO");
+  TX(D,(xa+xb)/2,yP,"TANQUE SÉPTICO",1.6,{b:true}); TX(D,(xc+xd)/2,yP,"SUMIDOURO",1.6,{b:true}); TX(D,(xc+xd)/2,yP+2.8*k,"PAREDES DE TIJOLO CRIVADO",1.2,{l:"COTAS"});
+  TX(D,(xb+xc)/2,yP-W/2-e-2.5*k,"PAREDE DIVISÓRIA IMPERMEÁVEL",1.3,{l:"COTAS"});
+  cotaH(D,xa,xb,yP+W/2+e+5*k,yP+W/2+e,f(FS.Lt)); cotaH(D,xc,xd,yP+W/2+e+5*k,yP+W/2+e,f(FS.Ls)); cotaV(D,yP-W/2,yP+W/2,-5*k,0,f(W));
+  // corte
+  const hT=FS.h, liv=0.30, tl=0.10, zN=-tl-liv, zT=-tl-liv-hT, z0=-0.40, z1=z0-FS.hs;
+  L(D,-1.2,Y(0),Lo+1.0,Y(0),.45,"TERRENO");
+  PG(D,[[0,Y(0)],[xb,Y(0)],[xb,Y(zT-tl)],[0,Y(zT-tl)]],"HACHURA"); PG(D,[[xa,Y(-tl)],[xb,Y(-tl)],[xb,Y(zT)],[xa,Y(zT)]],"FUNDO");
+  box(0,Y(0),xb,Y(zT-tl),.35); box(xa,Y(-tl),xb,Y(zT),.25);
+  PG(D,[[xb,Y(0)],[xc,Y(0)],[xc,Y(Math.min(zT-tl,z1))],[xb,Y(Math.min(zT-tl,z1))]],"HACHURA"); box(xb,Y(0),xc,Y(Math.min(zT-tl,z1)),.35);
+  box(xc,Y(0),Lo,Y(-tl),.35); [xd].forEach(xx=>{ for(let z=z0;z>z1;z-=0.2) box(xx,Y(z),xx+e,Y(Math.max(z1,z-0.12)),.15); });
+  PG(D,[[xc,Y(z1)],[xd,Y(z1)],[xd,Y(z1-0.5)],[xc,Y(z1-0.5)]],"HACHURA"); L(D,xc,Y(z1),xd,Y(z1),.25,"ESGOTO"); TX(D,(xc+xd)/2,Y(z1-0.25),"BRITA",1.2,{b:true,l:"COTAS"});
+  L(D,xa,Y(zN),xb,Y(zN),.18,"AGUA",true); TX(D,(xa+xb)/2,Y(zT)-2*k,"LODO",1.3,{l:"COTAS"});
+  L(D,-1.0,Y(zN+0.05),xa+0.15,Y(zN+0.05),.5,"ESGOTO"); L(D,xa+0.15,Y(zN+0.25),xa+0.15,Y(zN-0.45),.4,"ESGOTO");   // entrada com T
+  L(D,xb-0.15,Y(zN),xc+0.25,Y(zN-0.02),.5,"ESGOTO"); L(D,xb-0.15,Y(zN+0.20),xb-0.15,Y(zN-0.40),.4,"ESGOTO");   // passagem pela parede, saída 5 cm abaixo, com T
+  cotaV(D,Y(zN),Y(zT),xa+3*k,xa,`h = ${f(hT)}`); cotaV(D,Y(z0),Y(z1),Lo+3*k,Lo,`h = ${f(FS.hs)}`);
+  TX(D,-1.0,Y(0)-4*k,"CORTE LONGITUDINAL",1.8,{b:true,a:"s"}); TX(D,Lo/2,Y(z1-0.5)+5*k,"Tanque com fundo e paredes impermeáveis; sumidouro sem fundo, paredes de tijolo crivado. Medidas internas em metros.",1.3,{l:"COTAS"});
+  return D; }
+function desenhoFossa(k,FS){ if(FS.conj) return desenhoFossaConj(k,FS); const D=Dw(k), e=FS.e, g=FS.gap, Lo=FS.L+2*e, rf=FS.Df/2+e, rs=FS.Ds/2+e, Y=z=>-z;
   const xT0=0, xT1=Lo, xF=FS.fil?xT1+g+rf:xT1, xS=[]; { let x=FS.fil?xF+rf+g+rs:xT1+g+rs; for(let i=0;i<FS.ns;i++){ xS.push(x); x+=2*rs+g; } } const xEnd=xS[xS.length-1]+rs;
   const cir=(c,r,w,l="ESGOTO",dash)=>{ const pts=[]; for(let i=0;i<=36;i++){ const an=i/36*2*Math.PI; pts.push([c[0]+r*Math.cos(an),c[1]+r*Math.sin(an)]); } PL(D,pts,w,l,dash); };
   const box=(x0,y0,x1,y1,w,l="ESGOTO")=>PL(D,[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]],w,l);
@@ -3108,13 +3141,13 @@ function desenhoFossa(k,FS){ const D=Dw(k), e=FS.e, g=FS.gap, Lo=FS.L+2*e, rf=FS
   TX(D,-1.0,Y(0)-4*k,"CORTE LONGITUDINAL",1.8,{b:true,a:"s"}); TX(D,xEnd/2,Y(-0.4-FS.hs-0.5)+5*k,"Tubos de PVC Ø100 com declividade mínima de 1%. Medidas internas em metros.",1.3,{l:"COTAS"});
   return D; }
 const linhasFossa=FS=>[["Distância entre as unidades",`${f(FS.gap)} m`],["Afastamento da construção e divisas",FS.passeio?"no passeio":`${f(FS.afast)} m`],["Contribuintes (N)",`${FS.N} ${FS.com?"pessoas (escritório)":"pessoas"}`],["Contribuição (C)",`${FS.C} L/pessoa·dia`],["Contribuição diária",`${f(FS.Q,0)} L/dia`],["Tempo de detenção (T)",`${f(FS.T)} dia`],["Taxa de lodo (K) · lodo fresco (Lf)",`${FS.K} · ${f(FS.Lf,1)}`],
-  ["Tanque séptico: volume útil",`${f(FS.V,0)} L`],FS.cil?["Tanque cilíndrico: diâmetro x h útil",`Ø${f(FS.L)} x ${f(FS.h)} m`]:["Tanque: largura x comprimento x h útil",`${f(FS.W)} x ${f(FS.L)} x ${f(FS.h)} m`],...(FS.fil?[["Filtro anaeróbio: volume útil",`${f(FS.Vf,0)} L`],["Filtro: diâmetro x leito",`Ø${f(FS.Df)} x 1,20 m`]]:[]),
-  ["Sumidouro: área de infiltração",`${f(FS.Ai)} m²`],["Sumidouro: diâmetro x h útil",`${FS.ns>1?FS.ns+" x ":""}Ø${f(FS.Ds)} x ${f(FS.hs)} m`]];
+  ["Tanque séptico: volume útil",`${f(FS.V,0)} L`],FS.cil?["Tanque cilíndrico: diâmetro x h útil",`Ø${f(FS.L)} x ${f(FS.h)} m`]:["Tanque: largura x comprimento x h útil",`${f(FS.W)} x ${f(FS.conj?FS.Lt:FS.L)} x ${f(FS.h)} m`],...(FS.conj?[["Caixa única (tanque + parede + sumidouro)",`${f(FS.W)} x ${f(FS.L)} m (interno)`]]:[]),...(FS.fil?[["Filtro anaeróbio: volume útil",`${f(FS.Vf,0)} L`],["Filtro: diâmetro x leito",`Ø${f(FS.Df)} x 1,20 m`]]:[]),
+  ["Sumidouro: área de infiltração",`${f(FS.Ai)} m²`],FS.conj?["Sumidouro (na mesma caixa): largura x comprimento x h útil",`${f(FS.W)} x ${f(FS.Ls)} x ${f(FS.hs)} m`]:["Sumidouro: diâmetro x h útil",`${FS.ns>1?FS.ns+" x ":""}Ø${f(FS.Ds)} x ${f(FS.hs)} m`]];
 const notasFossa=FS=>[`Tanque séptico (NBR 7229): V = 1000 + N (C·T + K·Lf) = 1000 + ${FS.N} (${FS.C}×${f(FS.T)} + ${FS.K}×${f(FS.Lf,1)}) = ${f(FS.V,0)} L; limpeza a cada ${FS.lim} ano${FS.lim>1?"s":""}.${FS.cil?` Tanque cilíndrico: diâmetro mínimo 1,10 m e não maior que 2 vezes a profundidade útil.`:""}`,
   FS.fil?`Filtro anaeróbio (NBR 13969): Vu = 1,6 N C T = 1,6 × ${FS.N} × ${FS.C} × ${f(FS.Tf)} = ${f(FS.Vf,0)} L; leito de brita nº 4 com 1,20 m sobre fundo falso perfurado.`:`Sem filtro anaeróbio: o efluente do tanque séptico vai direto para o sumidouro. Confirmar com a prefeitura/órgão ambiental se o pós-tratamento é exigido no local.`,
   `Sumidouro: área de infiltração = ${f(FS.Q,0)} L/dia ÷ ${f(FS.ci,0)} L/m²·dia = ${f(FS.Ai)} m² (${FS.ns} un). Confirmar o coeficiente com teste de percolação (NBR 7229, anexo A).`,
   FS.passeio?`Conjunto no passeio da ${FS.rua}, com autorização da prefeitura; tampas niveladas com a calçada e resistentes a tráfego de pedestres. Manter 15 m de poços e o fundo do sumidouro 1,50 m acima do lençol freático.`:`Afastamento de ${f(FS.afast)} m de construções e divisas (mínimo 1,50 m), ${f(FS.gap)} m entre as unidades${FS.gap<1.5-1e-9?" (abaixo do 1,50 m da NBR 7229 entre tanque e sumidouro)":""} e 1,50 m do ramal de água; 15 m de poços. Fundo do sumidouro a pelo menos 1,50 m acima do lençol freático.`,
-  `Tampas de inspeção de concreto 60x60 sobre cada unidade; tubos de entrada e saída com T de PVC Ø100.`];
+  FS.conj?`Fossa e sumidouro na mesma caixa retangular: tanque com fundo e paredes impermeáveis (reboco com impermeabilizante), parede divisória de alvenaria impermeável com passagem por T de PVC Ø100; sumidouro sem fundo (brita), paredes de tijolo crivado. Tampa de inspeção 60x60 em cada câmara.`:`Tampas de inspeção de concreto 60x60 sobre cada unidade; tubos de entrada e saída com T de PVC Ø100.`];
 
 
 /* ---------------- Planta estrutural: pré-dimensionamento (NBR 6118 / NBR 6120) ---------------- */
@@ -4194,7 +4227,7 @@ function orcamento(){
     it("Caixas de inspeção, gordura e sifonadas","un",HD.caixas.length+HD.salas.filter(s=>s.cs).length+(HD.extra||[]).filter(o=>o.t==="cs").length,"caixa");
     { const nr=(HD.extra||[]).filter(o=>o.t!=="cs").length; if(nr) it("Ralos (sifonado, seco, quadrado e linear) com grelha","un",nr,"ralo"); }
     { const PV=redePluvial(G,HD); if(PV&&!PV.livre){ const Lt=Object.values(PV.tubos).reduce((a,b)=>a+b,0); it(`Rede de águas pluviais enterrada PVC Ø${Object.keys(PV.tubos).join("/")} até a ${PV.destino==="galeria"?"galeria":"sarjeta"}`,"m",Lt*1.1,"tubo_ap"); it("Caixas de areia e de inspeção pluviais com tampa","un",PV.caixas.length,"cx_areia"); } }
-    { const FS=fossaSeptica(G,HD); if(FS) it(`Conjunto tanque séptico ${FS.cil?"cilíndrico ":""}${f(FS.V,0)} L${FS.fil?" + filtro anaeróbio":""} + sumidouro${FS.ns>1?"s":""} Ø${f(FS.Ds)}`,"un",1,"fossa"); } it(`Reservatório ${HD.res?HD.res.vol:""} L com instalação`,"un",HD.res?1:0,"reservatorio");
+    { const FS=fossaSeptica(G,HD); if(FS) it(`${FS.conj?`Fossa ${f(FS.V,0)} L e sumidouro na mesma caixa ${f(FS.W)} x ${f(FS.L)} m`:`Conjunto tanque séptico ${FS.cil?"cilíndrico ":""}${f(FS.V,0)} L${FS.fil?" + filtro anaeróbio":""} + sumidouro${FS.ns>1?"s":""} Ø${f(FS.Ds)}`}`,"un",1,"fossa"); } it(`Reservatório ${HD.res?HD.res.vol:""} L com instalação`,"un",HD.res?1:0,"reservatorio");
     it(`Registro de gaveta Ø25/Ø32 com acabamento (áreas molhadas e reservatório)`,"un",HD.res?HD.salas.length+3:0,"reg_gaveta"); it(`Registro de pressão Ø25 com acabamento (chuveiros)`,"un",HD.ap.filter(a=>/chuv/i.test(a.nome)).length,"reg_pressao");
     it(`Cavalete do hidrômetro no muro com caixa padrão${HD.agua&&HD.agua.forn?` (${HD.agua.forn})`:""}`,"un",HD.hd?1:0,"cavalete");
     etapa("LOUÇAS E METAIS"); const c=t=>HD.ap.filter(a=>a.nome===t).length;
@@ -5258,7 +5291,7 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
     $("resDes").innerHTML=HD.res?svgDe(desenhoReservatorio(0.03,HD)):`<p class="cap">Sem reservatório (nenhuma área molhada).</p>`;
     $("isoDes").innerHTML=HD.salas.map((sa,i)=>`<h4 style="margin:10px 0 4px">${esc(sa.r.n)}</h4><div class="draw">${svgDe(desenhoIsoAgua(0.025,HD,i))}</div>`).join("")||`<p class="cap">Sem áreas molhadas.</p>`;
     $("aguaNotas").innerHTML=notasAgua(HD).map(t=>`<li>${esc(t)}</li>`).join("");
-    $("fossa.dt").closest("label").hidden=S.fossa.tanque!=="cil"; $("fossa.wt").closest("label").hidden=S.fossa.tanque==="cil";
+    $("fossa.dt").closest("label").hidden=S.fossa.tanque!=="cil"; $("fossa.wt").closest("label").hidden=S.fossa.tanque==="cil"; ["fossa.filtro","fossa.ds","fossa.ns"].forEach(id=>{ const e0=$(id); if(e0) e0.closest("label").hidden=S.fossa.tanque==="conj"; });
     { const sl=$("fossa.local"), PSs=passeios(G); sl.innerHTML=`<option value="lote">Dentro do lote (1,50 m de afastamento)</option>`+PSs.map(q=>`<option value="${q.i+1}">No passeio da ${esc(q.nome)}</option>`).join("");
       if(![...sl.options].some(o=>o.value===String(S.fossa.local))) S.fossa.local="lote"; sl.value=String(S.fossa.local);
       const sa=$("ap.rua"); sa.innerHTML=`<option value="frente">A rua da frente</option>`+PSs.map(q=>`<option value="${q.i+1}">${esc(q.nome)}</option>`).join("");
@@ -5602,7 +5635,7 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidP
   P.innerHTML=`<h4>${esc(q.nome)}${q.amb?` · ${esc(q.amb)}`:""}</h4><p class="cap" style="margin:0 0 8px">${dica}${q.man?" (posição escolhida por você)":""}</p>
     <div class="row" style="margin:0;flex-wrap:wrap">${q.movel?`<button class="btn pri" data-m>${HIDMOVE?"Cancelar":"Mover"}</button><button class="btn" data-d="-1,0" aria-label="10 cm para a esquerda">◀</button><button class="btn" data-d="0,-1" aria-label="10 cm para cima">▲</button><button class="btn" data-d="0,1" aria-label="10 cm para baixo">▼</button><button class="btn" data-d="1,0" aria-label="10 cm para a direita">▶</button>`:""}
     ${q.t==="rl"?`<button class="btn" data-rlg>Girar 90°</button><select data-rll aria-label="Comprimento do ralo linear" style="width:auto">${[0.4,0.5,0.6,0.7,0.8,0.9,1,1.2,1.5,2].map(v=>`<option value="${v}"${Math.abs(v-(S.hidAdd[q.j].len||0.8))<1e-6?" selected":""}>${f(v*100,0)} cm</option>`).join("")}</select>`:""}
-    ${fos?`<button class="btn" data-gira>Girar o conjunto 90°</button><button class="btn" data-sadd>Acrescentar sumidouro</button>`:""}${(!fos||q.tp==="fsm")&&q.tp!=="hd"&&q.tp!=="res"?`<button class="btn dng" data-del>${q.tp==="fsm"?"Excluir este sumidouro":"Excluir"}</button>`:""}${q.man&&q.tp!=="add"?`<button class="btn" data-auto>Voltar ao automático</button>`:""}${fos&&S.fossaM?`<button class="btn" data-fauto>Conjunto todo no automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" id="hidMsg" style="margin:6px 0 0"></p>`;
+    ${fos?`<button class="btn" data-gira>Girar o conjunto 90°</button>${HDV.fossa&&HDV.fossa.conj?"":`<button class="btn" data-sadd>Acrescentar sumidouro</button>`}`:""}${(!fos||q.tp==="fsm")&&q.tp!=="hd"&&q.tp!=="res"?`<button class="btn dng" data-del>${q.tp==="fsm"?"Excluir este sumidouro":"Excluir"}</button>`:""}${q.man&&q.tp!=="add"?`<button class="btn" data-auto>Voltar ao automático</button>`:""}${fos&&S.fossaM?`<button class="btn" data-fauto>Conjunto todo no automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" id="hidMsg" style="margin:6px 0 0"></p>`;
   const b=P.querySelector("[data-m]"); if(b) b.onclick=()=>{ HIDMOVE=!HIDMOVE; hidPainel(); };
   P.querySelectorAll("[data-d]").forEach(x=>x.onclick=()=>{ const [dx,dy]=x.dataset.d.split(",").map(Number); let p=[q.p[0]+dx*0.10,q.p[1]+dy*0.10];
     if(q.tp==="cx"&&!com){ const t0=HDV.anelT(q.p), cand=[HDV.anelP(t0+0.10),HDV.anelP(t0-0.10)]; p=cand.reduce((m,c)=>((c[0]-q.p[0])*dx+(c[1]-q.p[1])*dy)>((m[0]-q.p[0])*dx+(m[1]-q.p[1])*dy)?c:m); }
