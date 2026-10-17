@@ -4,6 +4,7 @@ App: https://elielengenharia.github.io/rdo-eliel/arquitetonico/ (arquivo único 
 Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
 
 ## No ar (main)
+- 5.86: testeira da garagem passava 15 cm da ponta da parede na fachada lateral (pedido do Eliel). volumesTel: piso externo usa axPiso(G,P): lado encostado em parede vai à face de fora da parede, lado aberto (linha de limite) fica no alinhamento do piso; caixote/testeira termina rente com a ponta da parede.
 - 5.85: garagem sumia (projeto do Eliel: parede da garagem encurtada para 19,375 e a linha de limite do fundo ficou em 19,524, área não fechava). encostaLims(ext,lims) no início de pisosExt: ponta de linha de limite solta a até 40 cm do contorno encosta nele; parede de lado -> a linha inteira anda (leva as linhas presas na outra ponta); parede na frente -> estica/encurta. Não mexe em S.lims.
 - 5.84: corte AA = longitudinal (o maior), BB = transversal (pedido do Eliel). trocaAB(G)/corteNome(G,q) só trocam o NOME (planta, títulos, aba Cortes com "longitudinal/transversal", prancha com AA primeiro); a linha interna A continua horizontal. Atrás do corte, com platibanda, o caixote é desenhado pela face de FORA das paredes (paraFora(polyAx,h), topoPlat de cada volume), em degraus retos.
 - 5.83: azulejo do corte a prumo (sem amarração, 0,60 x 0,30). Fachada: degrau da platibanda exatamente no canto do volume (ts recebe os cantos dos volumes). Corte com platibanda: silhueta do fundo pelo topo das platibandas, em degraus (sem rampa do telhado).

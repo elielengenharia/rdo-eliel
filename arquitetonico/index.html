@@ -763,7 +763,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 5.85 · garagem não some ao mexer na parede", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 5.86 · testeira da garagem rente com a parede", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1180,13 +1180,24 @@ function tiraDegraus(P0,lim=0.20){ let P=P0.map(p=>[p[0],p[1]]); const L=(a,b)=>
       mudou=true; }
     if(!mudou) break; }
   return P; }
+// piso externo (garagem, varanda) num volume: lado encostado em parede vai até a face de FORA da parede; lado aberto (linha de limite) fica no alinhamento do piso,
+// assim a testeira/platibanda da garagem termina rente com a ponta da parede, sem passar dela. Devolve o contorno no eixo (como os ambientes).
+function axPiso(G,P){ const h=G.h, n=P.length, ed=[];
+  for(let i=0;i<n;i++){ const a=P[i], b=P[(i+1)%n], l=Math.hypot(b[0]-a[0],b[1]-a[1]); if(l<1e-6){ ed.push(null); continue; } const u=[(b[0]-a[0])/l,(b[1]-a[1])/l], m=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+    let o=[u[1],-u[0]]; if(pip(P,m[0]+o[0]*0.01,m[1]+o[1]*0.01)) o=[-o[0],-o[1]];
+    const naPar=G.walls.some(w=>w.poly&&pip(w.poly,m[0]+o[0]*0.04,m[1]+o[1]*0.04)), d=naPar?h+0.003:-h+0.003;
+    ed.push({p:[a[0]+o[0]*d,a[1]+o[1]*d],u}); }
+  const E=ed.filter(Boolean), out=[];
+  for(let i=0;i<E.length;i++){ const A=E[(i-1+E.length)%E.length], B=E[i], den=A.u[0]*B.u[1]-A.u[1]*B.u[0];
+    if(Math.abs(den)<1e-9){ out.push(B.p); continue; } const t=((B.p[0]-A.p[0])*B.u[1]-(B.p[1]-A.p[1])*B.u[0])/den; out.push([A.p[0]+A.u[0]*t,A.p[1]+A.u[1]*t]); }
+  return out; }
 // volumes: S.vols = [{n, amb:[nomes dos ambientes] ou "resto", pd, tipo (1 ou 2 águas), dir}] — 2 ou mais volumes ligam o modo
 function volumesTel(G){ const V0=Array.isArray(S.vols)?S.vols.filter(v=>v&&num(v.pd)>0):[]; if(V0.length<2||!G||G.vazio) return null;
   const kv=JSON.stringify(S.vols); if(G._vols!==undefined&&G._volsK===kv) return G._vols; G._volsK=kv;
   const h=G.h, todos=[...G.rooms,...(G.pisos||[])], nm=x=>String(x||"").trim().toLowerCase(), usados=new Set();
   const lista=V0.map(V=>{ const am=Array.isArray(V.amb)?V.amb.map(nm):[]; const rs=V.amb==="resto"?[]:todos.filter(r=>am.includes(nm(r.n))); rs.forEach(r=>usados.add(r)); return {V,rs}; });
   lista.forEach(o=>{ if(o.V.amb==="resto") o.rs=todos.filter(r=>!usados.has(r)&&!r.piso); });
-  const out=lista.filter(o=>o.rs.length).map(o=>{ const polys=o.rs.map(r=>paraFora(r.poly,h+0.003)); const L0=lacos(contornoUniao(polys)); if(!L0.length) return null;
+  const out=lista.filter(o=>o.rs.length).map(o=>{ const polys=o.rs.map(r=>r.piso?axPiso(G,r.poly):paraFora(r.poly,h+0.003)); const L0=lacos(contornoUniao(polys)); if(!L0.length) return null;
       const ax=tiraDegraus(L0.reduce((m,P)=>!m||Math.abs(areaS(P))>Math.abs(areaS(m))?P:m,null)), polyIn=paraDentroV(ax,h+0.003);   /* degrau pequeno (piso da garagem passando 15 cm da parede) some: cobertura e calha retas no alinhamento da parede */
       return {V:o.V,rooms:o.rs,polyAx:ax,polyIn}; }).filter(Boolean);
   G._vols=out.length>=2?out:null; return G._vols; }
