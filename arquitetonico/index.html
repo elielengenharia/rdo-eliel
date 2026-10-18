@@ -797,7 +797,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.11 · isométrico de água fria ajustável, com conexões", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.12 · isométrico editável arrastando; chuveiro sobe reto", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -3673,8 +3673,9 @@ function desenhoReservatorio(k,HD){ const D=Dw(k), R0=HD.res; if(!R0) return D; 
 // isométrico de água fria de uma área molhada (banheiro, cozinha, lavanderia): coluna, registro de gaveta, ramal e sub-ramais com as alturas
 const apChave=(A,i)=>{ const n=A[i].nome; return n+"#"+A.slice(0,i).filter(o=>o.nome===n).length; };
 // ajustes do isométrico de cada área (S.isoM[ambiente] = {zR altura do ramal, rgModo "ramal"|"coluna", rg, rp, h:{ponto: altura}})
-function isoCfg(HD,i){ const sa=HD.salas[i], A=HD.agua||{rg:1.8,rp:1.1}, O=(S.isoM||{})[sa?sa.r.n:""]||{}, modo=O.rgModo==="coluna"?"coluna":"ramal";
-  const rg=num(O.rg)>0?num(O.rg):A.rg, rp=num(O.rp)>0?num(O.rp):A.rp; let zR=num(O.zR)>0?num(O.zR):(modo==="coluna"?Math.max(0.3,rg-0.25):rg);
+function isoCfg(HD,i){ const sa=HD.salas[i], A=HD.agua||{rg:1.8,rp:1.1}, O=(S.isoM||{})[sa?sa.r.n:""]||{}, ch=!!(sa&&sa.A.some(a=>/chuv/i.test(a.nome)));
+  const modo=O.rgModo==="coluna"||(!O.rgModo&&ch)?"coluna":"ramal";   // com chuveiro: registro de gaveta na coluna e ramal baixo (o chuveiro sobe reto)
+  const rg=num(O.rg)>0?num(O.rg):A.rg, rp=num(O.rp)>0?num(O.rp):A.rp; let zR=num(O.zR)>0?num(O.zR):(ch?Math.max(0.3,rp-0.10):modo==="coluna"?Math.max(0.3,rg-0.25):rg);
   return {modo,rg:modo==="coluna"?Math.max(rg,zR+0.15):rg,rp,zR,O}; }
 // isométrico de água fria de uma área molhada: coluna, registro de gaveta, ramal, sub-ramais e as conexões (tês marcados com ponto cheio)
 function desenhoIsoAgua(k,HD,i){ const D=Dw(k), sa=HD.salas[i], dc=HD.desc[i], rm=HD.ramaisAF[i]; if(!sa||!dc||!rm) return D; const C=isoCfg(HD,i);
@@ -3694,18 +3695,22 @@ function desenhoIsoAgua(k,HD,i){ const D=Dw(k), sa=HD.salas[i], dc=HD.desc[i], r
   TX(D,...P(pts[Math.floor((pts.length-1)/2)],zR).map((v,j)=>v+(j?-2.2*k:0)),`RAMAL Ø25 · h=${f(zR)}`,1.2,{l:"AGUA",mv:"n"});
   // sub-ramais até cada ponto: tê no ramal (ponto cheio), joelho na ponta do ramal
   const segDir=p=>{ let b=null; for(let j=0;j+1<pts.length;j++){ const a=pts[j], c=pts[j+1], d=distSegAB(p,a,c); if(!b||d<b.d) b={d,a,c}; } if(!b) return [1,0]; const l=Math.hypot(b.c[0]-b.a[0],b.c[1]-b.a[1])||1; return [(b.c[0]-b.a[0])/l,(b.c[1]-b.a[1])/l]; };
-  const fimR=pts[pts.length-1];
-  sa.A.forEach(a=>{ const q=a.afPipe||a.af.p, h=hNum(a.h), sg=SIGLA_AP(a.nome), ponta=Math.hypot(q[0]-fimR[0],q[1]-fimR[1])<0.05;
-    if(/chuv/i.test(a.nome)){ const u=segDir(q), q2=[q[0]-u[0]*0.15,q[1]-u[1]*0.15], zp=C.rp;
-      if(!(Math.hypot(q2[0]-fimR[0],q2[1]-fimR[1])<0.05)) te(q2,zR); L3(q2,zR,q2,zp); L3(q2,zp,q,zp); L3(q,zp,q,h); simbReg(D,P(q2,zp),dir2(q2,zp,q,zp),"rp"); const pr=P(q2,zp); TX(D,pr[0]-2.5*k,pr[1]+3.6*k,`RP Ø25 · h=${f(zp)}`,1.4,{a:"e",b:true,l:"AGUA",mv:"n"}); }
+  const fimR=pts[pts.length-1], hit=D.hit=[];
+  for(let j=0;j+1<pts.length;j++) hit.push({t:"zR",a:P(pts[j],zR),b:P(pts[j+1],zR),z:zR});
+  hit.push({t:C.modo==="coluna"?"rg":"zR",a:P(c0,C.modo==="coluna"?C.rg:zR),z:C.modo==="coluna"?C.rg:zR});
+  sa.A.forEach((a,j)=>{ const q=a.afPipe||a.af.p, h=hNum(a.h), sg=SIGLA_AP(a.nome), ponta=Math.hypot(q[0]-fimR[0],q[1]-fimR[1])<0.05;
+    if(/chuv/i.test(a.nome)){ const zp=C.rp;
+      if(zR<=zp+1e-9){ if(!ponta) te(q,zR); L3(q,zR,q,h); simbReg(D,P(q,zp),dir2(q,zp-0.1,q,zp),"rp"); const pr=P(q,zp); TX(D,pr[0]-2.5*k,pr[1],`RP Ø25 · h=${f(zp)}`,1.4,{a:"e",b:true,l:"AGUA",mv:"n"}); hit.push({t:"rp",a:pr,z:zp}); }   // sobe reto do ramal, registro no meio
+      else { const u=segDir(q), q2=[q[0]-u[0]*0.15,q[1]-u[1]*0.15];   // ramal acima do registro: desce até o registro e sobe ao chuveiro
+        if(!(Math.hypot(q2[0]-fimR[0],q2[1]-fimR[1])<0.05)) te(q2,zR); L3(q2,zR,q2,zp); L3(q2,zp,q,zp); L3(q,zp,q,h); simbReg(D,P(q2,zp),dir2(q2,zp,q,zp),"rp"); const pr=P(q2,zp); TX(D,pr[0]-2.5*k,pr[1]+3.6*k,`RP Ø25 · h=${f(zp)}`,1.4,{a:"e",b:true,l:"AGUA",mv:"n"}); hit.push({t:"rp",a:pr,z:zp}); } }
     else { if(!ponta) te(q,zR); L3(q,zR,q,h); }
-    const pe=P(q,h); CI(D,pe[0],pe[1],0.7*k,.3,"AGUA"); TX(D,pe[0]+2*k,pe[1],`${sg} Ø${a.dAf} · h=${f(h)}`,1.4,{a:"s",l:"AGUA",mv:"n"}); });
+    const pe=P(q,h); CI(D,pe[0],pe[1],0.7*k,.3,"AGUA"); TX(D,pe[0]+2*k,pe[1],`${sg} Ø${a.dAf} · h=${f(h)}`,1.4,{a:"s",l:"AGUA",mv:"n"}); hit.push({t:"h:"+apChave(sa.A,j),a:pe,z:h}); });
   return D; }
 // lista de conexões de uma área (para comprar e montar)
 function conexoesIso(HD,i){ const sa=HD.salas[i], rm=HD.ramaisAF[i], dc=HD.desc[i]; if(!sa||!rm||!dc) return []; const C=isoCfg(HD,i), pts=rm.pts.map(q=>[q[0],q[1]]); if(Math.hypot(pts[0][0]-dc.p[0],pts[0][1]-dc.p[1])>0.01) pts.unshift(dc.p.slice());
   const fimR=pts[pts.length-1], ch=sa.A.filter(a=>/chuv/i.test(a.nome)).length; let tes=0, joe=1+Math.max(0,pts.length-2);
   sa.A.forEach(a=>{ const q=a.afPipe||a.af.p; if(Math.hypot(q[0]-fimR[0],q[1]-fimR[1])<0.05&&!/chuv/i.test(a.nome)) joe++; else tes++; });
-  joe+=ch*2; const d20=sa.A.filter(a=>a.dAf===20).length, d25=sa.A.length-d20;
+  if(C.zR>C.rp+1e-9) joe+=ch*2; const d20=sa.A.filter(a=>a.dAf===20).length, d25=sa.A.length-d20;
   return [["Tê 25 mm",tes],["Joelho 90° 25 mm",joe],...(d20?[["Joelho de redução com bucha de latão 25x20 (saída)",d20]]:[]),...(d25?[["Joelho com bucha de latão 25 x 3/4\" (saída)",d25]]:[]),["Registro de gaveta 25 mm (3/4\") com canopla",1],...(ch?[["Registro de pressão 25 mm (3/4\") com canopla",ch]]:[])].filter(r=>r[1]>0); }
 const linhasAlturas=HD=>{ const out=[]; HD.salas.forEach((sa,i)=>{ const dc=HD.desc[i], C=isoCfg(HD,i); out.push([sa.r.n,`Registro de gaveta (${dc?dc.nome:"AF"})`,"Ø25",f(C.modo==="coluna"?C.rg:C.zR)]); if(Math.abs(C.zR-C.rg)>0.001||C.modo==="coluna") out.push([sa.r.n,"Ramal de água fria","Ø25",f(C.zR)]); sa.A.forEach(a=>{ if(/chuv/i.test(a.nome)) out.push([sa.r.n,"Registro de pressão do chuveiro","Ø25",f(C.rp)]); out.push([sa.r.n,a.nome,`Ø${a.dAf}`,f(hNum(a.h))]); }); }); return out; };
 const notasAgua=HD=>{ const A=HD.agua||{}; return [`Abastecimento: ${A.forn?`${A.rede==="particular"?"rede particular de água da rua, fornecida pela ":"rede pública da "}${A.forn}`:"rede de água da rua"}; hidrômetro no muro da frente, em caixa (padrão) conforme a exigência do fornecedor.`,
@@ -5414,7 +5419,7 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
     $("hidNotas").innerHTML=notasHidro(HD).map(t=>`<li>${esc(t)}</li>`).join("");
     $("resDes").innerHTML=HD.res?svgDe(desenhoReservatorio(0.03,HD)):`<p class="cap">Sem reservatório (nenhuma área molhada).</p>`;
     $("isoDes").innerHTML=HD.salas.map((sa,i)=>{ const C=isoCfg(HD,i), n=esc(sa.r.n), ch=sa.A.some(a=>/chuv/i.test(a.nome)), inp=(fd,v,ph,lab)=>`<label>${lab}<input type="text" inputmode="decimal" data-iso="${n}" data-isof="${fd}" value="${v!=null&&v!==""?esc(String(v)):""}" placeholder="${ph}"></label>`;
-      return `<h4 style="margin:12px 0 4px">${n}</h4><div class="draw">${svgDe(desenhoIsoAgua(0.025,HD,i))}</div>
+      return `<h4 style="margin:12px 0 4px">${n} <button class="btn" type="button" data-isoauto="${n}" style="margin-left:8px;font-size:12px;padding:4px 8px">Voltar ao automático</button></h4><p class="cap" style="margin:0 0 4px">Arraste para cima ou para baixo o ramal, um ponto, o registro de gaveta (RG) ou o de pressão (RP) para mudar a altura (de 5 em 5 cm).</p><div class="draw isoEd" id="isoSvg${i}" data-i="${i}" style="touch-action:none">${svgDe(desenhoIsoAgua(0.025,HD,i),"isoSvg"+i)}</div>
       <div class="form wide" style="margin-top:6px"><label>Registro de gaveta<select data-iso="${n}" data-isof="rgModo"><option value="ramal"${C.modo==="ramal"?" selected":""}>No começo do ramal</option><option value="coluna"${C.modo==="coluna"?" selected":""}>Na coluna (descida), acima do ramal</option></select></label>
         ${inp("rg",C.O.rg,f(C.rg),"Altura do registro de gaveta (m)")}${inp("zR",C.O.zR,f(C.zR),"Altura do ramal (m)")}${ch?inp("rp",C.O.rp,f(C.rp),"Altura do registro de pressão (m)"):""}
         ${sa.A.map((a,j)=>inp("h:"+apChave(sa.A,j),((C.O.h||{})[apChave(sa.A,j)])||"",a.h,`${a.nome} (m)`)).join("")}</div>
@@ -5986,9 +5991,21 @@ function apTrimToque(p){ const A=apTubSeg(p); if(!A) return "Nenhum tubo aí."; 
     if(APDEL) return; if(APSEL||APSELT){ APSEL=null; APSELT=null; render(); } apAcrescenta(p); });
   const modo=m=>{ const was={tubo:!!APTUBO,unir:!!APUNIR,trim:APTRIM,del:APDEL}[m]; APTUBO=null; APUNIR=null; APTRIM=false; APDEL=false; APSEL=null; APSELT=null; APMOVE=false; if(!was){ if(m==="tubo") APTUBO={pts:[],d:100}; if(m==="unir") APUNIR={A:null}; if(m==="trim") APTRIM=true; if(m==="del") APDEL=true; } $("apPanel").hidden=true; apBotoes(); render(); apPainel(); };
   $("apTuboBt").onclick=()=>modo("tubo"); $("apUnirBt").onclick=()=>modo("unir"); $("apTrimBt").onclick=()=>modo("trim"); $("apApagar").onclick=()=>modo("del");
+  // arrastar no isométrico: muda a altura do que foi pego (ramal, ponto, RG, RP), passo de 5 cm
+  { const box=$("isoDes"); let dr=null;
+    const pega=(ev)=>{ const el=ev.target.closest(".isoEd"); if(!el) return null; const i=+el.dataset.i, p=ptVista(ev,el.id); if(!p) return null; const D0=desenhoIsoAgua(0.025,HDV,i), H=D0.hit||[], tol=4*0.025; let b=null;
+      H.forEach(h0=>{ const d=h0.b?distSegAB(p,h0.a,h0.b):Math.hypot(p[0]-h0.a[0],p[1]-h0.a[1]); if(d<tol&&(!b||d<b.d-1e-6||(Math.abs(d-b.d)<1e-6&&!h0.b))) b={d,h:h0}; }); return b&&{el,i,p,h:b.h}; };
+    const grava=(i,t,z)=>{ const n=HDV.salas[i].r.n; S.isoM=S.isoM||{}; const o=S.isoM[n]=S.isoM[n]||{}, v=+Math.max(0.05,Math.min(3.5,Math.round(z*20)/20)).toFixed(2);
+      if(t.startsWith("h:")){ o.h=o.h||{}; o.h[t.slice(2)]=v; } else { o[t]=v; if(t==="rg"&&!o.rgModo) o.rgModo="coluna"; } };
+    box.addEventListener("pointerdown",ev=>{ const g=pega(ev); if(!g) return; ev.preventDefault(); try{ g.el.setPointerCapture(ev.pointerId); }catch(e){} dr={...g,id:ev.pointerId,s0:JSON.stringify(S.isoM||{}),moveu:false}; g.el.style.cursor="ns-resize"; });
+    box.addEventListener("pointermove",ev=>{ if(!dr||ev.pointerId!==dr.id) return; const p=ptVista(ev,dr.el.id); if(!p) return; const dz=-(p[1]-dr.p[1]); if(!dr.moveu&&Math.abs(dz)<0.03) return; dr.moveu=true;
+      S.isoM=JSON.parse(dr.s0); grava(dr.i,dr.h.t,dr.h.z+dz); const HDn=redeHidro(geom()); dr.el.innerHTML=svgDe(desenhoIsoAgua(0.025,HDn,dr.i),dr.el.id); dr.HDn=HDn; });
+    const solta=ev=>{ if(!dr||ev.pointerId!==dr.id) return; const d=dr; dr=null; d.el.style.cursor=""; if(!d.moveu){ S.isoM=JSON.parse(d.s0); return; } const fim=JSON.stringify(S.isoM); S.isoM=JSON.parse(d.s0); S.isoM=JSON.parse(fim); save(); render(); };
+    box.addEventListener("pointerup",solta); box.addEventListener("pointercancel",ev=>{ if(dr){ S.isoM=JSON.parse(dr.s0); dr=null; render(); } });
+    box.addEventListener("click",ev=>{ const b=ev.target.closest("[data-isoauto]"); if(!b) return; if(S.isoM) delete S.isoM[b.dataset.isoauto]; save(); render(); }); }
   $("isoDes").addEventListener("change",ev=>{ const e=ev.target, n=e.dataset.iso, fd=e.dataset.isof; if(!n||!fd) return; S.isoM=S.isoM||{}; const o=S.isoM[n]=S.isoM[n]||{};
     if(fd.startsWith("h:")){ const k=fd.slice(2); o.h=o.h||{}; if(num(e.value)>0) o.h[k]=num(e.value); else delete o.h[k]; if(!Object.keys(o.h).length) delete o.h; }
-    else if(fd==="rgModo"){ if(e.value==="coluna") o.rgModo="coluna"; else delete o.rgModo; }
+    else if(fd==="rgModo"){ o.rgModo=e.value; }
     else { if(num(e.value)>0) o[fd]=num(e.value); else delete o[fd]; }
     if(!Object.keys(o).length) delete S.isoM[n]; save(); render(); });
   $("tabCalhas").addEventListener("change",ev=>{ const e=ev.target, nm=e.dataset.chn||e.dataset.chl; if(!nm) return; S.apCalha=S.apCalha||{}; const o=S.apCalha[nm]||{};
