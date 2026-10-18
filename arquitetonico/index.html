@@ -94,6 +94,8 @@ h3{font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.06em;
 .slide input[type=number]{width:90px}
 .panel{border:1px solid var(--accent);border-radius:4px;padding:12px;margin-top:10px;background:var(--paper)}
 #selPanel,#elePanel,#hidPanel{position:fixed;right:16px;bottom:16px;width:min(440px,calc(100vw - 32px));max-height:70vh;overflow:auto;z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:0}
+@media (max-width:520px){#selPanel,#elePanel,#hidPanel{bottom:62px;max-height:calc(70vh - 46px)}}
+#undoBar .btn{background:var(--paper)}
 .panel h4{margin:0 0 8px;font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
 /* SVG */
 svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink)}   /* mesma letra do PDF: o lugar dos textos é medido com ela */
@@ -133,6 +135,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="stamp" id="stamp"></div><button class="btn pri" id="btnInstalar" type="button" hidden>Instalar no computador / celular</button></div>
   </header>
   <div class="panel" id="instAjuda" hidden style="margin:10px 16px"></div>
+  <div id="undoBar" style="position:fixed;left:12px;bottom:12px;z-index:70;display:flex;gap:6px;box-shadow:0 2px 10px rgba(0,0,0,.18);border-radius:10px">
+    <button class="btn" id="btnDesfazer" type="button" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" disabled>↶ Desfazer</button><button class="btn" id="btnRefazer" type="button" title="Refazer (Ctrl+Y)" aria-label="Refazer" disabled>↷ Refazer</button></div>
 
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="planta" aria-selected="true">Planta</button>
@@ -350,7 +354,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <div class="form wide" style="margin:0 0 8px"><label>Coletor de esgoto (caixas de inspeção)<select id="fossa.coletor"><option value="auto">Num corredor só, o lado das áreas molhadas (automático)</option><option value="esq">Corredor do lado esquerdo da planta</option><option value="dir">Corredor do lado direito da planta</option><option value="anel">Em volta da casa</option></select></label></div>
       <p class="cap" style="margin:6px 0"><b>Tubos:</b> toque em <b>Desenhar tubo</b> e vá tocando do começo (ex.: saída da pia) até o fim (ex.: caixa de gordura); o tubo gruda nas caixas, ralos e saídas perto do dedo. Toque num <b>tubo</b> para trocar o diâmetro (40, 50, 75, 100), pôr em 45°, dobrar, arrastar as bolinhas do caminho ou apagar. Vale também para os tubos automáticos e os da fossa. <b>Unir tubos</b> funciona como o fillet do AutoCAD: toque num tubo e depois no outro (ou numa caixa) e eles se encontram no canto, esticando ou cortando o que sobra; se o encontro cair no meio do outro tubo, ele fica inteiro (ligação em T). <b>Cortar pedaço</b> funciona como o trim: toque no pedaço que sobra e só ele some, até o cruzamento com outro tubo ou caixa mais perto de cada lado (sem cruzamento, some até a ponta).</p>
       <div class="row" style="margin:0 0 8px"><button class="btn pri" id="hidTuboBt" type="button" title="Atalho: T">Desenhar tubo</button><button class="btn" id="hidUnirBt" type="button" title="Atalho: F">Unir tubos (fillet)</button><button class="btn" id="hidTrimBt" type="button" title="Atalho: X">Cortar pedaço (trim)</button><label class="cap" style="display:flex;align-items:center;gap:4px;margin:0"><input type="checkbox" id="hidTrava" checked style="width:auto">Travar em 45°</label><button class="btn" id="hidApagar" type="button" aria-pressed="false" title="Atalho: E">Apagar itens</button><button class="btn" id="hidRestaura" type="button" hidden></button><span class="toast" id="hidDelMsg" role="status"></span></div>
-      <p class="cap" style="margin:0 0 8px">Atalhos no teclado do computador: <b>T</b> desenhar tubo · <b>F</b> unir (fillet) · <b>X</b> cortar (trim) · <b>E</b> apagar itens · <b>Delete</b> apaga o selecionado · <b>M</b> mover · <b>I</b> inverter o fluxo · <b>Enter</b> conclui o tubo · <b>Esc</b> cancela.</p>
+      <p class="cap" style="margin:0 0 8px">Atalhos no teclado do computador: <b>Ctrl+Z</b> desfazer · <b>Ctrl+Y</b> refazer · <b>T</b> desenhar tubo · <b>F</b> unir (fillet) · <b>X</b> cortar (trim) · <b>E</b> apagar itens · <b>Delete</b> apaga o selecionado · <b>M</b> mover · <b>I</b> inverter o fluxo · <b>Enter</b> conclui o tubo · <b>Esc</b> cancela.</p>
       <div class="draw" id="hid" style="touch-action:pan-y"></div><div id="hidPanel" class="panel" hidden></div>
       <div class="chips" id="hidChips"></div><div id="hidAvisos"></div>
     </div>
@@ -787,7 +791,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.04 · atalhos de teclado no hidrossanitário", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.05 · desfazer e refazer", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -860,7 +864,16 @@ let _o0=null; try{ _o0=JSON.parse(localStorage.getItem("arq-casa-v1")); }catch(e
 const PJ_KEY="arq-projetos-v1";
 let PJ=null; try{ PJ=JSON.parse(localStorage.getItem(PJ_KEY)); }catch(e){}
 if(!PJ||!PJ.lista||!PJ.atual||!PJ.lista[PJ.atual]){ PJ={atual:String(S.obra||"Meu projeto"),lista:{}}; PJ.lista[PJ.atual]=S; } else PJ.lista[PJ.atual]=S;
-function save(){ try{ localStorage.setItem("arq-casa-v1",JSON.stringify(S)); }catch(e){} PJ.lista[PJ.atual]=S; try{ localStorage.setItem(PJ_KEY,JSON.stringify(PJ)); }catch(e){} }
+// desfazer / refazer: cada mudança gravada guarda o estado anterior (mudanças seguidas em menos de 0,7 s, como digitar, contam como uma)
+let UNDO=[], REDO=[], ULAST=null, UPJ=null, UT=0, UREST=false;
+function histMarca(j){ if(UREST) return; if(UPJ!==PJ.atual||ULAST===null){ UNDO=[]; REDO=[]; UPJ=PJ.atual; ULAST=j; return; }
+  if(j===ULAST) return; if(Date.now()-UT>700||!UNDO.length){ UNDO.push(ULAST); if(UNDO.length>80) UNDO.shift(); } REDO=[]; UT=Date.now(); ULAST=j; }
+function histBotoes(){ const a=document.getElementById("btnDesfazer"), b=document.getElementById("btnRefazer"); if(a) a.disabled=!UNDO.length; if(b) b.disabled=!REDO.length; }
+function histVolta(de,para){ if(!de.length) return false; const cur=JSON.stringify(S); para.push(cur); const j=de.pop(); UREST=true;
+  try{ S=estadoDe(JSON.parse(j)); PJ.lista[PJ.atual]=S; if(typeof HIDSEL!=="undefined"){ HIDSEL=null; HIDSELT=null; HIDTUBO=null; HIDUNIR=null; HIDTRIM=false; HIDMOVE=false; } const hp=document.getElementById("hidPanel"); if(hp) hp.hidden=true; save(); loadForm(); render(); } finally { UREST=false; }
+  ULAST=JSON.stringify(S); UT=0; histBotoes(); return true; }
+const desfazer=()=>histVolta(UNDO,REDO), refazer=()=>histVolta(REDO,UNDO);
+function save(){ const j=JSON.stringify(S); histMarca(j); histBotoes(); try{ localStorage.setItem("arq-casa-v1",j); }catch(e){} PJ.lista[PJ.atual]=S; try{ localStorage.setItem(PJ_KEY,JSON.stringify(PJ)); }catch(e){} }
 
 /* ---------- polígonos: utilidades ---------- */
 const pip=(P,x,y)=>{ let d=false; for(let i=0,j=P.length-1;i<P.length;j=i++){ const [xi,yi]=P[i],[xj,yj]=P[j]; if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi) d=!d; } return d; };
@@ -5766,6 +5779,9 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidP
     { const t=tubAchar(p); if(t){ if(HIDDEL){ tubExclui(t.key); return; } HIDSELT=t.key; HIDSEL=null; HIDMOVE=false; render(); hidPainel(); return; } }
     if(HIDDEL) return;
     if(HIDSEL||HIDSELT){ HIDSEL=null; HIDSELT=null; render(); } hidAcrescenta(p); });
+  $("btnDesfazer").onclick=()=>{ if(desfazer()) $("hidDelMsg").textContent="Desfeito."; }; $("btnRefazer").onclick=()=>{ if(refazer()) $("hidDelMsg").textContent="Refeito."; };
+  document.addEventListener("keydown",ev=>{ if(!(ev.ctrlKey||ev.metaKey)||/INPUT|SELECT|TEXTAREA/.test((document.activeElement||{}).tagName||"")) return; const k=ev.key.toLowerCase();
+    if(k==="z"&&!ev.shiftKey){ ev.preventDefault(); desfazer(); } else if(k==="y"||(k==="z"&&ev.shiftKey)){ ev.preventDefault(); refazer(); } });
   // atalhos de teclado (como no AutoCAD), só com a aba Hidrossanitário aberta e fora de campos de texto
   document.addEventListener("keydown",ev=>{ const aba=$("tab-hid"); if(!aba||aba.hidden||ev.ctrlKey||ev.metaKey||ev.altKey||/INPUT|SELECT|TEXTAREA/.test((document.activeElement||{}).tagName||"")) return;
     const k=ev.key.length===1?ev.key.toLowerCase():ev.key, faz=f0=>{ ev.preventDefault(); f0(); };
