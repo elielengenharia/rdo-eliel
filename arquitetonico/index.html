@@ -798,7 +798,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.17 · cabo e eletroduto de entrada escolhidos pelo engenheiro", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.18 · escolha do cabo de entrada junto do diagrama unifilar", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -5530,11 +5530,13 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
       EL.C.map(c=>`<tr><td><b>${c.lab||"C"+c.n}</b></td><td>${esc(c.desc)}</td><td class="n">${c.va}</td><td class="n">${c.v}</td><td class="n">${f(c.ib,1)}</td><td class="n">${c.disj} A</td><td class="n">${f(c.fio,1)}${c.fio0&&c.fio>c.fio0?" *":""}</td><td>${c.dr?"sim":"—"}</td><td>${c.fase||"-"}</td><td class="n">${c.L!=null?f(c.L,1):"-"}</td><td class="n">${c.dv!=null?f(c.dv,1)+" %":"-"}</td></tr>`).join("")+
       (EL.multi?EL.UN.map(U=>`<tr class="tot"><td></td><td>Total ${U.qdNome} (${esc(U.nome)})</td><td class="n">${U.tot}</td><td colspan="8"></td></tr>`).join(""):"")+`<tr class="tot"><td></td><td>Total instalado</td><td class="n">${EL.tot}</td><td colspan="8"></td></tr>`;
     $("eleNotas").innerHTML=notasEletrica(EL).map(t=>`<li>${esc(t)}</li>`).join("");
-    $("eleUni").innerHTML=EL.UN.filter(U=>U.RE).map(U=>{ const E=U.RE.ent;
+    const opEnt=(k,ops)=>`<select data-ent="${k}">${ops.map(([v,t])=>`<option value="${v}"${String(S.ele[k]||"auto")===v?" selected":""}>${t}</option>`).join("")}</select>`;
+    $("eleUni").innerHTML=(EL.UN.some(U=>U.RE)?`<div class="form" style="margin-bottom:10px"><label>Cabo de entrada (padrão até o QD)${opEnt("cabo",[["auto","Calculado (mínimo da norma)"],["10","10 mm²"],["16","16 mm²"],["25","25 mm²"],["35","35 mm²"]])}</label><label>Eletroduto de entrada${opEnt("eEnt",[["auto",'Calculado (mínimo 1")'],["32",'ø32 mm (1")'],["40",'ø40 mm (1 1/4")'],["50",'ø50 mm (1 1/2")']])}</label></div>`:"")+EL.UN.filter(U=>U.RE).map(U=>{ const E=U.RE.ent;
       return `${EL.multi?`<h3 style="margin-top:14px">${U.qdNome} · ${esc(U.nome)}</h3>`:""}<div class="draw">${svgDe(desenhoUnifilar(U,0.02))}</div>
         <div class="chips">${[`Demanda ${f(E.Dm)} kVA`,`${E.nome} ${E.tensao}`,`Disjuntor geral ${E.polosG}P ${E.geral} A`,`Cabo de entrada ${f(E.sEnt,0)} mm² + terra ${f(E.sPE,0)} mm²`,`Eletroduto de entrada ø${E.eEnt.d} mm (${E.eEnt.pol})`,`Quadro ${E.qdMod} módulos`,...Object.entries(U.RE.eletr).map(([d,m])=>`Eletroduto ø${d}: ${f(m*1.1,0)} m`)].map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>
         <h3 style="margin-top:14px">Material elétrico${EL.multi?` · ${U.qdNome}`:""}</h3><div class="tbl"><table><tr><th>Material</th><th>Un</th><th class="n">Qtd</th><th>Comprar</th></tr>${materialEletrico(U).map(m=>`<tr><td>${esc(m[0])}</td><td>${m[1]}</td><td class="n">${m[1]==="m"?f(m[2],1):m[2]}</td><td>${esc(m[3])}</td></tr>`).join("")}</table></div>
         <ol class="notes" style="margin-top:12px">${notasEntrada(U).map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`; }).join("");
+    $("eleUni").querySelectorAll("select[data-ent]").forEach(sel=>{ sel.onchange=()=>{ const k=sel.dataset.ent; S.ele[k]=sel.value; const top=$("ele."+k); if(top) top.value=sel.value; save(); render(); }; });
     $("layAmb").innerHTML=`<tr><th>Ambiente</th><th>Tipo</th><th>Móveis</th><th></th></tr>`+LM.map((R,i)=>{ const lab=R.r.labIdx>=0?S.rooms[R.r.labIdx]:null, mt=lab&&lab.mt||"auto";
       return `<tr><td><b>${esc(R.r.n)}</b><div style="color:var(--muted);font-size:12px">${f(R.r.area)} m²</div></td><td><select data-lay="${i}" aria-label="Tipo de layout de ${esc(R.r.n)}">${TIPOS_MOB.map(([v,t])=>`<option value="${v}"${v===mt?" selected":""}>${v==="auto"?`Automático: ${(TIPOS_MOB.find(q=>q[0]===tipoMob({...R.r,labIdx:-1}))||["",""])[1].toLowerCase()}`:t}</option>`).join("")}</select></td>
         <td style="font-size:13px">${esc(resumoMob(R).join("; "))||"—"}${R.faltou.length?`<div style="color:var(--bad,#C4302B);font-size:12px">Não coube: ${esc(R.faltou.join(", "))}</div>`:""}</td>
