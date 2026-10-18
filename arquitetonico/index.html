@@ -505,8 +505,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
     <div class="sheet">
       <h2>Perspectivas</h2>
       <p class="cap">Quatro perspectivas da obra (frontal pelos dois lados, posterior e aérea). Sem maquete, o app levanta as paredes, as portas, as janelas, a platibanda e o telhado a partir da planta. Para usar a maquete do SketchUp, exporte em <b>Arquivo &gt; Exportar &gt; Modelo 3D &gt; COLLADA (.dae)</b> e anexe aqui. O SketchUp salva o .skp num formato fechado, que o navegador não consegue ler. As cores dos materiais e as arestas vêm junto com a maquete.</p>
-      <div class="row" style="margin-top:0;align-items:center"><label class="btn pri" for="perspFoto" style="display:inline-block">Imagem do meu 3D para as pranchas (foto, print ou quadro do vídeo)</label><input type="file" id="perspFoto" accept="image/*,video/*" style="position:absolute;width:1px;height:1px;opacity:0"><button class="btn" id="perspFotoTira" type="button" hidden>Tirar a imagem</button><span class="cap" id="perspFotoMsg" style="margin:0"></span></div>
-      <div id="perspFotoVer" style="max-width:520px"></div>
+      <div class="row" style="margin-top:0;align-items:center"><label class="btn pri" for="perspFoto" style="display:inline-block">Anexar imagens do meu render (SketchUp, foto, print ou quadro do vídeo)</label><input type="file" id="perspFoto" accept="image/*,video/*" multiple style="position:absolute;width:1px;height:1px;opacity:0"><button class="btn" id="perspFotoTira" type="button" hidden>Tirar todas</button><span class="cap" id="perspFotoMsg" style="margin:0"></span></div>
+      <p class="cap" style="margin:4px 0 0">Até 4 imagens. Com imagem anexada, a prancha de perspectivas sai com as suas imagens (e não com as do app), e a primeira vai também na prancha única do arquitetônico. Dê um nome a cada uma.</p><div id="perspFotoVer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:8px"></div>
       <div class="row" style="margin-top:0"><label class="btn pri" for="perspFile" style="display:inline-block">Anexar maquete (.dae, .obj, .stl)</label><input type="file" id="perspFile" accept=".dae,.obj,.stl,.skp" style="position:absolute;width:1px;height:1px;opacity:0"><button class="btn" id="perspTira">Tirar maquete</button><span class="toast" id="perspMsg" role="status"></span></div>
       <div class="form">
         <label>Usar<select id="persp.fonte"><option value="auto">maquete anexada (ou a do app)</option><option value="app">sempre a maquete do app</option></select></label>
@@ -799,7 +799,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.25 · escada com até 7 lances e armadura da laje", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.26 · até 4 imagens do render nas perspectivas", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -6609,7 +6609,7 @@ $("pjDup").onclick=()=>{ const n=pjNome((S.pjManual?"":nomeCliente(S))||PJ.atual
 $("pjRen").onclick=()=>{ const v=prompt("Novo nome do projeto:",PJ.atual); if(!v||!v.trim()||v.trim()===PJ.atual) return; const n=pjNomeLivre(v.trim(),PJ.atual); S.pjManual=v.trim()!==nomeCliente(S); pjRenomear(PJ.atual,n); save(); pjUI(); pjMsg(`Renomeado para ${n}.`); };
 $("pjDel").onclick=()=>{ const nomes=Object.keys(PJ.lista); if(nomes.length<2){ pjMsg("Este é o único projeto: crie outro antes de excluir."); return; } if(!confirm(`Excluir o projeto "${PJ.atual}" deste aparelho? (baixe o .json antes, se quiser guardar)`)) return;
   const velho=PJ.atual; delete PJ.lista[velho]; const n=Object.keys(PJ.lista)[0]; PJ.atual=n; S=estadoDe(JSON.parse(JSON.stringify(PJ.lista[n]))); PJ.lista[n]=S; save(); loadForm(); render(); pjUI(); pjMsg(`Excluído: ${velho}. Aberto: ${n}.`); };
-$("pjBaixar").onclick=async()=>{ try{ const txt=JSON.stringify({app:"projeto-arquitetonico",versao:1,nome:PJ.atual,estado:S}); const st=await saveFile(`${slug()}-projeto.json`,new TextEncoder().encode(txt),"application/json"); pjMsg(st==="shared"?"Arquivo pronto: salve em Arquivos ou envie.":"Projeto baixado."); }catch(e){ pjMsg(falhou(e,"o arquivo do projeto")); } };
+$("pjBaixar").onclick=async()=>{ try{ const txt=JSON.stringify({app:"projeto-arquitetonico",versao:1,nome:PJ.atual,estado:imgComUrl(S)}); const st=await saveFile(`${slug()}-projeto.json`,new TextEncoder().encode(txt),"application/json"); pjMsg(st==="shared"?"Arquivo pronto: salve em Arquivos ou envie.":"Projeto baixado."); }catch(e){ pjMsg(falhou(e,"o arquivo do projeto")); } };
 $("pjFile").onchange=async e=>{ const fl=e.target.files&&e.target.files[0]; if(!fl) return; try{ const o=JSON.parse(await fl.text()), est=o&&o.estado?o.estado:o; if(!est||!Array.isArray(est.walls)) throw 0;
     const n=pjNome((est.pjManual?"":nomeCliente(est))||o.nome||est.obra||fl.name.replace(/\.json$/i,"")); pjUsar(n,est); pjMsg(`Projeto aberto: ${n}.`); }catch(err){ pjMsg("Este arquivo não é um projeto deste app."); } e.target.value=""; };
 pjUI();
@@ -6672,7 +6672,12 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
 });
 
 
-function perspFolha(G,area,aw,ah,TT){ if((S.persp||{}).pdf==="não") return []; const VS=vistasPersp(G); if(!VS.length) return [];
+function perspFolha(G,area,aw,ah,TT){ if((S.persp||{}).pdf==="não") return [];
+  const IM=perspImgs(); if(IM.length){ const n=IM.length, cols=n===1?1:2, rows=n<=2?1:2, bw=(aw-(cols-1)*8)/cols, bh=(ah-(rows-1)*6)/rows;
+    const its=IM.map((F0,i)=>{ const F={...F0,url:F0.url||IMGC[F0.id]}, ar=F.w/F.h, w=Math.min(bw,(bh-TT)*ar), h=w/ar, D=Dw(1); D.p.push({t:"img",x0:0,y0:0,x1:w,y1:h,url:F.url,iw:F.w,ih:F.h,l:"GERAL"}); const e=extensao(D);
+      return {d:{D,s:1,k:1,e,w,h,gen:()=>D},sem:1,titulo:F.t||"PERSPECTIVA",box:[area.x0+(i%cols)*(bw+8),area.y0+Math.floor(i/cols)*(bh+6),bw,bh]}; });
+    return [{n:"",conteudo:"PERSPECTIVAS",escala:"SEM ESCALA",itens:its,lado:"persp"}]; }
+  const VS=vistasPersp(G); if(!VS.length) return [];
   const bw=aw/2-4, bh=ah/2-3, its=VS.map((v,i)=>{ const zg=Z=>k=>desenhoPersp(v.V,k,Z); let d=null; for(const Z of [3.2,2.6,2.1,1.7,1.4,1.15,1,0.85,0.7,0.55,0.45,0.38,0.32,0.27]){ d=encaixar(zg(Z),bw,bh-TT); if(d.w<=bw&&d.h<=bh-TT) break; }
     return {d,zgen:zg,sem:1,titulo:v.titulo,box:[area.x0+(i%2)*(bw+8),area.y0+Math.floor(i/2)*(bh+6),bw,bh]}; });
   return [{n:"",conteudo:"PERSPECTIVAS",escala:"SEM ESCALA",itens:its,lado:"persp"}]; }
@@ -6687,16 +6692,34 @@ function renderPersp(){ const el=$("perspVistas"); if(!el||$("tab-persp").hidden
 $("perspVistas").addEventListener("click",async e=>{ const b=e.target.closest("[data-pjpg]"); if(!b) return; const v=perspVS[+b.dataset.pjpg]; if(!v) return; b.disabled=true; const t0=b.textContent; b.textContent="Gerando...";
   setTimeout(async()=>{ try{ const r=imagemPersp(v.V,2400), bin=atob(r.url.split(",")[1]), u8=Uint8Array.from(bin,c=>c.charCodeAt(0)); await saveFile(`${slug()}-${v.titulo.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}.jpg`,u8,"image/jpeg"); }catch(err){ $("perspMsg").textContent=falhou(err,"a imagem"); } b.disabled=false; b.textContent=t0; },20); });
 // imagem do 3D do profissional (foto, print ou quadro de um vídeo) para as pranchas: guardada no projeto em JPEG de até 1800 px
-{ const msg=t=>$("perspFotoMsg").textContent=t, mostra=()=>{ const F=S.perspImg; $("perspFotoTira").hidden=!F; $("perspFotoVer").innerHTML=F?`<img src="${F.url}" alt="Imagem do 3D" style="width:100%;display:block;border-radius:2px;margin:6px 0">`:""; };
-  const guarda=(src,w0,h0)=>{ const sc=Math.min(1,1800/Math.max(w0,h0)), up=Math.max(w0,h0)<1200?Math.min(2,1600/Math.max(w0,h0)):1, f=sc<1?sc:up, cv=document.createElement("canvas"); cv.width=Math.round(w0*f); cv.height=Math.round(h0*f); const cx=cv.getContext("2d"); cx.imageSmoothingQuality="high"; cx.drawImage(src,0,0,cv.width,cv.height);
-    S.perspImg={url:cv.toDataURL("image/jpeg",0.88),w:cv.width,h:cv.height}; save(); mostra(); render(); msg("Imagem guardada: vai na prancha única do arquitetônico no lugar da perspectiva do app."); };
-  $("perspFoto").onchange=e=>{ const fl=e.target.files&&e.target.files[0]; e.target.value=""; if(!fl) return; const url=URL.createObjectURL(fl);
+// as imagens ficam no banco do aparelho (IndexedDB) e o projeto guarda só a referência; no "Baixar projeto" elas vão junto
+const IMGC={}; const imgDB=()=>new Promise((ok,er)=>{ try{ const r=indexedDB.open("arq-imgs",1); r.onupgradeneeded=()=>r.result.createObjectStore("img"); r.onsuccess=()=>ok(r.result); r.onerror=()=>er(r.error); }catch(e){ er(e); } });
+const imgPut=async(id,url)=>{ IMGC[id]=url; try{ const db=await imgDB(); await new Promise((ok,er)=>{ const t=db.transaction("img","readwrite"); t.objectStore("img").put(url,id); t.oncomplete=ok; t.onerror=()=>er(t.error); }); }catch(e){} };
+const imgGet=async id=>{ if(IMGC[id]) return IMGC[id]; try{ const db=await imgDB(); const u=await new Promise((ok,er)=>{ const r=db.transaction("img").objectStore("img").get(id); r.onsuccess=()=>ok(r.result); r.onerror=()=>er(r.error); }); if(u) IMGC[id]=u; return u; }catch(e){ return null; } };
+const perspImgs=()=>(Array.isArray(S.perspImgs)?S.perspImgs:[]).filter(F=>F&&(F.url||IMGC[F.id]));   // as que já estão prontas para o PDF
+const imgComUrl=E0=>{ const E1=JSON.parse(JSON.stringify(E0)); if(Array.isArray(E1.perspImgs)) E1.perspImgs=E1.perspImgs.map(F=>({...F,url:F.url||IMGC[F.id]||""})).filter(F=>F.url); return E1; };
+{ const msg=t=>$("perspFotoMsg").textContent=t;
+  const sync=async()=>{ let mud=false; if(S.perspImg&&S.perspImg.url){ const F=S.perspImg; S.perspImgs=[{id:"i"+Date.now().toString(36),w:F.w,h:F.h,t:"PERSPECTIVA",url:F.url},...(S.perspImgs||[])]; delete S.perspImg; mud=true; }
+    const L0=Array.isArray(S.perspImgs)?S.perspImgs:[]; for(const F of L0){ if(F.url){ if(!F.id) F.id="i"+Math.random().toString(36).slice(2,9); await imgPut(F.id,F.url); delete F.url; mud=true; } else if(F.id&&!IMGC[F.id]) await imgGet(F.id); }
+    if(mud) save(); mostra(); };
+  const mostra=()=>{ const L0=Array.isArray(S.perspImgs)?S.perspImgs:[]; $("perspFotoTira").hidden=!L0.length;
+    $("perspFotoVer").innerHTML=L0.map((F,i)=>`<div style="border:1px solid var(--line,#ddd);border-radius:6px;padding:6px">${IMGC[F.id]?`<img src="${IMGC[F.id]}" alt="${esc(F.t||"")}" style="width:100%;display:block;border-radius:2px">`:`<p class="cap">Imagem não encontrada neste aparelho.</p>`}
+      <input type="text" data-pimt="${i}" value="${esc(F.t||"")}" placeholder="Nome (ex.: PERSPECTIVA FRONTAL)" style="width:100%;margin-top:6px"><div class="row" style="margin-top:6px;gap:6px">${i?`<button class="btn" type="button" data-pimu="${i}">◀ Antes</button>`:""}<button class="btn" type="button" data-pimx="${i}">Tirar</button></div></div>`).join(""); };
+  $("perspFotoVer").addEventListener("input",e=>{ const i=e.target.dataset.pimt; if(i==null) return; S.perspImgs[+i].t=e.target.value.toUpperCase(); save(); });
+  $("perspFotoVer").addEventListener("click",e=>{ const x=e.target.closest("[data-pimx]"), u=e.target.closest("[data-pimu]"); if(x){ S.perspImgs.splice(+x.dataset.pimx,1); save(); mostra(); render(); msg("Imagem tirada."); }
+    if(u){ const i=+u.dataset.pimu, L0=S.perspImgs; [L0[i-1],L0[i]]=[L0[i],L0[i-1]]; save(); mostra(); render(); } });
+  const nomes=["PERSPECTIVA FRONTAL","PERSPECTIVA LATERAL","PERSPECTIVA POSTERIOR","VISTA AÉREA"];
+  const guarda=async(src,w0,h0,nome)=>{ const f0=Math.min(1,1800/Math.max(w0,h0)), up=Math.max(w0,h0)<1200?Math.min(2,1600/Math.max(w0,h0)):1, fz=f0<1?f0:up, cv=document.createElement("canvas"); cv.width=Math.round(w0*fz); cv.height=Math.round(h0*fz); const cx=cv.getContext("2d"); cx.imageSmoothingQuality="high"; cx.drawImage(src,0,0,cv.width,cv.height);
+    if(!Array.isArray(S.perspImgs)) S.perspImgs=[]; if(S.perspImgs.length>=4){ msg("Já tem 4 imagens: tire uma para pôr outra."); return; }
+    const id="i"+Date.now().toString(36)+Math.random().toString(36).slice(2,5); await imgPut(id,cv.toDataURL("image/jpeg",0.88)); S.perspImgs.push({id,w:cv.width,h:cv.height,t:nomes[S.perspImgs.length]||"PERSPECTIVA"}); save(); mostra(); render(); msg(`${S.perspImgs.length} imagem(ns) no projeto: vão na prancha de perspectivas no lugar das do app.`); };
+  const lerUm=fl=>new Promise(ok=>{ const url=URL.createObjectURL(fl);
     if(/^video\//.test(fl.type)){ const v=document.createElement("video"); v.muted=true; v.playsInline=true; v.src=url; msg("Lendo o vídeo...");
-      v.onloadedmetadata=()=>{ const t=prompt(`O vídeo tem ${Math.round(v.duration)} s. Em que segundo está a vista que você quer?`,"4"); if(t===null){ msg(""); return; } v.currentTime=Math.max(0,Math.min(v.duration-0.05,num(t))); };
-      v.onseeked=()=>{ guarda(v,v.videoWidth,v.videoHeight); URL.revokeObjectURL(url); }; v.onerror=()=>msg("Não consegui ler este vídeo aqui. Mande um print da tela."); return; }
-    const im=new Image(); im.onload=()=>{ guarda(im,im.naturalWidth,im.naturalHeight); URL.revokeObjectURL(url); }; im.onerror=()=>msg("Não consegui abrir esta imagem."); im.src=url; };
-  $("perspFotoTira").onclick=()=>{ delete S.perspImg; save(); mostra(); render(); msg("Imagem tirada: volta a perspectiva gerada pelo app."); };
-  window.__perspFotoMostra=mostra; setTimeout(mostra,0); }
+      v.onloadedmetadata=()=>{ const t=prompt(`O vídeo tem ${Math.round(v.duration)} s. Em que segundo está a vista que você quer?`,"4"); if(t===null){ msg(""); ok(); return; } v.currentTime=Math.max(0,Math.min(v.duration-0.05,num(t))); };
+      v.onseeked=async()=>{ await guarda(v,v.videoWidth,v.videoHeight); URL.revokeObjectURL(url); ok(); }; v.onerror=()=>{ msg("Não consegui ler este vídeo aqui. Mande um print da tela."); ok(); }; return; }
+    const im=new Image(); im.onload=async()=>{ await guarda(im,im.naturalWidth,im.naturalHeight); URL.revokeObjectURL(url); ok(); }; im.onerror=()=>{ msg("Não consegui abrir esta imagem."); ok(); }; im.src=url; });
+  $("perspFoto").onchange=async e=>{ const fls=[...(e.target.files||[])]; e.target.value=""; for(const fl of fls) await lerUm(fl); };
+  $("perspFotoTira").onclick=()=>{ if(!confirm("Tirar todas as imagens do render deste projeto?")) return; S.perspImgs=[]; save(); mostra(); render(); msg("Imagens tiradas: volta a perspectiva gerada pelo app."); };
+  window.__perspFotoMostra=()=>{ mostra(); sync(); }; setTimeout(()=>sync(),0); }
 let perspBruto=null;
 function perspAplica(){ if(!perspBruto) return; const u=+$("perspUnit").value, up=$("perspUp").value, mp=([x,y,z])=>up==="y"?[x*u,z*u,y*u]:[x*u,-y*u,z*u];
   const M={vid:(perspBruto.vid||[]).slice(),tris:perspBruto.tris.map(t=>t.map(mp)),cols:(perspBruto.cols||perspBruto.tris.map(()=>null)).map(c=>c||[0.86,0.86,0.84]),lines:(perspBruto.lines||[]).map(l=>l.map(mp))};
@@ -6813,8 +6836,8 @@ function pranchaUnica(folhas,area,TT){
   A.rows.forEach((r,ri)=>{ const noBloco=PZ&&ri>=PZ.i&&ri<=PZ.j, awR=noBloco?aw-PZ.fw-gx:aw, sw=r.its.reduce((a,x)=>a+x.d.w,0), sp=Math.max(gx,(awR-sw)/r.its.length); let x=area.x0+sp/2;
     if(PZ&&ri===PZ.i) PZ.y=y;
     r.its.forEach(q=>{ itens.push({...q,box:[x-sp/2+4,y,q.d.w+sp-8,A.hs[ri]]}); x+=q.d.w+sp; }); y+=A.hs[ri]+gy+ex; });
-  if(PZ&&S.perspImg&&S.perspImg.url){ const F=S.perspImg, ar=F.w/F.h, bw=PZ.fw, bh=PZ.fh-TT, w=Math.min(bw,bh*ar), h=w/ar, D=Dw(1); D.p.push({t:"img",x0:0,y0:0,x1:w,y1:h,url:F.url,iw:F.w,ih:F.h,l:"GERAL"}); const e=extensao(D);
-    itens.push({d:{D,s:1,k:1,e,w,h,gen:()=>D},sem:1,titulo:"PERSPECTIVA",box:[area.x1-bw,PZ.y,bw,PZ.fh]}); PZ={feito:1}; }
+  if(PZ&&perspImgs().length){ const F0=perspImgs()[0], F={...F0,url:F0.url||IMGC[F0.id]}, ar=F.w/F.h, bw=PZ.fw, bh=PZ.fh-TT, w=Math.min(bw,bh*ar), h=w/ar, D=Dw(1); D.p.push({t:"img",x0:0,y0:0,x1:w,y1:h,url:F.url,iw:F.w,ih:F.h,l:"GERAL"}); const e=extensao(D);
+    itens.push({d:{D,s:1,k:1,e,w,h,gen:()=>D},sem:1,titulo:F.t||"PERSPECTIVA",box:[area.x1-bw,PZ.y,bw,PZ.fh]}); PZ={feito:1}; }
   if(PZ&&!PZ.feito){ const bw=PZ.fw, bh=PZ.fh, zg=Z=>k=>desenhoPersp(PZ.v.V,k,Z); let d=null; for(const Z of [3.2,2.6,2.1,1.7,1.4,1.15,1,0.85,0.7,0.55,0.45,0.38,0.32,0.27]){ d=encaixar(zg(Z),bw,bh-TT); if(d.w<=bw&&d.h<=bh-TT) break; }
     itens.push({d,zgen:zg,sem:1,titulo:"PERSPECTIVA "+PZ.v.titulo.replace(/^PERSPECTIVA /,""),box:[area.x1-bw,PZ.y,bw,bh]}); }
   const nomes=["PLANTA BAIXA",fLA&&"LAYOUT",fCO&&"COBERTURA",fCT&&"CORTES",fFA&&"FACHADAS",imp&&"IMPLANTAÇÃO",PZ&&"PERSPECTIVA"].filter(Boolean);
@@ -6942,7 +6965,7 @@ function pranchas(fmt){
 }
 function textosLado(P,lado,fl){
   const {G,Q,TI}=P, pd=num(S.pd);
-  if(lado==="persp") return [{t:"NOTAS",linhas:[PERSP.M&&S.persp.fonte!=="app"?`Perspectivas geradas da maquete ${PERSP.nome}.`:"Perspectivas geradas da planta: paredes, vãos, platibanda e telhado do projeto.","Desenhos ilustrativos, sem escala. Valem as medidas das plantas, cortes e fachadas.","Cores e materiais finais conforme o projeto de fachada e o memorial."]}];
+  if(lado==="persp") return [{t:"NOTAS",linhas:[perspImgs().length?"Imagens renderizadas do modelo 3D do projeto (ilustrativas).":PERSP.M&&S.persp.fonte!=="app"?`Perspectivas geradas da maquete ${PERSP.nome}.`:"Perspectivas geradas da planta: paredes, vãos, platibanda e telhado do projeto.","Desenhos ilustrativos, sem escala. Valem as medidas das plantas, cortes e fachadas.","Cores e materiais finais conforme o projeto de fachada e o memorial."]}];
   if(lado==="escadaArm"){ const A=fl.EC.arm, rows=A.rel.map(r=>[`${r.el} ${r.pos}`,String(r.q),f(r.fi,1),f(r.c),f(r.kg,1)]), por=14, bl=[]; for(let i=0;i<rows.length;i+=por) bl.push({t:i?"RELAÇÃO DO AÇO (CONT.)":"RELAÇÃO DO AÇO",cols:[["POS.",0],["QTD",1],["ø",1],["C (m)",1],["kg",1]],pc:[0.28,0.16,0.16,0.2,0.2],rows:rows.slice(i,i+por)});
     return [...bl,{t:"RESUMO DO AÇO",cols:[["BITOLA",0],["kg (+10%)",1]],rows:[...Object.entries(A.res).sort((a,b)=>a[0]-b[0]).map(([fi,kg])=>[`ø ${f(+fi,1)} mm`,f(kg*1.1,1)]),["TOTAL",f(A.kg*1.1,1)],["CONCRETO",`${f(A.Vc,2)} m³`]]},{t:"NOTAS",linhas:notasEscada(fl.EC).slice(3)}]; }
   if(lado==="escada"){ const E=fl.EC; return [{t:"DIMENSIONAMENTO",cols:[["ITEM",0],["VALOR",1]],rows:[["Altura a vencer",`${f(E.H)} m`],["Lances",`${E.nL} (${E.LA.map(L0=>L0.r).join(" + ")} espelhos)`],["Degraus",String(E.n)],["Espelho",`${f(E.e*100,1)} cm`],["Piso",`${f(E.p*100,0)} cm`],["Blondel (2e + p)",`${f(E.bl*100,1)} cm`],["Largura útil",`${f(E.B)} m`]]},{t:"NOTAS",linhas:notasEscada(E)}]; }
@@ -7793,7 +7816,7 @@ loadForm(); render();
       if(ja!==String(h)){ if(PJ.lista[nome]&&ja){ const ant=pjRenomear(nome,pjNomeLivre(nome+" (versão anterior)",nome)); if(PJ.lista[ant]) PJ.lista[ant].pjManual=true; }   // o arquivo trouxe uma versão nova do projeto: a salva fica guardada com outro nome
         pjUsar(PJ.lista[nome]?pjNome(nome):nome,est); } } }catch(e){} } }
 /* projeto que veio pelo link do botão Instalar (arquivo baixado / página do Claude -> site): #importar=<json gzip em base64url> */
-async function pjPacote(){ const E0=JSON.parse(JSON.stringify(S)); if(E0.perspImg) delete E0.perspImg; const txt=JSON.stringify({nome:PJ.atual,estado:E0});   /* sem a imagem do 3D: link curto (o Safari do iPhone não cola link enorme) */ let by=new TextEncoder().encode(txt), z="j";
+async function pjPacote(){ const E0=JSON.parse(JSON.stringify(S)); if(E0.perspImg) delete E0.perspImg; if(E0.perspImgs) delete E0.perspImgs; const txt=JSON.stringify({nome:PJ.atual,estado:E0});   /* sem a imagem do 3D: link curto (o Safari do iPhone não cola link enorme) */ let by=new TextEncoder().encode(txt), z="j";
   try{ if(window.CompressionStream){ by=new Uint8Array(await new Response(new Blob([by]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer()); z="z"; } }catch(e){ by=new TextEncoder().encode(txt); z="j"; }
   let b=""; for(let i=0;i<by.length;i+=0x8000) b+=String.fromCharCode.apply(null,by.subarray(i,i+0x8000)); return z+btoa(b).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
 (async()=>{ const m=/^#importar=([jz])([A-Za-z0-9_-]+)$/.exec(location.hash||""); if(!m) return;
