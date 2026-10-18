@@ -93,8 +93,8 @@ h3{font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.06em;
 .slide input[type=range]{flex:1;min-width:160px}
 .slide input[type=number]{width:90px}
 .panel{border:1px solid var(--accent);border-radius:4px;padding:12px;margin-top:10px;background:var(--paper)}
-#selPanel,#elePanel,#hidPanel{position:fixed;right:16px;bottom:16px;width:min(440px,calc(100vw - 32px));max-height:70vh;overflow:auto;z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:0}
-@media (max-width:520px){#selPanel,#elePanel,#hidPanel{bottom:62px;max-height:calc(70vh - 46px)}}
+#selPanel,#elePanel,#hidPanel,#apPanel{position:fixed;right:16px;bottom:16px;width:min(440px,calc(100vw - 32px));max-height:70vh;overflow:auto;z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.25);margin:0}
+@media (max-width:520px){#selPanel,#elePanel,#hidPanel,#apPanel{bottom:62px;max-height:calc(70vh - 46px)}}
 #undoBar .btn{background:var(--paper)}
 .panel h4{margin:0 0 8px;font:700 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
 /* SVG */
@@ -394,7 +394,9 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
         <label>Saída da água para a rua (a mais baixa)<select id="ap.rua"><option value="frente">A rua da frente</option></select></label>
         <label>Caimento da rede enterrada (%)<input type="number" step="0.5" min="0.5" max="4" id="ap.i"></label>
       </div>
-      <div class="draw" id="pluvDes"></div><div class="chips" id="pluvChips"></div><div id="pluvAvisos"></div>
+      <p class="cap" style="margin:6px 0"><b>Mudar a rede:</b> toque numa <b>caixa</b> (CA, CI) ou no pé de um <b>condutor</b> (AP) e arraste, ou use Mover; toque em <b>Excluir</b> para tirar (caixa de areia excluída: os condutores dela vão para a caixa de areia mais perto). Toque num <b>lugar vazio</b> para acrescentar caixa. Toque num <b>tubo</b> para trocar o Ø, pôr em 45°, inverter o fluxo, arrastar as bolinhas ou apagar. Os mesmos atalhos do esgoto valem aqui com o mouse em cima desta planta.</p>
+      <div class="row" style="margin:0 0 8px"><button class="btn pri" id="apTuboBt" type="button">Desenhar tubo</button><button class="btn" id="apUnirBt" type="button">Unir tubos (fillet)</button><button class="btn" id="apTrimBt" type="button">Cortar pedaço (trim)</button><button class="btn" id="apApagar" type="button" aria-pressed="false">Apagar itens</button><button class="btn" id="apRestaura" type="button" hidden></button><span class="toast" id="apMsg" role="status"></span></div>
+      <div class="draw" id="pluvDes" style="touch-action:pan-y"></div><div id="apPanel" class="panel" hidden></div><div class="chips" id="pluvChips"></div><div id="pluvAvisos"></div>
       <div class="tbl"><table id="tabPluv"></table></div><ol class="notes" id="pluvNotas" style="margin-top:12px"></ol></div>
     <div class="sheet"><h2>Água fria: entrada, reservatório e isométricos</h2>
       <p class="cap">O hidrômetro fica no muro da frente, junto da rua. Para mudar o lugar dele ou da caixa d'água, toque no <b>hidrômetro (HD)</b> ou no <b>reservatório (RES.)</b> na planta acima e arraste.</p>
@@ -791,7 +793,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.05 · desfazer e refazer", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.06 · águas pluviais editáveis", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -870,7 +872,7 @@ function histMarca(j){ if(UREST) return; if(UPJ!==PJ.atual||ULAST===null){ UNDO=
   if(j===ULAST) return; if(Date.now()-UT>700||!UNDO.length){ UNDO.push(ULAST); if(UNDO.length>80) UNDO.shift(); } REDO=[]; UT=Date.now(); ULAST=j; }
 function histBotoes(){ const a=document.getElementById("btnDesfazer"), b=document.getElementById("btnRefazer"); if(a) a.disabled=!UNDO.length; if(b) b.disabled=!REDO.length; }
 function histVolta(de,para){ if(!de.length) return false; const cur=JSON.stringify(S); para.push(cur); const j=de.pop(); UREST=true;
-  try{ S=estadoDe(JSON.parse(j)); PJ.lista[PJ.atual]=S; if(typeof HIDSEL!=="undefined"){ HIDSEL=null; HIDSELT=null; HIDTUBO=null; HIDUNIR=null; HIDTRIM=false; HIDMOVE=false; } const hp=document.getElementById("hidPanel"); if(hp) hp.hidden=true; save(); loadForm(); render(); } finally { UREST=false; }
+  try{ S=estadoDe(JSON.parse(j)); PJ.lista[PJ.atual]=S; if(typeof HIDSEL!=="undefined"){ HIDSEL=null; HIDSELT=null; HIDTUBO=null; HIDUNIR=null; HIDTRIM=false; HIDMOVE=false; } const hp=document.getElementById("hidPanel"); if(hp) hp.hidden=true; if(typeof APSEL!=="undefined"){ APSEL=null; APSELT=null; APTUBO=null; APUNIR=null; APTRIM=false; APMOVE=false; const ap=document.getElementById("apPanel"); if(ap) ap.hidden=true; } save(); loadForm(); render(); } finally { UREST=false; }
   ULAST=JSON.stringify(S); UT=0; histBotoes(); return true; }
 const desfazer=()=>histVolta(UNDO,REDO), refazer=()=>histVolta(REDO,UNDO);
 function save(){ const j=JSON.stringify(S); histMarca(j); histBotoes(); try{ localStorage.setItem("arq-casa-v1",j); }catch(e){} PJ.lista[PJ.atual]=S; try{ localStorage.setItem(PJ_KEY,JSON.stringify(PJ)); }catch(e){} }
@@ -2855,28 +2857,37 @@ function redePluvial(G,HD0){ if(G.vazio||!HD0||!HD0.anelP) return null;
     W.forEach(w=>{ const dx=w.b[0]-w.a[0], dy=w.b[1]-w.a[1], L2=dx*dx+dy*dy||1, Lw=Math.sqrt(L2), u=Math.max(0.12/Lw,Math.min(1-0.12/Lw,((p[0]-w.a[0])*dx+(p[1]-w.a[1])*dy)/L2)), q=[w.a[0]+dx*u,w.a[1]+dy*u], d0=Math.hypot(p[0]-q[0],p[1]-q[1]);
       let n=[dy/Lw,-dx/Lw]; if(dentro([q[0]+n[0]*0.05,q[1]+n[1]*0.05])) n=[-n[0],-n[1]]; if(!best||d0<best.d) best={d:d0,pe:[q[0]+n[0]*0.08,q[1]+n[1]*0.08]}; });
     if(best) cond.push({nome:`AP${cond.length+1}`,top:p,pe:best.pe,dia:Math.max(75,c.dia),Q:c.Q/c.nC,A:c.A/c.nC,calha:c.nome}); }));
+  // mudanças do profissional: S.apM[chave]={x,y} (mover), S.apDel[chave] (excluir), S.apAdd=[{t:"ca"|"ci",x,y}] (acrescentar)
+  const APM=S.apM||{}, APD=S.apDel||{};
+  for(let j=cond.length-1;j>=0;j--){ const c=cond[j], kk="ap|"+c.nome; c.key=kk; if(APD[kk]){ cond.splice(j,1); continue; } if(APM[kk]){ c.pe=[num(APM[kk].x),num(APM[kk].y)]; c.man=1; } }
   // caixa de areia no anel de caixas (o mesmo do esgoto), uma por condutor; condutores juntos dividem a caixa
   const PER=HD.PER, nt=t=>((t%PER)+PER)%PER, dist=(a,b)=>{ const x=nt(a-b); return Math.min(x,PER-x); }, caixas=[];
   cond.forEach(c=>{ const bo=HD.anelT(c.pe,true), t=nt(bo?bo.t:HD.anelT(c.pe)), o=caixas.find(q=>dist(q.t,t)<0.6); if(o){ o.Q+=c.Q; o.cond.push(c); c.ca=o; } else { const q={t,p:HD.anelP(t),Q:c.Q,cond:[c],tipo:"CA"}; caixas.push(q); c.ca=q; } });
+  caixas.forEach(q=>{ q.key="ca|"+q.cond.map(c=>c.nome).join("+"); const m=APM[q.key]; if(m){ q.t=nt(HD.anelT([num(m.x),num(m.y)])); q.p=HD.anelP(q.t); q.man=1; } });
+  // caixa de areia excluída: o condutor continua ligado na rede no mesmo ponto (junção no tubo), só a caixa sai do desenho e da contagem
+  caixas.forEach(q=>{ if(APD[q.key]) q.del=1; });
+  (S.apAdd||[]).forEach((a,j)=>{ const p0=[num(a.x),num(a.y)], t0=nt(HD.anelT(p0)), pa=HD.anelP(t0), on=Math.hypot(pa[0]-p0[0],pa[1]-p0[1])<1.0;
+    caixas.push(on?{t:t0,p:pa,Q:0,cond:[],tipo:a.t==="ci"?"CI":"CA",add:j+1,key:"add|"+j}:{t:NaN,p:p0,Q:0,cond:[],tipo:a.t==="ci"?"CI":"CA",add:j+1,livre:1,key:"add|"+j}); });
   // caixa final na frente (ou do lado da rua escolhida, para onde o terreno cai), perto das outras e afastada da caixa final do esgoto
   const PSr=S.ap.rua!=="frente"?(HD.PS||[]).find(q=>String(q.i+1)===String(S.ap.rua)):null, mf=q=>[q.a[0]+q.n[0]*q.cal,q.a[1]+q.n[1]*q.cal], dMf=(p,q)=>{ const m=mf(q); return (m[0]-p[0])*q.n[0]+(m[1]-p[1])*q.n[1]; };
   let fr=HD.frente; if(PSr){ let mn=1e9; for(let t=0;t<PER;t+=0.1) mn=Math.min(mn,dMf(HD.anelP(t),PSr)); const ok=[]; for(let t=0;t<PER;t+=0.1) if(dMf(HD.anelP(t),PSr)<=mn+0.4) ok.push(t); if(ok.length) fr=[ok[0],ok[ok.length-1]]; if(ok.length&&ok[ok.length-1]-ok[0]>PER/2){ const sh=ok.map(t=>t<PER/2?t+PER:t).sort((a,b)=>a-b); fr=[sh[0],sh[sh.length-1]]; } }
   const pE=HD.fimE?HD.fimE.p:(HD.fim?HD.fim.p:null); let tf=(fr[0]+fr[1])/2, bc=1e18;
-  for(let t=fr[0]+(fr[1]-fr[0]>0.8?0.3:0);t<=fr[1]-(fr[1]-fr[0]>0.8?0.3:0)+1e-9;t+=0.1){ const q=HD.anelP(t), v=caixas.reduce((s0,c)=>s0+c.Q*dist(c.t,t),0)+(pE&&Math.hypot(q[0]-pE[0],q[1]-pE[1])<1.2?1e9:0); if(v<bc){ bc=v; tf=t; } }
+  for(let t=fr[0]+(fr[1]-fr[0]>0.8?0.3:0);t<=fr[1]-(fr[1]-fr[0]>0.8?0.3:0)+1e-9;t+=0.1){ const q=HD.anelP(t), v=caixas.filter(c=>isFinite(c.t)).reduce((s0,c)=>s0+c.Q*dist(c.t,t),0)+(pE&&Math.hypot(q[0]-pE[0],q[1]-pE[1])<1.2?1e9:0); if(v<bc){ bc=v; tf=t; } }
+  if(APM.fim) tf=nt(HD.anelT([num(APM.fim.x),num(APM.fim.y)]));
   // trechos: de cada caixa até a final pelo lado mais curto do anel; vazões somadas trecho a trecho
-  const tr=caixas.map(c=>{ let dd=nt(tf-c.t), dir=1; if(dd>PER/2){ dd=PER-dd; dir=-1; } return {t0:c.t,dir,L:dd,Q:c.Q}; }).filter(x=>x.L>0.05);
-  const bk=[...new Set([...caixas.map(c=>+nt(c.t).toFixed(3)),+nt(tf).toFixed(3),...HD.anelCn.map(c=>+nt(c).toFixed(3))])].sort((a,b)=>a-b), arcs=[];
+  const tr=caixas.filter(c=>isFinite(c.t)).map(c=>{ let dd=nt(tf-c.t), dir=1; if(dd>PER/2){ dd=PER-dd; dir=-1; } return {t0:c.t,dir,L:dd,Q:c.Q}; }).filter(x=>x.L>0.05);
+  const bk=[...new Set([...caixas.filter(c=>isFinite(c.t)).map(c=>+nt(c.t).toFixed(3)),+nt(tf).toFixed(3),...HD.anelCn.map(c=>+nt(c).toFixed(3))])].sort((a,b)=>a-b), arcs=[];
   bk.forEach((a,j)=>{ const b=j+1<bk.length?bk[j+1]:bk[0]+PER; if(b-a<0.02) return; const m=(a+b)/2, cob=tr.filter(x=>x.dir>0?nt(m-x.t0)<x.L:nt(x.t0-m)<x.L); if(!cob.length) return;
     const Q=cob.reduce((s0,x)=>s0+x.Q,0), dia=[100,125,150,200].find(d=>capHor(d,i)>=Q)||200, pts=[HD.anelP(a),...HD.anelCn.map(c=>[c,c+PER]).flat().filter(c=>c>a+0.02&&c<b-0.02).sort((x,y)=>x-y).map(c=>HD.anelP(c)),HD.anelP(b)];
-    arcs.push({a,b,Q,dia,dir:cob[0].dir,pts,L:b-a}); });
+    arcs.push({a,b,Q,dia,dir:cob[0].dir,pts,L:b-a,key:"apa|"+(+a).toFixed(2)}); });
   // caixa de inspeção nas mudanças de direção (cantos do anel que a rede usa)
-  HD.anelCn.forEach(cn=>{ const c0=nt(cn); if(arcs.some(x=>c0>x.a+0.05&&c0<x.b-0.05||c0+PER>x.a+0.05&&c0+PER<x.b-0.05)&&!caixas.some(q=>dist(q.t,c0)<0.6)&&!(HD.naObra&&HD.naObra(HD.anelP(c0)))) caixas.push({t:c0,p:HD.anelP(c0),Q:0,cond:[],tipo:"CI"}); });
-  let fim=caixas.find(q=>dist(q.t,tf)<0.6); if(!fim){ fim={t:nt(tf),p:HD.anelP(tf),Q:0,cond:[],tipo:"CI"}; caixas.push(fim); } fim.fim=true;
+  HD.anelCn.forEach(cn=>{ const c0=nt(cn); if(APD["ci|"+c0.toFixed(2)]) return; if(arcs.some(x=>c0>x.a+0.05&&c0<x.b-0.05||c0+PER>x.a+0.05&&c0+PER<x.b-0.05)&&!caixas.some(q=>dist(q.t,c0)<0.6)&&!(HD.naObra&&HD.naObra(HD.anelP(c0)))) caixas.push({t:c0,p:HD.anelP(c0),Q:0,cond:[],tipo:"CI",key:"ci|"+c0.toFixed(2),canto:1}); });
+  let fim=caixas.find(q=>!q.del&&isFinite(q.t)&&dist(q.t,tf)<0.6); if(!fim){ fim={t:nt(tf),p:HD.anelP(tf),Q:0,cond:[],tipo:"CI"}; caixas.push(fim); } fim.fim=true; fim.key0=fim.key; fim.keyFim="fim"; if(APM.fim) fim.man=1;
   { const ES0=(HD0.caixas||[]).map(c=>c.p), perto=p=>ES0.some(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<0.60);
-    caixas.forEach(c=>{ if(!perto(c.p)) return; for(const d of [0.3,-0.3,0.6,-0.6,0.9,-0.9,1.2,-1.2]){ const p=HD.anelP(c.t+d); if(!perto(p)&&!(HD.naObra&&HD.naObra(p))){ c.t=nt(c.t+d); c.p=p; break; } } }); }
+    caixas.forEach(c=>{ if(!isFinite(c.t)||c.man||!perto(c.p)) return; for(const d of [0.3,-0.3,0.6,-0.6,0.9,-0.9,1.2,-1.2]){ const p=HD.anelP(c.t+d); if(!perto(p)&&!(HD.naObra&&HD.naObra(p))){ c.t=nt(c.t+d); c.p=p; break; } } }); }
   // profundidade: 0,30 m na caixa mais alta e o caimento até a final
-  const Lmax=Math.max(0,...caixas.map(c=>dist(c.t,tf))), hF=0.30+i/100*Lmax; caixas.forEach(c=>{ c.h=Math.max(0.30,hF-i/100*dist(c.t,tf)); c.lado=c.h>0.60?0.60:0.40; });
-  caixas.sort((a,b)=>dist(b.t,tf)-dist(a.t,tf)).forEach((c,j)=>c.nome=`${c.tipo}${j+1}`);
+  const dT=c=>isFinite(c.t)?dist(c.t,tf):0, Lmax=Math.max(0,...caixas.map(dT)), hF=0.30+i/100*Lmax; caixas.forEach(c=>{ c.h=isFinite(c.t)?Math.max(0.30,hF-i/100*dT(c)):0.30; c.lado=c.h>0.60?0.60:0.40; });
+  caixas.sort((a,b)=>dT(b)-dT(a)).forEach((c,j)=>c.nome=`${c.tipo}${j+1}`);
   // saída: da caixa final, por baixo do passeio, até a sarjeta (boca no meio-fio) ou a galeria
   const v=PSr?PSr.n:HD.ED[HD.iF].n, PSf=PSr||(HD.PS||[]).filter(q=>q.n[0]*v[0]+q.n[1]*v[1]>0.5).sort((x,y)=>Math.abs((fim.p[0]-x.a[0])*x.n[0]+(fim.p[1]-x.a[1])*x.n[1])-Math.abs((fim.p[0]-y.a[0])*y.n[0]+(fim.p[1]-y.a[1])*y.n[1]))[0];
   let dOut=1.5; if(PSf){ const den=v[0]*PSf.n[0]+v[1]*PSf.n[1]; dOut=Math.max(0.4,((PSf.a[0]+PSf.n[0]*PSf.cal-fim.p[0])*PSf.n[0]+(PSf.a[1]+PSf.n[1]*PSf.cal-fim.p[1])*PSf.n[1])/den); }
@@ -2886,13 +2897,18 @@ function redePluvial(G,HD0){ if(G.vazio||!HD0||!HD0.anelP) return null;
   if(destino==="sarjeta"&&dSai>100) aviso.push(`A vazão pede Ø${dSai} na saída: para a sarjeta use 2 tubos de Ø100 (ou canaleta com grelha sob a calçada), conforme a prefeitura.`);
   const tubos={}; arcs.forEach(x=>tubos[x.dia]=(tubos[x.dia]||0)+x.L); tubos[dSai]=(tubos[dSai]||0)+dOut; cond.forEach(c=>tubos[100]=(tubos[100]||0)+Math.hypot(c.pe[0]-c.ca.p[0],c.pe[1]-c.ca.p[1]));
   const hCond=TI.plat?(TI.topoPlat||num(S.pd)):num(S.pd)+Math.max(0,num(S.laje)), Lcond=cond.reduce((s0,c)=>s0+hCond+0.3+Math.hypot(c.top[0]-c.pe[0],c.top[1]-c.pe[1]),0);
-  return {TI,TL:HD.TL,CL,i,cond,caixas,arcs,fim,out,dOut,dSai,destino,rua:PSr?PSr.nome:null,tubos,Lcond,hCond,Qtot,aviso,hF}; }
+  const caixasV=caixas.filter(c=>!c.del); caixasV.forEach((c,j)=>c.nome=`${c.tipo}${j+1}`);
+  return {TI,TL:HD.TL,CL,i,cond,caixas:caixasV,arcs,fim,out,dOut,dSai,destino,rua:PSr?PSr.nome:null,tubos,Lcond,hCond,Qtot,aviso,hF}; }
 const notasPluvial=PV=>PV.livre?[`Telhado sem calha: a água cai livre do beiral. Fazer calçada de proteção de no mínimo 0,60 m em volta da casa, com caimento de 2% para fora, e drenar o quintal para a rua pela superfície.`,`Não ligar água de chuva na rede de esgoto nem na fossa (NBR 10844 / NBR 8160).`]:[
   `Chuva de ${f(PV.CL.I,0)} mm/h; vazão total de ${f(PV.Qtot,0)} L/min em ${PV.cond.length} condutores (${[...new Set(PV.cond.map(c=>"Ø"+c.dia))].join(", ")}), de PVC série R (pluvial), ${PV.TI.plat?"descendo da calha da platibanda":"descendo da calha do beiral"} até a caixa de areia.`,
   `Caixas de areia (CA) no pé dos condutores e caixas de inspeção (CI) nas mudanças de direção, com tampa de concreto ou grelha, fundo 10 cm abaixo da saída para reter a areia; limpar depois das chuvas fortes.`,
   `Rede enterrada em PVC Ø${[...new Set(PV.arcs.map(x=>x.dia))].sort((a,b)=>a-b).join("/")||100} com caimento de ${f(PV.i,1)}% (NBR 10844, tabela 4), profundidade de 0,30 m na caixa mais alta até ${f(PV.hF,2)} m na final.`,
   PV.destino==="galeria"?`Ligação na galeria de águas pluviais da rua, com autorização da prefeitura.`:`Saída para a sarjeta${PV.rua?` da ${PV.rua} (lado para onde o terreno cai)`:""} por baixo da calçada (tubo Ø${PV.dSai}), com boca no meio-fio; não lançar a água sobre o passeio.`,
   `Água de chuva separada do esgoto: não ligar na rede de esgoto nem na fossa séptica (NBR 10844 / NBR 8160).`];
+// tubo de águas pluviais (editável como os de esgoto): S.apTub[chave]={pts,d,del}; tubos à mão em S.apTubM=[{pts,d}] (chave apm|i)
+function tuboAP(D,key,pts,d,o={}){ const l="PLUVIAL", M=o.manual?null:(S.apTub||{})[key]; if(M&&M.del) return; if(M&&M.d) d=+M.d; if(M&&Array.isArray(M.pts)&&M.pts.length>1) pts=M.pts.map(q=>[+q[0],+q[1]]); if(!pts||pts.length<2) return;
+  PL(D,pts,o.w||.45,l); const n=pts.length; setaFluxo(D,pts[n-2],pts[n-1],l); let j=0, lm=-1; for(let q=0;q+1<n;q++){ const L0=Math.hypot(pts[q+1][0]-pts[q][0],pts[q+1][1]-pts[q][1]); if(L0>lm){ lm=L0; j=q; } }
+  if(o.lab!==false) rotuloLinha(D,pts[j],pts[j+1],o.txt||`Ø${d}`,l); (D.tubosAP=D.tubosAP||[]).push({key,pts,d,man:!!M,manual:!!o.manual}); }
 function desenhoPluvial(G,k,PV,legenda=true){ const D=Dw(k), bb=G.bb, l="PLUVIAL";
   if(G.vazio||!PV){ TX(D,0,0,"Sem paredes.",3); return D; }
   G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s0=>L(D,...s0,.5,"PAREDE")); desenhaAberturas(D,G,G.abs); baseExt(D,G,{nv:true});
@@ -2905,16 +2921,15 @@ function desenhoPluvial(G,k,PV,legenda=true){ const D=Dw(k), bb=G.bb, l="PLUVIAL
     if(c.L>1.5) TX(D,m[0]-u[1]*2.2*k,m[1]+u[0]*2.2*k,`${c.nome} ${f(c.b*100,0)}x${f(c.h*100,0)} i=${f(PV.CL.ic*100,1)}%`,1.3,{l,rot:ang}); });
   // condutores e ramais até a caixa
   PV.cond.forEach(c=>{ CI(D,...c.top,Math.max(c.dia/2000,0.9*k),.3,l); if(Math.hypot(c.top[0]-c.pe[0],c.top[1]-c.pe[1])>0.05) L(D,...c.top,...c.pe,.2,l,true);
-    CI(D,...c.pe,0.7*k,.3,l); L(D,...c.pe,...c.ca.p,.35,l); setaFluxo(D,c.pe,c.ca.p,l); TX(D,c.top[0]+1.8*k,c.top[1]-1.8*k,`${c.nome} Ø${c.dia}`,1.3,{a:"s",b:true,l}); });
+    CI(D,...c.pe,0.7*k,.3,l); if(c.ca) tuboAP(D,"apr|"+c.nome,[c.pe,c.ca.p],100,{w:.35,lab:false}); TX(D,c.top[0]+1.8*k,c.top[1]-1.8*k,`${c.nome} Ø${c.dia}`,1.3,{a:"s",b:true,l}); });
   // rede enterrada
-  PV.arcs.forEach(x=>{ const P=x.dir>0?x.pts:[...x.pts].reverse(); PL(D,P,.45,l); let mi=0, mL=0; for(let j=0;j+1<P.length;j++){ const d0=Math.hypot(P[j+1][0]-P[j][0],P[j+1][1]-P[j][1]); if(d0>mL){ mL=d0; mi=j; } }
-    const a=P[mi], b=P[mi+1]; setaFluxo(D,a,b,l); if(mL>2.2){ const dx=b[0]-a[0], dy=b[1]-a[1], dd=Math.hypot(dx,dy); let ang=Math.atan2(dy,dx)*180/Math.PI; if(ang>=90) ang-=180; if(ang<-90) ang+=180;
-      TX(D,(a[0]+b[0])/2-dy/dd*2*k+dx/dd*4*k,(a[1]+b[1])/2+dx/dd*2*k+dy/dd*4*k,`Ø${x.dia} i=${f(PV.i,1)}%`,1.2,{l,rot:ang}); } });
+  PV.arcs.forEach(x=>{ const P=x.dir>0?x.pts:[...x.pts].reverse(); tuboAP(D,x.key,P,x.dia,{txt:`Ø${x.dia} i=${f(PV.i,1)}%`}); });
+  (S.apTubM||[]).forEach((t,j)=>tuboAP(D,"apm|"+j,(t.pts||[]).map(q=>[+q[0],+q[1]]),+t.d||100,{manual:true,txt:`Ø${+t.d||100} i=${f(PV.i,1)}%`}));
   // caixas
   PV.caixas.forEach(c=>{ const h=c.lado/2; PL(D,[[c.p[0]-h,c.p[1]-h],[c.p[0]+h,c.p[1]-h],[c.p[0]+h,c.p[1]+h],[c.p[0]-h,c.p[1]+h],[c.p[0]-h,c.p[1]-h]],.35,l);
     if(c.tipo==="CA") L(D,c.p[0]-h,c.p[1]-h,c.p[0]+h,c.p[1]+h,.15,l); TX(D,c.p[0]+h+1*k,c.p[1]+h+1.8*k,`${c.nome} ${f(c.lado*100,0)}x${f(c.lado*100,0)} h=${f(c.h,2)}`,1.2,{a:"s",b:true,l}); });
   // saída
-  L(D,...PV.fim.p,...PV.out,.45,l); setaFluxo(D,PV.fim.p,PV.out,l);
+  tuboAP(D,"aps",[PV.fim.p,PV.out],PV.dSai,{lab:false});
   { const dx=PV.out[0]-PV.fim.p[0], dy=PV.out[1]-PV.fim.p[1], dd=Math.hypot(dx,dy)||1, n=[-dy/dd,dx/dd]; L(D,PV.out[0]-n[0]*1.2,PV.out[1]-n[1]*1.2,PV.out[0]+n[0]*1.2,PV.out[1]+n[1]*1.2,.5,"LOTE"); TX(D,PV.out[0]+n[0]*1.4,PV.out[1]+n[1]*1.4,"MEIO-FIO",1.2,{a:n[0]<-0.3?"e":n[0]>0.3?"s":"m",l:"COTAS"}); } const vo=(()=>{ const dx=PV.out[0]-PV.fim.p[0], dy=PV.out[1]-PV.fim.p[1], dd=Math.hypot(dx,dy)||1; return [dx/dd,dy/dd]; })(), alO=vo[0]<-0.5?"e":vo[0]>0.5?"s":"m";
   TX(D,PV.out[0]+vo[0]*2.5*k,PV.out[1]+vo[1]*2.5*k+(alO==="m"?(vo[1]>=0?1.2:-1.2)*k:0),PV.destino==="galeria"?`PARA A GALERIA PLUVIAL Ø${PV.dSai}`:`PARA A SARJETA${PV.rua?` DA ${PV.rua.toUpperCase()}`:""} Ø${PV.dSai} (SOB A CALÇADA)`,1.5,{a:alO,b:true,l});
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
@@ -5296,7 +5311,7 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
   { const LM=layoutMoveis(G); $("lay").innerHTML=svgDe(desenhoLayout(G,k,LM),"lay"); LAYLM=LM; layBarra(); layMarca();
     const EL=pontosEletricos(G,LM); $("ele").innerHTML=svgDe(desenhoEletrica(G,k,LM,EL),"ele"); ELV=EL; eleMarca(); eleBotoes();
     const HD=redeHidro(G,LM); fossaSegue(HD); const DH=desenhoHidro(G,k,LM,HD); $("hid").innerHTML=svgDe(DH,"hid"); HDV=HD; HIDTUB=DH.tubos||[]; hidMarca(); hidBotoes();
-    { const PV=redePluvial(G,HD); $("pluvDes").innerHTML=PV?svgDe(desenhoPluvial(G,k,PV)):"";
+    { const PV=redePluvial(G,HD), DP=PV?desenhoPluvial(G,k,PV):null; $("pluvDes").innerHTML=DP?svgDe(DP,"pluvDes"):""; PVV=PV&&!PV.livre?PV:null; APTUB=DP&&DP.tubosAP||[]; apMarca(); apBotoes();
       $("pluvChips").innerHTML=PV&&!PV.livre?[`${PV.cond.length} condutores`,`${PV.caixas.filter(c=>c.tipo==="CA").length} caixas de areia`,`${PV.caixas.filter(c=>c.tipo==="CI").length} caixas de inspeção`,`Vazão ${f(PV.Qtot,0)} L/min`,...Object.entries(PV.tubos).map(([d,m])=>`Tubo Ø${d}: ${f(m*1.1,1)} m`),`Condutores: ${f(PV.Lcond,1)} m`].map(t=>`<span class="chip">${esc(t)}</span>`).join(""):"";
       $("pluvAvisos").innerHTML=PV?PV.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join(""):"";
       $("tabPluv").innerHTML=PV&&!PV.livre?`<tr><th>Caixa</th><th>Tipo</th><th class="n">Lado (cm)</th><th class="n">Profund. (m)</th><th>Recebe</th><th class="n">Vazão (L/min)</th></tr>`+PV.caixas.map(c=>`<tr><td><b>${c.nome}</b>${c.fim?" (final)":""}</td><td>${c.tipo==="CA"?"Caixa de areia":"Caixa de inspeção"}</td><td class="n">${f(c.lado*100,0)}x${f(c.lado*100,0)}</td><td class="n">${f(c.h,2)}</td><td>${c.cond.map(q=>`${q.nome} Ø${q.dia}`).join(", ")||"-"}</td><td class="n">${c.Q?f(c.Q,0):"-"}</td></tr>`).join(""):"";
@@ -5808,6 +5823,110 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidP
     const man=(S.hidTubM||[]).filter(t=>(t.pts||[]).some(q=>{ const fb=fossaBorda([+q[0],+q[1]]); return fb&&Math.hypot(fb[0]-q[0],fb[1]-q[1])<0.05; })).length;
     $("fossaPosMsg").textContent=`Canos da fossa refeitos pela norma: entrada reta no eixo do tanque, curvas de 45° e caixa de inspeção onde precisa virar mais.${ks.length?` (${ks.length} cano${ks.length>1?"s":""} mudado${ks.length>1?"s":""} à mão voltou ao automático.)`:""}${lig?` ${lig} tubo${lig>1?"s":""} desenhado${lig>1?"s":""} à mão com a ponta solta perto da fossa foi${lig>1?"ram":""} ligado${lig>1?"s":""} na parede dela.`:""}`; };
   $("fossaAuto").onclick=()=>{ fossaAuto(); $("fossaPosMsg").textContent="Conjunto de volta ao lugar automático."; }; }
+/* ---------------- Águas pluviais: edição na planta (como o esgoto) ---------------- */
+let PVV=null, APTUB=[], APSEL=null, APSELT=null, APTUBO=null, APDEL=false, APUNIR=null, APTRIM=false, APMOVE=false;
+const apManual=k=>/^apm\|/.test(k);
+function apObj(key,cria){ if(apManual(key)) return (S.apTubM||[])[+key.slice(4)]||null; S.apTub=S.apTub||{}; if(!S.apTub[key]&&cria) S.apTub[key]={}; return S.apTub[key]||null; }
+function apPoePts(key,pts){ const o=apObj(key,true); if(o) o.pts=pts.map(q=>[tr3(q[0]),tr3(q[1])]); }
+const apTubAtual=key=>APTUB.find(t=>t.key===key)||null;
+function apItens(){ const P=PVV; if(!P) return []; const out=[];
+  P.caixas.forEach(c=>{ const nm=(c.tipo==="CA"?"Caixa de areia ":"Caixa de inspeção ")+c.nome+(c.fim?" (final)":""); if(c.add) out.push({id:c.key,tp:"add",j:c.add-1,p:c.p,r:0.4,movel:1,nome:nm+" (acrescentada)"});
+    else if(c.fim) out.push({id:"fim",tp:"cx",p:c.p,r:0.4,movel:1,man:!!(S.apM||{}).fim,nome:nm,fim:1}); else out.push({id:c.key,tp:"cx",p:c.p,r:0.4,movel:!c.canto,man:!!c.man,nome:nm,canto:!!c.canto}); });
+  P.cond.forEach(c=>out.push({id:c.key,tp:"ap",p:c.pe,r:0.3,movel:1,man:!!c.man,nome:`Condutor ${c.nome} Ø${c.dia} (pé)`}));
+  return out; }
+function apAchar(p){ let b=null; apItens().forEach(q=>{ const d=Math.hypot(q.p[0]-p[0],q.p[1]-p[1]); if(d<=Math.max(0.40,q.r)&&(!b||d-q.r<b.d)) b={q,d:d-q.r}; }); return b&&b.q; }
+const apSel=()=>APSEL&&apItens().find(q=>q.id===APSEL);
+function apTubSeg(p){ let b=null; APTUB.forEach(t=>{ for(let j=0;j+1<t.pts.length;j++){ const d=distSegAB(p,t.pts[j],t.pts[j+1]); if(d<0.25&&(!b||d<b.d)) b={t,j,d,p}; } }); return b; }
+function apEncaixa(p,prev,ign){ let b=null; [...apItens().map(q=>q.p),...APTUB.filter(t=>t.key!==ign).flatMap(t=>t.pts)].forEach(q=>{ const d=Math.hypot(q[0]-p[0],q[1]-p[1]); if(d<0.25&&(!b||d<b.d)) b={q,d}; }); if(b) return [b.q[0],b.q[1]];
+  const it=apAchar(p); if(it) return it.p.slice(); return prev&&hidTrava()?snap45(prev,p):p; }
+function apPosItens(){ const m={}; apItens().forEach(q=>m[q.id]=q.p.slice()); return m; }
+function apSegue(antes){ const depois=apPosItens(), ids=Object.keys(antes); let n=0;
+  const mv=pts=>{ let mud=false; const o=pts.map(q=>{ let b=null; ids.forEach(id=>{ const a=antes[id], d=Math.hypot(+q[0]-a[0],+q[1]-a[1]); if(d<0.12&&(!b||d<b.d)) b={id,d}; }); if(!b) return q; const a=antes[b.id], c=depois[b.id]; if(!c||Math.hypot(c[0]-a[0],c[1]-a[1])<0.001) return q; mud=true; return [tr3(+q[0]+c[0]-a[0]),tr3(+q[1]+c[1]-a[1])]; }); return mud?o:null; };
+  (S.apTubM||[]).forEach(t=>{ const r=mv(t.pts||[]); if(r){ t.pts=r; n++; } }); Object.values(S.apTub||{}).forEach(o=>{ if(o&&o.pts&&!o.del){ const r=mv(o.pts); if(r){ o.pts=r; n++; } } }); if(n){ save(); render(); } }
+function apGrava(q,p){ const antes=apPosItens(), x=+p[0].toFixed(3), y=+p[1].toFixed(3);
+  if(q.tp==="add") Object.assign(S.apAdd[q.j],{x,y}); else if(!q.movel){ $("apMsg").textContent="Caixa de canto: fica sozinha onde a rede vira. Para tirar, toque em Excluir."; return; } else { S.apM=S.apM||{}; S.apM[q.id]={x,y}; }
+  save(); render(); apSegue(antes); apPainel(); }
+function apExclui(q){ if(!q) return; if(q.fim){ $("apMsg").textContent="A caixa final não sai: arraste para outro ponto."; return; }
+  if(q.tp==="add") S.apAdd.splice(q.j,1); else { S.apDel=S.apDel||{}; S.apDel[q.id]=1; }
+  APSEL=null; APMOVE=false; save(); render(); $("apPanel").hidden=true; $("apMsg").textContent=`${q.nome.replace(/ \(.*\)$/,"")} excluído(a).`; }
+function apTubExclui(key){ if(apManual(key)) S.apTubM.splice(+key.slice(4),1); else apObj(key,true).del=1; APSELT=null; save(); render(); apPainel(); $("apMsg").textContent="Tubo apagado."; }
+function apBotoes(){ const a=$("apApagar"), r=$("apRestaura"); if(!a) return; a.className=APDEL?"btn dng":"btn"; a.textContent=APDEL?"Apagando: toque nas caixas, condutores e tubos (toque aqui para parar)":"Apagar itens";
+  const n=Object.keys(S.apDel||{}).length+Object.values(S.apTub||{}).filter(o=>o&&o.del).length; r.hidden=!n; r.textContent=`Restaurar excluídos (${n})`;
+  $("apTuboBt").textContent=APTUBO?"Desenhando… (toque aqui para cancelar)":"Desenhar tubo"; $("apTuboBt").className=APTUBO?"btn dng":"btn pri";
+  $("apUnirBt").textContent=APUNIR?"Unindo… (toque aqui para parar)":"Unir tubos (fillet)"; $("apUnirBt").className=APUNIR?"btn dng":"btn";
+  $("apTrimBt").textContent=APTRIM?"Cortando… (toque aqui para parar)":"Cortar pedaço (trim)"; $("apTrimBt").className=APTRIM?"btn dng":"btn"; }
+function apMarca(){ const svg=$("pluvDes")&&$("pluvDes").querySelector("svg"), v=VIEW.pluvDes; if(!svg||!v) return; const m=p=>[v.pad+(p[0]-v.e.x0)/v.k,v.pad+(p[1]-v.e.y0)/v.k];
+  const des=(pts,cor)=>{ if(!pts||!pts.length) return; svg.insertAdjacentHTML("beforeend",`<g><polyline points="${pts.map(q=>m(q).map(x=>x.toFixed(2)).join(",")).join(" ")}" fill="none" stroke="${cor}" stroke-width="1.1" stroke-opacity=".55"/>${pts.map(q=>{ const [x,y]=m(q); return `<circle cx="${x}" cy="${y}" r="1.6" fill="#fff" stroke="${cor}" stroke-width="0.5"/>`; }).join("")}</g>`); };
+  if(APTUBO) des(APTUBO.pts,"#2563eb"); else if(APSELT){ const t=apTubAtual(APSELT); if(t) des(t.pts,"#d33"); }
+  const q=apSel(); if(q){ const [x,y]=m(q.p); svg.insertAdjacentHTML("beforeend",`<circle cx="${x}" cy="${y}" r="${Math.max(3.2,q.r/v.k+1)}" fill="none" stroke="#d33" stroke-width="0.5" stroke-dasharray="1 0.6"/>`); } }
+const DIAM_AP=[75,100,125,150,200];
+function apPainel(msg){ const P=$("apPanel"); if(!P) return;
+  if(APTUBO){ const n=APTUBO.pts.length; P.hidden=false; P.innerHTML=`<h4>Desenhar tubo de águas pluviais</h4><p class="cap" style="margin:0 0 8px">${n?`<b>Toque no próximo ponto.</b> Toque de novo no último ponto ou em Concluir para terminar.`:"<b>Toque no começo do tubo</b> (ex.: pé do condutor)."}</p><div class="row" style="margin:0;flex-wrap:wrap"><select data-nd style="width:auto">${DIAM_AP.map(d=>`<option value="${d}"${d===APTUBO.d?" selected":""}>Ø${d} mm</option>`).join("")}</select>${n>=2?`<button class="btn pri" data-ok>Concluir tubo</button>`:""}${n?`<button class="btn" data-undo>Desfazer ponto</button>`:""}<button class="btn" data-cancel>Cancelar</button></div>`;
+    P.querySelector("[data-nd]").onchange=e=>{ APTUBO.d=+e.target.value; }; const ok=P.querySelector("[data-ok]"); if(ok) ok.onclick=apTuboConclui; const un=P.querySelector("[data-undo]"); if(un) un.onclick=()=>{ APTUBO.pts.pop(); render(); apPainel(); }; P.querySelector("[data-cancel]").onclick=()=>{ APTUBO=null; P.hidden=true; apBotoes(); render(); }; return; }
+  if(APUNIR){ P.hidden=false; P.innerHTML=`<h4>Unir tubos (fillet)</h4><p class="cap" style="margin:0 0 8px">${msg?esc(msg)+" ":""}${APUNIR.A?"<b>Agora toque no segundo tubo</b> (ou numa caixa).":"<b>Toque no primeiro tubo</b>, perto da ponta que vai unir."}</p><div class="row" style="margin:0"><button class="btn" data-fim>Parar de unir</button></div>`; P.querySelector("[data-fim]").onclick=()=>{ APUNIR=null; P.hidden=true; apBotoes(); render(); }; return; }
+  if(APTRIM){ P.hidden=false; P.innerHTML=`<h4>Cortar pedaço (trim)</h4><p class="cap" style="margin:0 0 8px">${msg?esc(msg)+" ":""}<b>Toque no pedaço de tubo que vai sair.</b></p><div class="row" style="margin:0"><button class="btn" data-fim>Parar de cortar</button></div>`; P.querySelector("[data-fim]").onclick=()=>{ APTRIM=false; P.hidden=true; apBotoes(); render(); }; return; }
+  const q=apSel();
+  if(!q&&APSELT){ const t=apTubAtual(APSELT); if(!t){ APSELT=null; P.hidden=true; return; } const key=t.key, man=apManual(key), o=man?null:(S.apTub||{})[key]; P.hidden=false;
+    P.innerHTML=`<h4>Tubo de águas pluviais Ø${t.d} · ${f(tubCompr(t.pts))} m${man?" (desenhado por você)":o?" (mudado por você)":" (automático)"}</h4><p class="cap" style="margin:0 0 8px">Arraste as bolinhas vermelhas para mudar o caminho.</p>
+      <div class="row" style="margin:0;flex-wrap:wrap"><select data-td style="width:auto">${DIAM_AP.map(d=>`<option value="${d}"${d===t.d?" selected":""}>Ø${d} mm</option>`).join("")}</select><button class="btn" data-tinv>Inverter sentido do fluxo</button><button class="btn" data-t45>Pôr em 45°</button><button class="btn" data-tdob>Acrescentar dobra</button><button class="btn dng" data-tdel>Apagar tubo</button>${o?`<button class="btn" data-tauto>Voltar ao automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div>`;
+    P.querySelector("[data-td]").onchange=e=>{ apObj(key,true).d=+e.target.value; save(); render(); apPainel(); };
+    P.querySelector("[data-tinv]").onclick=()=>{ apPoePts(key,t.pts.slice().reverse()); save(); render(); apPainel(); $("apMsg").textContent="Sentido do fluxo invertido."; };
+    P.querySelector("[data-t45]").onclick=()=>{ apPoePts(key,tubAjusta(t.pts)); save(); render(); apPainel(); };
+    P.querySelector("[data-tdob]").onclick=()=>{ const pts=t.pts.slice(); let j=0, lm=-1; for(let i=0;i+1<pts.length;i++){ const l0=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]); if(l0>lm){ lm=l0; j=i; } } pts.splice(j+1,0,[(pts[j][0]+pts[j+1][0])/2,(pts[j][1]+pts[j+1][1])/2]); apPoePts(key,pts); save(); render(); apPainel(); };
+    P.querySelector("[data-tdel]").onclick=()=>apTubExclui(key); const au=P.querySelector("[data-tauto]"); if(au) au.onclick=()=>{ delete S.apTub[key]; save(); render(); apPainel(); };
+    P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; APSELT=null; render(); }; return; }
+  if(!q){ P.hidden=true; return; } P.hidden=false;
+  P.innerHTML=`<h4>${esc(q.nome)}</h4><p class="cap" style="margin:0 0 8px">${!q.movel?"Caixa de canto: fica onde a rede vira.":APMOVE?"<b>Toque no lugar novo</b> na planta.":q.tp==="ap"?"Arraste para mudar o pé do condutor; o ramal até a caixa se refaz.":"Arraste para o lado que quiser: a caixa corre pela rede em volta da obra."}${q.man?" (posição escolhida por você)":""}</p>
+    <div class="row" style="margin:0;flex-wrap:wrap">${q.movel?`<button class="btn pri" data-m>${APMOVE?"Cancelar":"Mover"}</button>`:""}${q.fim?"":`<button class="btn dng" data-del>Excluir</button>`}${q.man?`<button class="btn" data-auto>Voltar ao automático</button>`:""}<button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" id="apMsg2" style="margin:6px 0 0"></p>`;
+  const b=P.querySelector("[data-m]"); if(b) b.onclick=()=>{ APMOVE=!APMOVE; apPainel(); }; const dl=P.querySelector("[data-del]"); if(dl) dl.onclick=()=>apExclui(q);
+  const au=P.querySelector("[data-auto]"); if(au) au.onclick=()=>{ const antes=apPosItens(); delete (S.apM||{})[q.id]; save(); render(); apSegue(antes); apPainel(); };
+  P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; APSEL=null; APMOVE=false; render(); }; }
+function apAcrescenta(p0){ const P=$("apPanel"); P.hidden=false; P.innerHTML=`<h4>Acrescentar aqui</h4><div class="row" style="margin:0;flex-wrap:wrap"><button class="btn" data-add="ca">Caixa de areia</button><button class="btn" data-add="ci">Caixa de inspeção</button><button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" style="margin:6px 0 0">Perto da rede (até 1 m), a caixa entra nela; longe, fica solta para você ligar com tubo.</p>`;
+  P.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ S.apAdd=S.apAdd||[]; S.apAdd.push({t:b.dataset.add,x:+p0[0].toFixed(3),y:+p0[1].toFixed(3)}); APSEL="add|"+(S.apAdd.length-1); save(); render(); apPainel(); }); P.querySelector("[data-close]").onclick=()=>{ P.hidden=true; }; }
+function apTuboConclui(){ const pts=APTUBO.pts, d=APTUBO.d||100; APTUBO=null; if(pts.length>=2){ S.apTubM=S.apTubM||[]; S.apTubM.push({pts:tubAjusta(pts).map(q=>[tr3(q[0]),tr3(q[1])]),d}); APSELT="apm|"+(S.apTubM.length-1); save(); } apBotoes(); render(); apPainel(); }
+function apTuboPonto(p){ const pts=APTUBO.pts, last=pts[pts.length-1], q=apEncaixa(p,last); if(last&&Math.hypot(q[0]-last[0],q[1]-last[1])<0.08){ if(pts.length>=2) apTuboConclui(); return; } pts.push(q); render(); apPainel(); }
+function apUnirToque(p){ if(!APUNIR.A){ const A=apTubSeg(p); if(!A){ apPainel("Nenhum tubo aí."); return; } APUNIR.A=A; APSELT=A.t.key; render(); apPainel(); return; }
+  const A=APUNIR.A, B=apTubSeg(p), q=apAchar(p); let msg;
+  if(B&&B.t.key!==A.t.key){ const pa=A.t.pts, pb=B.t.pts, I=cruzaLinhas(pa[A.j],pa[A.j+1],pb[B.j],pb[B.j+1]);
+    if(!I){ const ea=[0,pa.length-1], eb=[0,pb.length-1]; let m=null; ea.forEach(i=>eb.forEach(k=>{ const d=Math.hypot(pa[i][0]-pb[k][0],pa[i][1]-pb[k][1]); if(!m||d<m.d) m={i,k,d}; })); const na=pa.map(c=>c.slice()); na[m.i]=pb[m.k].slice(); apPoePts(A.t.key,na); msg="Tubos paralelos: ponta ligada na ponta do outro."; }
+    else { apPoePts(A.t.key,tubLeva(pa,A.j,I.X,I.t)); const Lb=Math.hypot(pb[B.j+1][0]-pb[B.j][0],pb[B.j+1][1]-pb[B.j][1])||1; if(I.u<0||I.u>1||Math.min(Math.abs(I.u),Math.abs(1-I.u))*Lb<0.30){ apPoePts(B.t.key,tubLeva(pb,B.j,I.X,I.u)); msg="Tubos unidos no canto."; } else msg="Tubo ligado no outro (ligação em T)."; } }
+  else if(q){ const pa=A.t.pts, i=Math.hypot(pa[0][0]-q.p[0],pa[0][1]-q.p[1])<Math.hypot(pa[pa.length-1][0]-q.p[0],pa[pa.length-1][1]-q.p[1])?0:pa.length-1, na=pa.map(c=>c.slice()); na[i]=q.p.slice(); apPoePts(A.t.key,tubAjusta(na)); msg=`Ponta ligada na ${q.nome.toLowerCase()}.`; }
+  else { apPainel(B?"Esse é o mesmo tubo.":"Nenhum tubo aí."); return; }
+  save(); APUNIR={A:null}; APSELT=null; render(); apPainel(msg); }
+function apTrimToque(p){ const A=apTubSeg(p); if(!A) return "Nenhum tubo aí."; const t=A.t, pts=t.pts, Lt=polS(pts).slice(-1)[0], s0=polProj(pts,p).s, C=[];
+  APTUB.forEach(o=>{ if(o.key===t.key) return; for(let i=0;i+1<pts.length;i++) for(let j=0;j+1<o.pts.length;j++){ const I=cruzaLinhas(pts[i],pts[i+1],o.pts[j],o.pts[j+1]); if(I&&I.t>=-0.01&&I.t<=1.01&&I.u>=-0.01&&I.u<=1.01) C.push(polProj(pts,I.X).s); } });
+  apItens().forEach(q=>{ const pr=polProj(pts,q.p); if(pr.d<0.10) C.push(pr.s); });
+  const Cs=C.filter(c=>c>0.02&&c<Lt-0.02).sort((a,b)=>a-b), antes=Cs.filter(c=>c<s0-0.01).pop(), depois=Cs.find(c=>c>s0+0.01), ped=[];
+  if(antes!=null) ped.push(polSub(pts,0,antes)); if(depois!=null) ped.push(polSub(pts,depois,Lt)); if(!ped.length){ apTubExclui(t.key); return "Tubo cortado de ponta a ponta."; }
+  apPoePts(t.key,ped[0]); if(ped[1]){ S.apTubM=S.apTubM||[]; S.apTubM.push({pts:ped[1].map(q=>[tr3(q[0]),tr3(q[1])]),d:t.d}); } APSELT=null; save(); render(); return "Pedaço cortado."; }
+{ const cont=$("pluvDes"); let arr=null, tA=0;
+  cont.addEventListener("pointerdown",ev=>{ const p=ptVista(ev,"pluvDes"); if(!p||APMOVE||APTUBO||APUNIR||APTRIM) return;
+    if(APSELT&&!APDEL){ const t=apTubAtual(APSELT); if(t){ let vi=-1, dm=0.25; t.pts.forEach((c,i)=>{ const d=Math.hypot(c[0]-p[0],c[1]-p[1]); if(d<dm){ dm=d; vi=i; } }); if(vi>=0){ arr={id:ev.pointerId,tub:t,vi,p0:p,moveu:false,pts:t.pts.map(c=>c.slice())}; try{ cont.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); return; } } }
+    const q=apAchar(p); if(!q) return; APSELT=null; if(APDEL){ ev.preventDefault(); tA=Date.now(); apExclui(q); return; }
+    arr={id:ev.pointerId,q,p0:p,moveu:false}; APSEL=q.id; try{ cont.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); });
+  cont.addEventListener("pointermove",ev=>{ if(!arr||ev.pointerId!==arr.id) return; const p=ptVista(ev,"pluvDes"); if(!p) return; if(!arr.moveu&&Math.hypot(p[0]-arr.p0[0],p[1]-arr.p0[1])<0.06) return; arr.moveu=true;
+    if(arr.tub){ const vi=arr.vi, viz=vi>0?arr.pts[vi-1]:arr.pts[vi+1]; arr.pts[vi]=apEncaixa(p,viz,arr.tub.key); const svg=cont.querySelector("svg"), v=VIEW.pluvDes, m=q=>[v.pad+(q[0]-v.e.x0)/v.k,v.pad+(q[1]-v.e.y0)/v.k]; if(svg){ const o0=svg.querySelector("#apDrag"); if(o0) o0.remove(); svg.insertAdjacentHTML("beforeend",`<polyline id="apDrag" points="${arr.pts.map(q=>m(q).join(",")).join(" ")}" fill="none" stroke="#2563eb" stroke-width="1.1" stroke-opacity=".6"/>`); } return; }
+    if(!arr.q.movel) return; arr.p=[arr.q.p[0]+p[0]-arr.p0[0],arr.q.p[1]+p[1]-arr.p0[1]]; const svg=cont.querySelector("svg"), v=VIEW.pluvDes; let g=svg.querySelector("#apFant"); if(!g){ svg.insertAdjacentHTML("beforeend",`<circle id="apFant" r="${Math.max(2.6,arr.q.r/v.k)}" fill="rgba(220,50,50,.25)" stroke="#d33" stroke-width="0.4"/>`); g=svg.querySelector("#apFant"); }
+    g.setAttribute("cx",v.pad+(arr.p[0]-v.e.x0)/v.k); g.setAttribute("cy",v.pad+(arr.p[1]-v.e.y0)/v.k); });
+  cont.addEventListener("pointerup",ev=>{ if(!arr||ev.pointerId!==arr.id) return; const a=arr; arr=null; if(a.moveu) tA=Date.now();
+    if(a.tub){ if(a.moveu){ apPoePts(a.tub.key,tubAjusta(a.pts)); save(); render(); apPainel(); } return; } if(a.moveu&&a.p){ apGrava(a.q,a.p); return; } render(); apPainel(); });
+  cont.addEventListener("pointercancel",()=>{ arr=null; });
+  cont.addEventListener("click",ev=>{ if(Date.now()-tA<400) return; const p=ptVista(ev,"pluvDes"); if(!p||!PVV) return;
+    if(APTRIM){ const m=apTrimToque(p); apBotoes(); apPainel(m); return; } if(APUNIR){ apUnirToque(p); return; } if(APTUBO){ apTuboPonto(p); return; }
+    if(APMOVE){ const q=apSel(); APMOVE=false; if(q){ apGrava(q,p); return; } apPainel(); return; }
+    if(apAchar(p)) return; { const A=apTubSeg(p); if(A){ if(APDEL){ apTubExclui(A.t.key); return; } APSELT=A.t.key; APSEL=null; render(); apPainel(); return; } }
+    if(APDEL) return; if(APSEL||APSELT){ APSEL=null; APSELT=null; render(); } apAcrescenta(p); });
+  const modo=m=>{ const was={tubo:!!APTUBO,unir:!!APUNIR,trim:APTRIM,del:APDEL}[m]; APTUBO=null; APUNIR=null; APTRIM=false; APDEL=false; APSEL=null; APSELT=null; APMOVE=false; if(!was){ if(m==="tubo") APTUBO={pts:[],d:100}; if(m==="unir") APUNIR={A:null}; if(m==="trim") APTRIM=true; if(m==="del") APDEL=true; } $("apPanel").hidden=true; apBotoes(); render(); apPainel(); };
+  $("apTuboBt").onclick=()=>modo("tubo"); $("apUnirBt").onclick=()=>modo("unir"); $("apTrimBt").onclick=()=>modo("trim"); $("apApagar").onclick=()=>modo("del");
+  $("apRestaura").onclick=()=>{ delete S.apDel; Object.keys(S.apTub||{}).forEach(k=>{ const o=S.apTub[k]; if(o&&o.del){ delete o.del; if(!Object.keys(o).length) delete S.apTub[k]; } }); save(); render(); $("apMsg").textContent="Itens excluídos voltaram."; };
+  // atalhos com o mouse em cima da planta pluvial
+  let sobre=false; cont.addEventListener("pointerenter",()=>sobre=true); cont.addEventListener("pointerleave",()=>sobre=false);
+  document.addEventListener("keydown",ev=>{ if(!sobre||ev.ctrlKey||ev.metaKey||ev.altKey||/INPUT|SELECT|TEXTAREA/.test((document.activeElement||{}).tagName||"")) return; const k=ev.key.length===1?ev.key.toLowerCase():ev.key, faz=f0=>{ ev.preventDefault(); ev.stopImmediatePropagation(); f0(); };
+    if(k==="t"||k==="l") return faz(()=>modo("tubo")); if(k==="f") return faz(()=>modo("unir")); if(k==="x") return faz(()=>modo("trim")); if(k==="e") return faz(()=>modo("del"));
+    if(k==="Enter"&&APTUBO) return faz(()=>{ if(APTUBO.pts.length>=2) apTuboConclui(); }); if(k==="Escape") return faz(()=>{ APTUBO=null; APUNIR=null; APTRIM=false; APDEL=false; APMOVE=false; APSEL=null; APSELT=null; $("apPanel").hidden=true; apBotoes(); render(); });
+    if(k==="Delete"||k==="Backspace"){ if(APSELT&&!APTUBO) return faz(()=>apTubExclui(APSELT)); const q=apSel(); if(q) return faz(()=>apExclui(q)); return; }
+    if(k==="m"){ const q=apSel(); if(q&&q.movel) return faz(()=>{ APMOVE=true; apPainel(); }); return; }
+    if(k==="i"&&APSELT){ const t=apTubAtual(APSELT); if(t) return faz(()=>{ apPoePts(t.key,t.pts.slice().reverse()); save(); render(); apPainel(); }); } }, true); }
 /* ---------------- Unir paredes alinhadas (ex.: chanfro importado em pedaços) ---------------- */
 // o buraco entre duas paredes na mesma linha vira abertura de verdade
 function paresAlinhados(maxGap=6){ const W=S.walls.map((w,i)=>({i,a:[num(w.x1),num(w.y1)],b:[num(w.x2),num(w.y2)],st:w.st})).filter(w=>w.st!=="d"&&Math.hypot(w.b[0]-w.a[0],w.b[1]-w.a[1])>0.05);
