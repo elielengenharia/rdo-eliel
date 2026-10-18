@@ -595,13 +595,13 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
   <section id="tab-esca" hidden>
     <div class="sheet">
       <h2>Detalhe da escada</h2>
-      <p class="cap">Escada dimensionada sozinha: espelho de até 18 cm, piso de 28 a 32 cm e Blondel (2 espelhos + 1 piso entre 63 e 65 cm). Escolha reta, em L ou em U (com patamar), a largura e a altura a vencer (em branco = pé-direito + laje). Sai planta, corte desenvolvido com laje, corrimão e guarda-corpo.</p>
+      <p class="cap">Escada dimensionada sozinha: espelho de até 18 cm, piso de 28 a 32 cm e Blondel (2 espelhos + 1 piso entre 63 e 65 cm). Escolha reta, em L ou em U, quantos lances (1 a 7, com patamar entre eles), a largura e a altura a vencer (em branco = pé-direito + laje). Sai planta, corte desenvolvido, corrimão e guarda-corpo, e a armadura da laje de cada lance com a relação do aço.</p>
       <div class="form"><label>Projeto tem escada<select id="esc.on"><option value="não">Não</option><option value="sim">Sim (sai prancha)</option></select></label>
-        <label>Tipo<select id="esc.tipo"><option value="reta">Reta</option><option value="L">Em L (com patamar)</option><option value="U">Em U (com patamar)</option></select></label>
-        <label>Largura útil (m)<input type="number" step="0.05" min="0.6" id="esc.larg"></label><label>Altura a vencer (m)<input type="text" inputmode="decimal" id="esc.h" placeholder="pé-direito + laje"></label></div>
+        <label>Tipo<select id="esc.tipo"><option value="reta">Reta</option><option value="L">Em L (com patamar)</option><option value="U">Em U (com patamar)</option></select></label><label>Número de lances<select id="esc.lances"><option value="auto">Automático</option><option value="1">1 lance</option><option value="2">2 lances</option><option value="3">3 lances</option><option value="4">4 lances</option><option value="5">5 lances</option><option value="6">6 lances</option><option value="7">7 lances</option></select></label><label>Comprimento do patamar na reta (m)<input type="text" inputmode="decimal" id="esc.pat" placeholder="a largura"></label>
+        <label>Largura útil (m)<input type="number" step="0.05" min="0.6" id="esc.larg"></label><label>Altura a vencer (m)<input type="text" inputmode="decimal" id="esc.h" placeholder="pé-direito + laje"></label><label>Espessura da laje da escada (cm)<input type="text" inputmode="decimal" id="esc.hl" placeholder="automática"></label><label>Concreto fck (MPa)<select id="esc.fck"><option value="25">25</option><option value="20">20</option><option value="30">30</option></select></label><label>Carga de uso (kN/m²)<select id="esc.sc"><option value="2.5">2,5 (residencial)</option><option value="3">3,0 (uso coletivo)</option></select></label></div>
       <div class="chips" id="escChips"></div>
       <div class="grid2" style="margin-top:12px"><div><h3 style="margin-top:0">Planta</h3><div class="draw" id="escPl"></div></div><div><h3 style="margin-top:0">Corte</h3><div class="draw" id="escCo"></div></div></div>
-      <ol class="notes" id="escNotas" style="margin-top:12px"></ol>
+      <h3>Armadura da laje da escada</h3><div class="draw" id="escArm"></div><div class="grid2" style="margin-top:12px"><div><h3 style="margin-top:0">Ferros de cada lance</h3><div class="tbl"><table id="tabEscFer"></table></div></div><div><h3 style="margin-top:0">Resumo do aço</h3><div class="tbl"><table id="tabEscRes"></table></div></div></div><div class="row" style="margin-top:10px"><button class="btn pri" type="button" id="escPdf">Baixar PDF só da escada (detalhe e armadura)</button><span class="toast" id="escPdfMsg" role="status"></span></div><ol class="notes" id="escNotas" style="margin-top:12px"></ol>
     </div>
   </section>
 
@@ -798,7 +798,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.24 · medidas da viga baldrame, cinta e coluninha na estrutura simples", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
+const VERSAO="versão 6.25 · escada com até 7 lances e armadura da laje", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -841,7 +842,7 @@ function defaults(){
   return {
     obra:"Residência térrea 42 m²", cliente:"", cpf:"", local:"", aprov:"sim", orgao:"", emp:"Eliel Engenharia", rtNome:"Eliel Dias Ribeiro", crea:"CREA-PA 1520297858", data:today,
     walls:clone(WALLS42), rooms:clone(ROOMS42), ab:clone(AB42), esp:0.15,
-    pd:2.80, laje:0.10, reb:2.5, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim",div:"amb",fios:"sim",externa:"sim",garLuz:"tub2",cabo:"auto",eEnt:"auto"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45",ext:"auto"}, base:{int:"simples",arm:"tela",veic:"carro",ext:0}, pint:{corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"}, persp:{fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"}, memo:{obs:""}, orc:{bdi:20,cub:"",p:{}}, revp:{int:"latex",ext:"textura"}, fpag:[{},{},{},{}], esc:{on:"não",h:"",larg:0.90,tipo:"reta"}, fossa:{coletor:"auto",on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",ns:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto",lugar:"auto",afF:"auto",dir:"auto",ladoS:"auto"}, agua:{forn:"Saneatins",rede:"particular",rg:1.80,rp:1.10,vol:"auto"}, ap:{beiral:"sim",dest:"sarjeta",i:1,rua:"frente",cond:"ext",rede:"enterrada"}, estr:{fund:"sapata",sapB:"auto",sapH:"",sapForma:"chanfrada",lastro:5,sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"}, estS:{vmax:3.0,prof:1.2,cinta:"sim",vbB:"",vbH:"",ciB:"",ciH:"",plB:"",plH:""}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
+    pd:2.80, laje:0.10, reb:2.5, piso:0.15, viga:{on:"sim",h:0.20}, frente:"baixo", uso:"residencial", ele:{v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim",div:"amb",fios:"sim",externa:"sim",garLuz:"tub2",cabo:"auto",eEnt:"auto"}, forro:{tipo:"pvc",h:""}, pav:{seco:"porc60",mol:"cer45",ext:"auto"}, base:{int:"simples",arm:"tela",veic:"carro",ext:0}, pint:{corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"}, persp:{fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"}, memo:{obs:""}, orc:{bdi:20,cub:"",p:{}}, revp:{int:"latex",ext:"textura"}, fpag:[{},{},{},{}], esc:{on:"não",h:"",larg:0.90,tipo:"reta",lances:"auto",pat:"",hl:"",fck:"25",sc:"2.5"}, fossa:{coletor:"auto",on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",ns:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto",lugar:"auto",afF:"auto",dir:"auto",ladoS:"auto"}, agua:{forn:"Saneatins",rede:"particular",rg:1.80,rp:1.10,vol:"auto"}, ap:{beiral:"sim",dest:"sarjeta",i:1,rua:"frente",cond:"ext",rede:"enterrada"}, estr:{fund:"sapata",sapB:"auto",sapH:"",sapForma:"chanfrada",lastro:5,sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"}, estS:{vmax:3.0,prof:1.2,cinta:"sim",vbB:"",vbH:"",ciB:"",ciH:"",plB:"",plH:""}, banho:{rev:0}, terr:clone(TERR0), tel:clone(TEL0), cA:1.8, cB:4.5, fmt:"A3"
   };
 }
 let S;
@@ -865,7 +866,7 @@ function modeloSalas(){ const o=defaults();
   o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua lateral (o terreno cai para ela)
   return o; }
 // estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
-function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); if(S.emp==="Eliel Ribeiro Engenharia") S.emp="Eliel Engenharia"; /* nome fantasia no carimbo */ S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim",div:"amb",fios:"sim",externa:"sim",garLuz:"tub2",cabo:"auto",eEnt:"auto"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:"",reb:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45",ext:"auto"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta"},o.esc||{}); S.fossa=Object.assign({coletor:"auto",on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",ns:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto",lugar:"auto",afF:"auto",dir:"auto",ladoS:"auto"},o.fossa||{}); S.agua=Object.assign({forn:"Saneatins",rede:"particular",rg:1.80,rp:1.10,vol:"auto"},o.agua||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente",cond:"ext",rede:"enterrada"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sapB:"auto",sapH:"",sapForma:"chanfrada",lastro:5,sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim",vbB:"",vbH:"",ciB:"",ciH:"",plB:"",plH:""},o.estS||{}); S.lims=Array.isArray(o.lims)?o.lims:[]; S.vols=Array.isArray(o.vols)?o.vols:[]; S.est=Object.assign({tCota:1.8,tNome:1.8,tArea:1.4,lPar:0.5,lCota:0.18,marca:"ponto",fLarg:1},o.est||{}); if(!S.est.v){ if(num(S.est.tNome)===2.2) S.est.tNome=1.8; if(num(S.est.tArea)===1.7) S.est.tArea=1.4; S.est.v=2; } /* nome do ambiente menor (pedido do Eliel) */ }catch(e){ S=defaults(); } return S; }
+function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); if(S.emp==="Eliel Ribeiro Engenharia") S.emp="Eliel Engenharia"; /* nome fantasia no carimbo */ S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim",div:"amb",fios:"sim",externa:"sim",garLuz:"tub2",cabo:"auto",eEnt:"auto"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:"",reb:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45",ext:"auto"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta",lances:"auto",pat:"",hl:"",fck:"25",sc:"2.5"},o.esc||{}); S.fossa=Object.assign({coletor:"auto",on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",ns:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto",lugar:"auto",afF:"auto",dir:"auto",ladoS:"auto"},o.fossa||{}); S.agua=Object.assign({forn:"Saneatins",rede:"particular",rg:1.80,rp:1.10,vol:"auto"},o.agua||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente",cond:"ext",rede:"enterrada"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sapB:"auto",sapH:"",sapForma:"chanfrada",lastro:5,sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({vmax:3.0,prof:1.2,cinta:"sim",vbB:"",vbH:"",ciB:"",ciH:"",plB:"",plH:""},o.estS||{}); S.lims=Array.isArray(o.lims)?o.lims:[]; S.vols=Array.isArray(o.vols)?o.vols:[]; S.est=Object.assign({tCota:1.8,tNome:1.8,tArea:1.4,lPar:0.5,lCota:0.18,marca:"ponto",fLarg:1},o.est||{}); if(!S.est.v){ if(num(S.est.tNome)===2.2) S.est.tNome=1.8; if(num(S.est.tArea)===1.7) S.est.tArea=1.4; S.est.v=2; } /* nome do ambiente menor (pedido do Eliel) */ }catch(e){ S=defaults(); } return S; }
 let _o0=null; try{ _o0=JSON.parse(localStorage.getItem("arq-casa-v1")); }catch(e){} S=estadoDe(_o0||{});
 /* vários projetos no mesmo aparelho: a lista fica em arq-projetos-v1; o aberto continua em arq-casa-v1 */
 const PJ_KEY="arq-projetos-v1";
@@ -4740,65 +4741,113 @@ function cotaLivre(D,p,q,txt){ const k=D.k, dx=q[0]-p[0], dy=q[1]-p[1], l=Math.h
   let ang=Math.atan2(dy,dx)*180/Math.PI; if(ang>=90) ang-=180; if(ang<-90) ang+=180; const a=ang*Math.PI/180;
   TX(D,(p[0]+q[0])/2+Math.sin(a)*1.6*k,(p[1]+q[1])/2-Math.cos(a)*1.6*k,txt,1.8,{l:"COTAS",rot:ang,mv:"c"}); }
 /* ---------------- Detalhe da escada ---------------- */
-// dimensionamento pela fórmula de Blondel (63 a 65 cm) com espelho até 18 cm e piso de 28 a 32 cm
+// dimensionamento pela fórmula de Blondel (63 a 65 cm) com espelho até 18 cm e piso de 28 a 32 cm; de 1 a 7 lances (reta, em L ou em U)
+// cada patamar ocupa o lugar de um piso; os degraus são repartidos entre os lances (os primeiros ficam com um a mais quando não dá igual)
 function escada(){ const E=S.esc||{}, H=num(E.h)>0?num(E.h):num(S.pd)+Math.max(0,num(S.laje)), B=Math.max(0.6,num(E.larg)||0.90), tipo=["reta","L","U"].includes(E.tipo)?E.tipo:"reta";
   const n=Math.max(2,Math.ceil(H/0.18-1e-9)), e=H/n; let p=Math.min(0.32,Math.max(0.28,0.64-2*e)); p=Math.round(p*100)/100;
-  const np=n-1;   // pisos (o último degrau chega na laje)
-  let l1=np, l2=0; if(tipo!=="reta"){ l1=Math.ceil((np-1)/2); l2=np-1-l1; }   // o patamar ocupa o lugar de um piso
-  const vc=0.10, comp=tipo==="reta"?np*p:tipo==="L"?l1*p+B:l1*p+B, larg=tipo==="U"?2*B+vc:tipo==="L"?B+l2*p:B;
-  return {H,B,tipo,n,e,p,np,l1,l2,vc,comp,larg,bl:2*e+p,ok:e<=0.18+1e-9&&p>=0.28-1e-9&&2*e+p>=0.63-1e-9&&2*e+p<=0.65+1e-9,patamar:tipo!=="reta"}; }
+  const np=n-1, minL=tipo==="reta"?1:2, nLauto=Math.max(minL,Math.ceil(n/17));   // automático: até uns 17 espelhos por lance (NBR 9077 pede patamar a cada 3,20 m no máximo)
+  let nL=E.lances&&E.lances!=="auto"?Math.round(num(E.lances)):nLauto; nL=Math.max(minL,Math.min(7,nL,Math.floor((np+1)/2)));
+  const T=np-(nL-1), base=Math.floor(T/nL), sobra=T%nL, t=[...Array(nL)].map((_,i)=>base+(i<sobra?1:0));   // pisos de cada lance
+  const vc=0.10, Lp=tipo==="reta"?Math.max(B,num(E.pat)>0?num(E.pat):Math.max(0.90,B)):B;   // patamar: na reta o comprimento escolhido (mínimo a largura), em L e U um quadrado da largura
+  // planta: cada lance é um retângulo c + s·d + u·w (s de 0 até t·p, u de 0 até B); patamares entre eles
+  const LA=[], PA=[]; let c=[0,0], d=[1,0], w=[0,1];
+  const ad=(a,v,s0)=>[a[0]+v[0]*s0,a[1]+v[1]*s0];
+  for(let i=0;i<nL;i++){ const a=t[i]*p; LA.push({c:c.slice(),d:d.slice(),w:w.slice(),a,t:t[i],r:t[i]+1});
+    if(i===nL-1) break;
+    if(tipo==="reta"){ PA.push({c:ad(c,d,a),d:d.slice(),w:w.slice(),l:Lp,lw:B}); c=ad(c,d,a+Lp); }
+    else if(tipo==="L"){ PA.push({c:ad(c,d,a),d:d.slice(),w:w.slice(),l:B,lw:B}); c=ad(ad(c,d,a+B),w,B); const d0=d; d=w.slice(); w=[-d0[0],-d0[1]]; }
+    else { PA.push({c:ad(c,d,a),d:d.slice(),w:w.slice(),l:B,lw:2*B+vc}); c=ad(ad(c,d,a),w,2*B+vc); d=[-d[0],-d[1]]; w=[-w[0],-w[1]]; } }
+  const per=tipo==="U"?2:tipo==="L"?4:99, rects=[...LA.slice(0,Math.min(nL,per)).map(L0=>[L0.c,ad(L0.c,L0.d,L0.a),ad(ad(L0.c,L0.d,L0.a),L0.w,B),ad(L0.c,L0.w,B)]),...PA.slice(0,Math.min(PA.length,per)).map(P0=>[P0.c,ad(P0.c,P0.d,P0.l),ad(ad(P0.c,P0.d,P0.l),P0.w,P0.lw),ad(P0.c,P0.w,P0.lw)])].flat();
+  const xs=rects.map(q=>q[0]), ys=rects.map(q=>q[1]), comp=Math.max(...xs)-Math.min(...xs), larg=Math.max(...ys)-Math.min(...ys);
+  const rLance=LA.map(L0=>L0.r*e), ok=e<=0.18+1e-9&&p>=0.28-1e-9&&2*e+p>=0.63-1e-9&&2*e+p<=0.65+1e-9;
+  const EC={H,B,tipo,n,e,p,np,nL,t,LA,PA,Lp,vc,per,comp,larg,bl:2*e+p,ok,patamar:nL>1,l1:t[0],l2:t[1]||0,rLance,maxR:Math.max(...LA.map(L0=>L0.r))};
+  EC.arm=armEscada(EC); return EC; }
+// armadura da laje da escada (armada no sentido do lance, biapoiada): vão = projeção do lance + metade dos patamares vizinhos
+function armEscada(EC){ const E=S.esc||{}, fck=num(E.fck)||25, q=num(E.sc)>0?num(E.sc):2.5, rev=1.0, cos=EC.p/Math.hypot(EC.p,EC.e), fyd=50/1.15, B=EC.B;
+  const BAR=[[5.0,0.196,0.154],[6.3,0.312,0.245],[8.0,0.503,0.395],[10.0,0.785,0.617],[12.5,1.227,0.963]], ar=fi=>BAR.find(b=>b[0]===fi);
+  const hU=num(E.hl)>=8?num(E.hl)/100:0, pat=i=>i>=0&&i<EC.PA.length?EC.PA[i].l:0, r5=x=>Math.ceil(x*20-1e-9)/20;
+  const L=EC.LA.map((L0,i)=>{ const pa=pat(i-1), pd=pat(i), vao=L0.a+0.5*pa+0.5*pd, h=hU||Math.max(0.10,Math.ceil(vao/28*100-1e-9)/100);
+    const g=25*(h/cos+EC.e/2)+rev, pk=g+q, M=pk*vao*vao/8, Md=1.4*M, dd=h-0.03, kmd=Md/(dd*dd*fck*1000/1.4), As=Math.max(Md*100/(0.9*dd*100*fyd),0.0015*100*h*100);
+    let N1=null; for(const fi of [6.3,8.0,10.0,12.5]){ const s=Math.min(0.20,2*h,Math.floor(ar(fi)[1]/As*100/2.5)*0.025); if(s>=0.10-1e-9){ N1={fi,s}; break; } } if(!N1) N1={fi:12.5,s:0.10};
+    const Asd=Math.max(As/5,0.9), N2=Asd<=0.98?{fi:5.0,s:0.20}:{fi:6.3,s:Math.min(0.20,Math.floor(0.312/Asd*100/2.5)*0.025)};
+    const Lin=Math.hypot(L0.a,L0.t*EC.e), c1=r5(Lin+0.5*pa+0.5*pd+2*Math.max(0.10,10*N1.fi/1000)), n1=Math.floor((B-0.05)/N1.s)+1, c2=r5(B-0.05), n2=Math.ceil((c1-0.10)/N2.s)+1;
+    const N3={fi:Math.max(6.3,N1.fi>8?8.0:6.3),s:0.20}, c3=r5(vao/4+0.30), n3=(Math.floor((B-0.05)/0.20)+1)*2;   // negativo nas duas pontas (encontro com patamar ou laje)
+    const Vc=Lin*B*h+L0.t*EC.p*EC.e/2*B;
+    return {i,vao,h,pk,M,Md,kmd,As,N1,N2,N3,n1,c1,n2,c2,n3,c3,Vc,okK:kmd<=0.25}; });
+  const Vp=EC.PA.reduce((s0,P0,i)=>s0+P0.l*P0.lw*Math.max(L[i].h,L[i+1]?L[i+1].h:0),0), rel=[];
+  L.forEach((l,i)=>{ const nm=`L${i+1}`; rel.push({el:nm,pos:"N1",fi:l.N1.fi,q:l.n1,c:l.c1,obs:`c/${f(l.N1.s*100,1).replace(",0","")} embaixo, no sentido do lance`},{el:nm,pos:"N2",fi:l.N2.fi,q:l.n2,c:l.c2,obs:`c/${f(l.N2.s*100,0)} distribuição (por cima da N1)`},{el:nm,pos:"N3",fi:l.N3.fi,q:l.n3,c:l.c3,obs:"c/20 em cima, nas duas pontas"}); });
+  rel.forEach(r=>{ r.kg=r.q*r.c*ar(r.fi)[2]; });
+  const res={}; rel.forEach(r=>{ res[r.fi]=(res[r.fi]||0)+r.kg; });
+  return {fck,q,L,rel,res,kg:rel.reduce((s0,r)=>s0+r.kg,0),Vc:L.reduce((s0,l)=>s0+l.Vc,0)+Vp,cob:2.5,fol:Math.max(...L.map(l=>l.h))}; }
 function desenhoEscadaPlanta(k,EC){
-  const D=Dw(k), {B,p,l1,l2,tipo,vc}=EC, Lb=(x0,y0,x1,y1,w=.25)=>L(D,x0,y0,x1,y1,w,"ESCADA");
-  const ret=(x0,y0,x1,y1,w=.35)=>PL(D,[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]],w,"ESCADA");
-  let num=1; const rot=(x,y)=>{ TX(D,x,y,String(num++),1.4,{l:"COTAS"}); };
-  // lance 1: sobe da esquerda para a direita (eixo x), largura B em y
-  const a1=l1*p; ret(0,0,a1,B); for(let i=1;i<l1;i++) Lb(i*p,0,i*p,B); for(let i=0;i<l1;i++) rot(i*p+p/2,B*0.78);
-  const path=[[0.15,B/2]];
-  if(tipo==="reta"){ path.push([a1-0.05,B/2]); }
-  else if(tipo==="L"){ ret(a1,0,a1+B,B); TX(D,a1+B/2,B/2,"PATAMAR",1.5,{l:"COTAS"});
-    // lance 2: sobe em y a partir do patamar
-    const a2=l2*p; ret(a1,B,a1+B,B+a2); for(let i=1;i<l2;i++) Lb(a1,B+i*p,a1+B,B+i*p); for(let i=0;i<l2;i++) rot(a1+B*0.78,B+i*p+p/2);
-    path.push([a1+B/2,B/2],[a1+B/2,B+a2-0.05]); }
-  else { ret(a1,0,a1+B,2*B+vc); TX(D,a1+B/2,B+vc/2,"PATAMAR",1.5,{l:"COTAS",rot:-90});
-    // lance 2: volta (de a1 para 0) do outro lado do vão central
-    const y0=B+vc, a2=l2*p; ret(a1-a2,y0,a1,y0+B); for(let i=1;i<l2;i++) Lb(a1-i*p,y0,a1-i*p,y0+B); for(let i=0;i<l2;i++) rot(a1-i*p-p/2,y0+B*0.22);
-    Lb(0,B,a1,B,.18); Lb(a1-a2,y0,a1,y0,.18); path.push([a1+B/2,B/2],[a1+B/2,y0+B/2],[a1-a2+0.05,y0+B/2]); }
-  // linha de subida com seta e "SOBE"
-  PL(D,path,.18,"COTAS"); CI(D,...path[0],0.04,.25,"COTAS"); { const b=path[path.length-1], a=path[path.length-2], dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy)||1, s=1.5*k; PG(D,[b,[b[0]-dx/l*s*1.8-dy/l*s*0.7,b[1]-dy/l*s*1.8+dx/l*s*0.7],[b[0]-dx/l*s*1.8+dy/l*s*0.7,b[1]-dy/l*s*1.8-dx/l*s*0.7]],"COTAS"); }
-  TX(D,0.15,B/2-2.2*k,"SOBE",1.6,{a:"s",b:true,l:"COTAS"});
-  // corrimão (tracejado) nas laterais livres
-  Lb(0,0.05,a1,0.05,.13); if(tipo==="reta") Lb(0,B-0.05,a1,B-0.05,.13);
-  // cotas
-  cotaH(D,0,a1,-6*k,0,f(a1)); cotaV(D,0,B,-6*k,0,f(B));
-  if(tipo==="L"){ cotaH(D,a1,a1+B,-6*k,0,f(B)); cotaV(D,B,B+l2*p,a1+B+6*k,a1+B,f(l2*p)); }
-  if(tipo==="U"){ cotaH(D,a1,a1+B,-6*k,0,f(B)); cotaV(D,B,B+vc,a1+B+6*k,a1+B,f(vc)); cotaV(D,B+vc,2*B+vc,a1+B+6*k,a1+B,f(B)); }
+  const D=Dw(k), {B,p,tipo,LA,PA,per}=EC, Lb=(x0,y0,x1,y1,w=.25)=>L(D,x0,y0,x1,y1,w,"ESCADA"), ad=(a,v,s0)=>[a[0]+v[0]*s0,a[1]+v[1]*s0];
+  const ret=(Q,w=.35)=>PL(D,[...Q,Q[0]],w,"ESCADA"), qd=(c,d,w,a,b)=>[c,ad(c,d,a),ad(ad(c,d,a),w,b),ad(c,w,b)];
+  let num0=1; const nv=Math.min(LA.length,per);
+  // degraus numerados de baixo para cima; lances que repetem por cima (U a partir do 3º, L a partir do 5º) entram na nota
+  LA.forEach((L0,i)=>{ if(i>=nv){ num0+=L0.t; return; } ret(qd(L0.c,L0.d,L0.w,L0.a,B)); for(let j=1;j<L0.t;j++){ const a=ad(L0.c,L0.d,j*p); Lb(...a,...ad(a,L0.w,B)); }
+    for(let j=0;j<L0.t;j++){ const m=ad(ad(L0.c,L0.d,j*p+p/2),L0.w,B*0.80); TX(D,m[0],m[1],String(num0+j),1.4,{l:"COTAS"}); } num0+=L0.t+1;
+    const m0=ad(ad(L0.c,L0.d,L0.a/2),L0.w,B*0.40); TX(D,m0[0],m0[1],`LANCE ${i+1}`,1.5,{b:true,l:"COTAS",rot:Math.abs(L0.d[1])>0.5?-90:0});
+    // cota do lance pelo lado de fora
+    const o=ad(L0.c,L0.w,-0.30-3*k); cotaLivre(D,o,ad(o,L0.d,L0.a),f(L0.a)); });
+  PA.forEach((P0,i)=>{ if(i>=nv-1&&!(tipo==="reta")) return; const Q=qd(P0.c,P0.d,P0.w,P0.l,P0.lw); ret(Q); const m=ad(ad(P0.c,P0.d,P0.l/2),P0.w,P0.lw/2); TX(D,m[0],m[1],`PATAMAR ${i+1}`,1.5,{l:"COTAS",rot:tipo==="U"?-90:0}); });
+  // linha de subida: pelo meio de cada lance; no L dobra no meio do patamar, no U atravessa o patamar
+  const path=[]; LA.slice(0,nv).forEach((L0,i)=>{ path.push(ad(ad(L0.c,L0.w,B/2),L0.d,i?0:0.15),ad(ad(L0.c,L0.w,B/2),L0.d,L0.a)); const P0=PA[i]; if(!P0||i>=nv-1) return;
+    if(tipo==="L") path.push(ad(ad(P0.c,P0.d,B/2),P0.w,B/2)); else if(tipo==="U") path.push(ad(ad(P0.c,P0.d,B/2),P0.w,B/2),ad(ad(P0.c,P0.d,B/2),P0.w,B+EC.vc+B/2)); });
+  const pth=path.filter((q,i)=>i===0||Math.hypot(q[0]-path[i-1][0],q[1]-path[i-1][1])>1e-6); if(pth.length>1){ const b=pth[pth.length-1], a=pth[pth.length-2], dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy)||1, s=1.5*k; pth[pth.length-1]=[b[0]-dx/l*0.05,b[1]-dy/l*0.05];
+    PL(D,pth,.18,"COTAS"); CI(D,...pth[0],0.04,.25,"COTAS"); const bb=pth[pth.length-1]; PG(D,[bb,[bb[0]-dx/l*s*1.8-dy/l*s*0.7,bb[1]-dy/l*s*1.8+dx/l*s*0.7],[bb[0]-dx/l*s*1.8+dy/l*s*0.7,bb[1]-dy/l*s*1.8-dx/l*s*0.7]],"COTAS"); }
+  { const L0=LA[0], q=ad(ad(L0.c,L0.w,B/2-0.12),L0.d,0.15); TX(D,q[0],q[1],"SOBE",1.6,{a:"s",b:true,l:"COTAS"}); }
+  if(LA.length>nv) { const xs=[], ys=[]; LA.slice(0,nv).forEach(L0=>[L0.c,ad(ad(L0.c,L0.d,L0.a),L0.w,B)].forEach(q=>{ xs.push(q[0]); ys.push(q[1]); })); TX(D,(Math.min(...xs)+Math.max(...xs))/2,Math.max(...ys)+0.35+4*k,`LANCES ${nv+1} A ${LA.length} REPETEM ESTA PLANTA POR CIMA (${tipo==="U"?"2":"4"} LANCES POR VOLTA)`,1.4,{l:"COTAS"}); }
+  // largura
+  { const L0=LA[0], o=ad(L0.c,L0.d,-0.30-3*k); cotaLivre(D,o,ad(o,L0.w,B),f(B)); }
   return D; }
-// corte desenvolvido: degraus, laje inclinada, patamar, corrimão e guarda-corpo
+// perfil do corte desenvolvido (lances em sequência, patamares no meio): degraus por cima, laje por baixo
+function perfilEscada(EC){ const {e,p,LA,PA,H}=EC, ar=EC.arm, tl=Math.max(0.08,num(S.laje)||0.10), pts=[[0,0]], ls=[]; let x=0, z=0;
+  LA.forEach((L0,i)=>{ const x0=x, z0=z, h=ar.L[i].h, cos=p/Math.hypot(p,e); for(let j=0;j<L0.t;j++){ z+=e; pts.push([x,z]); x+=p; pts.push([x,z]); } z+=e; pts.push([x,z]);
+    const lp=i<PA.length?PA[i].l:0.6, xe=x; ls.push({x0,z0,xe,ze:z,h,cos,lp,ult:i===LA.length-1}); if(i<PA.length){ x+=lp; pts.push([x,z]); } });
+  const xf=x; pts.push([xf+0.6,H]);
+  // fundo: inclinado paralelo aos degraus (h na perpendicular), horizontal no patamar e na laje de cima; começa no chão
+  const fundo=[]; ls.forEach((s0,i)=>{ const sl=e/p, off=s0.h/s0.cos, zi=xx=>s0.z0+(xx-s0.x0)*sl-off, hb=s0.ult?tl:s0.h, zTopo=s0.ze-hb, xk=s0.x0+(zTopo+off-s0.z0)/sl;
+    if(i===0){ const xg=Math.max(0,s0.x0+(off)/sl); fundo.push([xg,0]); } else { const hp=ls[i-1].h, zb=s0.z0-hp, xj=s0.x0+(zb+off-s0.z0)/sl; fundo.push([Math.min(xj,s0.x0+0.3),zb]); }
+    fundo.push([xk,zTopo]); if(!s0.ult) fundo.push([s0.xe+s0.lp,zTopo]); else fundo.push([xf+0.6,H-tl]); });
+  return {pts,fundo,ls,xf,tl}; }
 function desenhoEscadaCorte(k,EC){
-  const D=Dw(k), {e,p,n,l1,l2,patamar,B,H}=EC, Y=z=>-z, tl=0.10;
-  const pts=[[0,Y(0)]]; let x=0, z=0;
-  for(let i=0;i<l1;i++){ z+=e; pts.push([x,Y(z)]); x+=p; pts.push([x,Y(z)]); }
-  let xp0=x; if(patamar){ z+=e; pts.push([x,Y(z)]); x+=B; pts.push([x,Y(z)]); for(let i=0;i<l2;i++){ z+=e; pts.push([x,Y(z)]); x+=p; pts.push([x,Y(z)]); } }
-  z+=e; pts.push([x,Y(z)]); const xf=x;
-  // laje: face de baixo acompanhando os degraus (e = 10 cm), patamar e chegada na laje do piso de cima
-  const zp=l1*e+e, fundo=patamar?[[0,0],[xp0,zp-tl],[xp0+B,zp-tl],[xf,H-tl]]:[[0,0],[xf,H-tl]], zb=xx=>{ for(let i=0;i+1<fundo.length;i++){ const [a0,b0]=fundo[i],[a1,b1]=fundo[i+1]; if(xx<=a1+1e-9) return b0+(b1-b0)*(xx-a0)/((a1-a0)||1); } return H-tl; };
-  const poly=[...pts,[xf+0.6,Y(H)],[xf+0.6,Y(H-tl)],...fundo.slice().reverse().map(([a0,b0])=>[a0,Y(b0)])];
+  const D=Dw(k), {e,p,n,H,LA}=EC, Y=z=>-z, PF=perfilEscada(EC), {pts,fundo,ls,xf,tl}=PF;
+  const poly=[...pts.map(([a,b])=>[a,Y(b)]),[xf+0.6,Y(H-tl)],...fundo.slice().reverse().map(([a,b])=>[a,Y(b)])];
   PG(D,poly,"CONCRETOS"); PL(D,[...poly,poly[0]],.35,"ESCADA");
   L(D,-0.5,Y(0),xf+0.8,Y(0),.45,"TERRENO");
-  // corrimão a 0,92 m e guarda-corpo a 1,10 m no topo
-  PL(D,[[p/2,Y(e+0.92)],[xp0-p/2,Y(l1*e+0.92)]],.25,"ESCADA");
-  if(patamar) PL(D,[[xp0+B+p/2,Y(l1*e+2*e+0.92)],[xf-p/2,Y(H+0.92-e)]],.25,"ESCADA");
+  // corrimão a 0,92 m em cada lance e guarda-corpo de 1,10 m no topo
+  ls.forEach((s0,i)=>{ const t0=LA[i].t; if(t0<1) return; const a=[s0.x0+p/2,s0.z0+e+0.92], b=[s0.x0+(t0-0.5)*p,s0.z0+t0*e+0.92]; PL(D,[[a[0],Y(a[1])],[b[0],Y(b[1])]],.25,"ESCADA"); L(D,a[0],Y(a[1]-0.92),a[0],Y(a[1]),.13,"ESCADA"); L(D,b[0],Y(b[1]-0.92),b[0],Y(b[1]),.13,"ESCADA");
+    TX(D,(s0.x0+s0.xe)/2,Y((s0.z0+s0.ze)/2)+5*k,`LANCE ${i+1}: ${LA[i].r} x ${f(e*100,1)} cm`,1.4,{l:"COTAS",rot:-Math.atan2(e,p)*180/Math.PI}); });
   L(D,xf,Y(H),xf,Y(H+1.10),.25,"ESCADA"); L(D,xf,Y(H+1.10),xf+0.6,Y(H+1.10),.25,"ESCADA");
-  [[p/2,e],[xp0-p/2,l1*e]].forEach(([a,b])=>L(D,a,Y(b),a,Y(b+0.92),.13,"ESCADA"));
-  // cotas
-  cotaV(D,Y(H),Y(0),-1.2*e-8*k,-0.3,`${f(H)} (${n} x ${f(e*100,1)} cm)`); cotaH(D,0,p,Y(0)+6*k,Y(0),f(p)); cotaV(D,Y(e),Y(0),xf+1.2,xf+0.8,f(e));
+  ls.forEach((s0,i)=>{ if(i>0) cotaV(D,Y(s0.z0),Y(0),xf+1.2+0.55*i,xf+0.8,f(s0.z0)); });
+  cotaV(D,Y(H),Y(0),-0.6-8*k,-0.3,`${f(H)} (${n} x ${f(e*100,1)} cm)`); cotaH(D,0,p,Y(0)+6*k,Y(0),f(p)); cotaV(D,Y(e),Y(0),-0.15-3*k,0,f(e));
   TX(D,p*1.5,Y(e+0.92)-2.2*k,"CORRIMÃO h = 0,92 m",1.5,{a:"s",l:"COTAS"}); TX(D,xf+0.3,Y(H+1.10)-2.2*k,"GUARDA-CORPO h = 1,10 m",1.5,{l:"COTAS"});
-  TX(D,xf*0.5,Y(zb(xf*0.5))+4*k,"LAJE DE CONCRETO ARMADO e = 10 cm",1.5,{l:"COTAS"});
+  TX(D,ls[0].x0+(ls[0].xe-ls[0].x0)*0.55,Y(ls[0].z0+(ls[0].ze-ls[0].z0)*0.55)+9*k,`LAJE DE CONCRETO ARMADO e = ${f(EC.arm.L[0].h*100,0)} cm`,1.5,{l:"COTAS",rot:-Math.atan2(e,p)*180/Math.PI});
   return D; }
-const notasEscada=EC=>[`${EC.n} degraus: espelho ${f(EC.e*100,1)} cm e piso ${f(EC.p*100,0)} cm; Blondel 2e + p = ${f(EC.bl*100,1)} cm ${EC.ok?"(dentro de 63 a 65 cm)":"(fora de 63 a 65 cm: ajustar)"}.`,
-  `Largura útil ${f(EC.B)} m; ${EC.tipo==="reta"?"lance reto":EC.tipo==="L"?"em L com patamar":"em U com patamar"} vencendo ${f(EC.H)} m.`,
+// corte com a armadura: N1 embaixo seguindo o fundo (de meio patamar a meio patamar), N2 em bolinhas, N3 em cima nas pontas
+function desenhoEscadaArm(k,EC){
+  const D=Dw(k), {e,p,H}=EC, Y=z=>-z, PF=perfilEscada(EC), {pts,fundo,ls,xf,tl}=PF, A=EC.arm, cb=0.03;
+  const poly=[...pts.map(([a,b])=>[a,Y(b)]),[xf+0.6,Y(H-tl)],...fundo.slice().reverse().map(([a,b])=>[a,Y(b)])];
+  PG(D,poly,"FUNDO"); PL(D,[...poly,poly[0]],.35,"CONCRETO"); L(D,-0.5,Y(0),xf+0.8,Y(0),.45,"TERRENO");
+  const zF=xx=>{ for(let i=0;i+1<fundo.length;i++){ const [a0,b0]=fundo[i],[a1,b1]=fundo[i+1]; if(xx>=a0-1e-9&&xx<=a1+1e-9) return b0+(b1-b0)*(xx-a0)/((a1-a0)||1); } return xx<fundo[0][0]?fundo[0][1]:fundo[fundo.length-1][1]; };
+  ls.forEach((s0,i)=>{ const l=A.L[i], pa=i>0?ls[i-1].lp:0, xa=s0.x0-(i>0?pa/2:0)+0.05, xb=Math.min(s0.xe+(s0.ult?0.5:s0.lp/2),xf+0.55), N=40, ln=[];
+    for(let m=0;m<=N;m++){ const xx=xa+(xb-xa)*m/N; ln.push([xx,Y(zF(xx)+cb)]); } PL(D,ln,.45,"VIGA");
+    for(let xx=xa+0.1;xx<xb-0.05;xx+=Math.max(0.2,(xb-xa)/14)) CI(D,xx,Y(zF(xx)+cb+0.012),0.012,.3,"VIGA");
+    // negativos nas pontas (em cima, perto da face de cima da laje)
+    const top=xx=>zF(xx)+l.h-cb; [[s0.x0-0.05,s0.x0+l.c3-0.3],[s0.xe-l.c3+0.3,s0.xe+0.25]].forEach(([u0,u1])=>{ const q=[]; for(let m=0;m<=8;m++){ const xx=u0+(u1-u0)*m/8; q.push([xx,Y(Math.min(top(xx),zF(xx)+l.h-cb))]); } PL(D,q,.35,"VIGA"); });
+    const mx=(s0.x0+s0.xe)/2, my=zF(mx), an=-Math.atan2(e,p)*180/Math.PI;
+    TX(D,mx,Y(my)+4*k,`N1 ${l.n1} ø${f(l.N1.fi,1)} c/${f(l.N1.s*100,1).replace(",0","")} C=${f(l.c1*100,0)}`,1.35,{l:"COTAS",rot:an});
+    TX(D,mx,Y(my)+7.5*k,`N2 ${l.n2} ø${f(l.N2.fi,1)} c/${f(l.N2.s*100,0)} C=${f(l.c2*100,0)}`,1.35,{l:"COTAS",rot:an});
+    TX(D,s0.x0+0.25,Y(zF(s0.x0+0.25)+l.h)-2.5*k,`N3 ø${f(l.N3.fi,1)} c/20 C=${f(l.c3*100,0)}`,1.3,{a:"s",l:"COTAS",rot:an});
+    TX(D,mx,Y(my+l.h/2+EC.e),`L${i+1} · h = ${f(l.h*100,0)} cm`,1.5,{b:true,l:"COTAS",rot:an}); });
+  return D; }
+const notasEscada=EC=>{ const A=EC.arm, tL=EC.tipo==="reta"?"reta":EC.tipo==="L"?"em L":"em U"; return [`${EC.n} degraus: espelho ${f(EC.e*100,1)} cm e piso ${f(EC.p*100,0)} cm; Blondel 2e + p = ${f(EC.bl*100,1)} cm ${EC.ok?"(dentro de 63 a 65 cm)":"(fora de 63 a 65 cm: ajustar)"}.`,
+  `Largura útil ${f(EC.B)} m; escada ${tL} com ${EC.nL} lance${EC.nL>1?"s":""} (${EC.LA.map((L0,i)=>`L${i+1}: ${L0.r} espelhos`).join(", ")})${EC.nL>1?` e ${EC.nL-1} patamar${EC.nL>2?"es":""}`:""}, vencendo ${f(EC.H)} m.${EC.maxR*EC.e>3.20?` Lance com mais de 3,20 m de altura: ponha mais lances.`:""}`,
   `Corrimão a 0,92 m (e 0,70 m se houver uso infantil); guarda-corpo de 1,10 m nas bordas livres e no topo.`,
-  `Estrutura em concreto armado conforme projeto estrutural; piso com bocel e faixa antiderrapante.`];
+  `Laje armada no sentido do lance, apoiada nas pontas (laje do piso, patamar ou viga): concreto fck ${A.fck} MPa, aço CA-50 (ø 5,0 CA-60), cobrimento ${f(A.cob,1)} cm; carga de uso ${f(A.q,1)} kN/m² + revestimento 1,0 kN/m².`,
+  `Na dobra entre o lance e o patamar os ferros de baixo (N1) se cruzam e seguem retos até a face de cima (não dobrar o ferro na quina de dentro, ele arranca o concreto).`,
+  `Escorar até 21 dias; degraus concretados junto com a laje; piso com bocel e faixa antiderrapante.`,
+  ...A.L.filter(l=>!l.okK).map(l=>`L${l.i+1}: laje fina para o vão de ${f(l.vao)} m; aumente a espessura.`)]; };
 
 /* ---------------- Planta de locação da obra ---------------- */
 // eixos das paredes, medidos a partir do ponto P0 (canto do alinhamento com a divisa esquerda)
@@ -5601,7 +5650,10 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
       $("pintNotas").innerHTML=notasPintura(PQ).map(t0=>`<li>${esc(t0)}</li>`).join(""); } }
   if(typeof renderPersp==="function"&&$("tab-persp")&&!$("tab-persp").hidden) renderPersp();
   { const EC=escada(); $("escPl").innerHTML=svgDe(desenhoEscadaPlanta(0.03,EC)); $("escCo").innerHTML=svgDe(desenhoEscadaCorte(0.03,EC));
-    $("escChips").innerHTML=[`${EC.n} degraus`,`Espelho ${f(EC.e*100,1)} cm`,`Piso ${f(EC.p*100,0)} cm`,`Blondel ${f(EC.bl*100,1)} cm${EC.ok?" ✓":" ⚠"}`,`Ocupa ${f(EC.comp)} x ${f(EC.larg)} m`].map(t=>`<span class="chip">${t}</span>`).join("");
+    $("escChips").innerHTML=[`${EC.n} degraus`,`Espelho ${f(EC.e*100,1)} cm`,`Piso ${f(EC.p*100,0)} cm`,`Blondel ${f(EC.bl*100,1)} cm${EC.ok?" ✓":" ⚠"}`,`${EC.nL} lance${EC.nL>1?"s":""}: ${EC.LA.map(L0=>L0.r).join(" + ")} espelhos`,`Ocupa ${f(EC.comp)} x ${f(EC.larg)} m`,`Laje ${[...new Set(EC.arm.L.map(l=>f(l.h*100,0)))].join("/")} cm`,`Aço ${f(EC.arm.kg,0)} kg`,`Concreto ${f(EC.arm.Vc,2)} m³`].map(t=>`<span class="chip">${t}</span>`).join("");
+    $("escArm").innerHTML=svgDe(desenhoEscadaArm(0.03,EC));
+    $("tabEscFer").innerHTML=`<tr><th>Lance</th><th>Pos.</th><th class="n">Qtd</th><th class="n">ø (mm)</th><th class="n">Compr. (m)</th><th class="n">kg</th><th>Obs.</th></tr>`+EC.arm.rel.map(r=>`<tr><td><b>${r.el}</b></td><td>${r.pos}</td><td class="n">${r.q}</td><td class="n">${f(r.fi,1)}</td><td class="n">${f(r.c)}</td><td class="n">${f(r.kg,1)}</td><td style="color:var(--muted);font-size:12px">${esc(r.obs)}</td></tr>`).join("");
+    $("tabEscRes").innerHTML=`<tr><th>Bitola</th><th class="n">kg</th><th class="n">Barras de 12 m</th></tr>`+Object.entries(EC.arm.res).sort((a,b)=>a[0]-b[0]).map(([fi,kg])=>`<tr><td>ø ${f(+fi,1)} mm</td><td class="n">${f(kg*1.1,1)}</td><td class="n">${Math.ceil(kg*1.1/(12*({5:0.154,6.3:0.245,8:0.395,10:0.617,12.5:0.963}[+fi]||0.4)))}</td></tr>`).join("")+`<tr class="tot"><td>Total (com 10%)</td><td class="n">${f(EC.arm.kg*1.1,1)}</td><td></td></tr>`;
     $("escNotas").innerHTML=notasEscada(EC).map(t=>`<li>${esc(t)}</li>`).join(""); }
   if(!$("tab-orc").hidden) renderOrc();
   window.__R={G,Q,TI};
@@ -6252,8 +6304,8 @@ function painelAmbiente(C,x,y){
 const path=id=>id.split(".");
 function getv(id){const p=path(id);return p.length>1?S[p[0]][p[1]]:S[p[0]];}
 function setv(id,v){const p=path(id);if(p.length>1)S[p[0]][p[1]]=v;else S[p[0]]=v;}
-const FIELDS=["forro.reb","cpf","tel.vigMat","tel.hVig","tel.hCaib","est.fLarg","cAcost","cBcost","cAamb2","cBamb2","est.tCota","est.tNome","est.tArea","est.lPar","est.lCota","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.coletor","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.rufo","tel.rufoH","tel.rufoAv","tel.rufoCor","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.vbB","estS.vbH","estS.ciB","estS.ciH","estS.plB","estS.plH","estS.prof","estS.cinta","estr.fund","estr.sapB","estr.sapH","estr.sapForma","estr.lastro","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","fossa.ns","agua.forn","agua.rede","agua.vol","agua.rg","agua.rp","ele.div","ele.fios","ele.externa","ele.garLuz","ele.cabo","ele.eEnt","ap.cond","ap.rede","fossa.lugar","fossa.afF","fossa.dir","fossa.ladoS","fossa.cW","fossa.cLt","fossa.cH","fossa.cLs","fossa.cHs","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","pav.ext","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
-const TEXTOS=["tel.rufo","tel.rufoCor","cpf","tel.vigMat","cAcost","cBcost","cAamb2","cBamb2","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.coletor","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","estr.sapB","estr.sapH","estr.sapForma","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","fossa.ns","agua.forn","agua.rede","agua.vol","ele.div","ele.fios","ele.externa","ele.garLuz","ele.cabo","ele.eEnt","ap.cond","ap.rede","fossa.lugar","fossa.afF","fossa.dir","fossa.ladoS","fossa.cW","fossa.cLt","fossa.cH","fossa.cLs","fossa.cHs","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","pav.ext","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
+const FIELDS=["forro.reb","cpf","tel.vigMat","tel.hVig","tel.hCaib","est.fLarg","cAcost","cBcost","cAamb2","cBamb2","est.tCota","est.tNome","est.tArea","est.lPar","est.lCota","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.coletor","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.giro","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ap.i","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","base.ext","tel.rufo","tel.rufoH","tel.rufoAv","tel.rufoCor","tel.chuva","tel.icalha","tel.cbMin","tel.chMin","tel.hPlat","reb","estr.sis","estS.vmax","estS.vbB","estS.vbH","estS.ciB","estS.ciH","estS.plB","estS.plH","estS.prof","estS.cinta","estr.fund","estr.sapB","estr.sapH","estr.sapForma","estr.lastro","estr.sig","estr.qe","estr.prof","estr.vmax","estr.fck","fossa.local","fossa.on","fossa.lim","fossa.ci","fossa.tanque","fossa.filtro","fossa.ds","fossa.ns","agua.forn","agua.rede","agua.vol","agua.rg","agua.rp","ele.div","ele.fios","ele.externa","ele.garLuz","ele.cabo","ele.eEnt","ap.cond","ap.rede","fossa.lugar","fossa.afF","fossa.dir","fossa.ladoS","fossa.cW","fossa.cLt","fossa.cH","fossa.cLs","fossa.cHs","terr.ruaPassa","terr.alinha","terr.encA","terr.recA","terr.encB","terr.recB","terr.forma","terr.areaMapa","terr.ladoRef","terr.dEsq","terr.ruaE","terr.ruaD","terr.ruaF","terr.qFrente","terr.qProf","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.larg","esc.tipo","esc.lances","esc.pat","esc.hl","esc.fck","esc.sc","revp.int","revp.ext","orc.bdi","orc.cub","memo.obs","pav.seco","pav.mol","pav.ext","forro.tipo","forro.h","ele.v","ele.ar","ele.mob","ele.rede","ele.ent","ele.qdSala","uso","banho.rev","terr.testada","terr.prof","terr.recFrente","terr.recEsq","terr.calcada","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","terr.norte","frente","obra","cliente","local","emp","rtNome","crea","data","esp","pd","laje","piso","viga.on","viga.h","tel.dir","tel.telha","tel.inc","tel.beiral","tel.plat"];
+const TEXTOS=["tel.rufo","tel.rufoCor","cpf","tel.vigMat","cAcost","cBcost","cAamb2","cBamb2","est.marca","aprov","orgao","tel.estr","tel.lt","tel.ev","fossa.coletor","fossa.dt","fossa.wt","fossa.gap","fossa.afast","persp.estilo","persp.cPar","persp.cPlat","persp.cEsq","persp.vidro","persp.fonte","persp.alt","persp.pdf","ap.beiral","ap.dest","ap.rua","ele.rede","ele.qdSala","pint.corInt","pint.corTeto","pint.corFach","pint.esqMad","pint.corEsq","base.int","base.veic","base.arm","estr.sis","estS.cinta","estr.fund","estr.sapB","estr.sapH","estr.sapForma","fossa.local","fossa.on","fossa.tanque","fossa.filtro","fossa.ds","fossa.ns","agua.forn","agua.rede","agua.vol","ele.div","ele.fios","ele.externa","ele.garLuz","ele.cabo","ele.eEnt","ap.cond","ap.rede","fossa.lugar","fossa.afF","fossa.dir","fossa.ladoS","fossa.cW","fossa.cLt","fossa.cH","fossa.cLs","fossa.cHs","terr.forma","terr.ladoRef","terr.ruaE","terr.ruaD","terr.ruaF","terr.esquina","terr.rua2","terr.chanfro","esc.on","esc.h","esc.tipo","esc.lances","esc.pat","esc.hl","esc.fck","esc.sc","revp.int","revp.ext","orc.cub","memo.obs","pav.seco","pav.mol","pav.ext","forro.tipo","forro.h","ele.ar","ele.mob","uso","terr.rua","terr.lote","terr.quadra","terr.confEsq","terr.confDir","terr.confFundo","frente","obra","cliente","local","emp","rtNome","crea","data","viga.on","tel.dir","tel.telha","tel.plat"];
 function renderLados(G){ const t=S.terr, pol=t.forma==="pol"; $("ladosBox").hidden=!pol; $("quadraForm").hidden=pol; document.querySelectorAll("[data-soret]").forEach(e=>e.hidden=pol); $("quadraCap").textContent=pol?"Lote desenhado pelas medidas do mapa, com as ruas nos lados marcados como rua e o nome dos vizinhos nos outros lados.":"Mostra a quadra inteira com as quatro ruas, o lote hachurado e a distância dele até a esquina mais próxima, medida pelo alinhamento da frente. Em terreno de esquina a distância é zero. Deixe 0 no comprimento e na profundidade da quadra para o app estimar (lotes vizinhos com a mesma testada)."; if(!pol) return;
   if(!Array.isArray(t.lados)||t.lados.length<3) t.lados=[{m:num(t.testada),c:t.rua||"",rua:"sim"},{m:num(t.prof),c:t.confDir||"",rua:"não"},{m:num(t.testada),c:t.confFundo||"",rua:"não"},{m:num(t.prof),c:t.confEsq||"",rua:"não"}];
   const tb=$("ladosTab"), foco=document.activeElement&&tb.contains(document.activeElement)?[document.activeElement.dataset.li,document.activeElement.dataset.lc]:null;
@@ -6725,7 +6777,7 @@ const GRUPOS=[/PLANTA BAIXA|DEMOLIR|LAYOUT|CORTES|FACHADAS|COBERTURA|SITUAÇÃO|
 const grupoFolha=fl=>{ const i=GRUPOS.findIndex(r=>r.test(fl.conteudo)); return i<0?GRUPOS.length:i; };
 // disciplina de cada prancha (para imprimir só o arquitetônico, só o elétrico...)
 function discFolha(fl){ const l=fl.lado; if(l==="eletrica"||l==="unifilar") return "ele"; if(l==="hidro"||l==="pluvial"||l==="fossa"||l==="hidiso") return "hid";
-  if(["forma","formaS","fundacao","armadura","basepiso"].includes(l)||(l==="locacao"&&fl.LC&&fl.LC.pil)) return "est"; return "arq"; }
+  if(["forma","formaS","fundacao","armadura","basepiso","escadaArm"].includes(l)||(l==="locacao"&&fl.LC&&fl.LC.pil)) return "est"; return "arq"; }
 const discSel=()=>{ const d=S.pdfDisc||{}; return {arq:d.arq!==false,ele:d.ele!==false,hid:d.hid!==false,est:d.est!==false}; };
 function agruparFolhas(folhas,cap,area,TT){ const aw=area.x1-area.x0, ah=area.y1-area.y0, out=[];
   const ordem=folhas.map((fl,i)=>({fl,i,g:grupoFolha(fl)})).sort((a,b)=>a.g-b.g||a.i-b.i);
@@ -6811,7 +6863,7 @@ function pranchas(fmt){
     let grp=[]; const fecha=()=>{ if(!grp.length) return; const g=grp.slice(), dv=encaixar(k=>desenhoVigasDet(k,g,bwV),bwV,ah-TT), rel=AR.rel.filter(r=>g.some(a=>a.nome===r.el)); armF.push({g,dv,dt:tabRel(rel,"")}); grp=[]; };
     AR.vigas.forEach(a=>{ const t=[...grp,a], d=encaixar(k=>desenhoVigasDet(k,t,bwV),bwV,ah-TT), nr=AR.rel.filter(r=>t.some(x=>x.nome===r.el)).length;
       if(grp.length&&(d.s>100||d.w>bwV||d.h>ah-TT||nr>maxL)) fecha(); grp.push(a); }); fecha(); }
-  const EC=escada(), eP=S.esc.on==="sim"?encaixar(k=>desenhoEscadaPlanta(k,EC),aw*0.42,ah-TT):null, eC=eP?encaixar(k=>desenhoEscadaCorte(k,EC),aw*0.58-8,ah-TT):null;
+  const EC=escada(), eP=(S.esc.on==="sim"||PDF_SO)?encaixar(k=>desenhoEscadaPlanta(k,EC),aw*0.42,ah-TT):null, eC=eP?encaixar(k=>desenhoEscadaCorte(k,EC),aw*0.58-8,ah-TT):null;
   const bans=G.rooms.filter(r=>ehBanho(r.n)&&retUtil(r)).map(r=>{ const bwP=aw*0.42, pl=encaixar(k=>desenhoBanheiro(G,r,k),bwP,ah-TT), bwV=(aw-bwP-8-6)/2, bhV=(ah-6)/2;
     let vs=[]; for(const s0 of [20,25,50,75,100]){ const k=s0/1000; vs=["A","B","C","D"].map(l=>{ const D=vistaBanheiro(G,r,k,l), e=extensao(D); return {D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:kk=>vistaBanheiro(G,r,kk,l)}; }); if(vs.every(d=>d.w<=bwV&&d.h<=bhV-TT)) break; }
     return {r,pl,vs,bwP,bwV,bhV}; });
@@ -6858,6 +6910,7 @@ function pranchas(fmt){
     ...armF.map((g,i)=>({n:"",conteudo:`DETALHAMENTO DAS VIGAS${armF.length>1?` (${i+1}/${armF.length})`:""}`,escala:`1:${g.dv.s}`,itens:[{d:g.dv,titulo:`VIGAS ${g.g[0].nome} A ${g.g[g.g.length-1].nome}`,box:[area.x0,area.y0,aw*0.64,ah]},{d:g.dt,sem:1,titulo:"RELAÇÃO DO AÇO",box:[area.x0+aw*0.64+8,area.y0,aw*0.36-8,ah]}],lado:"armadura",ES,AR})),
     ...(AR?(()=>{ const dp=encaixar(k=>desenhoPilSapDet(k,ES,AR),aw*0.55,ah-TT), rel=AR.rel.filter(r=>!AR.vigas.some(a=>a.nome===r.el)), dt=encaixar(k=>desenhoTabela(k,[{t:"RELAÇÃO DO AÇO - PILARES E FUNDAÇÃO",cols:COLS_REL,rows:linhasRel(rel)},...blocoResumo(AR)]),aw*0.45-8,ah-TT);
       return [{n:"",conteudo:"DETALHE DE PILARES E FUNDAÇÃO · RESUMO DO AÇO",escala:`1:${dp.s}`,itens:[{d:dp,titulo:"PILARES E FUNDAÇÃO",box:[area.x0,area.y0,aw*0.55,ah]},{d:dt,sem:1,titulo:"RELAÇÃO E RESUMO DO AÇO",box:[area.x0+aw*0.55+8,area.y0,aw*0.45-8,ah]}],lado:"armadura",ES,AR}]; })():[]),
+    ...(eP?(eA=>[{n:"",conteudo:"ARMADURA DA ESCADA",escala:`1:${eA.s}`,itens:[{d:eA,titulo:"CORTE DESENVOLVIDO COM A ARMADURA",box:[area.x0,area.y0,aw,ah]}],lado:"escadaArm",EC}])(encaixar(k=>desenhoEscadaArm(k,EC),aw,ah-TT)):[]),
     ...(eP?[{n:"",conteudo:"DETALHE DA ESCADA",escala:`1:${eP.s} / 1:${eC.s}`,itens:[{d:eP,titulo:"PLANTA DA ESCADA",box:[area.x0,area.y0,aw*0.42,ah]},{d:eC,titulo:"CORTE DA ESCADA",box:[area.x0+aw*0.42+8,area.y0,aw*0.58-8,ah]}],lado:"escada",EC}]:[]),
     ...(lo?[{n:"",conteudo:LC.pil?"PLANTA DE LOCAÇÃO DOS EIXOS DOS PILARES":"PLANTA DE LOCAÇÃO DA OBRA",escala:`1:${lo.s}`,itens:[{d:lo,titulo:LC.pil?"LOCAÇÃO DOS EIXOS DOS PILARES":"PLANTA DE LOCAÇÃO DA OBRA",box:[area.x0,area.y0,aw,ah]}],lado:"locacao",LC}]:[]),
     ...bans.map(b=>({n:"",conteudo:`DETALHE DO ${b.r.n.toUpperCase()}`,escala:`1:${b.pl.s} / 1:${b.vs[0].s}`,itens:[{d:b.pl,titulo:`PLANTA - ${b.r.n.toUpperCase()}`,box:[area.x0,area.y0,b.bwP,ah]},
@@ -6868,7 +6921,7 @@ function pranchas(fmt){
       const ds=gq.map(q=>{ const D=desenhoEsquadria(q,kk), e=extensao(D); return {D,s:sE,k:kk,e,w:(e.x1-e.x0)/kk,h:(e.y1-e.y0)/kk,gen:k2=>desenhoEsquadria(q,k2)}; });
       return {n:"",conteudo:gruposE.length>1?`QUADRO E DETALHE DAS ESQUADRIAS (${gi+1}/${gruposE.length})`:"QUADRO E DETALHE DAS ESQUADRIAS",escala:`1:${sE}`,itens:ds.map((d,i)=>({d,titulo:gq[i].cod,box:[area.x0+(i%L0.cE)*(L0.bwE+6),area.y0+Math.floor(i/L0.cE)*(L0.bhE+6),L0.bwE,L0.bhE]})),lado:"esquadrias"}; })
   ];
-  if(S.agrupar==="arq1"&&!G.vazio){ const F1=pranchaUnica(folhas,area,TT); if(F1){   // arquitetônico numa prancha só; as outras disciplinas marcadas seguem agrupadas como no automático
+  if(S.agrupar==="arq1"&&!G.vazio&&!PDF_SO){ const F1=pranchaUnica(folhas,area,TT); if(F1){   // arquitetônico numa prancha só; as outras disciplinas marcadas seguem agrupadas como no automático
       const DS=discSel(), resto=folhas.filter(fl=>discFolha(fl)!=="arq"&&DS[discFolha(fl)]), capR=({A0:9,A1:6,A2:4}[fmt]||1), fls=[...(DS.arq||!resto.length?[F1]:[]),...(capR>1?agruparFolhas(resto,capR,area,TT):resto)];
       fls.forEach((fl,i)=>fl.n=`${String(i+1).padStart(2,"0")}/${String(fls.length).padStart(2,"0")}`);
       fls.forEach(fl=>fl.itens.forEach(it=>{ if(!it.d||!it.d.D||!it.d.k) return; desencavala(it.d.D); const e=extensao(it.d.D); Object.assign(it.d,{e,w:(e.x1-e.x0)/it.d.k,h:(e.y1-e.y0)/it.d.k}); }));
@@ -6881,7 +6934,7 @@ function pranchas(fmt){
       const v=encaixar(it.d.gen,bV[2],bV[3]-TT); if(!(v.s<it.d.s)||v.w>bV[2]||v.h>bV[3]-TT) return;
       it.d=v; it.box=bV; fl.side=sV; fl.escala=fl.escala.replace(/^1:\d+/,`1:${v.s}`); }); }
   // só as disciplinas marcadas (arquitetônico, elétrico, hidrossanitário, estrutural); a numeração das folhas segue o que sai
-  const DSel=discSel(), folhasD=folhas.filter(fl=>DSel[discFolha(fl)]); if(!folhasD.length) folhasD.push(...folhas);
+  const DSel=discSel(), folhasD=folhas.filter(fl=>PDF_SO?PDF_SO.includes(fl.lado):DSel[discFolha(fl)]); if(!folhasD.length) folhasD.push(...folhas);
   const fls=cap>1?agruparFolhas(folhasD,cap,area,TT):folhasD;
   fls.forEach((fl,i)=>fl.n=`${String(i+1).padStart(2,"0")}/${String(fls.length).padStart(2,"0")}`);
   fls.forEach(fl=>fl.itens.forEach(it=>{ if(!it.d||!it.d.D||!it.d.k) return; desencavala(it.d.D); const e=extensao(it.d.D); Object.assign(it.d,{e,w:(e.x1-e.x0)/it.d.k,h:(e.y1-e.y0)/it.d.k}); }));   // tira os textos de cima uns dos outros (PDF e DXF) e mede de novo
@@ -6890,7 +6943,9 @@ function pranchas(fmt){
 function textosLado(P,lado,fl){
   const {G,Q,TI}=P, pd=num(S.pd);
   if(lado==="persp") return [{t:"NOTAS",linhas:[PERSP.M&&S.persp.fonte!=="app"?`Perspectivas geradas da maquete ${PERSP.nome}.`:"Perspectivas geradas da planta: paredes, vãos, platibanda e telhado do projeto.","Desenhos ilustrativos, sem escala. Valem as medidas das plantas, cortes e fachadas.","Cores e materiais finais conforme o projeto de fachada e o memorial."]}];
-  if(lado==="escada"){ const E=fl.EC; return [{t:"DIMENSIONAMENTO",cols:[["ITEM",0],["VALOR",1]],rows:[["Altura a vencer",`${f(E.H)} m`],["Degraus",String(E.n)],["Espelho",`${f(E.e*100,1)} cm`],["Piso",`${f(E.p*100,0)} cm`],["Blondel (2e + p)",`${f(E.bl*100,1)} cm`],["Largura útil",`${f(E.B)} m`]]},{t:"NOTAS",linhas:notasEscada(E)}]; }
+  if(lado==="escadaArm"){ const A=fl.EC.arm, rows=A.rel.map(r=>[`${r.el} ${r.pos}`,String(r.q),f(r.fi,1),f(r.c),f(r.kg,1)]), por=14, bl=[]; for(let i=0;i<rows.length;i+=por) bl.push({t:i?"RELAÇÃO DO AÇO (CONT.)":"RELAÇÃO DO AÇO",cols:[["POS.",0],["QTD",1],["ø",1],["C (m)",1],["kg",1]],pc:[0.28,0.16,0.16,0.2,0.2],rows:rows.slice(i,i+por)});
+    return [...bl,{t:"RESUMO DO AÇO",cols:[["BITOLA",0],["kg (+10%)",1]],rows:[...Object.entries(A.res).sort((a,b)=>a[0]-b[0]).map(([fi,kg])=>[`ø ${f(+fi,1)} mm`,f(kg*1.1,1)]),["TOTAL",f(A.kg*1.1,1)],["CONCRETO",`${f(A.Vc,2)} m³`]]},{t:"NOTAS",linhas:notasEscada(fl.EC).slice(3)}]; }
+  if(lado==="escada"){ const E=fl.EC; return [{t:"DIMENSIONAMENTO",cols:[["ITEM",0],["VALOR",1]],rows:[["Altura a vencer",`${f(E.H)} m`],["Lances",`${E.nL} (${E.LA.map(L0=>L0.r).join(" + ")} espelhos)`],["Degraus",String(E.n)],["Espelho",`${f(E.e*100,1)} cm`],["Piso",`${f(E.p*100,0)} cm`],["Blondel (2e + p)",`${f(E.bl*100,1)} cm`],["Largura útil",`${f(E.B)} m`]]},{t:"NOTAS",linhas:notasEscada(E)}]; }
   if(lado==="locacao"&&fl.LC.pil){ const LC=fl.LC; const rows=LC.pil.map(q=>[q.nome,f(q.X),f(q.Y)]), por=12, bl=[]; for(let i=0;i<rows.length;i+=por) bl.push({t:i?"QUADRO DE LOCAÇÃO (CONT.)":"QUADRO DE LOCAÇÃO DOS PILARES",cols:[["PILAR",0],["X (m)",1],["Y (m)",1]],pc:[0.34,0.33,0.33],rows:rows.slice(i,i+por)});   // muitos pilares: o quadro continua na coluna do lado
     return [...bl,{t:"NOTAS",linhas:notasLocPil(LC)}]; }
   if(lado==="locacao"){ const LC=fl.LC; return [{t:"QUADRO DE LOCAÇÃO",cols:[["EIXO",0],["MEDIDO DE",0],["DIST. (m)",1]],pc:[0.16,0.56,0.28],rows:[...LC.eixos.slice().sort((p,q)=>p.nome.localeCompare(q.nome,"pt",{numeric:true})).map(e=>[e.nome,e.ref,f(e.d,3)]),...LC.incl.flatMap((w,j)=>[[`C${j+1}a`,"alinhamento; divisa esq.",`${f(w.fa,2)}; ${f(w.ra,2)}`],[`C${j+1}b`,"alinhamento; divisa esq.",`${f(w.fb,2)}; ${f(w.rb,2)}`]])]},{t:"NOTAS",linhas:notasLocacao(LC)}]; }
@@ -7192,6 +7247,10 @@ $("pdfBtn").onclick=async()=>{
   try{ const st=await saveFile(`${slug()}-${fmt}-${agora().arq}.pdf`,buildPDF(fmt),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":st==="shared"?"PDF pronto: escolha Salvar em Arquivos ou envie.":"PDF enviado."; }
   catch(e){ msg.textContent=falhou(e,"o PDF"); }
 };
+// só a escada (detalhe e armadura), mesmo que o projeto não marque "tem escada"
+$("escPdf").onclick=async()=>{ const msg=$("escPdfMsg"), fmt=$("fmt").value; let data=null;
+  try{ PDF_SO=["escada","escadaArm"]; data=buildPDF(fmt); } catch(e){ PDF_SO=null; msg.textContent=falhou(e,"o PDF"); return; } PDF_SO=null;
+  try{ const st=await saveFile(`${slug()}-escada-${fmt}-${agora().arq}.pdf`,data,"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":st==="shared"?"PDF pronto: escolha Salvar em Arquivos ou envie.":"PDF enviado."; } catch(e){ msg.textContent=falhou(e,"o PDF"); } };
 $("pdfSepBtn").onclick=async()=>{
   const msg=$("pdfMsg"), fmt=$("fmt").value, orig=S.pdfDisc, DS=discSel(), NM={arq:"arquitetonico",ele:"eletrico",hid:"hidrossanitario",est:"estrutural"}, arqs=[];
   try{ msg.textContent="Gerando os PDFs...";
