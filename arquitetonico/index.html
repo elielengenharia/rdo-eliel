@@ -178,7 +178,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <div id="selPanel" class="panel" hidden></div>
       <div class="chips" id="planChips"></div>
       <div id="warnings"></div>
-      <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option><option>A0</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Desenhos por folha<select id="agrupar" style="width:auto"><option value="auto">Automático (A0 até 9, A1 até 6, A2 até 4)</option><option value="não">Um por folha</option><option value="2">Até 2 por folha</option><option value="4">Até 4 por folha</option><option value="6">Até 6 por folha</option><option value="9">Até 9 por folha</option><option value="arq1">Prancha única do arquitetônico (planta, layout, cobertura, cortes, fachadas, implantação)</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Cotas gerais (em cima e à esquerda)<select id="cotGer" style="width:auto"><option value="sim">Mostrar</option><option value="não">Não mostrar</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><span class="toast" id="pdfMsg" role="status"></span></div>
+      <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option><option>A0</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Desenhos por folha<select id="agrupar" style="width:auto"><option value="auto">Automático (A0 até 9, A1 até 6, A2 até 4)</option><option value="não">Um por folha</option><option value="2">Até 2 por folha</option><option value="4">Até 4 por folha</option><option value="6">Até 6 por folha</option><option value="9">Até 9 por folha</option><option value="arq1">Prancha única do arquitetônico (planta, layout, cobertura, cortes, fachadas, implantação)</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Cotas gerais (em cima e à esquerda)<select id="cotGer" style="width:auto"><option value="sim">Mostrar</option><option value="não">Não mostrar</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><button class="btn" id="pdfSepBtn" title="Um PDF para cada projeto marcado abaixo">Cada projeto em PDF separado</button><span class="toast" id="pdfMsg" role="status"></span></div>
       <div class="row" id="pdfDisc" style="font-size:13px"><b>O que vai no PDF e no DXF:</b>
         <label style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" data-disc="arq">Arquitetônico</label>
         <label style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" data-disc="ele">Elétrico</label>
@@ -798,7 +798,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.18 · escolha do cabo de entrada junto do diagrama unifilar", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.19 · cada projeto em PDF separado", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -6651,6 +6651,19 @@ async function saveFile(name,data,mime){
       catch(e){ if(e&&e.name==="AbortError") throw {code:"declined"}; } } }
   const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); return "saved";
 }
+// vários arquivos de uma vez: no celular, um só "Compartilhar" com todos; no computador, um download atrás do outro com os links na barra
+async function saveVarios(arqs,mime){
+  let dl=null; try{ dl=window.claude&&await window.claude.use("downloads"); }catch(e){}
+  if(dl){ for(const a of arqs) await dl.save({filename:a.name,data:a.data}); return "saved"; }
+  if(window.claude) throw {code:"unavailable"};
+  const fs=arqs.map(a=>({name:a.name,blob:new Blob([a.data],{type:mime})}));
+  const movel=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform||""));
+  if(movel&&navigator.canShare&&navigator.share){ let files=null; try{ files=fs.map(x=>new File([x.blob],x.name,{type:mime})); }catch(e){}
+    if(files&&navigator.canShare({files})){ try{ await navigator.share({files,title:"Projetos"}); return "shared"; } catch(e){ if(e&&e.name==="AbortError") throw {code:"declined"}; } } }
+  let bar=$("dlBar"); if(!bar){ bar=document.createElement("div"); bar.id="dlBar"; document.body.appendChild(bar); } bar.innerHTML="<span>Se não baixou:</span>";
+  for(const x of fs){ const url=URL.createObjectURL(x.blob), a=document.createElement("a"); a.href=url; a.download=x.name; document.body.appendChild(a); a.click(); a.remove();
+    const l=document.createElement("a"); l.href=url; l.download=x.name; l.target="_blank"; l.textContent=x.name.replace(/^.*?-(arquitetonico|eletrico|hidrossanitario|estrutural)-.*$/,"$1"); bar.appendChild(l); bar.appendChild(document.createTextNode(" ")); await new Promise(r=>setTimeout(r,700)); }
+  const xb=document.createElement("button"); xb.type="button"; xb.textContent="✕"; xb.onclick=()=>bar.remove(); bar.appendChild(xb); return "saved"; }
 function linkArquivo(url,name){ let bar=$("dlBar"); if(!bar){ bar=document.createElement("div"); bar.id="dlBar"; document.body.appendChild(bar); }
   if(bar._url) setTimeout((u=>()=>URL.revokeObjectURL(u))(bar._url),60000);
   bar._url=url; bar.innerHTML=""; const t=document.createElement("span"); t.textContent="Se não baixou:";
@@ -7150,6 +7163,17 @@ $("pdfBtn").onclick=async()=>{
   const msg=$("pdfMsg"), fmt=$("fmt").value;
   try{ const st=await saveFile(`${slug()}-${fmt}-${agora().arq}.pdf`,buildPDF(fmt),"application/pdf"); msg.textContent=st==="saved"?"PDF salvo.":st==="shared"?"PDF pronto: escolha Salvar em Arquivos ou envie.":"PDF enviado."; }
   catch(e){ msg.textContent=falhou(e,"o PDF"); }
+};
+$("pdfSepBtn").onclick=async()=>{
+  const msg=$("pdfMsg"), fmt=$("fmt").value, orig=S.pdfDisc, DS=discSel(), NM={arq:"arquitetonico",ele:"eletrico",hid:"hidrossanitario",est:"estrutural"}, arqs=[];
+  try{ msg.textContent="Gerando os PDFs...";
+    const tem=new Set(pranchas(fmt).folhas.map(fl=>fl.subs?"arq":discFolha(fl)));
+    for(const d of ["arq","ele","hid","est"]){ if(!DS[d]||!tem.has(d)) continue;
+      S.pdfDisc={arq:false,ele:false,hid:false,est:false,[d]:true}; arqs.push({name:`${slug()}-${NM[d]}-${fmt}-${agora().arq}.pdf`,data:buildPDF(fmt)}); }
+    S.pdfDisc=orig;
+    if(!arqs.length){ msg.textContent="Marque pelo menos um projeto."; return; }
+    const st=await saveVarios(arqs,"application/pdf"); msg.textContent=`${arqs.length} PDF${arqs.length>1?"s":""} (${arqs.map(a=>a.name.match(/-(arquitetonico|eletrico|hidrossanitario|estrutural)-/)[1]).join(", ")}) ${st==="shared"?"prontos: escolha Salvar em Arquivos ou envie.":"salvos."}`; }
+  catch(e){ S.pdfDisc=orig; msg.textContent=falhou(e,"os PDFs"); }
 };
 
 /* ======================================================================
