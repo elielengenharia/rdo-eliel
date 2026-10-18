@@ -178,7 +178,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <div id="selPanel" class="panel" hidden></div>
       <div class="chips" id="planChips"></div>
       <div id="warnings"></div>
-      <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option><option>A0</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Desenhos por folha<select id="agrupar" style="width:auto"><option value="auto">Automático (A0 até 9, A1 até 6, A2 até 4)</option><option value="não">Um por folha</option><option value="2">Até 2 por folha</option><option value="4">Até 4 por folha</option><option value="6">Até 6 por folha</option><option value="9">Até 9 por folha</option><option value="arq1">Prancha única do arquitetônico (planta, layout, cobertura, cortes, fachadas, implantação)</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Cotas gerais (em cima e à esquerda)<select id="cotGer" style="width:auto"><option value="sim">Mostrar</option><option value="não">Não mostrar</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><button class="btn" id="pdfSepBtn" title="Um PDF para cada projeto marcado abaixo">Cada projeto em PDF separado</button><span class="toast" id="pdfMsg" role="status"></span></div>
+      <div class="row"><label style="display:flex;align-items:center;gap:6px;font-size:13px">Prancha<select id="fmt" style="width:auto"><option>A4</option><option selected>A3</option><option>A2</option><option>A1</option><option>A0</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Desenhos por folha<select id="agrupar" style="width:auto"><option value="auto">Automático (A0 até 9, A1 até 6, A2 até 4)</option><option value="não">Um por folha</option><option value="2">Até 2 por folha</option><option value="4">Até 4 por folha</option><option value="6">Até 6 por folha</option><option value="9">Até 9 por folha</option><option value="arq1">Prancha única do arquitetônico (planta, layout, cobertura, cortes, fachadas, implantação)</option><option value="disc1">Uma prancha por projeto: elétrico numa folha, hidrossanitário noutra</option></select></label><label style="display:flex;align-items:center;gap:6px;font-size:13px">Cotas gerais (em cima e à esquerda)<select id="cotGer" style="width:auto"><option value="sim">Mostrar</option><option value="não">Não mostrar</option></select></label><button class="btn pri" id="pdfBtn">Baixar PDF das pranchas</button><button class="btn" id="pdfSepBtn" title="Um PDF para cada projeto marcado abaixo">Cada projeto em PDF separado</button><span class="toast" id="pdfMsg" role="status"></span></div>
       <div class="row" id="pdfDisc" style="font-size:13px"><b>O que vai no PDF e no DXF:</b>
         <label style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" data-disc="arq">Arquitetônico</label>
         <label style="display:inline-flex;gap:5px;align-items:center"><input type="checkbox" data-disc="ele">Elétrico</label>
@@ -799,7 +799,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.26 · até 4 imagens do render nas perspectivas", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.27 · elétrico e hidrossanitário numa prancha cheia cada (A0)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -3590,12 +3590,14 @@ function desenhoPilSapDet(k,ES,AR){ const D=Dw(k), Y=z=>-z; let x=0;
     x+=B+30*k; });
   return D; }
 // tabela desenhada (vai dentro da prancha e no DXF)
-function desenhoTabela(k,blocos){ const D=Dw(k); let y=0; const rh=4.2*k;
-  blocos.forEach(bl=>{ const W=bl.cols.reduce((s0,c)=>s0+c[1],0)*k; if(bl.t){ TX(D,0,y,bl.t,2.2,{a:"s",b:true}); y+=3*k; }
-    const linha=yy=>L(D,0,yy,W,yy,.18,"COTAS"); linha(y); let x=0; bl.cols.forEach(c=>{ TX(D,c[2]?x+c[1]*k-1*k:x+1*k,y+rh*0.72,c[0],1.4,{a:c[2]?"e":"s",b:true}); x+=c[1]*k; }); y+=rh; linha(y);
-    bl.rows.forEach((r,ri)=>{ let xx=0; bl.cols.forEach((c,j)=>{ TX(D,c[2]?xx+c[1]*k-1*k:xx+1*k,y+rh*0.72,String(r[j]),1.5,{a:c[2]?"e":"s",b:!!(bl.neg&&ri===bl.rows.length-1)}); xx+=c[1]*k; }); y+=rh; linha(y); });
-    let xx=0; [0,...bl.cols.map(c=>{ xx+=c[1]*k; return xx; })].forEach(xv=>L(D,xv,y-rh*(bl.rows.length+1),xv,y,.18,"COTAS")); y+=7*k; });
+function desenhoTabela(k,blocos,z=1){ const D=Dw(k); let y=0; const rh=4.2*k*z, m=1*k*z;
+  blocos.forEach(bl=>{ const W=bl.cols.reduce((s0,c)=>s0+c[1],0)*k*z; if(bl.t){ TX(D,0,y,bl.t,2.2*z,{a:"s",b:true}); y+=3*k*z; }
+    const linha=yy=>L(D,0,yy,W,yy,.18,"COTAS"); linha(y); let x=0; bl.cols.forEach(c=>{ TX(D,c[2]?x+c[1]*k*z-m:x+m,y+rh*0.72,c[0],1.4*z,{a:c[2]?"e":"s",b:true}); x+=c[1]*k*z; }); y+=rh; linha(y);
+    bl.rows.forEach((r,ri)=>{ let xx=0; bl.cols.forEach((c,j)=>{ TX(D,c[2]?xx+c[1]*k*z-m:xx+m,y+rh*0.72,String(r[j]),1.5*z,{a:c[2]?"e":"s",b:!!(bl.neg&&ri===bl.rows.length-1)}); xx+=c[1]*k*z; }); y+=rh; linha(y); });
+    let xx=0; [0,...bl.cols.map(c=>{ xx+=c[1]*k*z; return xx; })].forEach(xv=>L(D,xv,y-rh*(bl.rows.length+1),xv,y,.18,"COTAS")); y+=7*k*z; });
   return D; }
+// bloco do quadro lateral (cols [nome, alinha à direita], pc) virando tabela desenhada na prancha, com largura W mm
+const blocoTab=(bl,W=230)=>({t:bl.t,cols:bl.cols.map((c,j)=>[c[0],(bl.pc?bl.pc[j]:1/bl.cols.length)*W,c[1]===1]),rows:bl.rows.map(r=>r.slice(0,bl.cols.length)),neg:bl.rows.some(r=>r.length>bl.cols.length)});
 const linhasRel=rel=>rel.map(r=>[r.el,r.pos,f(r.fi,1),String(r.q),f(r.c*100,0),f(r.tot,2)]);
 const COLS_REL=[["PEÇA",30],["POS.",11],["Ø (mm)",13,1],["QTD",11,1],["C. UNIT (cm)",20,1],["C. TOTAL (m)",21,1]];
 const blocoResumo=AR=>[{t:"RESUMO DO AÇO CA-50 / CA-60",cols:[["Ø (mm)",14],["COMPR. (m)",20,1],["PESO (kg)",18,1],["+10% (kg)",18,1],["BARRAS 12 m",20,1]],neg:1,
@@ -6802,6 +6804,40 @@ const grupoFolha=fl=>{ const i=GRUPOS.findIndex(r=>r.test(fl.conteudo)); return 
 function discFolha(fl){ const l=fl.lado; if(l==="eletrica"||l==="unifilar") return "ele"; if(l==="hidro"||l==="pluvial"||l==="fossa"||l==="hidiso") return "hid";
   if(["forma","formaS","fundacao","armadura","basepiso","escadaArm"].includes(l)||(l==="locacao"&&fl.LC&&fl.LC.pil)) return "est"; return "arq"; }
 const discSel=()=>{ const d=S.pdfDisc||{}; return {arq:d.arq!==false,ele:d.ele!==false,hid:d.hid!==false,est:d.est!==false}; };
+// uma prancha só por disciplina (elétrico, hidrossanitário), bem cheia (pedido do Eliel para o A0):
+// plantas numa coluna à esquerda, na mesma escala, a maior que couber; detalhes, unifilares e isométricos numa grade à direita, cada um no maior tamanho que couber.
+// Tenta várias larguras para a coluna das plantas e fica com a que ocupa mais papel.
+// tenta os quadros numa coluna própria à direita e no meio dos desenhos; fica com a que deixa os desenhos maiores
+function pranchaDisc(fs,area,TT,G){ const a=pranchaDisc0(fs,area,TT,G,"col"), b=pranchaDisc0(fs,area,TT,G,"grade"), ar=P=>P?P.itens.filter(it=>!it.tab).reduce((s0,it)=>s0+it.d.w*it.d.h,0):0; return ar(b)>ar(a)*1.15?b:a; }
+function pranchaDisc0(fs,area,TT,G,modo){ const aw=area.x1-area.x0, ah=area.y1-area.y0, gx=10, gy=8;
+  const tabs=[]; { const vist=new Set(); fs.forEach(fl=>{ try{ textosLado({G},fl.lado,fl).forEach(bl=>{ if(!bl.cols||!bl.rows||!bl.rows.length) return; const kk=bl.t+"|"+bl.cols.length; if(vist.has(kk)) return; vist.add(kk); tabs.push(blocoTab(bl)); }); }catch(e){} }); }
+  // material em duas metades vira uma tabela só
+  for(let i=tabs.length-1;i>0;i--){ if(/\(CONT\.\)$/.test(tabs[i].t||"")&&tabs[i-1].cols.length===tabs[i].cols.length){ tabs[i-1].rows=[...tabs[i-1].rows,...tabs[i].rows]; tabs.splice(i,1); } }
+  const tabIts=tabs.map(tb=>{ const gz=Z=>k=>desenhoTabela(k,[{...tb,t:""}],Z); return {titulo:tb.t||"QUADRO",sem:1,tab:1,zgen:gz,d:naEscala(gz(1),100)}; });
+  // coluna dos quadros à direita: o maior tamanho de letra em que todos cabem empilhados (em 1 ou 2 colunas)
+  let TC=null; if(tabIts.length&&modo==="col"){ for(const Z of [1.5,1.3,1.15,1,0.9,0.8,0.7,0.6,0.5]){ const ds=tabIts.map(it=>naEscala(it.zgen(Z),100));
+      for(const nc of [1,2]){ const per=Math.ceil(ds.length/nc), cs=[...Array(nc)].map((_,c)=>ds.slice(c*per,(c+1)*per)), hs=cs.map(c=>c.reduce((s1,d)=>s1+d.h+TT,0)+gy*(c.length-1)), wc=Math.max(...ds.map(d=>d.w));
+        if(Math.max(...hs)<=ah&&wc*nc+gx*(nc-1)<=aw*0.42){ TC={Z,ds,nc,per,wc,wt:wc*nc+gx*(nc-1)}; break; } } if(TC) break; } }
+  const its=[...fs.flatMap(fl=>fl.itens).filter(it=>it.d&&(it.d.gen||it.zgen)),...(modo==="grade"?tabIts:[])];
+  if(TC) area={x0:area.x0,y0:area.y0,x1:area.x1-TC.wt-gx,y1:area.y1};
+  const aw2=area.x1-area.x0; if(its.length<1) return null;
+  const ehPl=it=>!it.sem&&/^PLANTA/.test(it.titulo||""), PL0=its.filter(ehPl), RS=its.filter(it=>!ehPl(it)), ZS=[3.4,2.8,2.3,1.9,1.6,1.35,1.15,1,0.85,0.72,0.6,0.5,0.42];
+  const cabe=(it,bw,bh)=>{ if(it.tab){ let d=null; for(const Z of [1.7,1.5,1.3,1.15,1,0.85,0.72,0.6,0.5]){ d=naEscala(it.zgen(Z),100); if(d.w<=bw&&d.h<=bh-TT) break; } return d; }
+    if(it.zgen){ let d=null; for(const Z of ZS){ d=encaixar(it.zgen(Z),bw,bh-TT); if(d.w<=bw&&d.h<=bh-TT) break; } return d; } return encaixar(it.d.gen,bw,bh-TT); };
+  const monta=fr=>{ const wl=RS.length?(PL0.length?aw2*fr:0):aw2, wr=PL0.length?aw2-wl-gx:aw2, itens=[]; let area0=0;
+    if(PL0.length){ const n=PL0.length, bh=(ah-gy*(n-1))/n; let sc=null; for(const s0 of ESCALAS){ const ds=PL0.map(it=>naEscala(it.d.gen,s0)); if(ds.every(d=>d.w<=wl&&d.h<=bh-TT)){ sc=s0; break; } } sc=sc||ESCALAS[ESCALAS.length-1];
+      PL0.forEach((it,j)=>{ const d=naEscala(it.d.gen,sc); area0+=d.w*d.h; itens.push({...it,d,box:[area.x0,area.y0+j*(bh+gy),wl,bh]}); }); }
+    if(RS.length){ const n=RS.length, x0=area.x0+(PL0.length?wl+gx:0); let best=null;
+      for(const cols of [1,2,3]){ if(cols>n) break; const rows=Math.ceil(n/cols), bw=(wr-gx*(cols-1))/cols, bh=(ah-gy*(rows-1))/rows; if(bw<60||bh<50) continue;
+        const ds=RS.map(it=>cabe(it,bw,bh)), a=ds.reduce((s1,d)=>s1+Math.min(d.w,bw)*Math.min(d.h,bh),0), mn=Math.min(...ds.map(d=>d.w*d.h)); if(!best||a+mn*n>best.a+best.mn*n) best={cols,rows,bw,bh,ds,a,mn}; }
+      if(best){ area0+=best.a; RS.forEach((it,j)=>itens.push({...it,d:best.ds[j],box:[x0+(j%best.cols)*(best.bw+gx),area.y0+Math.floor(j/best.cols)*(best.bh+gy),best.bw,best.bh]})); } }
+    return {itens,area0}; };
+  let M=null; for(const fr of (PL0.length&&RS.length?[0.40,0.48,0.55,0.62,0.68]:[1])){ const m=monta(fr); if(!M||m.area0>M.area0) M=m; }
+  if(TC){ const xT=area.x1+gx; TC.ds.forEach((d,j)=>{ const c=Math.floor(j/TC.per), jj=j-c*TC.per, y=area.y0+TC.ds.slice(c*TC.per,c*TC.per+jj).reduce((s1,q)=>s1+q.h+TT+gy,0); M.itens.push({...tabIts[j],d,box:[xT+c*(TC.wc+gx),y,TC.wc,d.h+TT]}); }); }
+  const esc=[...new Set(M.itens.filter(it=>!it.sem).map(it=>it.d.s))], curto=t=>String(t).replace(/^PLANTA DE /,"").replace(/^DETALHE D[OAE]S? /,"DET. ");
+  return {n:"",conteudo:[...new Set(fs.map(fl=>curto(fl.conteudo)))].join(" / "),escala:esc.length===1?`1:${esc[0]}`:esc.length?"INDICADA":"SEM ESCALA",itens:M.itens,lado:"grupo",subs:fs,fixo:1,tabsNoDesenho:tabs.length>0}; }
+// elétrico e hidrossanitário: cada um numa prancha só (A0 automático, ou "uma prancha por projeto" em qualquer folha)
+function juntaDisc(lista,area,TT,G){ let out=lista.slice(); ["ele","hid"].forEach(dc=>{ const fsd=out.filter(fl=>!fl.subs&&discFolha(fl)===dc); if(fsd.length<1||fsd.reduce((s0,fl)=>s0+fl.itens.length,0)<2) return; const P=pranchaDisc(fsd,area,TT,G); if(!P) return; const i0=out.indexOf(fsd[0]); out=out.filter(fl=>!fsd.includes(fl)); out.splice(i0,0,P); }); return out; }
 function agruparFolhas(folhas,cap,area,TT){ const aw=area.x1-area.x0, ah=area.y1-area.y0, out=[];
   const ordem=folhas.map((fl,i)=>({fl,i,g:grupoFolha(fl)})).sort((a,b)=>a.g-b.g||a.i-b.i);
   let cur=null; const fecha=()=>{ if(!cur) return; out.push(cur.fs.length===1?cur.fs[0]:montaGrupo(cur.fs)); cur=null; };
@@ -6813,7 +6849,7 @@ function agruparFolhas(folhas,cap,area,TT){ const aw=area.x1-area.x0, ah=area.y1
     const curto=t=>String(t).replace(/, QUADRO DE .*$/,"").replace(/ E ENTRADA( - .*)?$/,"$1").replace(/^DIAGRAMA UNIFILAR (QD\d+).*$/,"UNIFILAR $1").replace(/^PLANTA DE /,"").replace(/^DETALHE D[OAE]S? /,"DET. ");
     const conteudo=[...new Set(fs.map(fl=>curto(fl.conteudo)))].join(" / "), esc=[...new Set(itens.filter(it=>!it.sem).map(it=>it.d.s))];
     return {n:"",conteudo,escala:esc.length===1?`1:${esc[0]}`:esc.length?"INDICADA":"SEM ESCALA",itens,lado:"grupo",subs:fs}; };
-  ordem.forEach(({fl,g})=>{ const n=fl.itens.length, ok=fl.itens.every(it=>it.d&&it.d.gen)&&n<=cap;
+  ordem.forEach(({fl,g})=>{ const n=fl.itens.length, ok=!fl.fixo&&fl.itens.every(it=>it.d&&it.d.gen)&&n<=cap;
     if(cur&&ok&&cur.g===g&&cur.n+n<=cap){ cur.fs.push(fl); cur.n+=n; return; }
     fecha(); if(ok) cur={g,fs:[fl],n}; else out.push(fl); });
   fecha(); return out; }
@@ -6945,7 +6981,7 @@ function pranchas(fmt){
       return {n:"",conteudo:gruposE.length>1?`QUADRO E DETALHE DAS ESQUADRIAS (${gi+1}/${gruposE.length})`:"QUADRO E DETALHE DAS ESQUADRIAS",escala:`1:${sE}`,itens:ds.map((d,i)=>({d,titulo:gq[i].cod,box:[area.x0+(i%L0.cE)*(L0.bwE+6),area.y0+Math.floor(i/L0.cE)*(L0.bhE+6),L0.bwE,L0.bhE]})),lado:"esquadrias"}; })
   ];
   if(S.agrupar==="arq1"&&!G.vazio&&!PDF_SO){ const F1=pranchaUnica(folhas,area,TT); if(F1){   // arquitetônico numa prancha só; as outras disciplinas marcadas seguem agrupadas como no automático
-      const DS=discSel(), resto=folhas.filter(fl=>discFolha(fl)!=="arq"&&DS[discFolha(fl)]), capR=({A0:9,A1:6,A2:4}[fmt]||1), fls=[...(DS.arq||!resto.length?[F1]:[]),...(capR>1?agruparFolhas(resto,capR,area,TT):resto)];
+      const DS=discSel(), resto0=folhas.filter(fl=>discFolha(fl)!=="arq"&&DS[discFolha(fl)]), resto=fmt==="A0"||fmt==="A1"?juntaDisc(resto0,area,TT,G):resto0, capR=({A0:9,A1:6,A2:4}[fmt]||1), fls=[...(DS.arq||!resto.length?[F1]:[]),...(capR>1?agruparFolhas(resto,capR,area,TT):resto)];
       fls.forEach((fl,i)=>fl.n=`${String(i+1).padStart(2,"0")}/${String(fls.length).padStart(2,"0")}`);
       fls.forEach(fl=>fl.itens.forEach(it=>{ if(!it.d||!it.d.D||!it.d.k) return; desencavala(it.d.D); const e=extensao(it.d.D); Object.assign(it.d,{e,w:(e.x1-e.x0)/it.d.k,h:(e.y1-e.y0)/it.d.k}); }));
       fls.forEach(fl=>{ if(!fl.side) fl.side=side; }); return {W,H,mo,ml,cw,ch,ha,TT,area,side,G,Q,TI,folhas:fls}; } }
@@ -6958,7 +6994,7 @@ function pranchas(fmt){
       it.d=v; it.box=bV; fl.side=sV; fl.escala=fl.escala.replace(/^1:\d+/,`1:${v.s}`); }); }
   // só as disciplinas marcadas (arquitetônico, elétrico, hidrossanitário, estrutural); a numeração das folhas segue o que sai
   const DSel=discSel(), folhasD=folhas.filter(fl=>PDF_SO?PDF_SO.includes(fl.lado):DSel[discFolha(fl)]); if(!folhasD.length) folhasD.push(...folhas);
-  const fls=cap>1?agruparFolhas(folhasD,cap,area,TT):folhasD;
+  const folhasJ=S.agrupar==="disc1"||((S.agrupar||"auto")==="auto"&&fmt==="A0")?juntaDisc(folhasD,area,TT,G):folhasD, fls=cap>1?agruparFolhas(folhasJ,cap,area,TT):folhasJ;
   fls.forEach((fl,i)=>fl.n=`${String(i+1).padStart(2,"0")}/${String(fls.length).padStart(2,"0")}`);
   fls.forEach(fl=>fl.itens.forEach(it=>{ if(!it.d||!it.d.D||!it.d.k) return; desencavala(it.d.D); const e=extensao(it.d.D); Object.assign(it.d,{e,w:(e.x1-e.x0)/it.d.k,h:(e.y1-e.y0)/it.d.k}); }));   // tira os textos de cima uns dos outros (PDF e DXF) e mede de novo
   fls.forEach(fl=>{ if(!fl.side) fl.side=side; }); return {W,H,mo,ml,cw,ch,ha,TT,area,side,G,Q,TI,folhas:fls};
@@ -7160,7 +7196,7 @@ function buildPDF(fmt,opt){
     tb(54.9,20,6.25,(S.emp||"ELIEL ENGENHARIA").toUpperCase());
     c.push("0.93 0 0 rg"); poly([[X(55.5),Y(24.4)],[X(55.5),Y(22.45)],[X(142.8),Y(22.45)]],true); gray(0,true);
     tb(5.7,42.7,2.54,"USO:"); tb(4.3,51.3,2.45,S.uso==="comercial"?"COMERCIAL":"RESIDENCIAL");
-    const DISC={arq:"ARQUITETÔNICO",ele:"ELÉTRICO",hid:"HIDROSSANITÁRIO",est:"ESTRUTURAL"}, dsc=DISC[fl.subs?"arq":discFolha(fl)]||"ARQUITETÔNICO";
+    const DISC={arq:"ARQUITETÔNICO",ele:"ELÉTRICO",hid:"HIDROSSANITÁRIO",est:"ESTRUTURAL"}, dsc=DISC[fl.subs?discFolha(fl.subs[0]):discFolha(fl)]||"ARQUITETÔNICO";
     tb(51.7,40.7,2.54,"PROJETO:"); tb(69.5,53.1,dsc.length>13?5.2:6.25,dsc);
     tb(4.6,64.5,2.54,"PROPRIETÁRIO:"); lw(.2); gray(0); line(X(70.7),Y(78),X(146),Y(78)); gray(0,true);
     tb(108.3,81.9,1.7,`${(S.cliente||"").toUpperCase()}${S.cpf?`  -  CPF: ${S.cpf}`:""}`,false,1);
@@ -7221,7 +7257,7 @@ function buildPDF(fmt,opt){
   };
   const ladoBox=(fl)=>{ mk("QUADROS");
     if(fl.side&&fl.side.stack) return ladoColuna(fl);
-    const maxB=Math.max(3,Math.floor((side.x1-side.x0)/62)), blocos=fl.subs?(()=>{ let bs=fl.subs.flatMap(sf=>textosLado(P,sf.lado,sf)); if(bs.length>maxB) bs=bs.filter((b,j)=>b.cols||j===bs.findIndex(x=>!x.cols)); return bs.slice(0,maxB); })():textosLado(P,fl.lado,fl), x0=side.x0, x1=side.x1, gap=6, pesos=blocos.map(b=>b.cols&&b.cols.length>2?1.5:1), tot=pesos.reduce((a,b)=>a+b,0);
+    const maxB=Math.max(3,Math.floor((side.x1-side.x0)/62)), blocos=fl.subs?(()=>{ let bs=fl.subs.flatMap(sf=>textosLado(P,sf.lado,sf)).filter(b=>!(fl.tabsNoDesenho&&b.cols)); if(bs.length>maxB) bs=bs.filter((b,j)=>b.cols||j===bs.findIndex(x=>!x.cols)); return bs.slice(0,maxB); })():textosLado(P,fl.lado,fl), x0=side.x0, x1=side.x1, gap=6, pesos=blocos.map(b=>b.cols&&b.cols.length>2?1.5:1), tot=pesos.reduce((a,b)=>a+b,0);
     let xc=x0;
     blocos.forEach((b,bi)=>{ const wcol=(x1-x0-gap*(blocos.length-1))*pesos[bi]/tot, x=xc; xc+=wcol+gap; let y=side.y0+4; gray(0,true); text(x,y,2.4,b.t,true); y+=5;
       const sz=1.8, lh=3.4;
@@ -7235,7 +7271,7 @@ function buildPDF(fmt,opt){
   };
   // quadros empilhados na coluna da direita (planta comprida ocupando a altura da folha)
   const ladoColuna=(fl)=>{ const sd=fl.side, x=sd.x0, wcol=sd.x1-sd.x0, sz=Math.min(2.2,1.8*cw/120+0.4), rh=sz*2.6; let y=sd.y0+2;   // quadros em grade, como no modelo do Eliel
-    const blocos=fl.subs?(()=>{ const vist=new Set(); return fl.subs.flatMap(sf=>textosLado(P,sf.lado,sf)).filter(b=>{ const kk=b.t+"|"+(b.cols?b.cols.length:0); if(b.t&&vist.has(kk)) return false; vist.add(kk); return true; }); })():textosLado(P,fl.lado,fl);
+    const blocos=fl.subs?(()=>{ const vist=new Set(); return fl.subs.flatMap(sf=>textosLado(P,sf.lado,sf)).filter(b=>!(fl.tabsNoDesenho&&b.cols)).filter(b=>{ const kk=b.t+"|"+(b.cols?b.cols.length:0); if(b.t&&vist.has(kk)) return false; vist.add(kk); return true; }); })():textosLado(P,fl.lado,fl);
     blocos.forEach(b=>{ if(y>sd.y1-10) return;
       if(b.t){ gray(0); lw(.3); rect(x,y,wcol,rh); gray(0,true); text(x+wcol/2,y+rh/2,sz+0.3,b.t,false,1); y+=rh; }
       if(b.cols){ const n_=b.cols.length, pc=b.pc||(n_===6?[0.09,0.34,0.17,0.18,0.11,0.11]:n_>2?[0.12,0.22,0.32,0.18,0.16]:[0.64,0.36]), cwid=b.cols.map((_,i)=>wcol*pc[i]); let xx=x; const cx=[]; cwid.forEach(w=>{ cx.push(xx); xx+=w; });
@@ -7277,7 +7313,7 @@ $("escPdf").onclick=async()=>{ const msg=$("escPdfMsg"), fmt=$("fmt").value; let
 $("pdfSepBtn").onclick=async()=>{
   const msg=$("pdfMsg"), fmt=$("fmt").value, orig=S.pdfDisc, DS=discSel(), NM={arq:"arquitetonico",ele:"eletrico",hid:"hidrossanitario",est:"estrutural"}, arqs=[];
   try{ msg.textContent="Gerando os PDFs...";
-    const tem=new Set(pranchas(fmt).folhas.map(fl=>fl.subs?"arq":discFolha(fl)));
+    const tem=new Set(pranchas(fmt).folhas.map(fl=>fl.subs?discFolha(fl.subs[0]):discFolha(fl)));
     for(const d of ["arq","ele","hid","est"]){ if(!DS[d]||!tem.has(d)) continue;
       S.pdfDisc={arq:false,ele:false,hid:false,est:false,[d]:true}; arqs.push({name:`${slug()}-${NM[d]}-${fmt}-${agora().arq}.pdf`,data:buildPDF(fmt)}); }
     S.pdfDisc=orig;
