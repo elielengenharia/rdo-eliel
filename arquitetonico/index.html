@@ -399,6 +399,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <p class="cap" style="margin:6px 0"><b>Mudar a rede:</b> toque numa <b>caixa</b> (CA, CI) ou no pé de um <b>condutor</b> (AP) e arraste, ou use Mover; toque em <b>Excluir</b> para tirar (caixa de areia excluída: os condutores dela vão para a caixa de areia mais perto). Toque num <b>lugar vazio</b> para acrescentar caixa. Toque num <b>tubo</b> para trocar o Ø, pôr em 45°, inverter o fluxo, arrastar as bolinhas ou apagar. Os mesmos atalhos do esgoto valem aqui com o mouse em cima desta planta.</p>
       <div class="row" style="margin:0 0 8px"><button class="btn pri" id="apTuboBt" type="button">Desenhar tubo</button><button class="btn" id="apUnirBt" type="button">Unir tubos (fillet)</button><button class="btn" id="apTrimBt" type="button">Cortar pedaço (trim)</button><button class="btn" id="apApagar" type="button" aria-pressed="false">Apagar itens</button><button class="btn" id="apRestaura" type="button" hidden></button><span class="toast" id="apMsg" role="status"></span></div>
       <div class="draw" id="pluvDes" style="touch-action:pan-y"></div><div id="apPanel" class="panel" hidden></div><div class="chips" id="pluvChips"></div>
+      <h3 style="margin-top:14px">Descidas (condutores) por calha</h3><p class="cap" style="margin:0 0 6px">Escolha quantas descidas cada calha tem e, com uma só, de que lado ela fica (olhando da rua para a casa). O Ø do condutor e a seção da calha se recalculam.</p><div class="tbl"><table id="tabCalhas"></table></div>
       <h3 style="margin-top:14px">Perspectiva isométrica da rede pluvial</h3><p class="cap" style="margin:0 0 6px">Como os tubos se ligam na obra: calha no alto, condutor descendo, curva no pé, ramal e caixas enterrados até a rua.</p><div class="draw" id="pluvIso"></div><div id="pluvAvisos"></div>
       <div class="tbl"><table id="tabPluv"></table></div><ol class="notes" id="pluvNotas" style="margin-top:12px"></ol></div>
     <div class="sheet"><h2>Água fria: entrada, reservatório e isométricos</h2>
@@ -796,7 +797,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.09 · saída pluvial com 2 ou 3 tubos Ø100 até a sarjeta", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.10 · descidas por calha (número e lado)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -4917,22 +4918,28 @@ function desenhoQuadra(G,k,QD){
 // (chapa galvanizada n = 0,011, lâmina d'água até metade da altura) e condutores verticais a cada 12 m no máximo
 const CAP_AP={75:105,100:225,150:675};   // L/min por condutor vertical (áreas usuais de 42, 90 e 270 m² com 150 mm/h)
 function calhasPlat(G,TI){ TI=TI||infoTelhado(G); if(!TI.plat||G.vazio) return null;
-  if(TI.vols){ const ls=TI.vols.map(tv=>calhasDe(tv,tv.calhas.slice())).filter(Boolean); if(!ls.length) return null; let j=0; const lista=ls.flatMap(c=>c.lista.map(x=>({...x,nome:`CH${++j}`})));   // cada volume leva a água dele para as calhas dele
+  if(TI.vols){ const ls=TI.vols.map(tv=>calhasDe(tv,tv.calhas.slice())).filter(Boolean); if(!ls.length) return null; let j=0; const lista=ls.flatMap(c=>c.lista.map(x=>{ const nm=`CH${++j}`; return (S.apCalha||{})[nm]||(S.apCalha||{})[x.nome]?calhaCalc(x.seg,x.Aproj,x.A,nm):{...x,nome:nm}; }));   // cada volume leva a água dele para as calhas dele
     return {I:ls[0].I,ic:ls[0].ic,lista,bMax:Math.max(...lista.map(c=>c.b)),hMax:Math.max(...lista.map(c=>c.h)),Ltot:lista.reduce((a,c)=>a+c.L,0),nAP:lista.reduce((a,c)=>a+c.nC,0),Atot:lista.reduce((a,c)=>a+c.A,0)}; } const T=S.tel, I=num(T.chuva)>0?num(T.chuva):160, ic=Math.max(0.5,num(T.icalha)||0.5)/100, nM=0.011, R=TI.R;
   const segs=TI.poly?TI.calhas.slice():TI.bordas.map(e=>({cima:[R.x0,R.y0+0.25,R.x1,R.y0+0.25],baixo:[R.x0,R.y1-0.25,R.x1,R.y1-0.25],esq:[R.x0+0.25,R.y0,R.x0+0.25,R.y1],dir:[R.x1-0.25,R.y0,R.x1-0.25,R.y1]}[e]));
   return calhasDe(TI,segs); }
 function calhasDe(TI,segs){ const T=S.tel, I=num(T.chuva)>0?num(T.chuva):160, ic=Math.max(0.5,num(T.icalha)||0.5)/100, nM=0.011, R=TI.R;
   if(!segs.length) return null; const ap=segs.map(()=>0), st=0.10;
   for(let x=R.x0+st/2;x<R.x1;x+=st) for(let y=R.y0+st/2;y<R.y1;y+=st){ if(!TI.dentroT(x,y)) continue; let bi=0, bd=1e9; segs.forEach((s0,j)=>{ const dd=distSeg([x,y],{x1:s0[0],y1:s0[1],x2:s0[2],y2:s0[3]}); if(dd<bd){ bd=dd; bi=j; } }); ap[bi]+=st*st; }
-  const lista=segs.map((s0,j)=>{ const L0=Math.hypot(s0[2]-s0[0],s0[3]-s0[1]), A=ap[j]*(1+TI.i/2), Q=I*A/60;
-    let nC=Math.max(1,Math.ceil(L0/12-1e-9)); let dia=[75,100,150].find(dm=>Q/nC<=CAP_AP[dm]); while(!dia){ nC++; dia=[75,100,150].find(dm=>Q/nC<=CAP_AP[dm]); }
+  const lista=segs.map((s0,j)=>calhaCalc(s0,ap[j],ap[j]*(1+TI.i/2),`CH${j+1}`));
+  const bMax=Math.max(...lista.map(c=>c.b)), hMax=Math.max(...lista.map(c=>c.h));
+  return {I,ic,lista,bMax,hMax,Ltot:lista.reduce((s0,c)=>s0+c.L,0),nAP:lista.reduce((s0,c)=>s0+c.nC,0),Atot:lista.reduce((s0,c)=>s0+c.A,0)}; }
+// uma calha: condutores (a cada 12 m, ou o número e o lado escolhidos em S.apCalha[nome] = {n, lado: auto|dir|esq|meio}), Ø do condutor e seção da calha
+function calhaCalc(s0,Aproj,A,nome){ const T=S.tel, I=num(T.chuva)>0?num(T.chuva):160, ic=Math.max(0.5,num(T.icalha)||0.5)/100, nM=0.011, L0=Math.hypot(s0[2]-s0[0],s0[3]-s0[1]), Q=I*A/60, O=(S.apCalha||{})[nome]||{};
+    let nC=Math.max(1,Math.ceil(L0/12-1e-9)), nU=Math.round(num(O.n))||0; if(nU) nC=Math.max(1,Math.min(6,nU)); let dia=[75,100,150].find(dm=>Q/nC<=CAP_AP[dm]); if(!dia&&nU) dia=150; while(!dia){ nC++; dia=[75,100,150].find(dm=>Q/nC<=CAP_AP[dm]); }
+    const sobre=nU&&Q/nC>CAP_AP[150]+1e-9;
     const hF=num(T.chMin)>0?Math.max(0.05,num(T.chMin)/100):0;   // profundidade escolhida: a água ocupa no máximo 2/3 dela
     const Qs=Q/nC, cap=b0=>{ const y=hF?Math.min(b0/4,hF*2/3):b0/4, Am=b0*y, Rh=Am/(b0+2*y); return 60000*Am*Math.pow(Rh,2/3)*Math.sqrt(ic)/nM; };
     const bQ=[0.15,0.20,0.25,0.30,0.35,0.40,0.50,0.60].find(b0=>cap(b0)>=Qs)||0.60, bMin=Math.max(0.15,(num(T.cbMin)||25)/100), hMin=0.15, b=Math.max(bMin,bQ), h=hF||Math.max(hMin,Math.ceil(b/2*20-1e-9)/20);   // mínimo prático 25x15 (ou o escolhido) para limpeza e não transbordar
-    const pos=nC===1?[[s0[2],s0[3]]]:Array.from({length:nC},(_,m)=>[s0[0]+(s0[2]-s0[0])*m/(nC-1),s0[1]+(s0[3]-s0[1])*m/(nC-1)]);
-    return {nome:`CH${j+1}`,seg:s0,L:L0,Aproj:ap[j],A,Q,nC,dia,b,h,bQ,Qs,Qcap:cap(b),pos}; });
-  const bMax=Math.max(...lista.map(c=>c.b)), hMax=Math.max(...lista.map(c=>c.h));
-  return {I,ic,lista,bMax,hMax,Ltot:lista.reduce((s0,c)=>s0+c.L,0),nAP:lista.reduce((s0,c)=>s0+c.nC,0),Atot:lista.reduce((s0,c)=>s0+c.A,0)}; }
+    // lado da descida única (olhando da rua para a casa): a ponta da calha mais à direita, mais à esquerda ou o meio
+    const VF={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente]||[0,1], Rt=[VF[1],-VF[0]], dirFim=((s0[2]-s0[0])*Rt[0]+(s0[3]-s0[1])*Rt[1])>=0, lado=O.lado||"auto";
+    const um=lado==="meio"?[(s0[0]+s0[2])/2,(s0[1]+s0[3])/2]:lado==="esq"?(dirFim?[s0[0],s0[1]]:[s0[2],s0[3]]):lado==="dir"?(dirFim?[s0[2],s0[3]]:[s0[0],s0[1]]):[s0[2],s0[3]];
+    const pos=nC===1?[um]:Array.from({length:nC},(_,m)=>[s0[0]+(s0[2]-s0[0])*m/(nC-1),s0[1]+(s0[3]-s0[1])*m/(nC-1)]);
+    return {nome,seg:s0,L:L0,Aproj,A,Q,nC,dia,b,h,bQ,Qs,Qcap:cap(b),pos,nU,lado,sobre}; }
 // telhado aparente: calha no beiral de cada água (na borda do beiral), condutores nos cantos
 function calhasBeiral(G,TI){ TI=TI||infoTelhado(G); if(TI.plat||G.vazio||S.ap.beiral==="não") return null; const R=TI.R;
   const segs=TI.bordas.map(e=>({cima:[R.x0,R.y0,R.x1,R.y0],baixo:[R.x1,R.y1,R.x0,R.y1],esq:[R.x0,R.y1,R.x0,R.y0],dir:[R.x1,R.y0,R.x1,R.y1]}[e]));
@@ -5350,7 +5357,11 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
   { const LM=layoutMoveis(G); $("lay").innerHTML=svgDe(desenhoLayout(G,k,LM),"lay"); LAYLM=LM; layBarra(); layMarca();
     const EL=pontosEletricos(G,LM); $("ele").innerHTML=svgDe(desenhoEletrica(G,k,LM,EL),"ele"); ELV=EL; eleMarca(); eleBotoes();
     const HD=redeHidro(G,LM); fossaSegue(HD); const DH=desenhoHidro(G,k,LM,HD); $("hid").innerHTML=svgDe(DH,"hid"); HDV=HD; HIDTUB=DH.tubos||[]; hidMarca(); hidBotoes();
-    { const PV=redePluvial(G,HD), DP=PV?desenhoPluvial(G,k,PV):null; $("pluvDes").innerHTML=DP?svgDe(DP,"pluvDes"):""; PVV=PV&&!PV.livre?PV:null; APTUB=DP&&DP.tubosAP||[]; apMarca(); apBotoes(); $("pluvIso").innerHTML=PV&&!PV.livre?svgDe(desenhoIsoPluvial(G,0.06,PV)):`<p class="cap">Sem calhas (água cai livre do beiral).</p>`;
+    { const PV=redePluvial(G,HD), DP=PV?desenhoPluvial(G,k,PV):null; $("pluvDes").innerHTML=DP?svgDe(DP,"pluvDes"):""; PVV=PV&&!PV.livre?PV:null; APTUB=DP&&DP.tubosAP||[]; apMarca(); apBotoes();
+      $("tabCalhas").innerHTML=PV&&PV.CL?`<tr><th>Calha</th><th class="n">Comp. (m)</th><th class="n">Vazão (L/min)</th><th>Descidas</th><th>Lado da descida</th><th>Resultado</th></tr>`+PV.CL.lista.map(c=>`<tr><td><b>${c.nome}</b></td><td class="n">${f(c.L)}</td><td class="n">${f(c.Q,0)}</td>
+        <td><select data-chn="${c.nome}" aria-label="Descidas da ${c.nome}"><option value="0">Automático</option>${[1,2,3,4].map(n=>`<option value="${n}"${c.nU===n?" selected":""}>${n}</option>`).join("")}</select></td>
+        <td><select data-chl="${c.nome}" aria-label="Lado da descida da ${c.nome}"${c.nC>1?" disabled":""}>${[["auto","Automático"],["dir","Direita"],["esq","Esquerda"],["meio","Meio"]].map(([v,t])=>`<option value="${v}"${(c.lado||"auto")===v?" selected":""}>${t}</option>`).join("")}</select></td>
+        <td>${c.nC} x Ø${c.dia} · calha ${f(c.b*100,0)}x${f(c.h*100,0)}${c.sobre?` <span style="color:var(--bad)">· passa da capacidade de um Ø150: aumente as descidas</span>`:""}</td></tr>`).join(""):`<tr><td style="color:var(--muted)">Sem calhas.</td></tr>`; $("pluvIso").innerHTML=PV&&!PV.livre?svgDe(desenhoIsoPluvial(G,0.06,PV)):`<p class="cap">Sem calhas (água cai livre do beiral).</p>`;
       $("pluvChips").innerHTML=PV&&!PV.livre?[`${PV.cond.length} condutores`,`${PV.caixas.filter(c=>c.tipo==="CA").length} caixas de areia`,`${PV.caixas.filter(c=>c.tipo==="CI").length} caixas de inspeção`,`Vazão ${f(PV.Qtot,0)} L/min`,...Object.entries(PV.tubos).map(([d,m])=>`Tubo Ø${d}: ${f(m*1.1,1)} m`),`Condutores: ${f(PV.Lcond,1)} m`].map(t=>`<span class="chip">${esc(t)}</span>`).join(""):"";
       $("pluvAvisos").innerHTML=PV?PV.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join(""):"";
       $("tabPluv").innerHTML=PV&&!PV.livre?`<tr><th>Caixa</th><th>Tipo</th><th class="n">Lado (cm)</th><th class="n">Profund. (m)</th><th>Recebe</th><th class="n">Vazão (L/min)</th></tr>`+PV.caixas.map(c=>`<tr><td><b>${c.nome}</b>${c.fim?" (final)":""}</td><td>${c.tipo==="CA"?"Caixa de areia":"Caixa de inspeção"}</td><td class="n">${f(c.lado*100,0)}x${f(c.lado*100,0)}</td><td class="n">${f(c.h,2)}</td><td>${c.cond.map(q=>`${q.nome} Ø${q.dia}`).join(", ")||"-"}</td><td class="n">${c.Q?f(c.Q,0):"-"}</td></tr>`).join(""):"";
@@ -5957,6 +5968,8 @@ function apTrimToque(p){ const A=apTubSeg(p); if(!A) return "Nenhum tubo aí."; 
     if(APDEL) return; if(APSEL||APSELT){ APSEL=null; APSELT=null; render(); } apAcrescenta(p); });
   const modo=m=>{ const was={tubo:!!APTUBO,unir:!!APUNIR,trim:APTRIM,del:APDEL}[m]; APTUBO=null; APUNIR=null; APTRIM=false; APDEL=false; APSEL=null; APSELT=null; APMOVE=false; if(!was){ if(m==="tubo") APTUBO={pts:[],d:100}; if(m==="unir") APUNIR={A:null}; if(m==="trim") APTRIM=true; if(m==="del") APDEL=true; } $("apPanel").hidden=true; apBotoes(); render(); apPainel(); };
   $("apTuboBt").onclick=()=>modo("tubo"); $("apUnirBt").onclick=()=>modo("unir"); $("apTrimBt").onclick=()=>modo("trim"); $("apApagar").onclick=()=>modo("del");
+  $("tabCalhas").addEventListener("change",ev=>{ const e=ev.target, nm=e.dataset.chn||e.dataset.chl; if(!nm) return; S.apCalha=S.apCalha||{}; const o=S.apCalha[nm]||{};
+    if(e.dataset.chn) o.n=+e.value||0; else o.lado=e.value; if(!o.n) delete o.n; if(!o.lado||o.lado==="auto") delete o.lado; if(Object.keys(o).length) S.apCalha[nm]=o; else delete S.apCalha[nm]; save(); render(); });
   $("apRestaura").onclick=()=>{ delete S.apDel; Object.keys(S.apTub||{}).forEach(k=>{ const o=S.apTub[k]; if(o&&o.del){ delete o.del; if(!Object.keys(o).length) delete S.apTub[k]; } }); save(); render(); $("apMsg").textContent="Itens excluídos voltaram."; };
   // atalhos com o mouse em cima da planta pluvial
   let sobre=false; cont.addEventListener("pointerenter",()=>sobre=true); cont.addEventListener("pointerleave",()=>sobre=false);
