@@ -349,7 +349,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <p class="cap" style="margin:6px 0"><b>Mudar uma caixa:</b> toque na caixa de inspeção (CI), de gordura (CG) ou sifonada (CS) e <b>arraste</b>, ou toque em <b>Mover</b> e depois no lugar novo. Ligado na rede pública, a CI e a CG correm pelo coletor em volta da obra (vão para o lado onde você soltar); com fossa elas ficam onde você soltar. Com fossa, arraste o <b>tanque (TS)</b> para levar o conjunto todo, ou o <b>filtro (FA)</b> e o <b>sumidouro (SM)</b> para mudar só aquela unidade. Toque num <b>lugar vazio</b> para <b>acrescentar</b> caixa de inspeção, caixa de gordura, caixa sifonada ou ralo (sifonado, seco, quadrado ou linear). Para <b>tirar</b> uma caixa ou ralo, toque nele e em <b>Excluir</b>, ou ligue <b>Apagar itens</b>. Os canos, o coletor e as conferências se refazem sozinhos.</p>
       <div class="form wide" style="margin:0 0 8px"><label>Coletor de esgoto (caixas de inspeção)<select id="fossa.coletor"><option value="auto">Num corredor só, o lado das áreas molhadas (automático)</option><option value="esq">Corredor do lado esquerdo da planta</option><option value="dir">Corredor do lado direito da planta</option><option value="anel">Em volta da casa</option></select></label></div>
       <p class="cap" style="margin:6px 0"><b>Tubos:</b> toque em <b>Desenhar tubo</b> e vá tocando do começo (ex.: saída da pia) até o fim (ex.: caixa de gordura); o tubo gruda nas caixas, ralos e saídas perto do dedo. Toque num <b>tubo</b> para trocar o diâmetro (40, 50, 75, 100), pôr em 45°, dobrar, arrastar as bolinhas do caminho ou apagar. Vale também para os tubos automáticos e os da fossa. <b>Unir tubos</b> funciona como o fillet do AutoCAD: toque num tubo e depois no outro (ou numa caixa) e eles se encontram no canto, esticando ou cortando o que sobra; se o encontro cair no meio do outro tubo, ele fica inteiro (ligação em T). <b>Cortar pedaço</b> funciona como o trim: toque no pedaço que sobra e só ele some, até o cruzamento com outro tubo ou caixa mais perto de cada lado (sem cruzamento, some até a ponta).</p>
-      <div class="row" style="margin:0 0 8px"><button class="btn pri" id="hidTuboBt" type="button">Desenhar tubo</button><button class="btn" id="hidUnirBt" type="button">Unir tubos (fillet)</button><button class="btn" id="hidTrimBt" type="button">Cortar pedaço (trim)</button><label class="cap" style="display:flex;align-items:center;gap:4px;margin:0"><input type="checkbox" id="hidTrava" checked style="width:auto">Travar em 45°</label><button class="btn" id="hidApagar" type="button" aria-pressed="false">Apagar itens</button><button class="btn" id="hidRestaura" type="button" hidden></button><span class="toast" id="hidDelMsg" role="status"></span></div>
+      <div class="row" style="margin:0 0 8px"><button class="btn pri" id="hidTuboBt" type="button" title="Atalho: T">Desenhar tubo</button><button class="btn" id="hidUnirBt" type="button" title="Atalho: F">Unir tubos (fillet)</button><button class="btn" id="hidTrimBt" type="button" title="Atalho: X">Cortar pedaço (trim)</button><label class="cap" style="display:flex;align-items:center;gap:4px;margin:0"><input type="checkbox" id="hidTrava" checked style="width:auto">Travar em 45°</label><button class="btn" id="hidApagar" type="button" aria-pressed="false" title="Atalho: E">Apagar itens</button><button class="btn" id="hidRestaura" type="button" hidden></button><span class="toast" id="hidDelMsg" role="status"></span></div>
+      <p class="cap" style="margin:0 0 8px">Atalhos no teclado do computador: <b>T</b> desenhar tubo · <b>F</b> unir (fillet) · <b>X</b> cortar (trim) · <b>E</b> apagar itens · <b>Delete</b> apaga o selecionado · <b>M</b> mover · <b>I</b> inverter o fluxo · <b>Enter</b> conclui o tubo · <b>Esc</b> cancela.</p>
       <div class="draw" id="hid" style="touch-action:pan-y"></div><div id="hidPanel" class="panel" hidden></div>
       <div class="chips" id="hidChips"></div><div id="hidAvisos"></div>
     </div>
@@ -786,7 +787,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.03 · trocar o tipo da caixa (gordura, sifonada, inspeção, ralo)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.04 · atalhos de teclado no hidrossanitário", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -5765,6 +5766,18 @@ function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidP
     { const t=tubAchar(p); if(t){ if(HIDDEL){ tubExclui(t.key); return; } HIDSELT=t.key; HIDSEL=null; HIDMOVE=false; render(); hidPainel(); return; } }
     if(HIDDEL) return;
     if(HIDSEL||HIDSELT){ HIDSEL=null; HIDSELT=null; render(); } hidAcrescenta(p); });
+  // atalhos de teclado (como no AutoCAD), só com a aba Hidrossanitário aberta e fora de campos de texto
+  document.addEventListener("keydown",ev=>{ const aba=$("tab-hid"); if(!aba||aba.hidden||ev.ctrlKey||ev.metaKey||ev.altKey||/INPUT|SELECT|TEXTAREA/.test((document.activeElement||{}).tagName||"")) return;
+    const k=ev.key.length===1?ev.key.toLowerCase():ev.key, faz=f0=>{ ev.preventDefault(); f0(); };
+    if(k==="t"||k==="l") return faz(()=>$("hidTuboBt").click());
+    if(k==="f") return faz(()=>$("hidUnirBt").click());
+    if(k==="x") return faz(()=>$("hidTrimBt").click());
+    if(k==="e") return faz(()=>$("hidApagar").click());
+    if(k==="Enter"&&HIDTUBO) return faz(()=>{ if(HIDTUBO.pts.length>=2) hidTuboConclui(); });
+    if(k==="Escape") return faz(()=>{ HIDTUBO=null; HIDUNIR=null; HIDTRIM=false; HIDDEL=false; HIDMOVE=false; HIDSEL=null; HIDSELT=null; $("hidPanel").hidden=true; hidBotoes(); render(); });
+    if(k==="Delete"||k==="Backspace"){ if(HIDSELT&&!HIDTUBO) return faz(()=>tubExclui(HIDSELT)); const q=hidSel(); if(q) return faz(()=>hidExclui(q)); return; }
+    if(k==="m"){ const q=hidSel(); if(q&&q.movel) return faz(()=>{ HIDMOVE=true; hidPainel(); }); return; }
+    if(k==="i"&&HIDSELT){ const t=tubAtual(HIDSELT); if(t) return faz(()=>{ tubPoePts(t.key,t.pts.slice().reverse()); delete HIDALT[t.key]; save(); render(); hidPainel(); $("hidDelMsg").textContent="Sentido do fluxo invertido (a seta virou)."; }); } });
   $("hidTrimBt").onclick=()=>{ HIDTRIM=!HIDTRIM; HIDUNIR=null; HIDTUBO=null; HIDSEL=null; HIDSELT=null; HIDMOVE=false; HIDDEL=false; hidBotoes(); render(); hidPainel(); };
   $("hidUnirBt").onclick=()=>{ HIDUNIR=HIDUNIR?null:{A:null}; HIDTRIM=false; HIDTUBO=null; HIDSEL=null; HIDSELT=null; HIDMOVE=false; HIDDEL=false; hidBotoes(); render(); hidPainel(); };
   $("hidTuboBt").onclick=()=>{ HIDTUBO=HIDTUBO?null:{pts:[]}; HIDUNIR=null; HIDTRIM=false; HIDSEL=null; HIDSELT=null; HIDMOVE=false; HIDDEL=false; hidBotoes(); render(); hidPainel(); };
