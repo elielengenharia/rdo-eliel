@@ -398,7 +398,8 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       </div>
       <p class="cap" style="margin:6px 0"><b>Mudar a rede:</b> toque numa <b>caixa</b> (CA, CI) ou no pé de um <b>condutor</b> (AP) e arraste, ou use Mover; toque em <b>Excluir</b> para tirar (caixa de areia excluída: os condutores dela vão para a caixa de areia mais perto). Toque num <b>lugar vazio</b> para acrescentar caixa. Toque num <b>tubo</b> para trocar o Ø, pôr em 45°, inverter o fluxo, arrastar as bolinhas ou apagar. Os mesmos atalhos do esgoto valem aqui com o mouse em cima desta planta.</p>
       <div class="row" style="margin:0 0 8px"><button class="btn pri" id="apTuboBt" type="button">Desenhar tubo</button><button class="btn" id="apUnirBt" type="button">Unir tubos (fillet)</button><button class="btn" id="apTrimBt" type="button">Cortar pedaço (trim)</button><button class="btn" id="apApagar" type="button" aria-pressed="false">Apagar itens</button><button class="btn" id="apRestaura" type="button" hidden></button><span class="toast" id="apMsg" role="status"></span></div>
-      <div class="draw" id="pluvDes" style="touch-action:pan-y"></div><div id="apPanel" class="panel" hidden></div><div class="chips" id="pluvChips"></div><div id="pluvAvisos"></div>
+      <div class="draw" id="pluvDes" style="touch-action:pan-y"></div><div id="apPanel" class="panel" hidden></div><div class="chips" id="pluvChips"></div>
+      <h3 style="margin-top:14px">Perspectiva isométrica da rede pluvial</h3><p class="cap" style="margin:0 0 6px">Como os tubos se ligam na obra: calha no alto, condutor descendo, curva no pé, ramal e caixas enterrados até a rua.</p><div class="draw" id="pluvIso"></div><div id="pluvAvisos"></div>
       <div class="tbl"><table id="tabPluv"></table></div><ol class="notes" id="pluvNotas" style="margin-top:12px"></ol></div>
     <div class="sheet"><h2>Água fria: entrada, reservatório e isométricos</h2>
       <p class="cap">O hidrômetro fica no muro da frente, junto da rua. Para mudar o lugar dele ou da caixa d'água, toque no <b>hidrômetro (HD)</b> ou no <b>reservatório (RES.)</b> na planta acima e arraste.</p>
@@ -795,7 +796,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    Os desenhos são listas de primitivas (linha, retângulo cheio, polígono,
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
-const VERSAO="versão 6.07 · condutor embutido e descarga na calçada (menos tubo)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.08 · perspectiva isométrica da pluvial, condutor no pilar", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2858,7 +2859,8 @@ function redePluvial(G,HD0){ if(G.vazio||!HD0||!HD0.anelP) return null;
   const cond=[]; CL.lista.forEach(c=>c.pos.forEach(p=>{ let best=null;
     W.forEach(w=>{ const dx=w.b[0]-w.a[0], dy=w.b[1]-w.a[1], L2=dx*dx+dy*dy||1, Lw=Math.sqrt(L2), u=Math.max(0.12/Lw,Math.min(1-0.12/Lw,((p[0]-w.a[0])*dx+(p[1]-w.a[1])*dy)/L2)), q=[w.a[0]+dx*u,w.a[1]+dy*u], d0=Math.hypot(p[0]-q[0],p[1]-q[1]);
       let n=[dy/Lw,-dx/Lw]; if(dentro([q[0]+n[0]*0.05,q[1]+n[1]*0.05])) n=[-n[0],-n[1]]; const emb=S.ap.cond==="emb", ep=Math.max(0.09,num(S.esp)||0.15); if(!best||d0<best.d) best={d:d0,pe:emb?[q[0]-n[0]*ep/2,q[1]-n[1]*ep/2]:[q[0]+n[0]*0.08,q[1]+n[1]*0.08],n}; });
-    if(best) cond.push({nome:`AP${cond.length+1}`,top:p,pe:best.pe,nOut:best.n,emb:S.ap.cond==="emb",dia:Math.max(75,c.dia),Q:c.Q/c.nC,A:c.A/c.nC,calha:c.nome}); }));
+    if(best&&best.d>1.50){ best.pe=[p[0],p[1]]; best.pilar=1; }   // calha longe da parede (garagem, varanda): desce reto junto do pilar, sem trecho inclinado
+    if(best) cond.push({nome:`AP${cond.length+1}`,top:p,pe:best.pe,nOut:best.n,pilar:!!best.pilar,emb:S.ap.cond==="emb",dia:Math.max(75,c.dia),Q:c.Q/c.nC,A:c.A/c.nC,calha:c.nome}); }));
   // mudanças do profissional: S.apM[chave]={x,y} (mover), S.apDel[chave] (excluir), S.apAdd=[{t:"ca"|"ci",x,y}] (acrescentar)
   const APM=S.apM||{}, APD=S.apDel||{};
   for(let j=cond.length-1;j>=0;j--){ const c=cond[j], kk="ap|"+c.nome; c.key=kk; if(APD[kk]){ cond.splice(j,1); continue; } if(APM[kk]){ c.pe=[num(APM[kk].x),num(APM[kk].y)]; c.man=1; } }
@@ -2915,6 +2917,29 @@ const notasPluvial=PV=>PV.semRede?[`Chuva de ${f(PV.CL.I,0)} mm/h; ${PV.cond.len
   ...(PV.cond.some(c=>c.sup)?[`Condutores ${PV.cond.filter(c=>c.sup).map(c=>c.nome).join(", ")} descarregam na calçada (curva de 45° e canaleta com grelha até a rua), sem caixa nem rede enterrada.`]:[]),
   ...(PV.cond.some(c=>c.emb)?[`Condutores embutidos na parede: tubo PVC série R fixado antes do reboco, sem emendas dentro da parede (só conexões soldadas), com curva de 45° na base saindo para a caixa; testar com água antes de fechar.`]:[]),
   `Água de chuva separada do esgoto: não ligar na rede de esgoto nem na fossa séptica (NBR 10844 / NBR 8160).`];
+// perspectiva isométrica da rede pluvial: calhas no alto, condutores descendo, curva no pé, ramal e rede enterrados até a rua (para a obra entender as ligações)
+function desenhoIsoPluvial(G,k,PV){ const D=Dw(k), l="PLUVIAL"; if(!PV||PV.livre||G.vazio) return D;
+  const bb=G.bb, cx=(bb.x0+bb.x1)/2, cy=(bb.y0+bb.y1)/2, P=(p,z)=>[((p[0]-cx)-(p[1]-cy))*0.866,((p[0]-cx)+(p[1]-cy))*0.5-z], L3=(a,za,b,zb,w=.45,d=false,ll=l)=>L(D,...P(a,za),...P(b,zb),w,ll,d);
+  const hC=PV.hCond||3, cxs=PV.caixas||[], prof=q=>{ let b=null; cxs.forEach(c=>{ const d=Math.hypot(c.p[0]-q[0],c.p[1]-q[1]); if(!b||d<b.d) b={d,c}; }); return b&&b.d<6?-(b.c.h-0.05):-0.30; };
+  // contorno da casa no chão e cantos (referência)
+  G.contExt.forEach(s0=>{ L3([s0[0],s0[1]],0,[s0[2],s0[3]],0,.2,false,"PROJECAO"); }); G.contExt.forEach(s0=>L3([s0[0],s0[1]],0,[s0[0],s0[1]],hC,.12,true,"PROJECAO"));
+  // calhas
+  PV.CL.lista.forEach(c=>{ const [x0,y0,x1,y1]=c.seg; L3([x0,y0],hC,[x1,y1],hC,.6); const m=P([(x0+x1)/2,(y0+y1)/2],hC); TX(D,m[0],m[1]-3*k,`${c.nome} ${f(c.b*100,0)}x${f(c.h*100,0)}`,1.3,{l,mv:"n"}); });
+  // condutores
+  PV.cond.forEach(c=>{ if(Math.hypot(c.top[0]-c.pe[0],c.top[1]-c.pe[1])>0.05) L3(c.top,hC,c.pe,hC-0.15,.4); L3(c.pe,hC-(Math.hypot(c.top[0]-c.pe[0],c.top[1]-c.pe[1])>0.05?0.15:0),c.pe,0.10,.5);
+    const t=P(c.pe,hC*0.6); TX(D,t[0]+2*k,t[1],`${c.nome} Ø${c.dia}${c.pilar?" (no pilar)":c.emb?" (embutido)":""}`,1.4,{a:"s",b:true,l,mv:"n"});
+    if(c.sup&&c.nOut){ const n=c.nOut, b=[c.pe[0]+n[0]*0.25,c.pe[1]+n[1]*0.25], e=[b[0]+n[0]*0.8,b[1]+n[1]*0.8]; L3(c.pe,0.10,b,0,.45); L3(b,0,e,0,.3,true); const q=P(e,0); TX(D,q[0]+1.5*k,q[1]+2*k,"curva 45° → canaleta na calçada",1.2,{a:"s",l,mv:"n"}); }
+    else if(c.ca){ const z=prof(c.ca.p)+0.05; L3(c.pe,0.10,c.pe,z,.5); const q=P(c.pe,z); TX(D,q[0]-2*k,q[1]+2.5*k,"curva 90° longa",1.1,{a:"e",l:"COTAS",mv:"n"}); } });
+  // tubos enterrados (os mesmos da planta, com as mudanças feitas à mão)
+  const T=(desenhoPluvial(G,k,PV,false).tubosAP||[]);
+  T.forEach(t=>{ const sai=t.key==="aps", ram=/^apr\|/.test(t.key); const zs=t.pts.map((q,i)=>sai&&i===t.pts.length-1?-0.15:ram&&i===0?prof(t.pts[t.pts.length-1])+0.05:prof(q));
+    for(let i=0;i+1<t.pts.length;i++) L3(t.pts[i],zs[i],t.pts[i+1],zs[i+1],.45); const a=P(t.pts[t.pts.length-2],zs[zs.length-2]), b=P(t.pts[t.pts.length-1],zs[zs.length-1]); setaFluxo(D,a,b,l); });
+  // caixas (caixote abaixo do chão)
+  cxs.forEach(c=>{ const h=c.lado/2, cs=[[c.p[0]-h,c.p[1]-h],[c.p[0]+h,c.p[1]-h],[c.p[0]+h,c.p[1]+h],[c.p[0]-h,c.p[1]+h]];
+    cs.forEach((q,i)=>{ const r=cs[(i+1)%4]; L3(q,0,r,0,.35); L3(q,-c.h,r,-c.h,.2,true); L3(q,0,q,-c.h,.2,true); }); const t=P([c.p[0]+h,c.p[1]+h],0); TX(D,t[0]+1.5*k,t[1]+2*k,`${c.nome} ${f(c.lado*100,0)}x${f(c.lado*100,0)} h=${f(c.h,2)}`,1.3,{a:"s",b:true,l,mv:"n"}); });
+  if(PV.fim&&PV.out){ const q=P(PV.out,-0.15); TX(D,q[0],q[1]+3.5*k,PV.destino==="galeria"?"GALERIA PLUVIAL":"BOCA NO MEIO-FIO (SARJETA)",1.4,{b:true,l}); }
+  const q0=P([cx,cy],0); TX(D,q0[0],q0[1],"NÍVEL DO TERRENO ±0,00",1.2,{l:"COTAS"});
+  return D; }
 // tubo de águas pluviais (editável como os de esgoto): S.apTub[chave]={pts,d,del}; tubos à mão em S.apTubM=[{pts,d}] (chave apm|i)
 function tuboAP(D,key,pts,d,o={}){ const l="PLUVIAL", M=o.manual?null:(S.apTub||{})[key]; if(M&&M.del) return; if(M&&M.d) d=+M.d; if(M&&Array.isArray(M.pts)&&M.pts.length>1) pts=M.pts.map(q=>[+q[0],+q[1]]); if(!pts||pts.length<2) return;
   PL(D,pts,o.w||.45,l); const n=pts.length; setaFluxo(D,pts[n-2],pts[n-1],l); let j=0, lm=-1; for(let q=0;q+1<n;q++){ const L0=Math.hypot(pts[q+1][0]-pts[q][0],pts[q+1][1]-pts[q][1]); if(L0>lm){ lm=L0; j=q; } }
@@ -2931,7 +2956,7 @@ function desenhoPluvial(G,k,PV,legenda=true){ const D=Dw(k), bb=G.bb, l="PLUVIAL
     if(c.L>1.5) TX(D,m[0]-u[1]*2.2*k,m[1]+u[0]*2.2*k,`${c.nome} ${f(c.b*100,0)}x${f(c.h*100,0)} i=${f(PV.CL.ic*100,1)}%`,1.3,{l,rot:ang}); });
   // condutores e ramais até a caixa
   PV.cond.forEach(c=>{ CI(D,...c.top,Math.max(c.dia/2000,0.9*k),.3,l); if(Math.hypot(c.top[0]-c.pe[0],c.top[1]-c.pe[1])>0.05) L(D,...c.top,...c.pe,.2,l,true);
-    CI(D,...c.pe,0.7*k,.3,l); if(c.ca) tuboAP(D,"apr|"+c.nome,[c.pe,c.ca.p],100,{w:.35,lab:false}); TX(D,c.top[0]+1.8*k,c.top[1]-1.8*k,`${c.nome} Ø${c.dia}${c.emb?" (EMBUTIDO)":""}`,1.3,{a:"s",b:true,l});
+    CI(D,...c.pe,0.7*k,.3,l); if(c.ca) tuboAP(D,"apr|"+c.nome,[c.pe,c.ca.p],100,{w:.35,lab:false}); TX(D,c.top[0]+1.8*k,c.top[1]-1.8*k,`${c.nome} Ø${c.dia}${c.pilar?" (NO PILAR)":c.emb?" (EMBUTIDO)":""}`,1.3,{a:"s",b:true,l});
     if(c.sup&&c.nOut){ const n=c.nOut, a=[c.pe[0]+n[0]*(c.emb?0.10:0.02),c.pe[1]+n[1]*(c.emb?0.10:0.02)], b=[a[0]+n[0]*0.7,a[1]+n[1]*0.7]; L(D,...c.pe,...a,.3,l); L(D,...a,...b,.3,l,true); setaFluxo(D,a,b,l); TX(D,b[0]+n[0]*1.5*k,b[1]+n[1]*1.5*k,"DESCARGA NA CALÇADA (CANALETA)",1.2,{a:n[0]<-0.3?"e":n[0]>0.3?"s":"m",l,mv:"n"}); } });
   // rede enterrada
   PV.arcs.forEach(x=>{ const P=x.dir>0?x.pts:[...x.pts].reverse(); tuboAP(D,x.key,P,x.dia,{txt:`Ø${x.dia} i=${f(PV.i,1)}%`}); });
@@ -5322,7 +5347,7 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
   { const LM=layoutMoveis(G); $("lay").innerHTML=svgDe(desenhoLayout(G,k,LM),"lay"); LAYLM=LM; layBarra(); layMarca();
     const EL=pontosEletricos(G,LM); $("ele").innerHTML=svgDe(desenhoEletrica(G,k,LM,EL),"ele"); ELV=EL; eleMarca(); eleBotoes();
     const HD=redeHidro(G,LM); fossaSegue(HD); const DH=desenhoHidro(G,k,LM,HD); $("hid").innerHTML=svgDe(DH,"hid"); HDV=HD; HIDTUB=DH.tubos||[]; hidMarca(); hidBotoes();
-    { const PV=redePluvial(G,HD), DP=PV?desenhoPluvial(G,k,PV):null; $("pluvDes").innerHTML=DP?svgDe(DP,"pluvDes"):""; PVV=PV&&!PV.livre?PV:null; APTUB=DP&&DP.tubosAP||[]; apMarca(); apBotoes();
+    { const PV=redePluvial(G,HD), DP=PV?desenhoPluvial(G,k,PV):null; $("pluvDes").innerHTML=DP?svgDe(DP,"pluvDes"):""; PVV=PV&&!PV.livre?PV:null; APTUB=DP&&DP.tubosAP||[]; apMarca(); apBotoes(); $("pluvIso").innerHTML=PV&&!PV.livre?svgDe(desenhoIsoPluvial(G,0.06,PV)):`<p class="cap">Sem calhas (água cai livre do beiral).</p>`;
       $("pluvChips").innerHTML=PV&&!PV.livre?[`${PV.cond.length} condutores`,`${PV.caixas.filter(c=>c.tipo==="CA").length} caixas de areia`,`${PV.caixas.filter(c=>c.tipo==="CI").length} caixas de inspeção`,`Vazão ${f(PV.Qtot,0)} L/min`,...Object.entries(PV.tubos).map(([d,m])=>`Tubo Ø${d}: ${f(m*1.1,1)} m`),`Condutores: ${f(PV.Lcond,1)} m`].map(t=>`<span class="chip">${esc(t)}</span>`).join(""):"";
       $("pluvAvisos").innerHTML=PV?PV.aviso.map(t=>`<div class="alert warn">${esc(t)}</div>`).join(""):"";
       $("tabPluv").innerHTML=PV&&!PV.livre?`<tr><th>Caixa</th><th>Tipo</th><th class="n">Lado (cm)</th><th class="n">Profund. (m)</th><th>Recebe</th><th class="n">Vazão (L/min)</th></tr>`+PV.caixas.map(c=>`<tr><td><b>${c.nome}</b>${c.fim?" (final)":""}</td><td>${c.tipo==="CA"?"Caixa de areia":"Caixa de inspeção"}</td><td class="n">${f(c.lado*100,0)}x${f(c.lado*100,0)}</td><td class="n">${f(c.h,2)}</td><td>${c.cond.map(q=>`${q.nome} Ø${q.dia}`).join(", ")||"-"}</td><td class="n">${c.Q?f(c.Q,0):"-"}</td></tr>`).join(""):"";
@@ -6608,6 +6633,7 @@ function pranchas(fmt){
     ...isoF,
     ...(fs?[{n:"",conteudo:"FOSSA SÉPTICA, FILTRO ANAERÓBIO E SUMIDOURO",escala:`1:${fs.s}`,itens:[{d:fs,titulo:"CONJUNTO FOSSA SÉPTICA, FILTRO ANAERÓBIO E SUMIDOURO",box:[area.x0,area.y0,aw,ah]}],lado:"fossa",FS}]:[]),
     ...(pv?[{n:"",conteudo:"PLANTA DE ÁGUAS PLUVIAIS",escala:`1:${pv.s}`,itens:[{d:pv,titulo:"PLANTA DE ÁGUAS PLUVIAIS",box:[area.x0,area.y0,aw,ah]}],lado:"pluvial",PV}]:[]),
+    ...(pv&&!PV.livre?(()=>{ const di=encaixar(k=>desenhoIsoPluvial(G,k,PV),aw,ah-TT); return [{n:"",conteudo:"PERSPECTIVA ISOMÉTRICA DE ÁGUAS PLUVIAIS",escala:"SEM ESCALA",itens:[{d:di,titulo:"PERSPECTIVA ISOMÉTRICA DA REDE PLUVIAL",sem:1,box:[area.x0,area.y0,aw,ah]}],lado:"pluvial",PV}]; })():[]),
     ...(ptz?[{n:"",conteudo:"PLANTA DE PINTURA",escala:`1:${ptz.s}`,itens:[{d:ptz,titulo:"PLANTA DE PINTURA",box:[area.x0,area.y0,aw,ah]}],lado:"pintura",PQ}]:[]),
     ...(fo?[{n:"",conteudo:"PLANTA DE FORRO",escala:`1:${fo.s}`,itens:[{d:fo,titulo:"PLANTA DE FORRO",box:[area.x0,area.y0,aw,ah]}],lado:"forro",FO}]:[]),
     ...(bpz?[{n:"",conteudo:"DETALHE DO PISO DE CONCRETO",escala:`1:${bpz.s}`,itens:[{d:bpz,titulo:"DETALHE DO PISO DE CONCRETO",box:[area.x0,area.y0,aw,ah]}],lado:"basepiso",BP}]:[]),
