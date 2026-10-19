@@ -1,0 +1,16 @@
+{
+  "name": "Eliel 3D · Eliel Engenharia & Arquitetura",
+  "short_name": "Eliel 3D",
+  "description": "Projetos 3D interativos — Eliel Engenharia & Arquitetura",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0e1013",
+  "theme_color": "#0e1013",
+  "lang": "pt-BR",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

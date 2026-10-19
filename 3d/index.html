@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eliel 3D · Projetos</title>
+<meta name="description" content="Projetos 3D interativos — Eliel Engenharia & Arquitetura.">
+<meta property="og:title" content="Eliel 3D · Projetos">
+<meta property="og:description" content="Eliel Engenharia & Arquitetura — projetos em 3D para ver no celular.">
+<meta property="og:image" content="https://elielengenharia.github.io/rdo-eliel/3d/dr-tarcio/capa.jpg">
+<meta name="theme-color" content="#0e1013">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Eliel 3D">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1013;--card:#16191d;--line:rgba(255,255,255,.09);--text:#f3efe8;--muted:#a9a49b;--gold:#c9a86a;--gold-2:#e2c78f}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#0e1013}}
+:root[data-theme="dark"]{--bg:#0e1013}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:Manrope,system-ui,sans-serif;min-height:100%}
+body{padding:calc(env(safe-area-inset-top) + 28px) 16px calc(env(safe-area-inset-bottom) + 28px);max-width:980px;margin:0 auto}
+a{color:inherit;text-decoration:none}
+header{display:flex;align-items:center;gap:14px;margin-bottom:34px}
+.mono{width:48px;height:48px;border-radius:50%;border:1.5px solid var(--gold);color:var(--gold);display:grid;place-items:center;font-family:"Cormorant Garamond",serif;font-weight:600;font-size:24px;flex-shrink:0}
+header b{display:block;font-family:"Cormorant Garamond",serif;font-weight:600;font-size:24px;line-height:1.05}
+header span{font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--muted)}
+.kick{font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--gold);font-weight:700}
+h1{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:clamp(32px,7vw,48px);line-height:1.05;margin:6px 0 8px}
+.lead{color:var(--muted);font-size:14.5px;max-width:520px;line-height:1.5;margin-bottom:26px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.card{display:block;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;transition:transform .2s,border-color .2s}
+.card:hover{transform:translateY(-2px);border-color:rgba(201,168,106,.5)}
+.card .img{aspect-ratio:16/9;background:#222 center/cover no-repeat}
+.card .info{padding:14px 16px 16px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.card small{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700}
+.card h2{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:23px;line-height:1.1;margin-top:3px}
+.card p{font-size:12.5px;color:var(--muted);margin-top:3px}
+.go{flex-shrink:0;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--gold-2),var(--gold));display:grid;place-items:center;color:#15120c;font-size:18px;font-weight:700}
+footer{margin-top:34px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}
+.wa{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:12px;border:1px solid var(--line);color:var(--text);font-weight:600;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <div class="mono">E</div>
+  <div><b>Eliel Engenharia</b><span>&amp; Arquitetura · 3D</span></div>
+</header>
+
+<div class="kick">Projetos em 3D</div>
+<h1>Veja a sua casa antes de construir</h1>
+<p class="lead">Toque num projeto para girar a casa, ver de dia e à noite, entrar pela planta e testar cores e pisos.</p>
+
+<main class="grid" id="lista"></main>
+
+<footer>
+  <span>Eng. Eliel Dias Ribeiro · CREA-PA 1520297858</span>
+  <a class="wa" href="https://wa.me/5594991405022?text=Ol%C3%A1%2C%20Eng.%20Eliel!%20Quero%20um%20projeto%203D." target="_blank" rel="noopener">Falar no WhatsApp</a>
+</footer>
+
+<script>
+// Para incluir um projeto novo, acrescente uma linha aqui.
+const PROJETOS = [
+  { pasta: 'dr-tarcio', nome: 'Residência Dr. Tárcio', tipo: 'Residencial', desc: 'Casa térrea com garagem coberta' },
+];
+const lista = document.getElementById('lista');
+PROJETOS.forEach((p) => {
+  const a = document.createElement('a'); a.className = 'card'; a.href = p.pasta + '/';
+  a.innerHTML = `<div class="img" style="background-image:url('${p.pasta}/capa.jpg')"></div>
+    <div class="info"><div><small>${p.tipo}</small><h2>${p.nome}</h2><p>${p.desc}</p></div><span class="go">›</span></div>`;
+  lista.appendChild(a);
+});
+</script>
+</body>
+</html>
