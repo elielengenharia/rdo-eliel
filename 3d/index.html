@@ -44,6 +44,11 @@ h1{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:clamp(32px,7
 .card p{font-size:12.5px;color:var(--muted);margin-top:3px}
 .go{flex-shrink:0;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--gold-2),var(--gold));display:grid;place-items:center;color:#15120c;font-size:18px;font-weight:700}
 footer{margin-top:34px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}
+/* botões do card */
+.acts{display:flex;gap:8px;padding:0 16px 16px}
+.acts button{font:inherit;cursor:pointer;flex:1;padding:11px 10px;border-radius:12px;font-weight:700;font-size:13px}
+.acts .send{border:0;background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#15120c}
+.acts .copy{background:none;border:1px solid var(--line);color:var(--text)}
 .wa{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:12px;border:1px solid var(--line);color:var(--text);font-weight:600;font-size:13px}
 </style>
 </head>
@@ -67,14 +72,24 @@ footer{margin-top:34px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;j
 <script>
 // Para incluir um projeto novo, acrescente uma linha aqui.
 const PROJETOS = [
-  { pasta: 'dr-tarcio', nome: 'Residência Dr. Tárcio', tipo: 'Residencial', desc: 'Casa térrea com garagem coberta' },
+  { pasta: 'dr-tarcio', nome: 'Residência Dr. Tárcio', cliente: 'Dr. Tárcio', tipo: 'Residencial', desc: 'Casa térrea com garagem coberta' },
 ];
 const lista = document.getElementById('lista');
+const BASE = 'https://elielengenharia.github.io/rdo-eliel/3d/';
 PROJETOS.forEach((p) => {
-  const a = document.createElement('a'); a.className = 'card'; a.href = p.pasta + '/';
-  a.innerHTML = `<div class="img" style="background-image:url('${p.pasta}/capa.jpg')"></div>
-    <div class="info"><div><small>${p.tipo}</small><h2>${p.nome}</h2><p>${p.desc}</p></div><span class="go">›</span></div>`;
-  lista.appendChild(a);
+  const link = BASE + p.pasta + '/';
+  const msg = `Olá, ${p.cliente}! Tudo bem?\n\nSegue o projeto 3D: *${p.nome}*.\nPelo celular você pode girar a casa, ver de dia e à noite, entrar pela Planta 3D e testar cores e pisos:\n\n${link}\n\nQualquer dúvida estou à disposição.\nEng. Eliel Dias Ribeiro — Eliel Engenharia & Arquitetura`;
+  const c = document.createElement('div'); c.className = 'card';
+  c.innerHTML = `<a href="${p.pasta}/"><div class="img" style="background-image:url('${p.pasta}/capa.jpg')"></div>
+    <div class="info"><div><small>${p.tipo} · Cliente: ${p.cliente}</small><h2>${p.nome}</h2><p>${p.desc}</p></div><span class="go">›</span></div></a>
+    <div class="acts"><button class="send">Enviar ao cliente</button><button class="copy">Copiar link</button></div>`;
+  c.querySelector('.send').addEventListener('click', () => { window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank'); });
+  c.querySelector('.copy').addEventListener('click', async (e) => {
+    try { await navigator.clipboard.writeText(link); e.target.textContent = 'Link copiado ✓'; }
+    catch (err) { prompt('Copie o link:', link); }
+    setTimeout(() => (e.target.textContent = 'Copiar link'), 2200);
+  });
+  lista.appendChild(c);
 });
 </script>
 </body>
