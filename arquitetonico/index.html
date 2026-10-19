@@ -567,7 +567,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <h3>Ferros de cada viga</h3><div class="tbl"><table id="tabArmV"></table></div>
       <h3>Pilares e fundação</h3><div class="tbl"><table id="tabArmP"></table></div>
       <h3>Detalhamento das vigas</h3><div class="draw" id="armVigas" style="max-height:720px;overflow:auto"></div>
-      <h3>Detalhe de pilares e sapatas</h3><div class="draw" id="armPil"></div>
+      <h3>Detalhe de pilares e sapatas</h3><div class="draw" id="armPil"></div><h3>Detalhe de verga e contraverga</h3><div class="draw" id="estrVerga"></div>
       <div class="grid2" style="margin-top:12px"><div><h3 style="margin-top:0">Relação do aço</h3><div class="tbl" style="max-height:520px;overflow:auto"><table id="tabRel"></table></div></div>
         <div><h3 style="margin-top:0">Resumo do aço</h3><div class="tbl"><table id="tabRes"></table></div><div class="tbl" style="margin-top:12px"><table id="tabResP"></table></div></div></div>
     </div>
@@ -585,7 +585,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <div class="chips" id="estSChips"></div>
       <h3>Planta de coluninhas e cinta</h3><div class="draw" id="estSForma"></div>
       <h3>Locação das coluninhas e fundação</h3><div class="draw" id="estSFund"></div>
-      <h3>Seções</h3><div class="draw" id="estSDet" style="max-width:640px"></div>
+      <h3>Seções</h3><div class="draw" id="estSDet" style="max-width:640px"></div><h3>Detalhe de verga e contraverga</h3><div class="draw" id="estSVerga"></div>
       <div class="tbl" style="margin-top:12px"><table id="tabEstS"></table></div>
       <div class="grid2" style="margin-top:12px"><div><h3 style="margin-top:0">Ferros de cada peça</h3><div class="tbl"><table id="tabEstSFer"></table></div></div><div><h3 style="margin-top:0">Resumo do aço por bitola</h3><div class="tbl"><table id="tabEstSRes"></table></div></div></div>
       <ol class="notes" id="estSNotas" style="margin-top:12px"></ol>
@@ -799,7 +799,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.32 · com ou sem laje no estrutural e vergas e contravergas", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.33 · detalhe de verga e contraverga na parede", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -3623,6 +3623,38 @@ function vergasDe(G,CF){ const T=CF.tr, ap=num(T.apoio)/100, tp=Math.max(1,num(T
   G.abs.forEach(g=>{ const L0=g.l+2*ap; vgs.push({k:"Verga",L:L0,h:num(T.hv),cod:g.cod||g.tipo}); if(g.tipo==="Janela") vgs.push({k:"Contraverga",L:L0,h:num(T.hc),cod:g.cod||g.tipo}); });
   const bars=[]; [...vgs].sort((a,c)=>c.L-a.L).forEach(c=>{ if(c.L>tp){ bars.push({emenda:true,sobra:0}); return; } const b0=bars.find(x=>!x.emenda&&x.sobra>=c.L-1e-9); if(b0) b0.sobra-=c.L; else bars.push({sobra:tp-c.L}); });
   const trM=vgs.reduce((s0,v)=>s0+v.L,0), Vvg=vgs.reduce((s0,v)=>s0+v.L*num(T.b)*v.h/1e4,0); return {vgs,bars,trM,Vvg,tp,T,nV:vgs.filter(v=>v.k==="Verga").length,nC:vgs.filter(v=>v.k==="Contraverga").length}; }
+// detalhe de verga e contraverga numa parede de tijolo: janela e porta típicas (as maiores do projeto), passando o apoio para cada lado, e a seção com a treliça
+function desenhoVergas(k,G,VG){ const D=Dw(k), T=VG.T, ap=num(T.apoio)/100, hv=num(T.hv)/100, hc=num(T.hc)/100, bw=num(T.b)/100, Y=z=>-z;
+  const jan=G.abs.filter(g=>g.tipo==="Janela").sort((a,b)=>b.l-a.l)[0], por=G.abs.filter(g=>g.tipo!=="Janela").sort((a,b)=>b.l-a.l)[0];
+  const H=Math.max(2.6,Math.min(3.2,num(S.pd)||2.8)), tij=[0.19,0.09+0.01];   // tijolo 9x19 deitado na vista: fiadas de 10 cm
+  const parede=(x0,W,vaos,cheios)=>{ PL(D,[[x0,Y(0)],[x0+W,Y(0)],[x0+W,Y(H)],[x0,Y(H)],[x0,Y(0)]],.35,"PAREDE");
+    const fora=(x,z)=>![...vaos,...cheios].some(r=>x>r[0]-1e-6&&x<r[1]+1e-6&&z>r[2]-1e-6&&z<r[3]+1e-6);
+    for(let z=tij[1],i=0;z<H-1e-6;z+=tij[1],i++){ let a=null; for(let x=x0;x<=x0+W+1e-9;x+=0.01){ const ok=fora(x,z); if(ok&&a==null) a=x; if((!ok||x>=x0+W-1e-9)&&a!=null){ if(x-a>0.02) L(D,a,Y(z),Math.min(x,x0+W),Y(z),.1,"PAREDE"); a=null; } }
+      const off=(i%2)*tij[0]/2; for(let x=x0+off+tij[0];x<x0+W-0.02;x+=tij[0]+0.01) if(fora(x,z-tij[1]/2)) L(D,x,Y(z-tij[1]),x,Y(z),.1,"PAREDE"); }
+    vaos.forEach(r=>{ PG(D,[[r[0],Y(r[2])],[r[1],Y(r[2])],[r[1],Y(r[3])],[r[0],Y(r[3])]],"FUNDO"); PL(D,[[r[0],Y(r[2])],[r[1],Y(r[2])],[r[1],Y(r[3])],[r[0],Y(r[3])],[r[0],Y(r[2])]],.35,"ESQUADRIA"); L(D,r[0],Y(r[2]),r[1],Y(r[3]),.1,"ESQUADRIA"); L(D,r[0],Y(r[3]),r[1],Y(r[2]),.1,"ESQUADRIA"); });
+    cheios.forEach(r=>{ PG(D,[[r[0],Y(r[2])],[r[1],Y(r[2])],[r[1],Y(r[3])],[r[0],Y(r[3])]],"HACHURA"); PL(D,[[r[0],Y(r[2])],[r[1],Y(r[2])],[r[1],Y(r[3])],[r[0],Y(r[3])],[r[0],Y(r[2])]],.4,"CONCRETO");
+      L(D,r[0]+0.03,Y(r[2]+0.03),r[1]-0.03,Y(r[2]+0.03),.3,"VIGA"); L(D,r[0]+0.03,Y(r[3]-0.03),r[1]-0.03,Y(r[3]-0.03),.3,"VIGA"); for(let x=r[0]+0.03;x<r[1]-0.05;x+=0.20) L(D,x,Y(r[2]+0.03),x+0.10,Y(r[3]-0.03),.18,"VIGA"),L(D,x+0.10,Y(r[3]-0.03),x+0.20,Y(r[2]+0.03),.18,"VIGA"); });
+    L(D,x0-0.3,Y(0),x0+W+0.3,Y(0),.45,"TERRENO"); };
+  let x=0;
+  if(jan){ const l=jan.l, p0=num(jan.a.p)||1.0, a0=num(jan.a.a)||1.2, W=l+2*ap+1.0, xv=x+0.5+ap, z1=p0+a0;
+    const V=[xv-ap,xv+l+ap,z1,z1+hv], C=[xv-ap,xv+l+ap,p0-hc,p0];
+    parede(x,W,[[xv,xv+l,p0,z1]],[V,C]);
+    cotaH(D,V[0],xv,Y(V[3])-5*k,Y(V[3]),f(ap*100,0)); cotaH(D,xv,xv+l,Y(V[3])-5*k,Y(V[3]),`VÃO ${f(l)}`); cotaH(D,xv+l,V[1],Y(V[3])-5*k,Y(V[3]),f(ap*100,0));
+    cotaH(D,C[0],xv,Y(C[2])+5*k,Y(C[2]),f(ap*100,0)); cotaH(D,xv+l,C[1],Y(C[2])+5*k,Y(C[2]),f(ap*100,0)); cotaH(D,C[0],C[1],Y(C[2])+10*k,Y(C[2]),f(l+2*ap));
+    cotaV(D,Y(V[3]),Y(V[2]),x+W+5*k,V[1],f(hv*100,0)); cotaV(D,Y(C[3]),Y(C[2]),x+W+5*k,C[1],f(hc*100,0)); cotaV(D,Y(p0),Y(0),x-5*k,x,f(p0)); cotaV(D,Y(z1),Y(p0),x-5*k,x,f(a0));
+    TX(D,xv+l/2,Y(V[3])-11*k,`VERGA ${f(l+2*ap)} m (${f(ap*100,0)} cm PARA CADA LADO)`,1.5,{b:true,l:"COTAS"}); TX(D,xv+l/2,Y(C[2])+15*k,`CONTRAVERGA ${f(l+2*ap)} m`,1.5,{b:true,l:"COTAS"});
+    TX(D,x+W/2,Y(-0.35),`JANELA ${jan.cod||""} - PAREDE DE TIJOLO`,1.8,{b:true}); x+=W+1.6; }
+  if(por){ const l=por.l, a0=num(por.a.a)||2.1, W=l+2*ap+1.0, xv=x+0.5+ap, V=[xv-ap,xv+l+ap,a0,a0+hv];
+    parede(x,W,[[xv,xv+l,0,a0]],[V]);
+    cotaH(D,V[0],xv,Y(V[3])-5*k,Y(V[3]),f(ap*100,0)); cotaH(D,xv,xv+l,Y(V[3])-5*k,Y(V[3]),`VÃO ${f(l)}`); cotaH(D,xv+l,V[1],Y(V[3])-5*k,Y(V[3]),f(ap*100,0));
+    cotaV(D,Y(V[3]),Y(V[2]),x+W+5*k,V[1],f(hv*100,0)); cotaV(D,Y(a0),Y(0),x-5*k,x,f(a0));
+    TX(D,xv+l/2,Y(V[3])-11*k,`VERGA ${f(l+2*ap)} m (${f(ap*100,0)} cm PARA CADA LADO)`,1.5,{b:true,l:"COTAS"}); TX(D,x+W/2,Y(-0.35),`PORTA ${por.cod||""} - PAREDE DE TIJOLO`,1.8,{b:true}); x+=W+1.2; }
+  // seção da verga com a treliça
+  { const m=4, h=hv*m, b=bw*m, z0=0.6; PG(D,[[x,Y(z0)],[x+b,Y(z0)],[x+b,Y(z0+h)],[x,Y(z0+h)]],"HACHURA"); PL(D,[[x,Y(z0)],[x+b,Y(z0)],[x+b,Y(z0+h)],[x,Y(z0+h)],[x,Y(z0)]],.4,"CONCRETO");
+    const c=0.025*m; [[x+c,z0+c],[x+b-c,z0+c],[x+b/2,z0+h-c]].forEach(([a,zz])=>CI(D,a,Y(zz),0.006*m,.3,"VIGA")); PL(D,[[x+c,Y(z0+c)],[x+b/2,Y(z0+h-c)],[x+b-c,Y(z0+c)]],.2,"VIGA");
+    cotaH(D,x,x+b,Y(z0)+5*k,Y(z0),f(bw*100,0)); cotaV(D,Y(z0+h),Y(z0),x+b+5*k,x+b,f(hv*100,0));
+    TX(D,x+b/2,Y(z0+h)-4*k,"SEÇÃO DA VERGA (AMPLIADA)",1.6,{b:true}); TX(D,x+b+10*k,Y(z0+h/2),`TRELIÇA ${T.nome}`,1.3,{a:"s",l:"COTAS"}); }
+  return D; }
 function calcSimples(G,R,CF){ const vb=CF.vb, pl=CF.pl, br=CF.br, lp=num(CF.peca)||6, tr=num(CF.trasp)/100, pieces=(L0,l,t0)=>L0<=l?1:Math.ceil((L0-l)/(l-t0))+1;
   const kgm=(g,bit,est)=>{ const le=(2*(num(g.ga)+num(g.gb))+10)/100; return 4*BIT_F[bit].kg+(100/num(g.s))*le*EST_F[est].kg; };
   const V=R.vigas, Ltot=V.reduce((s0,v)=>s0+v.L,0), ext=Math.max(0,num(vb.b)/200-0.03);
@@ -5653,7 +5685,7 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
       $("estrChips").innerHTML=[`${ES.pil.length} pilares`,`${ES.vigas.length} vigas`,ES.temLaje?`${ES.lajes.length} lajes`:"sem laje",...(ES.VG?[`${ES.VG.nV} vergas e ${ES.VG.nC} contravergas`]:[]),`Carga total ≈ ${f(ES.Ntot,0)} kN`,...(ES.fund==="sapata"?[`Sapatas: ${ES.tipos.map(t0=>`${t0.nome} ${t0.f.tx} x ${f(t0.f.h)}`).join(", ")}`,`Concreto das sapatas ${f(ES.Vsap,2)} m³`,...(ES.Vlas>0?[`Lastro ${f(ES.lastro,0)} cm: ${f(ES.Vlas,2)} m³`]:[])]:[`Blocos: ${ES.tipos.map(t0=>t0.nome).join(", ")}`])].map(t0=>`<span class="chip">${t0}</span>`).join("");
       $("tabPil").innerHTML=`<tr><th>Pilar</th><th class="n">Seção (cm)</th><th class="n">Carga (kN)</th><th>Fundação</th></tr>`+ES.pil.map(q=>`<tr><td><b>${q.nome}</b></td><td class="n">${f(q.b*100,0)}x${f(q.h*100,0)}</td><td class="n">${f(q.N,0)}</td><td>${q.fn} · ${esc(q.f.tx)}</td></tr>`).join("");
       $("tabVig").innerHTML=`<tr><th>Peça</th><th class="n">Seção / h</th><th class="n">Vão máx. (m)</th></tr>`+ES.vigas.map(v=>`<tr><td><b>${v.nome}</b> / ${v.nomeB}</td><td class="n">${f(v.b*100,0)}x${f(v.h*100,0)} / ${f(v.b*100,0)}x${f(v.hb*100,0)}</td><td class="n">${f(v.Lm)}</td></tr>`).join("")+ES.lajes.map(l=>`<tr><td><b>${l.nome}</b> ${esc(l.r.n)}</td><td class="n">${l.h?`h=${l.h} cm`:"-"} (${esc(l.tipo)})</td><td class="n">${f(l.lmin)}</td></tr>`).join("");
-      $("estrNotas").innerHTML=notasEstr(ES).map(t0=>`<li>${esc(t0)}</li>`).join("");
+      $("estrNotas").innerHTML=notasEstr(ES).map(t0=>`<li>${esc(t0)}</li>`).join(""); $("estrVerga").innerHTML=G.abs.length&&ES.VG?svgDe(desenhoVergas(0.03,G,ES.VG)):"";
       if(!$("tab-estr").hidden){ const AR=armadura(G,ES), tb=(cols,rows)=>`<tr>${cols.map(c=>`<th${c[1]?' class="n"':""}>${c[0]}</th>`).join("")}</tr>`+rows.map(r=>`<tr>${r.map((v,j)=>`<td${cols[j][1]?' class="n"':""}>${v}</td>`).join("")}</tr>`).join("");
         $("armChips").innerHTML=[`Aço total ${f(AR.tot,0)} kg (${f(AR.tot10,0)} kg com 10% de perda)`,...AR.porTipo.map(([n,v])=>`${n}: ${f(v,0)} kg`)].map(t0=>`<span class="chip">${t0}</span>`).join("");
         $("armAvisos").innerHTML=AR.av.map(t0=>`<div class="alert warn">${esc(t0)}</div>`).join("");
@@ -5664,7 +5696,7 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
         $("tabRel").innerHTML=tb([["Peça"],["Pos."],["Ø (mm)",1],["Qtd",1],["C. unit (cm)",1],["C. total (m)",1],["Peso (kg)",1]],AR.rel.map(r=>[esc(r.el),r.pos,f(r.fi,1),r.q,f(r.c*100,0),f(r.tot,2),f(r.kg,1)]));
         $("tabRes").innerHTML=tb([["Ø (mm)"],["Compr. (m)",1],["Peso (kg)",1],["+10% (kg)",1],["Barras de 12 m",1]],[...AR.resumo.map(o=>[f(o.fi,1),f(o.m,1),f(o.kg,1),f(o.kg10,1),o.barras]),["<b>Total</b>","",`<b>${f(AR.tot,1)}</b>`,`<b>${f(AR.tot10,1)}</b>`,`<b>${AR.resumo.reduce((a,o)=>a+o.barras,0)}</b>`]]);
         $("tabResP").innerHTML=tb([["Aço por peça"],["Peso (kg)",1]],AR.porTipo.map(([n,v])=>[n,f(v,1)])); } } }
-  { const ES=estrutural(G,true); if(ES){ const kk=Math.max(0.04,kTela(G)); $("estSForma").innerHTML=svgDe(desenhoForma(G,kk,ES)); $("estSFund").innerHTML=svgDe(desenhoFundacao(G,kk,ES)); $("estSDet").innerHTML=svgDe(desenhoDetColunas(0.012,ES));
+  { const ES=estrutural(G,true); if(ES){ const kk=Math.max(0.04,kTela(G)); $("estSForma").innerHTML=svgDe(desenhoForma(G,kk,ES)); $("estSFund").innerHTML=svgDe(desenhoFundacao(G,kk,ES)); $("estSVerga").innerHTML=G.abs.length?svgDe(desenhoVergas(0.03,G,vergasDe(G,ES.CF))):""; $("estSDet").innerHTML=svgDe(desenhoDetColunas(0.012,ES));
       document.querySelectorAll("[data-sis]").forEach(x=>{ x.value=(S.estr&&S.estr.sis)||"auto"; }); document.querySelectorAll("[data-estr]").forEach(x=>{ if(document.activeElement!==x) x.value=S.estr[x.dataset.estr]??(x.tagName==="SELECT"?x.options[0].value:""); });
       const Q=ES.Q, CF=ES.CF; $("estSChips").innerHTML=[`${ES.pil.length} pilares (coluninhas)`,(Q.sap?`${Q.npil} sapatas ${R0tx(ES)}`:`${Q.nbr} brocas ø${CF.br.d}`),`${Q.vbPieces+Q.ciPieces} peças ø ${CF.vb.bit}"`,`${Q.plPieces} peças ø ${CF.pl.bit}"`,`Aço ${f(Q.acoTot,0)} kg`,`Concreto ${f(Q.Vbr+Q.Vvb+Q.Vci+Q.Vvg,2)} m³`,(S.estr.sis==="simples"||(S.estr.sis==="auto"&&!lajeEstr()))?"vai no PDF":"não vai no PDF (veja a aba Estrutural)"].map(t0=>`<span class="chip">${t0}</span>`).join("")+(ES.avisos||[]).map(t0=>`<div class="alert warn">${esc(t0)}</div>`).join("");
       $("tabEstS").innerHTML=`<tr><th>Item</th><th class="n">Un</th><th class="n">Qtd</th><th>Obs.</th></tr>`+linhasEstS(ES).map(r=>r[0]==="grp"?`<tr><td colspan="4"><b>${esc(r[1])}</b></td></tr>`:`<tr><td>${esc(r[0])}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td><td style="color:var(--muted);font-size:12px">${esc(r[3])}</td></tr>`).join("");
@@ -6827,11 +6859,11 @@ const ESCALAS=[20,25,50,75,100,125,150,200,250,500,750,1000,1500,2000];
 function encaixar(gerar,bw,bh){ let ult=null; for(const s of ESCALAS){ const k=s/1000, D=gerar(k), e=extensao(D), w=(e.x1-e.x0)/k, h=(e.y1-e.y0)/k; ult={D,s,k,e,w,h,gen:gerar}; if(w<=bw&&h<=bh) return ult; } return ult; }
 const naEscala=(gerar,s)=>{ const k=s/1000, D=gerar(k), e=extensao(D); return {D,s,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:gerar}; };
 /* pranchas agrupadas: junta desenhos da mesma disciplina numa folha (A0 até 9, A1 até 6, A2 até 4) */
-const GRUPOS=[/PLANTA BAIXA|DEMOLIR|LAYOUT|CORTES|FACHADAS|COBERTURA|SITUAÇÃO|PAGINAÇÃO/,/FORMA|COLUNINHAS|PILARES|LOCAÇÃO|ESTRUTURA E DETALHES DO TELHADO|ESCADA|PISO DE CONCRETO|ARMADURA/,/ELÉTRIC|UNIFILAR|HIDROSS|PLUVIA|FOSSA/,/PINTURA|FORRO|PISO|REVESTIMENTO/,/BANHEIRO|PORTAS|ESQUADRIAS|PERSPECTIVA/];
+const GRUPOS=[/PLANTA BAIXA|DEMOLIR|LAYOUT|CORTES|FACHADAS|COBERTURA|SITUAÇÃO|PAGINAÇÃO/,/FORMA|COLUNINHAS|PILARES|LOCAÇÃO|ESTRUTURA E DETALHES DO TELHADO|ESCADA|PISO DE CONCRETO|ARMADURA|VERGA/,/ELÉTRIC|UNIFILAR|HIDROSS|PLUVIA|FOSSA/,/PINTURA|FORRO|PISO|REVESTIMENTO/,/BANHEIRO|PORTAS|ESQUADRIAS|PERSPECTIVA/];
 const grupoFolha=fl=>{ const i=GRUPOS.findIndex(r=>r.test(fl.conteudo)); return i<0?GRUPOS.length:i; };
 // disciplina de cada prancha (para imprimir só o arquitetônico, só o elétrico...)
 function discFolha(fl){ const l=fl.lado; if(l==="eletrica"||l==="unifilar") return "ele"; if(l==="hidro"||l==="pluvial"||l==="fossa"||l==="hidiso") return "hid";
-  if(["forma","formaS","fundacao","armadura","basepiso","escadaArm"].includes(l)||(l==="locacao"&&fl.LC&&fl.LC.pil)) return "est"; return "arq"; }
+  if(["forma","formaS","fundacao","armadura","basepiso","escadaArm","vergas"].includes(l)||(l==="locacao"&&fl.LC&&fl.LC.pil)) return "est"; return "arq"; }
 const discSel=()=>{ const d=S.pdfDisc||{}; return {arq:d.arq!==false,ele:d.ele!==false,hid:d.hid!==false,est:d.est!==false}; };
 // uma prancha só por disciplina (elétrico, hidrossanitário), bem cheia (pedido do Eliel para o A0):
 // plantas numa coluna à esquerda, na mesma escala, a maior que couber; detalhes, unifilares e isométricos numa grade à direita, cada um no maior tamanho que couber.
@@ -7001,6 +7033,7 @@ function pranchas(fmt){
       {n:"",conteudo:"PLANTA DE IMPLANTAÇÃO",escala:`1:${si.s}`,itens:[{d:si,titulo:"PLANTA DE IMPLANTAÇÃO",box:[area.x0,area.y0,aw,ah]}],lado:"situacao"}]
     :[{n:"05/05",conteudo:sq?"PLANTA DE SITUAÇÃO E IMPLANTAÇÃO":"PLANTA DE IMPLANTAÇÃO",escala:sq?`1:${sq.s} / 1:${si.s}`:`1:${si.s}`,itens:[...(sq?[{d:sq,titulo:"PLANTA DE SITUAÇÃO",box:[area.x0,area.y0,wQ,ah]}]:[]),{d:si,titulo:"PLANTA DE IMPLANTAÇÃO",box:sq?[area.x0+wQ+8,area.y0,aw-wQ-8,ah]:[area.x0,area.y0,aw,ah]}],lado:"situacao",QD}]),
     ...(efo?[{n:"",conteudo:ES.simples?"PLANTA DE COLUNINHAS E CINTA":"PLANTA DE FORMA (ESTRUTURA)",escala:`1:${efo.s}`,itens:[{d:efo,titulo:ES.simples?"PLANTA DE COLUNINHAS E CINTA":"PLANTA DE FORMA",box:[area.x0,area.y0,aw,ah]}],lado:ES.simples?"formaS":"forma",ES}]:[]),
+    ...(ES&&G.abs.length?(VGx=>[{n:"",conteudo:"DETALHE DE VERGA E CONTRAVERGA",escala:"",itens:[(d=>({d,titulo:"VERGA E CONTRAVERGA NA PAREDE DE TIJOLO",box:[area.x0,area.y0,aw,ah]}))(encaixar(k=>desenhoVergas(k,G,VGx),aw,ah-TT))],lado:"vergas",VG:VGx}])(ES.VG||vergasDe(G,ES.CF||cfgFund())):[]),
     ...(efu?[{n:"",conteudo:ES.simples?"LOCAÇÃO DAS COLUNINHAS E FUNDAÇÃO":"LOCAÇÃO DE PILARES E FUNDAÇÃO",escala:`1:${efu.s} / 1:${edf.s}`,itens:[{d:efu,titulo:ES.simples?"LOCAÇÃO DAS COLUNINHAS E FUNDAÇÃO":"LOCAÇÃO DE PILARES E FUNDAÇÃO",box:[area.x0,area.y0,aw*0.68,ah]},{d:edf,titulo:ES.simples?"SEÇÕES":ES.fund==="sapata"?"DETALHE TÍPICO DA SAPATA":"DETALHE TÍPICO DO BLOCO",box:[area.x0+aw*0.68+8,area.y0,aw*0.32-8,ah]}],lado:"fundacao",ES}]:[]),
     ...armF.map((g,i)=>({n:"",conteudo:`DETALHAMENTO DAS VIGAS${armF.length>1?` (${i+1}/${armF.length})`:""}`,escala:`1:${g.dv.s}`,itens:[{d:g.dv,titulo:`VIGAS ${g.g[0].nome} A ${g.g[g.g.length-1].nome}`,box:[area.x0,area.y0,aw*0.64,ah]},{d:g.dt,sem:1,titulo:"RELAÇÃO DO AÇO",box:[area.x0+aw*0.64+8,area.y0,aw*0.36-8,ah]}],lado:"armadura",ES,AR})),
     ...(AR?(()=>{ const dp=encaixar(k=>desenhoPilSapDet(k,ES,AR),aw*0.55,ah-TT), rel=AR.rel.filter(r=>!AR.vigas.some(a=>a.nome===r.el)), dt=encaixar(k=>desenhoTabela(k,[{t:"RELAÇÃO DO AÇO - PILARES E FUNDAÇÃO",cols:COLS_REL,rows:linhasRel(rel)},...blocoResumo(AR)]),aw*0.45-8,ah-TT);
@@ -7038,6 +7071,8 @@ function pranchas(fmt){
 function textosLado(P,lado,fl){
   const {G,Q,TI}=P, pd=num(S.pd);
   if(lado==="persp") return [{t:"NOTAS",linhas:[perspImgs().length?"Imagens renderizadas do modelo 3D do projeto (ilustrativas).":PERSP.M&&S.persp.fonte!=="app"?`Perspectivas geradas da maquete ${PERSP.nome}.`:"Perspectivas geradas da planta: paredes, vãos, platibanda e telhado do projeto.","Desenhos ilustrativos, sem escala. Valem as medidas das plantas, cortes e fachadas.","Cores e materiais finais conforme o projeto de fachada e o memorial."]}];
+  if(lado==="vergas"){ const V=fl.VG; return [{t:"VERGAS E CONTRAVERGAS",cols:[["PEÇA",0],["QTD",1],["COMPR. TOTAL (m)",1]],pc:[0.44,0.2,0.36],rows:[["Vergas",String(V.nV),f(V.vgs.filter(v=>v.k==="Verga").reduce((s0,v)=>s0+v.L,0))],["Contravergas",String(V.nC),f(V.vgs.filter(v=>v.k==="Contraverga").reduce((s0,v)=>s0+v.L,0))],[`Treliça ${V.T.nome} (barras de ${f(V.tp,0)} m)`,String(V.bars.length),f(V.trM)],["Concreto",`${f(V.Vvg,2)} m³`,""]]},
+    {t:"NOTAS",linhas:[`Verga sobre todas as portas e janelas e contraverga sob todas as janelas, passando ${V.T.apoio} cm para cada lado do vão (apoio na alvenaria).`,`Seção ${V.T.b} x ${V.T.hv} cm (verga) e ${V.T.b} x ${V.T.hc} cm (contraverga), com treliça ${V.T.nome} e concreto fck 20 MPa; pode ser moldada na obra com forma ou em canaleta.`,`Vão acima de 2,40 m: verga calculada como viga (consultar o projeto estrutural).`]}]; }
   if(lado==="escadaArm"){ const A=fl.EC.arm, rows=A.rel.map(r=>[`${r.el} ${r.pos}`,String(r.q),f(r.fi,1),f(r.c),f(r.kg,1)]), por=14, bl=[]; for(let i=0;i<rows.length;i+=por) bl.push({t:i?"RELAÇÃO DO AÇO (CONT.)":"RELAÇÃO DO AÇO",cols:[["POS.",0],["QTD",1],["ø",1],["C (m)",1],["kg",1]],pc:[0.28,0.16,0.16,0.2,0.2],rows:rows.slice(i,i+por)});
     return [...bl,{t:"RESUMO DO AÇO",cols:[["BITOLA",0],["kg (+10%)",1]],rows:[...Object.entries(A.res).sort((a,b)=>a[0]-b[0]).map(([fi,kg])=>[`ø ${f(+fi,1)} mm`,f(kg*1.1,1)]),["TOTAL",f(A.kg*1.1,1)],["CONCRETO",`${f(A.Vc,2)} m³`]]},{t:"NOTAS",linhas:notasEscada(fl.EC).slice(3)}]; }
   if(lado==="escada"){ const E=fl.EC; return [{t:"DIMENSIONAMENTO",cols:[["ITEM",0],["VALOR",1]],rows:[["Altura a vencer",`${f(E.H)} m`],["Lances",`${E.nL} (${E.LA.map(L0=>L0.r).join(" + ")} espelhos)`],["Degraus",String(E.n)],["Espelho",`${f(E.e*100,1)} cm`],["Piso",`${f(E.p*100,0)} cm`],["Blondel (2e + p)",`${f(E.bl*100,1)} cm`],["Largura útil",`${f(E.B)} m`]]},{t:"NOTAS",linhas:notasEscada(E)}]; }
