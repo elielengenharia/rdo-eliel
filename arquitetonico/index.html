@@ -547,7 +547,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <h2>Planta estrutural</h2>
       <p class="cap">Pré-dimensionamento para obra térrea: pilares nos cantos e encontros de parede e no meio dos trechos longos (fora de portas e janelas), vigas sobre as paredes, lajes treliçadas por ambiente (vigotas no menor vão), cargas pela área de influência de cada pilar e fundação em sapata ou estaca broca, com viga baldrame. Conferir e detalhar no projeto estrutural.</p>
       <div class="form">
-        <label>Sistema que vai no PDF<select id="estr.sis"><option value="auto">Automático: sem laje = coluninhas e cinta; com laje = pilares e vigas</option><option value="conv">Pilares, vigas e laje (esta aba)</option><option value="simples">Coluninhas prontas e cinta (aba Estrutura simples)</option><option value="nenhum">Nenhum</option></select></label>
+        <label>Sistema que vai no PDF<select id="estr.sis"><option value="auto">Automático: sem laje = coluninhas e cinta; com laje = pilares e vigas</option><option value="conv">Estrutural completo: pilares, vigas, laje e sapatas (esta aba)</option><option value="simples">Coluninhas prontas e cinta (aba Estrutura simples)</option><option value="nenhum">Nenhum</option></select></label>
         <label>Fundação<select id="estr.fund"><option value="sapata">Sapata isolada</option><option value="broca">Estaca broca Ø25 + bloco</option></select></label>
         <label>Tensão admissível do solo (kPa)<input type="number" step="10" id="estr.sig"></label>
         <label>Carga por estaca broca (kN)<input type="number" step="5" id="estr.qe"></label>
@@ -578,7 +578,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <h2>Estrutura simples: coluninhas prontas e cinta</h2>
       <p class="cap">Igual ao Detalhador de Fundação: sem laje, pilar 12x20 com coluna pronta 14x7 ø 3/8" (entra 1,00 m na broca e sobe até o topo da cinta), viga baldrame 15x20 e cinta 12x20 com coluna pronta 14x7 ø 5/16", estribos ø 4,2 c/15, broca ø 25 x 1,20 m (padrão) debaixo de cada pilar, peças de 6 m com traspasse de 40 cm e vergas/contravergas com treliça TG8L. Se você mudou essas medidas no Detalhador de Fundação neste aparelho, elas valem aqui também; as medidas da viga baldrame, da cinta e da coluninha você também muda logo abaixo (valem por cima de tudo). No automático, casa sem laje (laje = 0 em Dados) sai no PDF com esta estrutura.</p>
       <div class="form">
-        <label>Distância máxima entre coluninhas (m)<input type="number" step="0.1" id="estS.vmax" placeholder="3,00"></label>
+        <label>O que vai no PDF<select data-sis="1"><option value="auto">Automático: sem laje = coluninhas; com laje = pilares e vigas</option><option value="conv">Estrutural completo: pilares, vigas, laje e sapatas</option><option value="simples">Estrutura simples: coluninhas e cinta (esta aba)</option><option value="nenhum">Nenhum</option></select></label><label>Distância máxima entre coluninhas (m)<input type="number" step="0.1" id="estS.vmax" placeholder="3,00"></label>
         <label>Profundidade da broca (m)<input type="number" step="0.1" id="estS.prof" placeholder="1,20"></label>
         <label>Cinta de amarração em cima<select id="estS.cinta"><option value="sim">Sim</option><option value="não">Não</option></select></label><label>Viga baldrame: largura (cm)<input type="number" step="1" id="estS.vbB" placeholder="15"></label><label>Viga baldrame: altura (cm)<input type="number" step="1" id="estS.vbH" placeholder="20"></label><label>Cinta: largura (cm)<input type="number" step="1" id="estS.ciB" placeholder="12"></label><label>Cinta: altura (cm)<input type="number" step="1" id="estS.ciH" placeholder="20"></label><label>Coluninha (pilar): largura na parede (cm)<input type="number" step="1" id="estS.plB" placeholder="12"></label><label>Coluninha (pilar): comprimento (cm)<input type="number" step="1" id="estS.plH" placeholder="20"></label>
       </div>
@@ -799,7 +799,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.29 · piso de concreto com o estrutural e hidro em 2 folhas A0", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.30 · escolha do estrutural completo também na estrutura simples", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -5641,6 +5641,7 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
         $("tabRes").innerHTML=tb([["Ø (mm)"],["Compr. (m)",1],["Peso (kg)",1],["+10% (kg)",1],["Barras de 12 m",1]],[...AR.resumo.map(o=>[f(o.fi,1),f(o.m,1),f(o.kg,1),f(o.kg10,1),o.barras]),["<b>Total</b>","",`<b>${f(AR.tot,1)}</b>`,`<b>${f(AR.tot10,1)}</b>`,`<b>${AR.resumo.reduce((a,o)=>a+o.barras,0)}</b>`]]);
         $("tabResP").innerHTML=tb([["Aço por peça"],["Peso (kg)",1]],AR.porTipo.map(([n,v])=>[n,f(v,1)])); } } }
   { const ES=estrutural(G,true); if(ES){ const kk=Math.max(0.04,kTela(G)); $("estSForma").innerHTML=svgDe(desenhoForma(G,kk,ES)); $("estSFund").innerHTML=svgDe(desenhoFundacao(G,kk,ES)); $("estSDet").innerHTML=svgDe(desenhoDetColunas(0.012,ES));
+      document.querySelectorAll("[data-sis]").forEach(x=>{ x.value=(S.estr&&S.estr.sis)||"auto"; });
       const Q=ES.Q, CF=ES.CF; $("estSChips").innerHTML=[`${ES.pil.length} pilares (coluninhas)`,`${Q.nbr} brocas ø${CF.br.d}`,`${Q.vbPieces+Q.ciPieces} peças ø ${CF.vb.bit}"`,`${Q.plPieces} peças ø ${CF.pl.bit}"`,`Aço ${f(Q.acoTot,0)} kg`,`Concreto ${f(Q.Vbr+Q.Vvb+Q.Vci+Q.Vvg,2)} m³`,(S.estr.sis==="simples"||(S.estr.sis==="auto"&&!(num(S.laje)>0.04)))?"vai no PDF":"não vai no PDF (veja a aba Estrutural)"].map(t0=>`<span class="chip">${t0}</span>`).join("")+(ES.avisos||[]).map(t0=>`<div class="alert warn">${esc(t0)}</div>`).join("");
       $("tabEstS").innerHTML=`<tr><th>Item</th><th class="n">Un</th><th class="n">Qtd</th><th>Obs.</th></tr>`+linhasEstS(ES).map(r=>r[0]==="grp"?`<tr><td colspan="4"><b>${esc(r[1])}</b></td></tr>`:`<tr><td>${esc(r[0])}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td><td style="color:var(--muted);font-size:12px">${esc(r[3])}</td></tr>`).join("");
       $("estSNotas").innerHTML=notasEstrS(ES).map(t0=>`<li>${esc(t0)}</li>`).join("");
@@ -6332,6 +6333,8 @@ FIELDS.forEach(id=>{ const el=$(id); if(!el) return;
 $("fmt").onchange=()=>{ S.fmt=$("fmt").value; save(); };
 $("agrupar").onchange=()=>{ S.agrupar=$("agrupar").value; save(); };
 $("hidFolhas").onchange=()=>{ S.hidFolhas=$("hidFolhas").value; save(); };
+// escolha do sistema estrutural também na aba Estrutura simples (o Eliel não achava na aba Estrutural)
+document.querySelectorAll("[data-sis]").forEach(sel=>{ sel.onchange=()=>{ S.estr.sis=sel.value; const t=$("estr.sis"); if(t) t.value=sel.value; save(); render(); }; });
 document.addEventListener("change",e=>{ const el=e.target.closest&&e.target.closest("[data-est]"); if(!el) return; S.est[el.dataset.est]=num(el.value); const tw=$("est."+el.dataset.est); if(tw) tw.value=el.value; save(); render(); });   // altura e largura das letras: o mesmo estilo em todas as plantas
 $("cotGer").onchange=()=>{ S.cotGer=$("cotGer").value; save(); render(); };   // cotas gerais da planta (cadeias de cima e da esquerda)
 $("roofTypes").addEventListener("click",e=>{ const b=e.target.closest("[data-tipo]"); if(!b) return; const tp=+b.dataset.tipo; S.tel.tipo=tp; S.tel.dir=dirPadrao(tp,GG||geom()); render(); });
