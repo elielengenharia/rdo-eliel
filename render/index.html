@@ -116,6 +116,7 @@ footer{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;j
       <button class="btn pri" id="baixar" disabled>Baixar imagem em alta (JPG)</button>
       <button class="btn sec" id="zerar">Voltar aos ajustes do estilo</button>
       <button class="btn sec" id="outra">Carregar outra imagem</button>
+      <button class="btn sec" id="descartar" disabled style="color:#e8a49a">Descartar imagem</button>
     </div>
   </aside>
 
@@ -135,7 +136,7 @@ footer{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;j
 
 <footer>
   <span>Eng. Eliel Dias Ribeiro · CREA-PA 1520297858 · Tucumã/PA</span>
-  <span>RenderPro Studio · versão 1.0</span>
+  <span>RenderPro Studio · versão 1.1</span>
 </footer>
 
 <script>
@@ -188,6 +189,15 @@ let IMG = null, PREV = null;   // imagem original (bitmap) e prévia reduzida (I
 const MAXPREV = 1400;
 $('drop').addEventListener('click', () => $('arq').click());
 $('outra').addEventListener('click', () => $('arq').click());
+let urlAtual = null;
+$('descartar').addEventListener('click', () => {   // apaga a imagem da tela e da memória do aparelho
+  IMG = null; PREV = null;
+  if (urlAtual) { URL.revokeObjectURL(urlAtual); urlAtual = null; }
+  ['cIn', 'cOut'].forEach((id) => { const c = $(id); c.width = 1; c.height = 1; });
+  $('cmp').hidden = true; $('info').hidden = true; $('drop').hidden = false;
+  $('baixar').disabled = true; $('descartar').disabled = true;
+  window.scrollTo({top: 0, behavior: 'smooth'});
+});
 $('arq').addEventListener('change', (e) => { if (e.target.files[0]) abre(e.target.files[0]); e.target.value = ''; });
 ['dragover', 'dragenter'].forEach((ev) => $('drop').addEventListener(ev, (e) => { e.preventDefault(); $('drop').classList.add('over'); }));
 ['dragleave', 'drop'].forEach((ev) => $('drop').addEventListener(ev, (e) => { e.preventDefault(); $('drop').classList.remove('over'); }));
@@ -195,7 +205,8 @@ $('drop').addEventListener('drop', (e) => { const f = e.dataTransfer.files[0]; i
 document.addEventListener('paste', (e) => { const it = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith('image/')); if (it) abre(it.getAsFile()); });
 
 function abre(file) {
-  const url = URL.createObjectURL(file), im = new Image();
+  if (urlAtual) URL.revokeObjectURL(urlAtual);
+  const url = URL.createObjectURL(file), im = new Image(); urlAtual = url;
   im.onload = () => {
     IMG = im;
     const k = Math.min(1, MAXPREV / Math.max(im.naturalWidth, im.naturalHeight));
@@ -205,7 +216,7 @@ function abre(file) {
     PREV = x.getImageData(0, 0, w, h);
     const ci = $('cIn'); ci.width = w; ci.height = h; ci.getContext('2d').putImageData(PREV, 0, 0);
     const co = $('cOut'); co.width = w; co.height = h;
-    $('drop').hidden = true; $('cmp').hidden = false; $('info').hidden = false; $('baixar').disabled = false;
+    $('drop').hidden = true; $('cmp').hidden = false; $('info').hidden = false; $('baixar').disabled = false; $('descartar').disabled = false;
     $('dim').textContent = `Original: ${im.naturalWidth} x ${im.naturalHeight} px`;
     posBarra(0.5); agenda();
   };
