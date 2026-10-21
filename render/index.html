@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RenderPro Studio — Eliel Engenharia</title>
+<meta name="description" content="Pós-produção fotorrealista de fachadas e interiores — Eliel Engenharia & Arquitetura.">
+<meta name="theme-color" content="#0e1013">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RenderPro">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1013;--card:#16191d;--card2:#1c2025;--line:rgba(255,255,255,.09);--text:#f3efe8;--muted:#a9a49b;--gold:#c9a86a;--gold-2:#e2c78f}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--text);font-family:Manrope,system-ui,sans-serif;min-height:100%}
+body{padding:calc(env(safe-area-inset-top) + 22px) max(16px,env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 28px) max(16px,env(safe-area-inset-left));max-width:1320px;margin:0 auto}
+header{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.mono{width:48px;height:48px;border-radius:50%;border:1.5px solid var(--gold);color:var(--gold);display:grid;place-items:center;font-family:"Cormorant Garamond",serif;font-weight:600;font-size:24px;flex-shrink:0}
+header b{display:block;font-family:"Cormorant Garamond",serif;font-weight:600;font-size:24px;line-height:1.05}
+header span{font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--muted)}
+.kick{font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--gold);font-weight:700}
+h1{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:6px 0 6px;text-wrap:balance}
+.lead{color:var(--muted);font-size:14px;max-width:640px;line-height:1.5;margin-bottom:20px}
+.app{display:grid;grid-template-columns:320px 1fr;gap:18px;align-items:start}
+@media (max-width:860px){.app{grid-template-columns:1fr}.panel{order:2}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;display:grid;gap:16px;min-width:0}
+.grp{display:grid;gap:10px}
+.grp h3{font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--gold);font-weight:700}
+label.row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:13px;color:var(--text)}
+label.row output{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
+label.row input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--gold)}
+select,button{font:inherit}
+select{width:100%;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:13.5px}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.presets button{background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 8px;font-size:12.5px;font-weight:600;cursor:pointer;text-align:left;line-height:1.25}
+.presets button[aria-pressed=true]{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);color:var(--gold-2)}
+.presets button small{display:block;color:var(--muted);font-weight:500;font-size:11px;margin-top:2px}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px}
+.chk input{accent-color:var(--gold);width:16px;height:16px}
+.btn{border:0;border-radius:12px;padding:12px 14px;font-weight:700;font-size:14px;cursor:pointer}
+.btn.pri{background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#15120c}
+.btn.sec{background:none;border:1px solid var(--line);color:var(--text)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btns{display:grid;gap:8px}
+.stage{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px;min-width:0;display:grid;gap:10px}
+.drop{border:1.5px dashed rgba(201,168,106,.45);border-radius:14px;min-height:360px;display:grid;place-items:center;text-align:center;padding:24px;cursor:pointer;color:var(--muted);font-size:14px;line-height:1.6}
+.drop strong{color:var(--text);font-size:16px;display:block;margin-bottom:4px}
+.drop.over{background:rgba(201,168,106,.06)}
+.cmp{position:relative;overflow:hidden;border-radius:12px;background:#0a0b0d;touch-action:none;user-select:none}
+.cmp canvas{display:block;width:100%;height:auto}
+.cmp .before{position:absolute;inset:0;overflow:hidden}
+.cmp .before canvas{position:absolute;left:0;top:0;width:100%}
+.cmp .bar{position:absolute;top:0;bottom:0;width:2px;background:var(--gold);box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+.cmp .knob{position:absolute;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;background:var(--gold);color:#15120c;display:grid;place-items:center;font-weight:800;font-size:14px}
+.tag{position:absolute;top:10px;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(14,16,19,.72);color:var(--text)}
+.tag.l{left:10px}.tag.r{right:10px;color:var(--gold-2)}
+.info{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+.busy{position:absolute;inset:0;display:none;place-items:center;background:rgba(14,16,19,.55);font-weight:700;font-size:14px}
+.cmp.working .busy{display:grid}
+footer{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}
+:focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="mono">E</div>
+  <div><b>Eliel Engenharia</b><span>&amp; Arquitetura · RenderPro Studio</span></div>
+</header>
+
+<div class="kick">Pós-produção fotorrealista</div>
+<h1>Deixe a imagem do projeto com cara de foto</h1>
+<p class="lead">Carregue a imagem do 3D, do SketchUp ou de um print. Escolha o estilo, ajuste a luz e compare o antes e o depois arrastando a barra. A imagem não sai do seu aparelho.</p>
+
+<div class="app">
+  <aside class="panel" aria-label="Ajustes">
+    <div class="grp">
+      <h3>Tipo de projeto</h3>
+      <select id="tipo">
+        <option value="fachada">Fachada residencial contemporânea</option>
+        <option value="comercial">Fachada comercial / corporativa</option>
+        <option value="interior">Design de interiores (área social)</option>
+        <option value="gourmet">Área gourmet / lazer externa</option>
+      </select>
+    </div>
+    <div class="grp">
+      <h3>Estilo</h3>
+      <div class="presets" id="presets">
+        <button data-p="corona" aria-pressed="true">Corona<small>fotorrealista limpo</small></button>
+        <button data-p="sunset" aria-pressed="false">Pôr do sol<small>golden hour quente</small></button>
+        <button data-p="noite" aria-pressed="false">Noturna<small>LED e luz quente</small></button>
+        <button data-p="beton" aria-pressed="false">Minimalista<small>concreto e vidro</small></button>
+      </div>
+    </div>
+    <div class="grp" id="sliders">
+      <h3>Luz e cor</h3>
+    </div>
+    <div class="grp">
+      <h3>Efeito de lente</h3>
+      <select id="atm">
+        <option value="none">Padrão cristalino</option>
+        <option value="vig">Vinheta cinematográfica</option>
+        <option value="sol">Brilho solar suave</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="marca" checked> Assinatura Eliel Engenharia no canto</label>
+    </div>
+    <div class="btns">
+      <button class="btn pri" id="baixar" disabled>Baixar imagem em alta (JPG)</button>
+      <button class="btn sec" id="zerar">Voltar aos ajustes do estilo</button>
+      <button class="btn sec" id="outra">Carregar outra imagem</button>
+    </div>
+  </aside>
+
+  <section class="stage">
+    <input type="file" id="arq" accept="image/*" hidden>
+    <div class="drop" id="drop"><div><strong>Toque para carregar a imagem do projeto</strong>ou arraste o arquivo para cá, ou cole (Ctrl+V)<br>PNG ou JPG · de preferência em alta resolução</div></div>
+    <div class="cmp" id="cmp" hidden>
+      <canvas id="cOut"></canvas>
+      <div class="before" id="before"><canvas id="cIn"></canvas></div>
+      <div class="bar" id="bar"><div class="knob">⇆</div></div>
+      <span class="tag l">Antes</span><span class="tag r">Depois</span>
+      <div class="busy">Processando…</div>
+    </div>
+    <div class="info" id="info" hidden><span id="dim"></span><span>Arraste a barra para comparar</span></div>
+  </section>
+</div>
+
+<footer>
+  <span>Eng. Eliel Dias Ribeiro · CREA-PA 1520297858 · Tucumã/PA</span>
+  <span>RenderPro Studio · versão 1.0</span>
+</footer>
+
+<script>
+/* ---------------- parâmetros ---------------- */
+const SL = [
+  ['exp', 'Exposição', 0.6, 1.6, 0.01],
+  ['con', 'Contraste (profundidade)', 0.7, 1.8, 0.01],
+  ['alt', 'Altas luzes (céu e brilhos)', -1, 1, 0.01],
+  ['som', 'Sombras', -1, 1, 0.01],
+  ['tmp', 'Temperatura (frio ↔ quente)', -1, 1, 0.01],
+  ['sat', 'Saturação', 0.5, 1.8, 0.01],
+  ['vib', 'Vibração (cores apagadas)', 0, 1, 0.01],
+  ['nit', 'Nitidez de bordas', 0, 2.5, 0.05],
+  ['blo', 'Brilho das luzes (bloom)', 0, 1, 0.01],
+];
+const PRESETS = {
+  corona: {exp:1.05, con:1.20, alt:-0.25, som:0.20, tmp:0.05, sat:1.08, vib:0.35, nit:1.0, blo:0.10, tintS:[0,0,0], tintH:[0,0,0]},
+  sunset: {exp:1.06, con:1.18, alt:-0.15, som:0.15, tmp:0.55, sat:1.15, vib:0.40, nit:0.9, blo:0.30, tintS:[0.02,-0.01,0.05], tintH:[0.10,0.04,-0.06]},
+  noite:  {exp:0.82, con:1.30, alt:0.10, som:-0.10, tmp:-0.20, sat:1.10, vib:0.30, nit:0.8, blo:0.70, tintS:[-0.03,0.0,0.08], tintH:[0.10,0.05,-0.04]},
+  beton:  {exp:1.04, con:1.28, alt:-0.20, som:0.10, tmp:-0.20, sat:0.82, vib:0.10, nit:1.4, blo:0.05, tintS:[-0.01,0.0,0.03], tintH:[0.0,0.0,0.0]},
+};
+const TIPO = {   // pequenos ajustes por tipo de projeto
+  fachada:{}, comercial:{con:+0.05, nit:+0.3}, interior:{som:+0.15, tmp:+0.10, blo:+0.05}, gourmet:{sat:+0.07, vib:+0.10, tmp:+0.08},
+};
+let P = {...PRESETS.corona}, preset = 'corona';
+
+const $ = (id) => document.getElementById(id);
+const sl = $('sliders');
+SL.forEach(([k, nome, mn, mx, st]) => {
+  const l = document.createElement('label'); l.className = 'row';
+  l.innerHTML = `<span>${nome}</span><output id="o_${k}"></output><input type="range" id="s_${k}" min="${mn}" max="${mx}" step="${st}">`;
+  sl.appendChild(l);
+  l.querySelector('input').addEventListener('input', (e) => { P[k] = +e.target.value; mostra(); agenda(); });
+});
+function mostra() { SL.forEach(([k]) => { $('s_' + k).value = P[k]; $('o_' + k).textContent = (+P[k]).toFixed(2).replace('.', ','); }); }
+function aplicaPreset(nome) {
+  preset = nome; P = {...PRESETS[nome]};
+  const t = TIPO[$('tipo').value] || {}; Object.keys(t).forEach((k) => P[k] = +(P[k] + t[k]).toFixed(2));
+  document.querySelectorAll('#presets button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.p === nome));
+  mostra(); agenda();
+}
+document.querySelectorAll('#presets button').forEach((b) => b.addEventListener('click', () => aplicaPreset(b.dataset.p)));
+$('tipo').addEventListener('change', () => aplicaPreset(preset));
+$('zerar').addEventListener('click', () => aplicaPreset(preset));
+$('atm').addEventListener('change', agenda);
+$('marca').addEventListener('change', agenda);
+
+/* ---------------- carregar imagem ---------------- */
+let IMG = null, PREV = null;   // imagem original (bitmap) e prévia reduzida (ImageData)
+const MAXPREV = 1400;
+$('drop').addEventListener('click', () => $('arq').click());
+$('outra').addEventListener('click', () => $('arq').click());
+$('arq').addEventListener('change', (e) => { if (e.target.files[0]) abre(e.target.files[0]); e.target.value = ''; });
+['dragover', 'dragenter'].forEach((ev) => $('drop').addEventListener(ev, (e) => { e.preventDefault(); $('drop').classList.add('over'); }));
+['dragleave', 'drop'].forEach((ev) => $('drop').addEventListener(ev, (e) => { e.preventDefault(); $('drop').classList.remove('over'); }));
+$('drop').addEventListener('drop', (e) => { const f = e.dataTransfer.files[0]; if (f) abre(f); });
+document.addEventListener('paste', (e) => { const it = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith('image/')); if (it) abre(it.getAsFile()); });
+
+function abre(file) {
+  const url = URL.createObjectURL(file), im = new Image();
+  im.onload = () => {
+    IMG = im;
+    const k = Math.min(1, MAXPREV / Math.max(im.naturalWidth, im.naturalHeight));
+    const w = Math.round(im.naturalWidth * k), h = Math.round(im.naturalHeight * k);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d'); x.drawImage(im, 0, 0, w, h);
+    PREV = x.getImageData(0, 0, w, h);
+    const ci = $('cIn'); ci.width = w; ci.height = h; ci.getContext('2d').putImageData(PREV, 0, 0);
+    const co = $('cOut'); co.width = w; co.height = h;
+    $('drop').hidden = true; $('cmp').hidden = false; $('info').hidden = false; $('baixar').disabled = false;
+    $('dim').textContent = `Original: ${im.naturalWidth} x ${im.naturalHeight} px`;
+    posBarra(0.5); agenda();
+  };
+  im.onerror = () => alertaErro('Não consegui abrir esta imagem. Use PNG ou JPG.');
+  im.src = url;
+}
+function alertaErro(m) { $('dim').textContent = m; }
+
+/* ---------------- comparação antes/depois ---------------- */
+let fr = 0.5;
+function posBarra(f) {
+  fr = Math.max(0, Math.min(1, f));
+  $('before').style.width = (fr * 100) + '%';
+  $('before').querySelector('canvas').style.width = $('cmp').clientWidth + 'px';
+  $('bar').style.left = (fr * 100) + '%';
+}
+let arr = false;
+const mv = (e) => { if (!arr) return; const r = $('cmp').getBoundingClientRect(); posBarra((e.clientX - r.left) / r.width); };
+$('cmp').addEventListener('pointerdown', (e) => { arr = true; $('cmp').setPointerCapture(e.pointerId); mv(e); });
+$('cmp').addEventListener('pointermove', mv);
+$('cmp').addEventListener('pointerup', () => arr = false);
+window.addEventListener('resize', () => posBarra(fr));
+
+/* ---------------- motor de processamento ---------------- */
+let tmr = null;
+function agenda() { if (!PREV) return; clearTimeout(tmr); $('cmp').classList.add('working'); tmr = setTimeout(() => { processaPrevia(); $('cmp').classList.remove('working'); }, 60); }
+function processaPrevia() {
+  const out = processa(PREV, P);
+  const c = $('cOut'); c.getContext('2d').putImageData(out, 0, 0);
+  if ($('marca').checked) assina(c.getContext('2d'), c.width, c.height);
+}
+
+function boxBlur(src, w, h, r) {   // desfoque separável (3 passadas ~ gaussiano), canal único Float32
+  let a = src, b = new Float32Array(w * h);
+  for (let pass = 0; pass < 3; pass++) {
+    for (let y = 0; y < h; y++) {          // horizontal
+      let acc = 0, o = y * w; const n = 2 * r + 1;
+      for (let i = -r; i <= r; i++) acc += a[o + Math.min(w - 1, Math.max(0, i))];
+      for (let x = 0; x < w; x++) { b[o + x] = acc / n; acc += a[o + Math.min(w - 1, x + r + 1)] - a[o + Math.max(0, x - r)]; }
+    }
+    const c = new Float32Array(w * h);
+    for (let x = 0; x < w; x++) {          // vertical
+      let acc = 0; const n = 2 * r + 1;
+      for (let i = -r; i <= r; i++) acc += b[Math.min(h - 1, Math.max(0, i)) * w + x];
+      for (let y = 0; y < h; y++) { c[y * w + x] = acc / n; acc += b[Math.min(h - 1, y + r + 1) * w + x] - b[Math.max(0, y - r) * w + x]; }
+    }
+    a = c;
+  }
+  return a;
+}
+const curva = (x, c) => { x = Math.min(1, Math.max(0, x)); return x < 0.5 ? 0.5 * Math.pow(2 * x, c) : 1 - 0.5 * Math.pow(2 - 2 * x, c); };
+const ombro = (x) => x <= 0.82 ? x : 0.82 + 0.18 * (1 - Math.exp(-(x - 0.82) / 0.18));   // segura as altas luzes sem achatar o resto
+
+function processa(src, p) {
+  const w = src.width, h = src.height, N = w * h, s = src.data;
+  const R = new Float32Array(N), G = new Float32Array(N), B = new Float32Array(N);
+  for (let i = 0, j = 0; i < N; i++, j += 4) { R[i] = s[j] / 255; G[i] = s[j + 1] / 255; B[i] = s[j + 2] / 255; }
+  const esc = Math.max(w, h) / 1400;   // raio dos efeitos acompanha a resolução
+  // 1) nitidez (máscara de desfoque na luminância)
+  if (p.nit > 0) {
+    const L = new Float32Array(N); for (let i = 0; i < N; i++) L[i] = 0.2126 * R[i] + 0.7152 * G[i] + 0.0722 * B[i];
+    const Lb = boxBlur(L, w, h, Math.max(1, Math.round(1.2 * esc)));
+    for (let i = 0; i < N; i++) { const d = (L[i] - Lb[i]) * p.nit * 0.9; R[i] += d; G[i] += d; B[i] += d; }
+  }
+  // 2) bloom: só o que já é bem claro (janelas acesas, LED, sol)
+  let BL = null;
+  if (p.blo > 0) {
+    const ds = 4, w2 = Math.ceil(w / ds), h2 = Math.ceil(h / ds), br = new Float32Array(w2 * h2), bg = new Float32Array(w2 * h2), bb = new Float32Array(w2 * h2);
+    for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) {
+      const i = Math.min(h - 1, y * ds) * w + Math.min(w - 1, x * ds), l = 0.2126 * R[i] + 0.7152 * G[i] + 0.0722 * B[i];
+      const k = Math.max(0, (l - 0.72) / 0.28); const t = k * k;
+      br[y * w2 + x] = R[i] * t; bg[y * w2 + x] = G[i] * t; bb[y * w2 + x] = B[i] * t;
+    }
+    const rr = Math.max(2, Math.round(10 * esc / ds * 4) / 4 | 0) || 3;
+    BL = {w2, h2, ds, r: boxBlur(br, w2, h2, rr), g: boxBlur(bg, w2, h2, rr), b: boxBlur(bb, w2, h2, rr)};
+  }
+  // 3) cor e tom por pixel
+  const out = new ImageData(w, h), o = out.data;
+  const tR = 1 + 0.12 * p.tmp, tB = 1 - 0.12 * p.tmp, tG = 1 + 0.03 * p.tmp;
+  const tS = p.tintS || [0, 0, 0], tH = p.tintH || [0, 0, 0];
+  const atm = $('atm').value, cx = w / 2, cy = h / 2, md = Math.hypot(cx, cy);
+  const sx = w * 0.82, sy = h * 0.08, sr = Math.hypot(w, h) * 0.75;   // posição do sol (canto de cima à direita)
+  for (let i = 0, j = 0; i < N; i++, j += 4) {
+    let r = R[i] * p.exp * tR, g = G[i] * p.exp * tG, b = B[i] * p.exp * tB;
+    if (BL) {
+      const x = (i % w) / BL.ds | 0, y = ((i / w) | 0) / BL.ds | 0, k = Math.min(BL.h2 - 1, y) * BL.w2 + Math.min(BL.w2 - 1, x);
+      const a = p.blo * 1.6; r += BL.r[k] * a; g += BL.g[k] * a; b += BL.b[k] * a;
+    }
+    // altas luzes e sombras
+    let l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const wh = Math.max(0, Math.min(1, (l - 0.5) * 2)), ws = Math.max(0, Math.min(1, (0.5 - l) * 2));
+    let f = 1 + p.alt * 0.35 * wh * wh + p.som * 0.55 * ws * ws;
+    r *= f; g *= f; b *= f;
+    // compressão das altas luzes (sem estourar o céu) + contraste em S
+    r = curva(ombro(r), p.con); g = curva(ombro(g), p.con); b = curva(ombro(b), p.con);
+    // tonalização de sombras e altas luzes do estilo
+    l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const kh = l * l, ks = (1 - l) * (1 - l);
+    r += tS[0] * ks + tH[0] * kh; g += tS[1] * ks + tH[1] * kh; b += tS[2] * ks + tH[2] * kh;
+    // saturação + vibração (mais nas cores apagadas)
+    l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), satAtual = mx > 0 ? (mx - mn) / mx : 0;
+    const sf = p.sat * (1 + p.vib * (1 - satAtual) * 0.6);
+    r = l + (r - l) * sf; g = l + (g - l) * sf; b = l + (b - l) * sf;
+    // lente
+    if (atm !== 'none') {
+      const x = i % w, y = (i / w) | 0;
+      if (atm === 'vig') { const d = Math.hypot(x - cx, y - cy) / md; const v = 1 - 0.32 * Math.pow(d, 2.2); r *= v; g *= v; b *= v; }
+      else { const d = Math.hypot(x - sx, y - sy) / sr; const k = Math.max(0, 1 - d); const a = 0.30 * k * k;
+        r = 1 - (1 - r) * (1 - a * 1.0); g = 1 - (1 - g) * (1 - a * 0.86); b = 1 - (1 - b) * (1 - a * 0.62);
+        const d2 = Math.hypot(x - cx, y - cy) / md; const v = 1 - 0.12 * d2 * d2; r *= v; g *= v; b *= v; }
+    }
+    o[j] = r <= 0 ? 0 : r >= 1 ? 255 : r * 255; o[j + 1] = g <= 0 ? 0 : g >= 1 ? 255 : g * 255; o[j + 2] = b <= 0 ? 0 : b >= 1 ? 255 : b * 255; o[j + 3] = 255;
+  }
+  return out;
+}
+
+function assina(ctx, w, h) {
+  const s = Math.max(w, h) / 1400, pad = 22 * s;
+  ctx.save();
+  ctx.font = `600 ${Math.round(26 * s)}px "Cormorant Garamond", Georgia, serif`;
+  const t1 = 'Eliel Engenharia & Arquitetura', t2 = 'Eng. Eliel Dias Ribeiro · CREA-PA 1520297858';
+  const w1 = ctx.measureText(t1).width; ctx.font = `600 ${Math.round(12 * s)}px Manrope, Arial, sans-serif`; const w2 = ctx.measureText(t2).width;
+  const bw = Math.max(w1, w2) + pad * 1.4, bh = 62 * s, x = w - bw - pad, y = h - bh - pad;
+  ctx.fillStyle = 'rgba(14,16,19,0.55)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, bw, bh, 10 * s) : ctx.rect(x, y, bw, bh); ctx.fill();
+  ctx.fillStyle = '#c9a86a'; ctx.fillRect(x + pad * 0.7, y + 34 * s, Math.min(w1, 120 * s), 2 * s);
+  ctx.fillStyle = '#f3efe8'; ctx.font = `600 ${Math.round(26 * s)}px "Cormorant Garamond", Georgia, serif`; ctx.fillText(t1, x + pad * 0.7, y + 28 * s);
+  ctx.fillStyle = '#d8d2c7'; ctx.font = `600 ${Math.round(12 * s)}px Manrope, Arial, sans-serif`; ctx.fillText(t2, x + pad * 0.7, y + 52 * s);
+  ctx.restore();
+}
+
+/* ---------------- baixar em resolução cheia ---------------- */
+$('baixar').addEventListener('click', async () => {
+  if (!IMG) return;
+  const b = $('baixar'); b.disabled = true; b.textContent = 'Gerando a imagem em alta…';
+  await new Promise((r) => setTimeout(r, 30));
+  try {
+    const lim = 6000, k = Math.min(1, lim / Math.max(IMG.naturalWidth, IMG.naturalHeight));
+    const w = Math.round(IMG.naturalWidth * k), h = Math.round(IMG.naturalHeight * k);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d'); x.drawImage(IMG, 0, 0, w, h);
+    x.putImageData(processa(x.getImageData(0, 0, w, h), P), 0, 0);
+    if ($('marca').checked) assina(x, w, h);
+    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.95));
+    const nome = `render_${preset}_eliel_engenharia.jpg`, file = new File([blob], nome, {type: 'image/jpeg'});
+    if (navigator.canShare && navigator.canShare({files: [file]}) && /iPhone|iPad|Android/i.test(navigator.userAgent)) {
+      await navigator.share({files: [file], title: 'Render Eliel Engenharia'});
+    } else {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+    }
+  } catch (e) { if (e.name !== 'AbortError') alertaErro('Não consegui gerar a imagem em alta. Tente uma imagem menor.'); }
+  b.disabled = false; b.textContent = 'Baixar imagem em alta (JPG)';
+});
+
+aplicaPreset('corona');
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
