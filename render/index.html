@@ -65,6 +65,21 @@ select{width:100%;background:var(--card2);color:var(--text);border:1px solid var
 .info{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
 .busy{position:absolute;inset:0;display:none;place-items:center;background:rgba(14,16,19,.55);font-weight:700;font-size:14px}
 .cmp.working .busy{display:grid}
+#pdfBox{display:grid;gap:10px}
+.pdfbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted)}
+.pdfbar b{color:var(--text)}
+.pg{display:flex;align-items:center;gap:6px}
+.pg button{background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;width:34px;height:30px;font-size:16px;cursor:pointer}
+.pdfview{position:relative;border-radius:10px;overflow:hidden;background:#fff;user-select:none}
+.pdfview canvas{display:block;width:100%;height:auto}
+.pdfview.mao{touch-action:none;cursor:crosshair}
+.pdfview.mao .box{pointer-events:none;opacity:.35}
+.box{position:absolute;border:2px solid var(--gold);background:rgba(201,168,106,.14);border-radius:3px;cursor:pointer}
+.box.sel{border:3px solid #d01818;background:rgba(208,24,24,.12)}
+.box span{position:absolute;left:3px;top:3px;background:var(--gold);color:#15120c;font-weight:800;font-size:12px;padding:1px 7px;border-radius:999px}
+.box.sel span{background:#d01818;color:#fff}
+#selRect{position:absolute;border:2px dashed #d01818;background:rgba(208,24,24,.10);pointer-events:none}
+.btns2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 footer{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}
 :focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -78,7 +93,7 @@ footer{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;j
 
 <div class="kick">Pós-produção fotorrealista</div>
 <h1>Deixe a imagem do projeto com cara de foto</h1>
-<p class="lead">Carregue a imagem do 3D, do SketchUp ou de um print. Escolha o estilo, ajuste a luz e compare o antes e o depois arrastando a barra. A imagem não sai do seu aparelho.</p>
+<p class="lead">Carregue a imagem do 3D, do SketchUp, um print ou o PDF da prancha (o app acha a imagem dentro dela). Escolha o estilo, ajuste a luz e compare o antes e o depois arrastando a barra. A imagem não sai do seu aparelho.</p>
 
 <div class="app">
   <aside class="panel" aria-label="Ajustes">
@@ -114,6 +129,8 @@ footer{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;j
     </div>
     <div class="btns">
       <button class="btn pri" id="baixar" disabled>Baixar imagem em alta (JPG)</button>
+      <button class="btn pri" id="devolverPdf" hidden>Devolver a imagem ao PDF da prancha</button>
+      <button class="btn sec" id="voltarPdf" hidden>Escolher outra imagem da prancha</button>
       <button class="btn sec" id="zerar">Voltar aos ajustes do estilo</button>
       <button class="btn sec" id="outra">Carregar outra imagem</button>
       <button class="btn sec" id="descartar" disabled style="color:#e8a49a">Descartar imagem</button>
@@ -121,8 +138,13 @@ footer{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;j
   </aside>
 
   <section class="stage">
-    <input type="file" id="arq" accept="image/*" hidden>
-    <div class="drop" id="drop"><div><strong>Toque para carregar a imagem do projeto</strong>ou arraste o arquivo para cá, ou cole (Ctrl+V)<br>PNG ou JPG · de preferência em alta resolução</div></div>
+    <input type="file" id="arq" accept="image/*,application/pdf,.pdf" hidden>
+    <div class="drop" id="drop"><div><strong>Toque para carregar a imagem ou o PDF da prancha</strong>ou arraste o arquivo para cá, ou cole (Ctrl+V)<br>PNG, JPG ou PDF (A0, A1…) · no PDF o app acha as imagens da prancha</div></div>
+    <div id="pdfBox" hidden>
+      <div class="pdfbar"><span id="pdfMsg">Lendo o PDF…</span><span class="pg" id="pgCtl" hidden><button id="pgAnt" aria-label="Página anterior">‹</button><span id="pgNum"></span><button id="pgProx" aria-label="Próxima página">›</button></span></div>
+      <div class="pdfview" id="pdfView"><canvas id="cPdf"></canvas><div id="pdfBoxes"></div><div id="selRect" hidden></div></div>
+      <div class="btns2"><button class="btn sec" id="maoBtn">Selecionar à mão</button><button class="btn pri" id="usarSel" disabled>Melhorar esta imagem</button></div>
+    </div>
     <div class="cmp" id="cmp" hidden>
       <canvas id="cOut"></canvas>
       <div class="before" id="before"><canvas id="cIn"></canvas></div>
@@ -136,7 +158,7 @@ footer{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;j
 
 <footer>
   <span>Eng. Eliel Dias Ribeiro · CREA-PA 1520297858 · Tucumã/PA</span>
-  <span>RenderPro Studio · versão 1.1</span>
+  <span>RenderPro Studio · versão 1.2</span>
 </footer>
 
 <script>
@@ -185,13 +207,15 @@ $('atm').addEventListener('change', agenda);
 $('marca').addEventListener('change', agenda);
 
 /* ---------------- carregar imagem ---------------- */
-let IMG = null, PREV = null;   // imagem original (bitmap) e prévia reduzida (ImageData)
+let IMG = null, IMGW = 0, IMGH = 0, PREV = null;   // imagem original (img ou canvas), tamanho e prévia reduzida
+let PDF = null, FONTE = null;   // PDF aberto e de onde veio a imagem (página e retângulo)
 const MAXPREV = 1400;
 $('drop').addEventListener('click', () => $('arq').click());
 $('outra').addEventListener('click', () => $('arq').click());
 let urlAtual = null;
 $('descartar').addEventListener('click', () => {   // apaga a imagem da tela e da memória do aparelho
-  IMG = null; PREV = null;
+  IMG = null; PREV = null; PDF = null; FONTE = null;
+  $('pdfBox').hidden = true; $('devolverPdf').hidden = true; $('voltarPdf').hidden = true; $('cPdf').width = 1; $('cPdf').height = 1; $('pdfBoxes').innerHTML = '';
   if (urlAtual) { URL.revokeObjectURL(urlAtual); urlAtual = null; }
   ['cIn', 'cOut'].forEach((id) => { const c = $(id); c.width = 1; c.height = 1; });
   $('cmp').hidden = true; $('info').hidden = true; $('drop').hidden = false;
@@ -205,24 +229,196 @@ $('drop').addEventListener('drop', (e) => { const f = e.dataTransfer.files[0]; i
 document.addEventListener('paste', (e) => { const it = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith('image/')); if (it) abre(it.getAsFile()); });
 
 function abre(file) {
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')) { abrePdf(file); return; }
+  PDF = null; FONTE = null; $('pdfBox').hidden = true; $('devolverPdf').hidden = true; $('voltarPdf').hidden = true;
   if (urlAtual) URL.revokeObjectURL(urlAtual);
   const url = URL.createObjectURL(file), im = new Image(); urlAtual = url;
-  im.onload = () => {
-    IMG = im;
-    const k = Math.min(1, MAXPREV / Math.max(im.naturalWidth, im.naturalHeight));
-    const w = Math.round(im.naturalWidth * k), h = Math.round(im.naturalHeight * k);
-    const c = document.createElement('canvas'); c.width = w; c.height = h;
-    const x = c.getContext('2d'); x.drawImage(im, 0, 0, w, h);
-    PREV = x.getImageData(0, 0, w, h);
-    const ci = $('cIn'); ci.width = w; ci.height = h; ci.getContext('2d').putImageData(PREV, 0, 0);
-    const co = $('cOut'); co.width = w; co.height = h;
-    $('drop').hidden = true; $('cmp').hidden = false; $('info').hidden = false; $('baixar').disabled = false; $('descartar').disabled = false;
-    $('dim').textContent = `Original: ${im.naturalWidth} x ${im.naturalHeight} px`;
-    posBarra(0.5); agenda();
-  };
-  im.onerror = () => alertaErro('Não consegui abrir esta imagem. Use PNG ou JPG.');
+  im.onload = () => usaFonte(im, im.naturalWidth, im.naturalHeight);
+  im.onerror = () => { $('info').hidden = false; alertaErro('Não consegui abrir esta imagem. Use PNG, JPG ou PDF.'); };
   im.src = url;
 }
+function usaFonte(src, W, H) {
+  IMG = src; IMGW = W; IMGH = H;
+  const k = Math.min(1, MAXPREV / Math.max(W, H));
+  const w = Math.round(W * k), h = Math.round(H * k);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'); x.drawImage(src, 0, 0, w, h);
+  PREV = x.getImageData(0, 0, w, h);
+  const ci = $('cIn'); ci.width = w; ci.height = h; ci.getContext('2d').putImageData(PREV, 0, 0);
+  const co = $('cOut'); co.width = w; co.height = h;
+  $('drop').hidden = true; $('pdfBox').hidden = true; $('cmp').hidden = false; $('info').hidden = false; $('baixar').disabled = false; $('descartar').disabled = false;
+  $('devolverPdf').hidden = !FONTE; $('voltarPdf').hidden = !FONTE;
+  $('dim').textContent = FONTE ? `Imagem da prancha (pág. ${FONTE.pag}): ${W} x ${H} px` : `Original: ${W} x ${H} px`;
+  posBarra(0.5); agenda();
+  $('cmp').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+/* ---------------- PDF da prancha ---------------- */
+const LIB_PDF = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const LIB_PDF_W = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const LIB_PDFLIB = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+const libs = {};
+function carregaLib(url) {
+  return libs[url] || (libs[url] = new Promise((ok, erro) => { const s = document.createElement('script'); s.src = url; s.onload = ok; s.onerror = () => { delete libs[url]; erro(new Error('sem internet')); }; document.head.appendChild(s); }));
+}
+let modoMao = false;
+async function abrePdf(file) {
+  FONTE = null; $('drop').hidden = true; $('cmp').hidden = true; $('info').hidden = true; $('pdfBox').hidden = false;
+  $('devolverPdf').hidden = true; $('voltarPdf').hidden = true; $('baixar').disabled = true; $('descartar').disabled = false;
+  $('pdfMsg').textContent = 'Lendo o PDF da prancha…';
+  try {
+    await carregaLib(LIB_PDF); pdfjsLib.GlobalWorkerOptions.workerSrc = LIB_PDF_W;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const doc = await pdfjsLib.getDocument({data: bytes.slice()}).promise;
+    PDF = {bytes, doc, nome: (file.name || 'prancha.pdf').replace(/\.pdf$/i, ''), n: 1, page: null, vp: null, rects: [], sel: null};
+    $('pgCtl').hidden = doc.numPages < 2;
+    await mostraPagina(1);
+  } catch (e) { $('pdfMsg').textContent = e.message === 'sem internet' ? 'Para abrir PDF o app precisa de internet na primeira vez.' : 'Não consegui ler este PDF.'; }
+}
+async function mostraPagina(n) {
+  PDF.n = n; PDF.sel = null; $('usarSel').disabled = true; $('selRect').hidden = true; $('pdfBoxes').innerHTML = '';
+  $('pgNum').textContent = `${n} / ${PDF.doc.numPages}`;
+  $('pdfMsg').textContent = 'Procurando as imagens da prancha…';
+  const page = await PDF.doc.getPage(n); PDF.page = page;
+  const b = page.getViewport({scale: 1});
+  const vp = page.getViewport({scale: Math.min(3, 1800 / Math.max(b.width, b.height))}); PDF.vp = vp;
+  const c = $('cPdf'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+  await page.render({canvasContext: x, viewport: vp}).promise;
+  PDF.rects = await achaImagens(page);
+  PDF.rects.forEach((r, i) => {
+    const v = paraTela(r), d = document.createElement('div'); d.className = 'box';
+    d.style.left = (v.x / c.width * 100) + '%'; d.style.top = (v.y / c.height * 100) + '%';
+    d.style.width = (v.w / c.width * 100) + '%'; d.style.height = (v.h / c.height * 100) + '%';
+    d.innerHTML = `<span>${i + 1}</span>`;
+    d.addEventListener('click', () => escolhe(r, d));
+    $('pdfBoxes').appendChild(d);
+  });
+  const nr = PDF.rects.length;
+  if (nr === 0) { $('pdfMsg').innerHTML = 'Não achei imagem nesta página. Use <b>Selecionar à mão</b> e arraste sobre a área.'; setMao(true); }
+  else { setMao(false); $('pdfMsg').innerHTML = nr === 1 ? 'Achei <b>1 imagem</b>. Ela já está marcada.' : `Achei <b>${nr} imagens</b>. Toque na que você quer melhorar.`; if (nr === 1) escolhe(PDF.rects[0], $('pdfBoxes').firstChild); }
+}
+function paraTela(r, vp = PDF.vp) {   // retângulo em pontos do PDF -> pixels da tela
+  const q = vp.convertToViewportRectangle([r.x0, r.y0, r.x1, r.y1]);
+  const x = Math.min(q[0], q[2]), y = Math.min(q[1], q[3]);
+  return {x, y, w: Math.abs(q[2] - q[0]), h: Math.abs(q[3] - q[1])};
+}
+async function achaImagens(page) {   // percorre o desenho da página e anota onde cada imagem foi colocada
+  const ops = await page.getOperatorList(), O = pdfjsLib.OPS, T = pdfjsLib.Util.transform, A = pdfjsLib.Util.applyTransform;
+  const img = new Set([O.paintImageXObject, O.paintInlineImageXObject, O.paintJpegXObject].filter((v) => v !== undefined));
+  let m = [1, 0, 0, 1, 0, 0]; const pilha = [], achados = [];
+  for (let i = 0; i < ops.fnArray.length; i++) {
+    const f = ops.fnArray[i], a = ops.argsArray[i];
+    if (f === O.save) pilha.push(m);
+    else if (f === O.restore) m = pilha.pop() || [1, 0, 0, 1, 0, 0];
+    else if (f === O.transform) m = T(m, a);
+    else if (f === O.paintFormXObjectBegin) { pilha.push(m); if (a && a[0]) m = T(m, a[0]); }
+    else if (f === O.paintFormXObjectEnd) m = pilha.pop() || [1, 0, 0, 1, 0, 0];
+    else if (img.has(f)) {
+      const p = [[0, 0], [1, 0], [0, 1], [1, 1]].map((q) => A(q, m)), xs = p.map((q) => q[0]), ys = p.map((q) => q[1]);
+      achados.push({x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys)});
+    }
+  }
+  // junta faixas da mesma imagem (alguns plotters cortam a imagem em tiras)
+  let rs = achados, mudou = true;
+  while (mudou) {
+    mudou = false;
+    for (let i = 0; i < rs.length && !mudou; i++) for (let j = i + 1; j < rs.length && !mudou; j++) {
+      const a = rs[i], b = rs[j], g = 1.5;
+      if (a.x0 <= b.x1 + g && b.x0 <= a.x1 + g && a.y0 <= b.y1 + g && b.y0 <= a.y1 + g) {
+        rs[i] = {x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1)}; rs.splice(j, 1); mudou = true;
+      }
+    }
+  }
+  const v = page.view, area = (v[2] - v[0]) * (v[3] - v[1]);
+  rs = rs.map((r) => ({x0: Math.max(r.x0, v[0]), y0: Math.max(r.y0, v[1]), x1: Math.min(r.x1, v[2]), y1: Math.min(r.y1, v[3])}))
+    .filter((r) => r.x1 - r.x0 > 30 && r.y1 - r.y0 > 30 && (r.x1 - r.x0) * (r.y1 - r.y0) > area * 0.002);
+  const tela = (r) => paraTela(r);
+  return rs.sort((a, b) => { const p = tela(a), q = tela(b); return Math.abs(p.y - q.y) > 40 ? p.y - q.y : p.x - q.x; });
+}
+function escolhe(r, el) {
+  PDF.sel = r; $('usarSel').disabled = false; $('selRect').hidden = true;
+  document.querySelectorAll('#pdfBoxes .box').forEach((b) => b.classList.toggle('sel', b === el));
+}
+function setMao(on) {
+  modoMao = on; $('pdfView').classList.toggle('mao', on);
+  $('maoBtn').textContent = on ? 'Usar as imagens achadas' : 'Selecionar à mão';
+  if (on) { PDF && (PDF.sel = null); $('usarSel').disabled = true; document.querySelectorAll('#pdfBoxes .box').forEach((b) => b.classList.remove('sel')); if (PDF && PDF.rects.length) $('pdfMsg').innerHTML = 'Arraste o dedo sobre a área da imagem.'; }
+  else $('selRect').hidden = true;
+}
+$('maoBtn').addEventListener('click', () => { if (!PDF) return; if (modoMao && !PDF.rects.length) return; setMao(!modoMao); });
+$('pgAnt').addEventListener('click', () => { if (PDF && PDF.n > 1) mostraPagina(PDF.n - 1); });
+$('pgProx').addEventListener('click', () => { if (PDF && PDF.n < PDF.doc.numPages) mostraPagina(PDF.n + 1); });
+let arrPdf = null;
+const ptPdf = (e) => { const c = $('cPdf'), r = c.getBoundingClientRect(); return [Math.max(0, Math.min(c.width, (e.clientX - r.left) / r.width * c.width)), Math.max(0, Math.min(c.height, (e.clientY - r.top) / r.height * c.height))]; };
+function desenhaSel(a, b) {
+  const c = $('cPdf'), s = $('selRect'), x = Math.min(a[0], b[0]), y = Math.min(a[1], b[1]);
+  s.hidden = false; s.style.left = (x / c.width * 100) + '%'; s.style.top = (y / c.height * 100) + '%';
+  s.style.width = (Math.abs(b[0] - a[0]) / c.width * 100) + '%'; s.style.height = (Math.abs(b[1] - a[1]) / c.height * 100) + '%';
+}
+$('pdfView').addEventListener('pointerdown', (e) => { if (!modoMao) return; e.preventDefault(); arrPdf = ptPdf(e); $('pdfView').setPointerCapture(e.pointerId); });
+$('pdfView').addEventListener('pointermove', (e) => { if (arrPdf) desenhaSel(arrPdf, ptPdf(e)); });
+$('pdfView').addEventListener('pointerup', (e) => {
+  if (!arrPdf) return; const a = arrPdf, b = ptPdf(e); arrPdf = null;
+  if (Math.abs(b[0] - a[0]) < 12 || Math.abs(b[1] - a[1]) < 12) { $('selRect').hidden = true; return; }
+  desenhaSel(a, b);
+  const p = PDF.vp.convertToPdfPoint(a[0], a[1]), q = PDF.vp.convertToPdfPoint(b[0], b[1]);
+  PDF.sel = {x0: Math.min(p[0], q[0]), y0: Math.min(p[1], q[1]), x1: Math.max(p[0], q[0]), y1: Math.max(p[1], q[1])};
+  $('usarSel').disabled = false; $('pdfMsg').innerHTML = 'Área marcada. Toque em <b>Melhorar esta imagem</b>.';
+});
+$('usarSel').addEventListener('click', async () => {   // desenha só a área escolhida em alta resolução
+  if (!PDF || !PDF.sel) return;
+  const bt = $('usarSel'); bt.disabled = true; bt.textContent = 'Recortando em alta…';
+  try {
+    const r = PDF.sel, lado = Math.max(r.x1 - r.x0, r.y1 - r.y0);
+    const vp = PDF.page.getViewport({scale: Math.max(1, Math.min(8, 3600 / lado))});
+    const t = paraTela(r, vp), W = Math.max(1, Math.round(t.w)), H = Math.max(1, Math.round(t.h));
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+    await PDF.page.render({canvasContext: x, viewport: vp, transform: [1, 0, 0, 1, -t.x, -t.y]}).promise;
+    FONTE = {pag: PDF.n, rect: {...r}, rot: ((PDF.page.rotate || 0) % 360 + 360) % 360};
+    usaFonte(c, W, H);
+  } catch (e) { $('pdfMsg').textContent = 'Não consegui recortar esta área. Tente uma área menor.'; }
+  bt.textContent = 'Melhorar esta imagem'; bt.disabled = !PDF.sel;
+});
+$('voltarPdf').addEventListener('click', () => {
+  if (!PDF) return; FONTE = null;
+  $('cmp').hidden = true; $('info').hidden = true; $('pdfBox').hidden = false; $('devolverPdf').hidden = true; $('voltarPdf').hidden = true; $('baixar').disabled = true;
+  $('pdfBox').scrollIntoView({behavior: 'smooth', block: 'start'});
+});
+
+async function geraFinal(lim, comMarca) {   // aplica os ajustes na imagem inteira, em resolução cheia
+  const k = Math.min(1, lim / Math.max(IMGW, IMGH));
+  const w = Math.round(IMGW * k), h = Math.round(IMGH * k);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'); x.drawImage(IMG, 0, 0, w, h);
+  x.putImageData(processa(x.getImageData(0, 0, w, h), P), 0, 0);
+  if (comMarca) assina(x, w, h);
+  return c;
+}
+async function entrega(blob, nome, titulo) {
+  const file = new File([blob], nome, {type: blob.type});
+  if (navigator.canShare && navigator.canShare({files: [file]}) && /iPhone|iPad|Android/i.test(navigator.userAgent)) await navigator.share({files: [file], title: titulo});
+  else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 20000); }
+}
+$('devolverPdf').addEventListener('click', async () => {   // coloca a imagem melhorada por cima da original, no mesmo lugar da prancha
+  if (!PDF || !FONTE) return;
+  const b = $('devolverPdf'); b.disabled = true; b.textContent = 'Montando o PDF…';
+  await new Promise((r) => setTimeout(r, 30));
+  try {
+    await carregaLib(LIB_PDFLIB);
+    const c = await geraFinal(6000, false);
+    const jpg = new Uint8Array(await (await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92))).arrayBuffer());
+    const doc = await PDFLib.PDFDocument.load(PDF.bytes, {ignoreEncryption: true});
+    const pg = doc.getPage(FONTE.pag - 1), im = await doc.embedJpg(jpg);
+    const {x0, y0, x1, y1} = FONTE.rect, wu = x1 - x0, hu = y1 - y0, rot = FONTE.rot;
+    const pos = {0: [x0, y0, wu, hu], 90: [x1, y0, hu, wu], 180: [x1, y1, wu, hu], 270: [x0, y1, hu, wu]}[rot] || [x0, y0, wu, hu];
+    pg.drawImage(im, {x: pos[0], y: pos[1], width: pos[2], height: pos[3], rotate: PDFLib.degrees(rot)});
+    const out = await doc.save();
+    await entrega(new Blob([out], {type: 'application/pdf'}), `${PDF.nome}_render.pdf`, 'Prancha Eliel Engenharia');
+  } catch (e) { if (e.name !== 'AbortError') alertaErro(e.message === 'sem internet' ? 'Precisa de internet para montar o PDF.' : 'Não consegui montar o PDF. Baixe a imagem em JPG.'); }
+  b.disabled = false; b.textContent = 'Devolver a imagem ao PDF da prancha';
+});
 function alertaErro(m) { $('dim').textContent = m; }
 
 /* ---------------- comparação antes/depois ---------------- */
@@ -354,19 +550,9 @@ $('baixar').addEventListener('click', async () => {
   const b = $('baixar'); b.disabled = true; b.textContent = 'Gerando a imagem em alta…';
   await new Promise((r) => setTimeout(r, 30));
   try {
-    const lim = 6000, k = Math.min(1, lim / Math.max(IMG.naturalWidth, IMG.naturalHeight));
-    const w = Math.round(IMG.naturalWidth * k), h = Math.round(IMG.naturalHeight * k);
-    const c = document.createElement('canvas'); c.width = w; c.height = h;
-    const x = c.getContext('2d'); x.drawImage(IMG, 0, 0, w, h);
-    x.putImageData(processa(x.getImageData(0, 0, w, h), P), 0, 0);
-    if ($('marca').checked) assina(x, w, h);
+    const c = await geraFinal(6000, $('marca').checked);
     const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.95));
-    const nome = `render_${preset}_eliel_engenharia.jpg`, file = new File([blob], nome, {type: 'image/jpeg'});
-    if (navigator.canShare && navigator.canShare({files: [file]}) && /iPhone|iPad|Android/i.test(navigator.userAgent)) {
-      await navigator.share({files: [file], title: 'Render Eliel Engenharia'});
-    } else {
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); a.remove();
-    }
+    await entrega(blob, `render_${preset}_eliel_engenharia.jpg`, 'Render Eliel Engenharia');
   } catch (e) { if (e.name !== 'AbortError') alertaErro('Não consegui gerar a imagem em alta. Tente uma imagem menor.'); }
   b.disabled = false; b.textContent = 'Baixar imagem em alta (JPG)';
 });
