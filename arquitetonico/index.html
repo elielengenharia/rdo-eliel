@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.50 · iluminação das salas comerciais com plafons LED distribuídos por igual", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.51 · DXF no padrão R12 que o AutoCAD abre (nomes de layer sem acento e sem espaço)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -7445,6 +7445,27 @@ function dxfCotaEliel(p,mm){   // DXF em metros (desenho) ou em milímetros (pra
     tab:()=>{ p(0,"TABLE");p(2,"DIMSTYLE");p(70,1);p(0,"DIMSTYLE");p(2,"ELIEL ENGENHARIA");p(70,0);p(3,"");p(4,"");p(5,"_DOT");p(6,"");p(7,"");
       p(40,v.DIMSCALE);p(41,v.DIMASZ);p(42,v.DIMEXO);p(43,v.DIMDLI);p(44,v.DIMEXE);p(45,0);p(46,0);p(47,0);p(48,0);p(140,v.DIMTXT);p(141,0);p(142,0);p(143,25.4);p(144,v.DIMLFAC);p(145,0);p(146,1);p(147,v.DIMGAP);
       p(71,0);p(72,0);p(73,0);p(74,0);p(75,0);p(76,0);p(77,1);p(78,0);p(170,0);p(171,2);p(172,0);p(173,0);p(174,0);p(175,0);p(176,0);p(177,0);p(178,0);p(0,"ENDTAB"); } }; }
+// DXF R12 que o AutoCAD aceita: nomes de layer e de estilo só com A-Z, 0-9, $, _ e - (até 31 letras, sem acento nem espaço),
+// sem variáveis que não existem no R12 ($INSUNITS) e sem seta de cota apontando para bloco que não está no arquivo
+function dxfR12(o){ const nm=v=>(String(v).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9_$-]/g,"_").replace(/_+/g,"_").slice(0,31))||"0";
+  const out=[]; let ent=null;
+  for(let i=0;i+1<o.length;i+=2){ const c=String(o[i]), v=o[i+1];
+    if(c==="9"&&v==="$INSUNITS"){ i+=2; continue; }
+    if(c==="0") ent=v;
+    let w=v;
+    if(c==="8") w=nm(v);
+    else if(c==="2"&&(ent==="LAYER"||ent==="DIMSTYLE")) w=nm(v);
+    else if(c==="2"&&o[i-1]==="$DIMSTYLE") w=nm(v);
+    else if(c==="1"&&o[i-1]==="$DIMBLK") w="";
+    else if(c==="5"&&ent==="DIMSTYLE") w="";
+    out.push(c,String(w)); }
+  // layers que ficaram com o mesmo nome (ex.: "cotas" e "COTAS") viram um só
+  const a=out.findIndex((v,i)=>i%2===1&&v==="LAYER"&&out[i-1]==="2"&&out[i-2]==="TABLE"); if(a<0) return out;
+  let i=a+1; if(out[i]==="70") i+=2; const ini=i; let fim=i; const ents=[];
+  while(fim<out.length&&!(out[fim]==="0"&&out[fim+1]==="ENDTAB")){ let j=fim+2; while(j<out.length&&out[j]!=="0") j+=2; ents.push(out.slice(fim,j)); fim=j; }
+  const vistos=new Set(), ok=ents.filter(e=>{ const k=e[e.indexOf("2")+1]; if(vistos.has(k)) return false; vistos.add(k); return true; });
+  if(out[a+1]==="70") out[a+2]=String(ok.length);
+  return [...out.slice(0,ini),...ok.flat(),...out.slice(fim)]; }
 function dxfEnc(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?"); }
 function buildDXF(){
   const P=pranchas(S.fmt||"A3"), o=[], p=(c,v)=>o.push(String(c),String(v)), n=v=>(+v).toFixed(4);
@@ -7478,7 +7499,7 @@ function buildDXF(){
   // dados do projeto
   [S.obra,S.cliente?("Proprietário: "+S.cliente):"",S.local,S.rt,S.data].filter(Boolean).forEach((t,i)=>T(0,-(P.folhas[0].itens[0].d.e.y1-P.folhas[0].itens[0].d.e.y0)-1-i*0.35,0.18,t,"texto",0,0));
   p(0,"ENDSEC");p(0,"EOF");
-  return o.join("\r\n")+"\r\n";
+  return dxfR12(o).join("\r\n")+"\r\n";
 }
 // DXF da prancha: a folha inteira como no PDF (moldura, carimbo, quadros, títulos e desenhos já na escala), em milímetros; folhas lado a lado
 function buildDXFPrancha(fmt){
@@ -7512,7 +7533,7 @@ function buildDXFPrancha(fmt){
         else if(t==="f"||t==="B"){ path.forEach(sp=>{ enche(sp); if(t==="B") for(let j=0;j<sp.length;j++) lin(sp[j],sp[(j+1)%sp.length]); }); path=[]; sub=null; st=[]; }
         else if(t==="q"||t==="Q"||t==="Do"){ st=[]; }
         else st.push(t); } }); });
-  p(0,"ENDSEC");p(0,"EOF"); return o.join("\r\n")+"\r\n"; }
+  p(0,"ENDSEC");p(0,"EOF"); return dxfR12(o).join("\r\n")+"\r\n"; }
 const setDxfMsg=t=>document.querySelectorAll("[data-dxfmsg]").forEach(m=>m.textContent=t);
 document.querySelectorAll("[data-dxfpr]").forEach(b=>b.onclick=async()=>{ try{ const fmt=S.fmt||"A3", bytes=to1252(buildDXFPrancha(fmt)), nm=`${slug()}-pranchas-${fmt}-${agora().arq}`; let st;
     if(window.claude) st=await saveFile(nm+"-DXF.zip",zipOne(nm+".dxf",bytes),"application/zip"); else st=await saveFile(nm+".dxf",bytes,"application/dxf");
