@@ -48,6 +48,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .sheet h2{font:700 19px/1.1 var(--f-display);text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px}
 .sheet .cap{color:var(--muted);font-size:12.5px;margin:0 0 12px;max-width:68ch}
 .draw{overflow-x:auto}
+.zbar{position:sticky;top:calc(var(--navh,52px) + env(safe-area-inset-top,0px) + 4px);z-index:4;display:flex;gap:4px;align-items:center;justify-content:flex-end;margin:0 0 4px;pointer-events:none}
+.zbar>*{pointer-events:auto}
+.zbar button{min-width:38px;padding:4px 8px;font-size:16px;line-height:1.2;border:1px solid var(--line);background:var(--sheet);color:var(--ink);border-radius:6px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.zbar .zv{font-size:12px;color:var(--muted);background:var(--sheet);padding:2px 6px;border-radius:4px;min-width:42px;text-align:center}
 .draw svg{display:block;width:100%;height:auto;max-width:100%}
 #plan svg{cursor:crosshair;touch-action:manipulation}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
@@ -799,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.37 · caixas livres para chegar perto dos aparelhos", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.38 · zoom nas plantas para pôr caixas, tubos e peças", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -5498,7 +5502,8 @@ function svgDe(D,id,pad=4){
   desencavala(D); const k=D.k, e=extensao(D), W=(e.x1-e.x0)/k+2*pad, H=(e.y1-e.y0)/k+2*pad;
   const map=(x,y)=>[pad+(x-e.x0)/k,pad+(y-e.y0)/k];
   if(id) VIEW[id]={e,k,pad};
-  return `<svg viewBox="0 0 ${n2(W)} ${n2(H)}" xmlns="http://www.w3.org/2000/svg" role="img">${primsSVG(D,map,k)}</svg>`;
+  const zs=id&&zoomCont(id)?(ZOOM[id]||1):1; if(zs!==1||(id&&zoomCont(id))) zoomAgenda();
+  return `<svg viewBox="0 0 ${n2(W)} ${n2(H)}" xmlns="http://www.w3.org/2000/svg" role="img"${zs>1?` style="width:${(zs*100).toFixed(1)}%;max-width:none"`:""}>${primsSVG(D,map,k)}</svg>`;
 }
 const VIEW={};
 // escala da tela: textos legíveis no celular (a prancha usa a escala real)
@@ -7975,6 +7980,42 @@ $("impApply").onclick=()=>{ if(!IMP) return;
     S.rooms=S.rooms.filter((_,j)=>!del.has(j)); }catch(e){} }
   loadForm(); render(); $("impRes").hidden=true; impMsg(IMP.juntar?`Planta aplicada com portas, janelas e nomes do DXF. Confira na aba Planta.${fora.length?` Fora de ambiente fechado (área aberta, sem área no quadro): ${fora.join(", ")}.`:""}`:"Planta aplicada. Veja a aba Planta: dê nome aos ambientes e coloque as janelas tocando nas paredes."); };
 
+/* ======================================================================
+   ZOOM NAS PLANTAS DE EDIÇÃO (pedido do Eliel, 6.38): aproximar o desenho para pôr caixas, tubos e peças com
+   mais controle. Botões − / + / Ajustar em cima de cada planta, Ctrl + rodinha (ou pinça no touchpad) no ponto do
+   mouse e pinça com dois dedos no celular. O zoom fica guardado por planta enquanto o app está aberto.
+   ====================================================================== */
+const ZOOM={}, ZSCR={}, ZMAX=8;
+function zoomCont(id){ if(/^ban\d+$/.test(id)) return document.querySelector(`[data-banplan="${id.slice(3)}"]`);
+  const m={plan:"plan",ref:"refDes",lay:"lay",ele:"ele",hid:"hid",pluvDes:"pluvDes"}[id]; return m?document.getElementById(m):null; }
+const zoomIds=()=>["plan","ref","lay","ele","hid","pluvDes",...[...document.querySelectorAll("[data-banplan]")].map(e=>"ban"+e.dataset.banplan)];
+let zoomRaf=0;
+function zoomAgenda(){ if(zoomRaf) return; zoomRaf=requestAnimationFrame(()=>{ zoomRaf=0; { const nv=document.querySelector("nav.tabs"); if(nv) document.documentElement.style.setProperty("--navh",nv.offsetHeight+"px"); } zoomIds().forEach(id=>{ const el=zoomCont(id); if(!el||!el.querySelector("svg")) return; zoomBarra(id,el);
+    if(ZSCR[id]!=null&&Math.abs(el.scrollLeft-ZSCR[id])>1) el.scrollLeft=ZSCR[id]; }); }); }
+function zoomBarra(id,el){ let b=el.previousElementSibling; if(!b||!b.classList.contains("zbar")){ b=document.createElement("div"); b.className="zbar"; b.dataset.zid=id; el.parentNode.insertBefore(b,el);
+    b.innerHTML=`<span class="zv" aria-live="polite"></span><button type="button" data-z="out" aria-label="Afastar o desenho" title="Afastar">−</button><button type="button" data-z="in" aria-label="Aproximar o desenho" title="Aproximar (Ctrl + rodinha)">+</button><button type="button" data-z="fit" aria-label="Desenho inteiro" title="Desenho inteiro" style="font-size:12px">Ajustar</button>`;
+    b.addEventListener("click",e=>{ const z=e.target.closest("[data-z]"); if(!z) return; const t=z.dataset.z; zoomMuda(b.dataset.zid,t==="in"?1.5:t==="out"?1/1.5:0); });
+    if(!el.dataset.zl){ el.dataset.zl=1; zoomLiga(el,()=>b.dataset.zid); } }
+  b.dataset.zid=id; const s=ZOOM[id]||1; b.querySelector(".zv").textContent=Math.round(s*100)+"%"; b.querySelector('[data-z="fit"]').hidden=s<=1;
+  if(el.dataset.ta0==null) el.dataset.ta0=el.style.touchAction||""; const t0=el.dataset.ta0; el.style.touchAction=s>1?(t0==="none"?"none":"pan-x pan-y"):t0; }
+// muda o zoom (fator; 0 = desenho inteiro) mantendo parado o ponto (cx, cy) da tela; sem ponto, o meio do que está visível
+function zoomMuda(id,fat,cx,cy){ const el=zoomCont(id), svg=el&&el.querySelector("svg"); if(!svg) return; const r=svg.getBoundingClientRect(), rc=el.getBoundingClientRect();
+  if(cx==null){ cx=Math.max(rc.left,r.left)+(Math.min(rc.right,r.right)-Math.max(rc.left,r.left))/2; cy=Math.max(0,r.top)+(Math.min(window.innerHeight,r.bottom)-Math.max(0,r.top))/2; }
+  const fx=(cx-r.left)/r.width, fy=(cy-r.top)/r.height, s0=ZOOM[id]||1, s=fat?Math.max(1,Math.min(ZMAX,s0*fat)):1; if(Math.abs(s-s0)<1e-3&&fat) return;
+  ZOOM[id]=s; if(s>1){ svg.style.width=(s*100).toFixed(1)+"%"; svg.style.maxWidth="none"; } else { svg.style.width=""; svg.style.maxWidth=""; }
+  const r2=svg.getBoundingClientRect(); el.scrollLeft+=(r2.left+fx*r2.width)-cx; if(s>1||fat) window.scrollBy(0,(r2.top+fy*r2.height)-cy); ZSCR[id]=el.scrollLeft; zoomBarra(id,el); }
+function zoomLiga(el,idDe){ el.addEventListener("scroll",()=>{ ZSCR[idDe()]=el.scrollLeft; },{passive:true});
+  el.addEventListener("wheel",ev=>{ if(!ev.ctrlKey&&!ev.metaKey) return; ev.preventDefault(); zoomMuda(idDe(),Math.exp(-ev.deltaY*0.0025),ev.clientX,ev.clientY); },{passive:false});
+  // pinça e arraste com dois dedos: aproxima/afasta e corre o desenho; o arraste de peça com o 1º dedo é cancelado
+  const T=new Map(); let P=null, canc=false;
+  const pd=ev=>{ if(ev.pointerType!=="touch") return; T.set(ev.pointerId,[ev.clientX,ev.clientY]); if(T.size===2){ const [a,b]=[...T.values()]; P={d:Math.hypot(b[0]-a[0],b[1]-a[1])||1,m:[(a[0]+b[0])/2,(a[1]+b[1])/2]};
+      const ids=[...T.keys()]; canc=true; try{ ev.target.dispatchEvent(new PointerEvent("pointercancel",{pointerId:ids[0],bubbles:true,pointerType:"touch"})); }catch(e){} canc=false; ev.stopPropagation(); ev.preventDefault(); } else if(P) ev.stopPropagation(); };
+  const pm=ev=>{ if(!T.has(ev.pointerId)) return; T.set(ev.pointerId,[ev.clientX,ev.clientY]); if(!P||T.size<2) return; ev.stopPropagation(); ev.preventDefault();
+    const [a,b]=[...T.values()], d=Math.hypot(b[0]-a[0],b[1]-a[1])||1, m=[(a[0]+b[0])/2,(a[1]+b[1])/2], id=idDe();
+    el.scrollLeft-=m[0]-P.m[0]; window.scrollBy(0,-(m[1]-P.m[1])); zoomMuda(id,d/P.d,m[0],m[1]); P={d,m}; };
+  const pu=ev=>{ if(canc||!T.has(ev.pointerId)) return; T.delete(ev.pointerId); if(P){ ev.stopPropagation(); if(T.size<1) setTimeout(()=>{ P=null; },0); } };
+  el.addEventListener("pointerdown",pd,true); el.addEventListener("pointermove",pm,true); el.addEventListener("pointerup",pu,true); el.addEventListener("pointercancel",pu,true);
+  el.addEventListener("click",ev=>{ if(P){ ev.stopPropagation(); ev.preventDefault(); } },true); }
 $("versao").textContent=VERSAO;
 /* projeto vindo do Detalhador de Fundação pelo botão "Fazer o hidrossanitário": entra como projeto novo, com fossa, aberto na aba Hidrossanitário */
 let deFundacao=null;
