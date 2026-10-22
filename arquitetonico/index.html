@@ -799,7 +799,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.33 · detalhe de verga e contraverga na parede", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.34 · lavatório e vaso acompanham a parede inclinada do banheiro", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2084,7 +2084,7 @@ function vistaBanheiro(G,r,k,lado){
     let a=U(...g.p0), b=U(...g.p1); if(a>b) [a,b]=[b,a]; a=Math.max(a,ua); b=Math.min(b,ub); if(b-a<0.05) return;
     const alt=num(g.a.a)||ABDEF[g.tipo].a, z0=g.tipo==="Janela"?num(g.a.p):0; esquadriaVista(D,g.tipo,a,b,z0,z0+alt,g.cod,g.mod,g.nf); });
   // louças encostadas nesta parede
-  const naFace=it=>it&&Math.abs(it.n[0]+F[0])<1e-6&&Math.abs(it.n[1]+F[1])<1e-6;
+  const naFace=it=>it&&-(it.n[0]*F[0]+it.n[1]*F[1])>0.7072;   // reto: na parede; inclinado (até 45°): na vista da parede mais de frente
   const pontos=[];
   if(Lb){
     if(naFace(Lb.vaso)){ const u=U(...Lb.vaso.c), w=Lb.vaso.larg/2;
@@ -2304,7 +2304,7 @@ function desenhaLoucas(D,r,Lb,k,txt){
   const V=Lb.vaso; ret(V,-V.larg/2,V.larg/2,0,0.18,.35); elipse(V,0,0.18+0.24,0.18,0.24,.35); elipse(V,0,0.18+0.25,0.12,0.17,.18);
   // lavatório (bancada com cuba)
   const Lv=Lb.lav; ret(Lv,-Lv.larg/2,Lv.larg/2,0,Lv.prof,.35); elipse(Lv,0,Lv.prof*0.55,Math.min(0.18,Lv.larg/2-0.05),0.13,.25); CI(D,...loc(Lv,0,0.06),0.02,.25,"ESQUADRIA");
-  if(txt){ TX(D,...loc(V,0,0.75+2*k),"VASO",1.5,{l:"COTAS",mv:"l"}); TX(D,...loc(Lv,0,Lv.prof+2.5*k),"LAVATÓRIO",1.5,{l:"COTAS",rot:Lv.a[0]===0?-90:0,mv:"l"}); }
+  if(txt){ TX(D,...loc(V,0,0.75+2*k),"VASO",1.5,{l:"COTAS",mv:"l"}); TX(D,...loc(Lv,0,Lv.prof+2.5*k),"LAVATÓRIO",1.5,{l:"COTAS",rot:(()=>{ let g=Math.atan2(Lv.a[1],Lv.a[0])*180/Math.PI; if(Math.abs(Lv.a[0])<1e-6) return -90; while(g>=90) g-=180; while(g<-90) g+=180; return Math.abs(g)<1e-6?0:+g.toFixed(2); })(),mv:"l"}); }
 }
 function desenhaPeca(D,T,des,lay="MOBILIA"){ const w0=.18, dr={
   R:(s0,t0,s1,t1,w=w0)=>{ const q=retW(T,[s0,t0,s1,t1]); PL(D,[...q,q[0]],w,lay); },
@@ -6569,10 +6569,39 @@ function banLb(li,X){ const lab=S.rooms[li]; if(lab.lb&&lab.lb.vaso&&lab.lb.lav)
   lab.lb={vaso:{c:c2(Lb.vaso.c),n:c2(Lb.vaso.n)},lav:{c:c2(Lb.lav.c),n:c2(Lb.lav.n),larg:Math.round(Lb.lav.larg*100)/100},box:Lb.box?{...Lb.box}:null,chuv:Lb.chuv&&Lb.chuv.lado||null}; return lab.lb; }
 const BAN_PAR=[["A",[0,1]],["B",[-1,0]],["C",[0,-1]],["D",[1,0]]];   // paredes do retângulo útil: cima, direita, baixo, esquerda (n = para dentro)
 function banParede(u,n){ return n[1]>0.5?"A":n[0]<-0.5?"B":n[1]<-0.5?"C":"D"; }
-// encosta a peça (vaso ou lavatório) na parede mais perto do ponto p, sem passar dos cantos
-function banEncosta(u,p,larg,forca){ const d={A:p[1]-u.y0,C:u.y1-p[1],D:p[0]-u.x0,B:u.x1-p[0]}, w=forca||Object.keys(d).sort((a,b)=>d[a]-d[b])[0], n=BAN_PAR.find(x=>x[0]===w)[1], h=larg/2+0.02;
+// paredes inclinadas do banheiro (pedido do Eliel, 6.34): lados do contorno real que não seguem o retângulo útil, no sistema do banheiro.
+// n = normal para dentro, d = direção ao longo da parede; chave "I<i>" (lado i do contorno)
+function banInclinadas(u){ const R=u&&u.real; if(!R||!R.poly) return []; if(u._inc) return u._inc; const P=u.fr?R.poly.map(p=>frLocal(u.fr,p)):R.poly, n=P.length, out=[];
+  P.forEach((a,i)=>{ const b=P[(i+1)%n], dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy); if(L<0.5||Math.abs(dx)/L<0.02||Math.abs(dy)/L<0.02) return;
+    const d=[dx/L,dy/L], m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; let nn=[-d[1],d[0]]; if(!pontoDentro([m[0]+nn[0]*0.05,m[1]+nn[1]*0.05],P)) nn=[d[1],-d[0]];
+    out.push({w:"I"+i,a,b,d,L,n:nn,P}); });
+  u._inc=out; return out; }
+// lado do retângulo útil que é parede de verdade (no banheiro com parede inclinada, o lado do retângulo junto da inclinada é só uma linha)
+function banLadoReal(u,w){ const R=u&&u.real; if(!R||!R.poly) return true; const P=u.fr?R.poly.map(p=>frLocal(u.fr,p)):R.poly, n=P.length, t=0.02;
+  const [ax,v,lo,hi]=w==="A"?[1,u.y0,u.x0,u.x1]:w==="C"?[1,u.y1,u.x0,u.x1]:w==="D"?[0,u.x0,u.y0,u.y1]:[0,u.x1,u.y0,u.y1];
+  let tot=0; P.forEach((a,i)=>{ const b=P[(i+1)%n]; if(Math.abs(a[ax]-v)<t&&Math.abs(b[ax]-v)<t){ const o=1-ax; tot+=Math.max(0,Math.min(hi,Math.max(a[o],b[o]))-Math.max(lo,Math.min(a[o],b[o]))); } });
+  return tot>=0.3; }
+// parede em que a peça está encostada (A, B, C, D ou a inclinada I<i>)
+const banW=(u,it)=>it&&it.w&&banInclinadas(u).some(e=>e.w===it.w)?it.w:banParede(u,it.n);
+// encosta a peça (vaso ou lavatório) na parede mais perto do ponto p, sem passar dos cantos; na parede inclinada a peça gira junto com ela
+function banEncosta(u,p,larg,forca,prof){ prof=prof||0.45; const inc=banInclinadas(u), d={A:p[1]-u.y0,C:u.y1-p[1],D:p[0]-u.x0,B:u.x1-p[0]};
+  let w=forca;
+  if(!w){ const cand=Object.keys(d).filter(k=>banLadoReal(u,k)).map(k=>[k,d[k]]);
+    inc.forEach(e=>{ if(e.L<larg+0.04) return; const t=(p[0]-e.a[0])*e.d[0]+(p[1]-e.a[1])*e.d[1], sd=(p[0]-e.a[0])*e.n[0]+(p[1]-e.a[1])*e.n[1]; cand.push([e.w,t>=0&&t<=e.L?sd:distSegAB(p,e.a,e.b)]); });
+    w=(cand.length?cand:Object.keys(d).map(k=>[k,d[k]])).sort((x,y)=>x[1]-y[1])[0][0]; }
+  const e=inc.find(x=>x.w===w);
+  if(e){ const h=larg/2+0.02, r3=v=>+v.toFixed(3), r4=v=>+v.toFixed(4), at=t=>[e.a[0]+e.d[0]*t,e.a[1]+e.d[1]*t];
+    // a peça inteira tem de caber no ambiente (no canto agudo ela anda para longe do canto)
+    const cabe=t=>{ const c=at(t); return [[-larg/2,0.01],[larg/2,0.01],[-larg/2,prof],[larg/2,prof]].every(([s0,t0])=>pontoDentro([c[0]+e.d[0]*s0+e.n[0]*t0,c[1]+e.d[1]*s0+e.n[1]*t0],e.P)); };
+    let t0=(p[0]-e.a[0])*e.d[0]+(p[1]-e.a[1])*e.d[1]; t0=e.L<2*h?e.L/2:Math.max(h,Math.min(e.L-h,t0));
+    let t=t0; if(!cabe(t)){ const ok=[]; for(let s=0.01;s<=e.L;s+=0.01){ if(t0+s<=e.L-h&&cabe(t0+s)) ok.push(t0+s); if(t0-s>=h&&cabe(t0-s)) ok.push(t0-s); if(ok.length) break; } if(ok.length) t=ok[0]; }
+    const c=at(t); return {c:[r3(c[0]),r3(c[1])],n:[r4(e.n[0]),r4(e.n[1])],w}; }
+  if(!d[w]&&d[w]!==0) w="A";
+  const n=BAN_PAR.find(x=>x[0]===w)[1], h=larg/2+0.02;
   const cl=(v,a,b)=>Math.max(a+h,Math.min(b-h,v)); const c=w==="A"?[cl(p[0],u.x0,u.x1),u.y0]:w==="C"?[cl(p[0],u.x0,u.x1),u.y1]:w==="D"?[u.x0,cl(p[1],u.y0,u.y1)]:[u.x1,cl(p[1],u.y0,u.y1)];
-  return {c:[+c[0].toFixed(3),+c[1].toFixed(3)],n}; }
+  return {c:[+c[0].toFixed(3),+c[1].toFixed(3)],n,w}; }
+// grava a peça encostada (guarda a parede só quando é a inclinada)
+const banPoe=(it,e)=>{ const o={...it,c:e.c,n:e.n}; if(e.w&&e.w[0]==="I") o.w=e.w; else delete o.w; return o; };
 // box: leva o retângulo para o ponto e gruda nas paredes que estiverem a menos de 35 cm
 function banMoveBox(u,b,p){ const w=b.x1-b.x0, h=b.y1-b.y0; let x0=p[0]-w/2, y0=p[1]-h/2;
   if(x0-u.x0<0.35) x0=u.x0; if(u.x1-(x0+w)<0.35) x0=u.x1-w; if(y0-u.y0<0.35) y0=u.y0; if(u.y1-(y0+h)<0.35) y0=u.y1-h;
@@ -6604,8 +6633,8 @@ const encolhe=Q=>{ const c=[Q.reduce((s,p)=>s+p[0],0)/Q.length,Q.reduce((s,p)=>s
 function banPonto(ev,li,X){ const el=document.querySelector(`[data-banplan="${li}"] svg`), V=VIEW["ban"+li]; if(!el||!V) return null; const pt=el.createSVGPoint(); pt.x=ev.clientX; pt.y=ev.clientY;
   const q=pt.matrixTransform(el.getScreenCTM().inverse()), w=[V.e.x0+(q.x-V.pad)*V.k,V.e.y0+(q.y-V.pad)*V.k]; return X.u.fr?frLocal(X.u.fr,w):w; }
 function banAplica(li,X,peca,p){ const M=banLb(li,X); if(!M) return; const u=X.u;
-  if(peca==="vaso"){ const e=banEncosta(u,p,0.38); M.vaso={c:e.c,n:e.n}; }
-  else if(peca==="lav"){ const e=banEncosta(u,p,num(M.lav.larg)||0.5); M.lav={...M.lav,c:e.c,n:e.n}; }
+  if(peca==="vaso"){ const e=banEncosta(u,p,0.38,null,0.65); M.vaso=banPoe(M.vaso,e); }
+  else if(peca==="lav"){ const e=banEncosta(u,p,num(M.lav.larg)||0.5,null,0.42); M.lav=banPoe(M.lav,e); }
   else if(peca==="box"&&M.box) M.box=banMoveBox(u,M.box,p);
   else if(peca==="ralo"&&M.box) banPoeRalo(M,X,[p[0]-M.box.x0,p[1]-M.box.y0],true); }
 // ralo do box: guarda a distância ao canto x0,y0 do box (anda junto com o box); perto do centro ou de um canto, gruda nele
@@ -6631,7 +6660,7 @@ function banRaloNovoBox(M,b0,b1){ if(!M.ralo||!b0||!b1) return; const w0=b0.x1-b
   cont.addEventListener("change",e=>{ if(e.target.matches("[data-banpasso]")){ LAYPASSO=num(e.target.value)||0.05; return; } const bar=e.target.closest("[data-banbar]"); if(!bar) return; const li=+bar.dataset.banbar, X=banGeo(li); if(!X) return;
     if(e.target.matches("[data-banpeca]")){ BANSEL[li]=e.target.value; render(); return; }
     const M=banLb(li,X); if(!M) return;
-    if(e.target.matches("[data-banlarg]")){ const l=num(e.target.value); M.lav.larg=l; const e2=banEncosta(X.u,M.lav.c,l,banParede(X.u,M.lav.n)); M.lav.c=e2.c; }
+    if(e.target.matches("[data-banlarg]")){ const l=num(e.target.value); M.lav.larg=l; const e2=banEncosta(X.u,M.lav.c,l,banW(X.u,M.lav),0.42); M.lav=banPoe(M.lav,e2); }
     if(e.target.matches("[data-banbox]")){ const v=e.target.value; if(v==="sem") M.box=null; else if(v){ const [w,h]=v.split("x").map(num), u=X.u, b=M.box||{x0:u.x0,y0:u.y0,x1:u.x0+w,y1:u.y0+h};
         const cx=(b.x0+b.x1)/2<(u.x0+u.x1)/2?"e":"d", cy=(b.y0+b.y1)/2<(u.y0+u.y1)/2?"c":"b", W0=Math.min(w,u.x1-u.x0), H0=Math.min(h,u.y1-u.y0);   // fica no mesmo canto
         const x0=cx==="e"?u.x0:u.x1-W0, y0=cy==="c"?u.y0:u.y1-H0, b1={x0,y0,x1:x0+W0,y1:y0+H0}; if(M.box) banRaloNovoBox(M,M.box,b1); M.box=b1; } }
@@ -6647,10 +6676,10 @@ function banRaloNovoBox(M,b0,b1){ if(!M.ralo||!b0||!b1) return; const w0=b0.x1-b
     if(ac==="menos"||ac==="mais"){ const sg=ac==="mais"?1:-1, dirDe=n=>Math.abs(n[1])>0.5?[1,0]:[0,1];   // setas como na tela: ◀ ▶ em parede deitada, ▲ ▼ em parede em pé
       const ps=LAYPASSO;
       if(sel==="box"&&M.box){ const a=dirDe(chuvDoBox(M.box,u,M.chuv).n), b0=M.box, w=b0.x1-b0.x0, h=b0.y1-b0.y0, x0=Math.max(u.x0,Math.min(u.x1-w,b0.x0+a[0]*ps*sg)), y0=Math.max(u.y0,Math.min(u.y1-h,b0.y0+a[1]*ps*sg)); M.box={x0:+x0.toFixed(3),y0:+y0.toFixed(3),x1:+(x0+w).toFixed(3),y1:+(y0+h).toFixed(3)}; }
-      else if(sel!=="box"){ const it=M[sel], a=dirDe(it.n), l=sel==="vaso"?0.38:num(it.larg)||0.5, e2=banEncosta(u,[it.c[0]+a[0]*ps*sg,it.c[1]+a[1]*ps*sg],l,banParede(u,it.n)); M[sel]={...it,c:e2.c}; } }
+      else if(sel!=="box"){ const it=M[sel], w=banW(u,it), ei=banInclinadas(u).find(x=>x.w===w), a=ei?(Math.abs(ei.d[0])>=Math.abs(ei.d[1])?(ei.d[0]<0?[-ei.d[0],-ei.d[1]]:ei.d):(ei.d[1]<0?[-ei.d[0],-ei.d[1]]:ei.d)):dirDe(it.n), l=sel==="vaso"?0.38:num(it.larg)||0.5, e2=banEncosta(u,[it.c[0]+a[0]*ps*sg,it.c[1]+a[1]*ps*sg],l,w,sel==="vaso"?0.65:0.42); M[sel]=banPoe(it,e2); } }
     if(ac==="girar"){
       if(sel==="box"&&M.box){ const ok=["A","B","C","D"].filter(w=>{ const ch=chuvDoBox(M.box,u,w); return ch.lado===w; }), at=chuvDoBox(M.box,u,M.chuv).lado, i=ok.indexOf(at); M.chuv=ok[(i+1)%ok.length]||at; }
-      else if(sel!=="box"){ const it=M[sel], l=sel==="vaso"?0.38:num(it.larg)||0.5, ord=["A","B","C","D"], w=ord[(ord.indexOf(banParede(u,it.n))+1)%4], e2=banEncosta(u,it.c,l,w); M[sel]={...it,c:e2.c,n:e2.n}; } }
+      else if(sel!=="box"){ const it=M[sel], l=sel==="vaso"?0.38:num(it.larg)||0.5, ord=[...["A","B","C","D"].filter(w0=>banLadoReal(u,w0)),...banInclinadas(u).filter(x=>x.L>=l+0.04).map(x=>x.w)], i=ord.indexOf(banW(u,it)), w=ord[(i+1)%ord.length]||"A", e2=banEncosta(u,it.c,l,w,sel==="vaso"?0.65:0.42); M[sel]=banPoe(it,e2); } }
     save(); render(); });
 }
 /* troca de projeto */
