@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.42 · Detalhe H (isométrico) no padrão do Eliel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.43 · Detalhe S (esgoto ampliado) no padrão do Eliel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -3982,6 +3982,7 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
   const FS=fossaSeptica(G,HD); if(FS&&FS.pos) desenhaFossaPlanta(D,G,FS,HD);
   else if(HD.caixas.some(c=>!(G.casas||[]).some(P=>pontoDentro(c.p,P)))&&passeios(G).length){ const T=terreno(G); PL(D,[...T.lote,T.lote[0]],.25,"LOTE",true); desenhaPasseios(D,G); }
   else if(HD.fim&&HD.out){ tuboHid(D,"fim|out",[HD.fim.p,HD.out],100,{lab:false}); TX(D,HD.out[0],HD.out[1]+2.5*k*(HD.out[1]>=HD.fim.p[1]?1:-1),"PARA A REDE PÚBLICA / FOSSA",1.5,{b:true,l:"HTX"}); }
+  if(!HIDESG){   // detalhe S (só esgoto): sem água fria, molduras, cotas e legenda
   // água fria
   HD.ramaisAF.forEach(rm=>PL(D,rm.pts,.3,"AGUA"));
   HD.salas.forEach(sa=>sa.A.forEach(a=>{ const p=a.afPipe; L(D,...p,...a.af.p,.3,"AGUA"); simbHidro(D,{t:"af",p}); const n=a.af.N; TX(D,p[0]+n[0]*2.8*k,p[1]+n[1]*2.8*k,`Ø${a.dAf}`,1.3,{l:"HTX"}); }));
@@ -3997,15 +3998,46 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
   if(HD.res) HD.salas.forEach((sa,i)=>{ const P0=[...sa.A.map(a=>a.af.p),...sa.A.map(a=>a.afPipe).filter(Boolean),...(HD.desc[i]?[HD.desc[i].p]:[])]; if(!P0.length) return;   // em volta só dos pontos de água da área
     const x0=Math.min(...P0.map(q=>q[0]))-0.3, x1=Math.max(...P0.map(q=>q[0]))+0.3, y0=Math.min(...P0.map(q=>q[1]))-0.3, y1=Math.max(...P0.map(q=>q[1]))+0.3;
     PL(D,[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]],.3,"DESTAQUE"); TX(D,x0+0.1,y0-1.6*k,`H${i+1}`,2.2,{a:"s",l:"DESTAQUE"}); });
+  // moldura do Detalhe S: em volta dos pontos de esgoto de cada área (um pouco maior que a do H)
+  detSLista(HD).forEach(({sa,n})=>{ const P0=[...sa.A.map(a=>a.es).filter(Boolean),...(sa.cs?[sa.cs]:[])]; const x0=Math.min(...P0.map(q=>q[0]))-0.45, x1=Math.max(...P0.map(q=>q[0]))+0.45, y0=Math.min(...P0.map(q=>q[1]))-0.45, y1=Math.max(...P0.map(q=>q[1]))+0.45;
+    PL(D,[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]],.3,"DESTAQUE"); TX(D,x1-0.1,y1+3*k,`S${n}`,2.2,{a:"e",l:"DESTAQUE"}); });
   cotaH(D,bb.x0,bb.x1,bb.y0-14*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-14*k,bb.x0,f(bb.y1-bb.y0));
-  if(legenda){ const x0=bb.x1+0.8+18*k; let y=bb.y0; TX(D,x0,y,"LEGENDA",2,{a:"s",b:true}); y+=6*k;
+  if(legenda&&!HIDESG){ const x0=bb.x1+0.8+18*k; let y=bb.y0; TX(D,x0,y,"LEGENDA",2,{a:"s",b:true}); y+=6*k;
     const item=(q,txt)=>{ if(q.lin){ L(D,x0,y,x0+4.5*k,y,q.w,q.l,!!q.d); } else simbHidro(D,{...q,p:[x0+2*k,y]}); TX(D,x0+7*k,y-0.6*k,txt,1.5,{a:"s"}); y+=6*k; };
     item({lin:1,w:.3,l:"AGUA"},"Água fria (ramal na parede)"); item({lin:1,w:.25,l:"AGUA",d:1},"Barrilete / alimentação (na laje)");
     item({t:"desc"},"Coluna de água fria (descida)"); item({t:"af"},"Ponto de água fria");
     item({lin:1,w:.5,l:"ESGOTO"},"Esgoto (sob o piso)"); item({t:"es"},"Saída de esgoto do aparelho");
     item({t:"cs"},"Caixa sifonada 150x150"); item({t:"ci"},"Caixa de inspeção de esgoto (CE) 60x60"); item({t:"cg"},"Caixa de gordura"); { const tps=[...new Set([...(HD.extra||[]).map(o=>o.t),...Object.values(S.hidTipo||{})])]; [["rs","Ralo sifonado (RS) Ø100"],["rsc","Ralo seco (RSC) Ø100"],["rq","Ralo quadrado (RQ) grelha 15x15"],["rl","Ralo linear (RL)"]].forEach(([t,tx])=>{ if(tps.includes(t)) item({t,len:t==="rl"?0.6:undefined},tx); }); } item({t:"tv"},"Tubo de ventilação (suspiro) Ø50"); item({t:"jn"},"Junção com redução 100x50 no tubo do vaso"); item({t:"hd"},`Hidrômetro no muro${HD.agua&&HD.agua.forn?` (${HD.agua.forn})`:""} · AL = alimentação do reservatório`); }
+  }
   return D;
 }
+/* ---------------- Detalhe S (padrão do Eliel): planta ampliada do esgoto de cada área molhada, com Lista de Materiais e Legenda ---------------- */
+let HIDESG=false;
+const detSLista=HD=>{ let n=0; return (HD.salas||[]).map((sa,i)=>sa.A.some(a=>a.es)?{sa,i,n:++n}:null).filter(Boolean); };
+function clipD(F,w){ const D=Dw(F.k), inn=(x,y)=>x>=w.x0&&x<=w.x1&&y>=w.y0&&y<=w.y1;
+  const seg=(xa,ya,xb,yb)=>{ let t0=0,t1=1; const dx=xb-xa, dy=yb-ya; for(const [pp,qq] of [[-dx,xa-w.x0],[dx,w.x1-xa],[-dy,ya-w.y0],[dy,w.y1-ya]]){ if(Math.abs(pp)<1e-12){ if(qq<0) return null; continue; } const rr=qq/pp; if(pp<0) t0=Math.max(t0,rr); else t1=Math.min(t1,rr); } return t0<t1?[xa+dx*t0,ya+dy*t0,xa+dx*t1,ya+dy*t1]:null; };
+  const corta=P=>{ let out=P; [[0,w.x0,1],[0,w.x1,-1],[1,w.y0,1],[1,w.y1,-1]].forEach(([c,v,sg])=>{ const ok=q=>(q[c]-v)*sg>=0, res=[]; out.forEach((a,i)=>{ const b=out[(i+1)%out.length]; if(ok(a)) res.push(a); if(ok(a)!==ok(b)){ const tt=(v-a[c])/(b[c]-a[c]); res.push([a[0]+(b[0]-a[0])*tt,a[1]+(b[1]-a[1])*tt]); } }); out=res; }); return out; };
+  F.p.forEach(q=>{ if(q.t==="l"){ const r=seg(q.x1,q.y1,q.x2,q.y2); if(r) D.p.push({...q,x1:r[0],y1:r[1],x2:r[2],y2:r[3]}); }
+    else if(q.t==="g"){ const P=corta(q.pts); if(P.length>=3) D.p.push({...q,pts:P}); }
+    else if(q.t==="c"||q.t==="a"){ if(inn(q.cx,q.cy)) D.p.push(q); }
+    else if(q.t==="t"){ if(inn(q.x,q.y)) D.p.push(q); }
+    else if(q.t==="r"){ if(q.x1>w.x0&&q.x0<w.x1&&q.y1>w.y0&&q.y0<w.y1) D.p.push(q); } });
+  return D; }
+function desenhoDetS(G,k,LM,HD,i){ const sa=HD.salas[i]; HIDESG=true; let F; try{ F=desenhoHidro(G,k,LM,HD,false); } finally{ HIDESG=false; }
+  // janela: os pontos de esgoto da área com 1 m de folga, sem passar muito do ambiente
+  const P0=[...sa.A.map(a=>a.es).filter(Boolean),...(sa.cs?[sa.cs]:[])], RP=sa.r.poly, m=1.0, rx0=Math.min(...RP.map(q=>q[0]))-0.45, rx1=Math.max(...RP.map(q=>q[0]))+0.45, ry0=Math.min(...RP.map(q=>q[1]))-0.45, ry1=Math.max(...RP.map(q=>q[1]))+0.45;
+  const w={x0:Math.max(rx0,Math.min(...P0.map(q=>q[0]))-m),x1:Math.min(rx1,Math.max(...P0.map(q=>q[0]))+m),y0:Math.max(ry0,Math.min(...P0.map(q=>q[1]))-m),y1:Math.min(ry1,Math.max(...P0.map(q=>q[1]))+m)};
+  const D=clipD(F,w); D.tubos=(F.tubos||[]).filter(t=>t.pts.some(q=>q[0]>=w.x0&&q[0]<=w.x1&&q[1]>=w.y0&&q[1]<=w.y1)); return D; }
+// Lista de Materiais e Legenda do Detalhe S (contadas dos tubos e peças que aparecem no detalhe)
+function quadrosDetS(k,HD,i,D){ const sa=HD.salas[i], tub={}, cur={}; (D.tubos||[]).forEach(t=>{ const d=+t.d||100; let l=0; for(let j=0;j+1<t.pts.length;j++) l+=Math.hypot(t.pts[j+1][0]-t.pts[j][0],t.pts[j+1][1]-t.pts[j][1]); tub[d]=(tub[d]||0)+l; cur[d]=(cur[d]||0)+Math.max(0,t.pts.length-2); });
+  const temJn=sa.cs&&sa.saida&&sa.saida.vaso&&!(S.hidDel||{})["jn|"+sa.r.n], temTV=!(S.hidDel||{})["tv|"+sa.r.n]&&!!(sa.cs?sa.saida&&sa.saida.vaso:sa.saida&&sa.saida.tv), lav=sa.A.filter(a=>/lavat|pia|tanque/i.test(a.nome)).length;
+  const rows=[...Object.keys(tub).sort((a,b)=>b-a).map(d=>[`Tubo PVC esgoto ponta-bolsa c/ virola ${d} mm`,`${f(tub[d]*1.1,2)} m`]),...Object.keys(cur).filter(d=>cur[d]).sort((a,b)=>b-a).map(d=>[`Curva 90 curta ${d} mm`,`${cur[d]} pç`]),
+    ...(sa.cs?[["Caixa sifonada 150x150x50","1 pç"]]:[]),...(temJn?[["Junção com redução 100 x 50 mm","1 pç"]]:[]),...(temTV?[["Terminal de ventilação 50 mm","1 pç"]]:[]),...(lav?[["Sifão de copo p/ pia e lavatório 1\" - 1.1/2\"",`${lav} pç`],["Válvula p/ lavatório e tanque 1\"",`${lav} pç`]]:[]),
+    ...(sa.A.some(a=>/bacia|vaso/i.test(a.nome))?[["Bolsa de ligação p/ vaso sanitário 1.1/2\"","1 pç"]]:[])];
+  const T=desenhoTabela(k,[{t:"Lista de Materiais",cols:[["Item",64],["Qtd",16,1]],rows}],0.85), e=extensao(T), y0=e.y1+2*k;
+  TX(T,0,y0+2*k,"Legenda",1.9,{a:"s",b:true,l:"HTIT"});
+  [[sa.cs?"cs":null,"Caixa Sifonada"],[temJn?"jn":null,"Junção com redução 100x50"],[temTV?"tv":null,"Tubo de ventilação (suspiro) ø50"],["es","Saída de esgoto do aparelho"]].filter(x=>x[0]).forEach(([t,tx],j)=>{ const y=y0+(6+j*5.5)*k; simbHidro(T,{t,p:[3*k,y]}); TX(T,8*k,y,tx,1.25,{a:"s"}); });
+  return T; }
 const notasHidro=HD=>[`Reservatório: ${HD.pessoas} pessoas x ${HD.cons} L/dia = ${HD.Vn} L; adotado ${HD.res?HD.res.vol:"-"} L (1 dia de consumo).`,`Água fria em PVC soldável: alimentação e colunas Ø25, barrilete Ø32, sub-ramais conforme o quadro.`,`Esgoto em PVC: vaso Ø100 i=1%; ramais Ø50 i=2% (lavatório, tanque e ralos); o ralo (caixa sifonada) liga no tubo do vaso por junção com redução 100x50, nunca dentro do vaso, com suspiro Ø50 entre o ralo e a junção; coletor Ø100 i=1% até a rede pública ou fossa.`,`Caixa de inspeção a cada mudança de direção e no máximo a cada 25 m; pia da cozinha passa pela caixa de gordura.`,`Ventilação Ø50 junto ao vaso, subindo até 0,30 m acima do telhado.`,`Traçado sugerido pelo app: conferir no projeto hidrossanitário e na obra.`];
 
 /* ---------------- Planta de forro ---------------- */
@@ -6986,7 +7018,7 @@ const naEscala=(gerar,s)=>{ const k=s/1000, D=gerar(k), e=extensao(D); return {D
 const GRUPOS=[/PLANTA BAIXA|DEMOLIR|LAYOUT|CORTES|FACHADAS|COBERTURA|SITUAÇÃO|PAGINAÇÃO/,/FORMA|COLUNINHAS|PILARES|LOCAÇÃO|ESTRUTURA E DETALHES DO TELHADO|ESCADA|PISO DE CONCRETO|ARMADURA|VERGA/,/ELÉTRIC|UNIFILAR|HIDROSS|PLUVIA|FOSSA/,/PINTURA|FORRO|PISO|REVESTIMENTO/,/BANHEIRO|PORTAS|ESQUADRIAS|PERSPECTIVA/];
 const grupoFolha=fl=>{ const i=GRUPOS.findIndex(r=>r.test(fl.conteudo)); return i<0?GRUPOS.length:i; };
 // disciplina de cada prancha (para imprimir só o arquitetônico, só o elétrico...)
-function discFolha(fl){ const l=fl.lado; if(l==="eletrica"||l==="unifilar") return "ele"; if(l==="hidro"||l==="pluvial"||l==="fossa"||l==="hidiso") return "hid";
+function discFolha(fl){ const l=fl.lado; if(l==="eletrica"||l==="unifilar") return "ele"; if(l==="hidro"||l==="pluvial"||l==="fossa"||l==="hidiso"||l==="hidesg") return "hid";
   if(["forma","formaS","fundacao","armadura","basepiso","escadaArm","vergas"].includes(l)||(l==="locacao"&&fl.LC&&fl.LC.pil)) return "est"; return "arq"; }
 const discSel=()=>{ const d=S.pdfDisc||{}; return {arq:d.arq!==false,ele:d.ele!==false,hid:d.hid!==false,est:d.est!==false}; };
 // uma prancha só por disciplina (elétrico, hidrossanitário), bem cheia (pedido do Eliel para o A0):
@@ -7093,6 +7125,10 @@ function pranchas(fmt){
     const capI=({A4:2,A3:4}[fmt]||6); for(let i0=0;i0<gens.length;i0+=capI){ const gr=gens.slice(i0,i0+capI), n=gr.length, c=n<=1?1:n<=4?2:3, r=Math.ceil(n/c), bw=(aw-6*(c-1))/c, bh=(ah-6*(r-1))/r;
       const its=gr.map((o,j)=>{ const d=encaixar(o.g,bw,bh-TT); return {d,titulo:o.t,det:o.det,box:[area.x0+(j%c)*(bw+6),area.y0+Math.floor(j/c)*(bh+6),bw,bh]}; });
       isoF.push({n:"",conteudo:`ÁGUA FRIA: RESERVATÓRIO E ISOMÉTRICOS${gens.length>capI?` (${isoF.length+1}/${Math.ceil(gens.length/capI)})`:""}`,escala:[...new Set(its.map(it=>`1:${it.d.s}`))].join(" / "),itens:its,lado:"hidiso",HD}); } }
+  // esgoto: Detalhe S de cada área molhada (planta ampliada), como no projeto do Eliel
+  { const ls=detSLista(HD); const capS=({A4:2,A3:4}[fmt]||6); for(let i0=0;i0<ls.length;i0+=capS){ const gr=ls.slice(i0,i0+capS), n=gr.length, c=n<=1?1:n<=4?2:3, r=Math.ceil(n/c), bw=(aw-6*(c-1))/c, bh=(ah-6*(r-1))/r;
+      const its=gr.map((o,j)=>{ const d=encaixar(k=>{ const D=desenhoDetS(G,k,LM,HD,o.i), Q=quadrosDetS(k,HD,o.i,D), e=extensao(D), eq=extensao(Q); moveD(Q,e.x1+8*k-eq.x0,e.y0-eq.y0); D.p.push(...Q.p); return D; },bw,bh-TT); return {d,titulo:`Detalhe S${o.n}`,det:`${o.sa.r.n} · esgoto`,box:[area.x0+(j%c)*(bw+6),area.y0+Math.floor(j/c)*(bh+6),bw,bh]}; });
+      isoF.push({n:"",conteudo:`ESGOTO: DETALHES S${ls.length>capS?` (${Math.floor(i0/capS)+1}/${Math.ceil(ls.length/capS)})`:""}`,escala:[...new Set(its.map(it=>`1:${it.d.s}`))].join(" / "),itens:its,lado:"hidesg",HD}); } }
   const FO=[...forros(G),...forrosExt(G)], fo=G.rooms.length?encaixar(k=>desenhoForro(G,k,LM,EL,FO),aw,ah-TT):null;
   const PQ=G.rooms.length?pintura(G):null, ptz=PQ?encaixar(k=>desenhoPintura(G,k,PQ),aw,ah-TT):null;
   const BP=basePiso(G), bpz=BP?(()=>{ let u=null; for(const s0 of [5,10,15,20,25]){ const k=s0/1000, D=desenhoBasePiso(k,BP), e=extensao(D); u={D,s:s0,k,e,w:(e.x1-e.x0)/k,h:(e.y1-e.y0)/k,gen:kk=>desenhoBasePiso(kk,BP)}; if(u.w<=aw&&u.h<=ah-TT) break; } return u; })():null;
@@ -7230,6 +7266,7 @@ function textosLado(P,lado,fl){
   if(lado==="pluvial"){ const PV=fl.PV; return PV.livre?[{t:"NOTAS",linhas:notasPluvial(PV)}]:[{t:"CAIXAS",cols:[["CAIXA",0],["LADO",1],["PROF.",1],["RECEBE",0]],pc:[0.17,0.22,0.18,0.43],rows:PV.caixas.map(c=>[c.nome,`${f(c.lado*100,0)}x${f(c.lado*100,0)}`,`${f(c.h,2)} m`,c.cond.map(q=>q.nome).join(", ")||(c.fim?"final":"-")])},
     {t:"MATERIAL",cols:[["ITEM",0],["QTD",1]],pc:[0.72,0.28],rows:[...Object.entries(PV.tubos).map(([d,m])=>[`Tubo PVC Ø${d} enterrado`,`${f(m*1.1,1)} m`]),["Condutores PVC série R",`${f(PV.Lcond*1.1,1)} m`],["Ralos hemisféricos",String(PV.cond.length)],["Caixas de areia / inspeção",String(PV.caixas.length)]]},{t:"NOTAS",linhas:notasPluvial(PV).slice(2)}]; }
   if(lado==="fossa") return [{t:"DIMENSIONAMENTO",cols:[["ITEM",0],["VALOR",1]],pc:[0.58,0.42],rows:linhasFossa(fl.FS)},{t:"NOTAS",linhas:notasFossa(fl.FS)}];
+  if(lado==="hidesg") return [{t:"NOTAS",linhas:notasHidro(fl.HD).slice(2,5)}];
   if(lado==="hidiso"){ const H=fl.HD, cx={}; H.salas.forEach((sa,i)=>conexoesIso(H,i).forEach(([n,q])=>cx[n]=(cx[n]||0)+q)); return [{t:"ALTURAS DOS PONTOS (DO PISO ACABADO)",pc:[0.26,0.44,0.13,0.17],cols:[["AMBIENTE",0],["PEÇA",0],["Ø",1],["h (m)",1]],rows:linhasAlturas(H)},{t:"CONEXÕES DE ÁGUA FRIA (ÁREAS MOLHADAS)",cols:[["PEÇA",0],["QTD",1]],pc:[0.84,0.16],rows:Object.entries(cx).map(([n,q])=>[n,String(q)])},{t:"NOTAS",linhas:notasAgua(H)}]; }
   if(lado==="hidro"){ const H=fl.HD; return [{t:"QUADRO DE PONTOS",pc:[0.24,0.38,0.12,0.12,0.14],cols:[["AMBIENTE",0],["APARELHO",0],["AF",1],["ALT.",1],["ESG.",1]],rows:H.ap.map(a=>[a.r.n,a.nome,`Ø${a.dAf}`,a.h,a.dEs?`Ø${a.dEs}`:"ralo"])},{t:"NOTAS",linhas:notasHidro(H)}]; }
   if(lado==="eletrica"){ const E=fl.EL; return [{t:"QUADRO DE CARGAS",pc:E.multi?[0.12,0.34,0.10,0.08,0.10,0.12,0.07,0.07]:[0.07,0.39,0.10,0.08,0.10,0.12,0.07,0.07],cols:[["C",0],["DESCRIÇÃO",0],["VA",1],["V",1],["DISJ.",1],["FIO",1],["FASE",1],["QUEDA",1]],rows:[...E.C.map(c=>[c.lab||`C${c.n}`,c.desc.length>38?c.desc.slice(0,35)+"...":c.desc,String(c.va),String(c.v),`${c.disj} A`,`${f(c.fio,1)}`+(c.dr?" DR":""),c.fase||"-",c.dv!=null?`${f(c.dv,1)}%`:"-"]),["","TOTAL INSTALADO",String(E.tot),"","","","","",1]]},{t:"NOTAS",linhas:notasEletrica(E)}]; }
