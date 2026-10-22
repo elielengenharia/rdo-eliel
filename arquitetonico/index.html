@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.47 · porta de abrir com folha de 4 cm e dobradiça; P1 a P4 no padrão do Eliel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.48 · porta de abrir com folha de 4 cm e fechadura", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1408,7 +1408,9 @@ function desenhaAberturas(D,G,lista){ const h=G.h, k=D.k;
       const folha=(a,b,lado,trac)=>{ const f0=lado*h, e=0.04, sg=Math.sign(b-a)||1, hinge=ln(a,f0), fim=ln(a,f0+lado*Math.abs(b-a)), outro=ln(b,f0), h2=ln(a+sg*e,f0), f2=ln(a+sg*e,f0+lado*(Math.abs(b-a)-0.005));
         PL(D,[hinge,fim,f2,h2,hinge],.3,"ESQUADRIA",trac);
         AR(D,...hinge,...fim,...outro,.18,"ESQUADRIA");
-        const c=ln(a-sg*0.018,f0+lado*0.02); CI(D,...c,0.022,.3,"ESQUADRIA"); PG(D,[ln(a,f0+lado*0.005),ln(a,f0+lado*0.075),ln(a-sg*0.03,f0+lado*0.075),ln(a-sg*0.03,f0+lado*0.005)],"ESQUADRIA"); };   // dobradiça: o pino e a aba no batente
+        // fechadura na ponta da folha: caixa da fechadura dentro da folha e a maçaneta dos dois lados
+        const Lf=Math.abs(b-a), t=Lf-0.07, m0=a+sg*e/2; PG(D,[ln(a+sg*0.006,f0+lado*(t-0.035)),ln(a+sg*(e-0.006),f0+lado*(t-0.035)),ln(a+sg*(e-0.006),f0+lado*(t+0.035)),ln(a+sg*0.006,f0+lado*(t+0.035))],"ESQUADRIA");
+        [[a,a-sg*0.07],[a+sg*e,a+sg*(e+0.07)]].forEach(([x1,x2])=>{ L(D,...ln(x1,f0+lado*t),...ln(x2,f0+lado*t),.3,"ESQUADRIA"); L(D,...ln(x2,f0+lado*t),...ln(x2,f0+lado*(t-0.09)),.3,"ESQUADRIA"); }); };
       if(m==="giro2"||(m==="giro"&&g.l>=1.2)){ folha(s0,sm,ld); folha(s1,sm,ld); }   // duas folhas, uma em cada batente
       else if(m==="vaivem"){ if(g.l>=1.2){ [ld,-ld].forEach(lv=>{ folha(s0,sm,lv,lv!==ld); folha(s1,sm,lv,lv!==ld); }); } else { folha(sH,sO,ld); folha(sH,sO,-ld,true); } }
       else if(m==="pivot"){ const off=Math.min(0.15,g.l*0.15), P=ln(sH+dS*off,0), L1=g.l-off, nx=g.nX*ld, ny=g.nY*ld;   // eixo deslocado: a folha gira para os dois lados do eixo
