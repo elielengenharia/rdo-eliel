@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.49 · revisão profissional das salas comerciais da Av. Paraná", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.50 · iluminação das salas comerciais com plafons LED distribuídos por igual", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2448,11 +2448,24 @@ function pontosEletricos(G,LM){
     const W=r.x1-r.x0, H=r.y1-r.y0, nl=(r.area>=14||Math.max(W,H)>=5)?2:1, va=vaLuz(r.area), c0=[(r.x0+r.x1)/2,(r.y0+r.y1)/2];
     let luz=nl===1?[pip(r.poly,...c0)?c0:[r.cx,r.cy]]:(W>=H?[[r.x0+W/4,c0[1]],[r.x0+3*W/4,c0[1]]]:[[c0[0],r.y0+H/4],[c0[0],r.y0+3*H/4]]);
     luz=luz.map(p=>pip(r.poly,...p)?p:[r.cx,r.cy]);
-    // sala comercial / escritório (6.49): luminárias tubulares LED em grade a cerca de 2,4 m (iluminação uniforme de trabalho), longe 0,6 m das paredes
-    let lampG=null; if(tp==="escrit"&&S.ele.escLuz!=="bulbo"&&r.area>=8){ const nx=Math.max(1,Math.round(W/2.4)), ny=Math.max(1,Math.round(H/2.4)), g=[], dentro=p=>[[0,0],[0.6,0],[-0.6,0],[0,0.6],[0,-0.6]].every(([a,b])=>pip(r.poly,p[0]+a,p[1]+b));
-      for(let i=0;i<nx;i++) for(let j=0;j<ny;j++){ const p=[r.x0+W*(i+0.5)/nx,r.y0+H*(j+0.5)/ny]; if(dentro(p)) g.push(p); }
-      if(g.length>=2){ luz=g; lampG={lamp:"tub",rot:W>=H?0:1}; } }
-    const cm=letra(), vaU=lampG?Math.max(40,Math.ceil(va/luz.length/10)*10):Math.round(va/luz.length/10)*10;
+    // sala comercial / escritório (6.50): plafons LED distribuídos por igual na forma real da sala — fileiras (ou colunas) a cada ~2,5 m e, em cada
+    // uma, luminárias espaçadas por igual no comprimento que a sala tem ali (sala trapezoidal fica com menos luminárias no lado estreito)
+    let lampG=null; if(tp==="escrit"&&S.ele.escLuz!=="bulbo"&&r.area>=8){ const P=r.poly, dentro=p=>[[0,0],[0.6,0],[-0.6,0],[0,0.6],[0,-0.6]].every(([a,b])=>pip(P,p[0]+a,p[1]+b));
+      // eixo 0: fileiras horizontais; eixo 1: colunas verticais. Fica o arranjo que deixa o ponto da sala mais longe de uma luminária mais perto dela
+      const corda=(y,e)=>{ const xs=[]; P.forEach((A0,i)=>{ const B0=P[(i+1)%P.length], A=e?[A0[1],A0[0]]:A0, B=e?[B0[1],B0[0]]:B0; if((A[1]-y)*(B[1]-y)<0) xs.push(A[0]+(B[0]-A[0])*(y-A[1])/(B[1]-A[1])); }); xs.sort((u,v)=>u-v); let m=null; for(let i=0;i+1<xs.length;i+=2) if(!m||xs[i+1]-xs[i]>m[1]-m[0]) m=[xs[i],xs[i+1]]; return m; };
+      const DX=2.5, arranjo=e=>{ const g=[], v0=e?r.x0:r.y0, Hv=e?W:H, nf=Math.max(1,Math.round(Hv/DX));
+        for(let j=0;j<nf;j++){ const y=v0+Hv*(j+0.5)/nf, c=corda(y,e); if(!c) continue; const Lc=c[1]-c[0], n=Math.max(1,Math.round(Lc/DX));
+          for(let i=0;i<n;i++){ const u=c[0]+Lc*(i+0.5)/n, P0=e?[y,u]:[u,y], sh=[0.3,-0.3,0.6,-0.6].map(d=>e?[y+d,u]:[u,y+d]); const q=dentro(P0)?P0:sh.find(dentro); if(q) g.push(q); } }
+        return g; };
+      const pior=g=>{ let m=0; for(let x=r.x0+0.25;x<r.x1;x+=0.5) for(let y=r.y0+0.25;y<r.y1;y+=0.5) if(pip(P,x,y)) m=Math.max(m,Math.min(...g.map(q=>Math.hypot(q[0]-x,q[1]-y)))); return m; };
+      // sala de 4 lados (retângulo, trapézio, paralelogramo): grade que acompanha as quatro paredes — fileiras paralelas à frente e ao fundo ao mesmo tempo
+      const quad=()=>{ const Q=P.filter((q,i)=>{ const a=P[(i+P.length-1)%P.length], b=P[(i+1)%P.length]; return Math.abs((q[0]-a[0])*(b[1]-a[1])-(q[1]-a[1])*(b[0]-a[0]))>1e-3*Math.hypot(b[0]-a[0],b[1]-a[1]); }); if(Q.length!==4) return null;
+        const d=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]), [A,B,C,Dq]=Q, ns=Math.max(1,Math.round((d(A,B)+d(Dq,C))/2/DX)), nt=Math.max(1,Math.round((d(A,Dq)+d(B,C))/2/DX)), g=[];
+        for(let i=0;i<ns;i++) for(let j=0;j<nt;j++){ const u=(i+0.5)/ns, v=(j+0.5)/nt, p0=[0,1].map(c=>(1-v)*((1-u)*A[c]+u*B[c])+v*((1-u)*Dq[c]+u*C[c])); if(dentro(p0)) g.push(p0); }
+        return g.length===ns*nt?g:null; };
+      const A0=arranjo(0), A1=arranjo(1), g=quad()||(!A1.length?A0:!A0.length?A1:(pior(A1)+0.05*A1.length<pior(A0)+0.05*A0.length?A1:A0));
+      if(g.length>=2){ const tub=S.ele.escLuz==="tub"; luz=g; lampG={lamp:tub?"tub":"plafon",...(tub?{rot:W>=H?0:1}:{})}; } }
+    const cm=letra(), vaU=lampG?Math.max(LAMP_VA[lampG.lamp]||40,Math.ceil(va/luz.length/10)*10):Math.round(va/luz.length/10)*10;
     const Ls=luz.map(p=>add({t:"luz",p,va:vaU,cmd:cm,...(lampG||{})}));
     const portas=ABS.filter(o=>o.g.tipo!=="Janela").sort((a,b)=>(b.g.externa?1:0)-(a.g.externa?1:0));
     let it=null;
