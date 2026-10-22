@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.43 · Detalhe S (esgoto ampliado) no padrão do Eliel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.44 · planta elétrica no padrão do Eliel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2522,34 +2522,36 @@ function pontosEletricos(G,LM){
   out.RE=UN[0].RE; return out; }
 // símbolos (tamanhos em mm de papel)
 const SIMB=0.65;   // símbolos elétricos menores para a planta não ficar carregada
-function simbolo(D,q){ const k=D.k*SIMB, l="ELETRICA", [x,y]=q.p, N=q.N||[0,-1], u=[-N[1],N[0]];
+function simbolo(D,q){ const k=D.k*SIMB, l="ELSIMB", lt="ELTX", [x,y]=q.p, N=q.N||[0,-1], u=[-N[1],N[0]];
   const P=(a,b)=>[x+u[0]*a*k+N[0]*b*k,y+u[1]*a*k+N[1]*b*k];
   if(q.t==="luz"&&q.lamp==="tub"){ const hL=0.60, w=0.9*k, u0=q.rot?[0,1]:[1,0], n0=[-u0[1],u0[0]], c=(a,b)=>[x+u0[0]*a+n0[0]*b,y+u0[1]*a+n0[1]*b];
     PL(D,[c(-hL,-w),c(hL,-w),c(hL,w),c(-hL,w),c(-hL,-w)],.3,l); L(D,...c(-hL,0),...c(hL,0),.15,l); CI(D,x,y,0.6*k,.25,l);
-    q.leg||TX(D,...c(hL+0.4*k,-1.2*k),String(q.va),1.1,{a:"s",l}); q.leg||TX(D,...c(hL+0.4*k,1.3*k),`C${q.c}-${q.cmd}`,1.1,{a:"s",l,b:true}); return; }
-  if(q.t==="luz"&&q.lamp==="plafon"){ const r=1.8*k; CI(D,x,y,r,.3,l); CI(D,x,y,r*0.55,.2,l); q.leg||TX(D,x+r+0.6*k,y-1.2*k,String(q.va),1.1,{a:"s",l}); q.leg||TX(D,x+r+0.6*k,y+1.3*k,`C${q.c}-${q.cmd}`,1.1,{a:"s",l,b:true}); return; }
+    q.leg||rotLuz(D,c(hL,0),c(-hL,0),0.4*k,q,"TUB"); return; }
+  if(q.t==="luz"&&q.lamp==="plafon"){ const r=1.8*k; CI(D,x,y,r,.3,l); CI(D,x,y,r*0.55,.2,l); q.leg||rotLuz(D,[x+r,y],[x-r,y],0.6*k,q,"PL"); return; }
   if(q.t==="luz"){ const r=1.8*k; CI(D,x,y,r,.3,l); L(D,x-r*0.7,y-r*0.7,x+r*0.7,y+r*0.7,.18,l); L(D,x-r*0.7,y+r*0.7,x+r*0.7,y-r*0.7,.18,l);
-    q.leg||TX(D,x+r+0.6*k,y-1.2*k,String(q.va),1.1,{a:"s",l}); q.leg||TX(D,x+r+0.6*k,y+1.3*k,`C${q.c}-${q.cmd}`,1.1,{a:"s",l,b:true}); return; }
+    q.leg||rotLuz(D,[x+r,y],[x-r,y],0.6*k,q,"LED"); return; }
   if(q.t==="arand"){ const r=1.5, pts=[]; for(let i=0;i<=12;i++){ const an=Math.PI*i/12; pts.push(P(r*Math.cos(an),0.3+r*Math.sin(an))); } PL(D,pts,.3,l); L(D,...P(-r,0.3),...P(r,0.3),.3,l); L(D,...P(-r*0.6,0.3),...P(r*0.6,0.3+r*0.8),.15,l); L(D,...P(r*0.6,0.3),...P(-r*0.6,0.3+r*0.8),.15,l);
-    q.leg||TX(D,...P(0,4.1),`C${q.c}-${q.cmd} ${q.va}`,1.1,{l,b:true}); return; }
-  if(q.t==="int"){ PG(D,[P(-0.8,0.6),P(0.8,0.6),P(0.8,2.2),P(-0.8,2.2)],l); q.leg||TX(D,...P(0,3.6),q.cmd,1.2,{l,b:true});
+    q.leg||TX(D,...P(0,4.1),`${q.c}  ${q.va}  ${q.cmd}`,1.1,{l:lt}); return; }
+  if(q.t==="int"){ PG(D,[P(-0.8,0.6),P(0.8,0.6),P(0.8,2.2),P(-0.8,2.2)],l); q.leg||TX(D,...P(0,3.6),q.cmd,1.2,{l:lt});
     // ligação até a(s) luz(es)
     (q.liga||[]).forEach(t=>{ const a=P(0,2.2), mx=(a[0]+t[0])/2, my=(a[1]+t[1])/2, dx=t[0]-a[0], dy=t[1]-a[1], dd=Math.hypot(dx,dy)||1, cv=[mx-dy/dd*dd*0.18,my+dx/dd*dd*0.18], pts=[];
       for(let i=0;i<=14;i++){ const s=i/14, x1=(1-s)*(1-s)*a[0]+2*(1-s)*s*cv[0]+s*s*t[0], y1=(1-s)*(1-s)*a[1]+2*(1-s)*s*cv[1]+s*s*t[1]; pts.push([x1,y1]); }
       // não entra no círculo da luz
       const rr=1.8*k; while(pts.length>2&&Math.hypot(pts[pts.length-2][0]-t[0],pts[pts.length-2][1]-t[1])<rr) pts.pop(); const pe=pts[pts.length-2]||a, qx=t[0]-pe[0], qy=t[1]-pe[1], ql=Math.hypot(qx,qy)||1; pts[pts.length-1]=[t[0]-qx/ql*rr,t[1]-qy/ql*rr];
-      PL(D,pts,.13,l,true); });
+      PL(D,pts,.13,"ELFIO",true); });
     return; }
-  if(q.t==="qd"){ const a=P(-2.4,0.3), b=P(2.4,0.3), c=P(2.4,2.3), d=P(-2.4,2.3); PL(D,[a,b,c,d,a],.3,l); PG(D,[a,b,c],l); q.leg||TX(D,...P(0,4),q.nome||"QD",1.4,{l,b:true}); return; }
+  if(q.t==="qd"){ const a=P(-2.4,0.3), b=P(2.4,0.3), c=P(2.4,2.3), d=P(-2.4,2.3); PL(D,[a,b,c,d,a],.3,l); PG(D,[a,b,c],l); q.leg||TX(D,...P(0,4),q.nome||"QD",1.4,{l:lt,b:true}); return; }
   if(q.ch){ const s=1.2; PL(D,[P(-s,0.4),P(s,0.4),P(s,0.4+2*s),P(-s,0.4+2*s),P(-s,0.4)],.3,l); L(D,...P(-s,0.4),...P(s,0.4+2*s),.18,l); L(D,...P(s,0.4),...P(-s,0.4+2*s),.18,l);
-    q.leg||TX(D,...P(0,0.4+2*s+2),`C${q.c} ${q.va}W`,1.1,{l,b:true}); return; }
+    q.leg||(TX(D,...P(0,0.4+2*s+2),`CHS  ${q.c}`,1.1,{l:lt}),TX(D,...P(0,0.4+2*s+3.6),String(q.va),1.1,{l:lt})); return; }
   // tomada: triângulo com a base na parede (vazio = baixa, meio cheio = média, cheio = alta)
   const A=P(-1.2,0.3), B=P(1.2,0.3), T=P(0,2.4); PL(D,[A,B,T,A],.25,l);
   if(q.alt==="a") PG(D,[A,B,T],l); else if(q.alt==="m") PG(D,[A,P(0,0.3),T],l);
-  q.leg||TX(D,...P(0,4.1),q.t==="tue"?`C${q.c} ${q.ar?`AR ${q.btu?fBtu(q.btu):""}`.trim():"TUE"}`:`C${q.c}`,1.1,{l,b:q.t==="tue"}); }
+  if(q.leg) return; if(q.t==="tue"){ TX(D,...P(0,4.1),q.ar?`ARC${q.btu||""}`:"TUE",1.1,{l:lt}); TX(D,...P(0,5.7),`${q.c}  ${q.va}`,1.1,{l:lt}); } else TX(D,...P(0,4.1),String(q.c),1.1,{l:lt}); }
+// rótulo da luz do Eliel: circuito à esquerda; potência e tipo à direita; letra do comando em cima
+function rotLuz(D,dir,esq,g,q,tipo){ const k=D.k*SIMB, lt="ELTX"; TX(D,esq[0]-g,esq[1],String(q.c),1.1,{a:"e",l:lt}); TX(D,dir[0]+g,dir[1]-0.2*k,String(q.va),1.1,{a:"s",l:lt}); TX(D,dir[0]+g,dir[1]+1.5*k,tipo,1.1,{a:"s",l:lt}); TX(D,dir[0]+g*0.3,dir[1]-2.1*k,String(q.cmd||""),1.1,{a:"s",l:lt}); }
 // condutores no eletroduto (NBR 5444): traços atravessando o tubo; fase = traço, neutro = traço com bolinha, retorno = traço com gancho, terra = traço com barra (T)
 const POL={20:'1/2"',25:'3/4"',32:'1"'};
-function simbFios(D,m,u,cond){ if(!cond||!cond.length) return; const k=D.k*SIMB, l="ELETRICA", n=[-u[1],u[0]], ord={fase:0,neutro:1,retorno:2,terra:3}, cs=cond.slice().sort((a,b)=>ord[a[1]]-ord[b[1]]), passo=1.0*k, s0=-(cs.length-1)*passo/2, h=1.3*k;
+function simbFios(D,m,u,cond){ if(!cond||!cond.length) return; const k=D.k*SIMB, l="ELFIO", n=[-u[1],u[0]], ord={fase:0,neutro:1,retorno:2,terra:3}, cs=cond.slice().sort((a,b)=>ord[a[1]]-ord[b[1]]), passo=1.0*k, s0=-(cs.length-1)*passo/2, h=1.3*k;
   cs.forEach(([sx,tp],i)=>{ const c=[m[0]+u[0]*(s0+i*passo),m[1]+u[1]*(s0+i*passo)], a=[c[0]-n[0]*h,c[1]-n[1]*h], b=[c[0]+n[0]*h,c[1]+n[1]*h]; L(D,...a,...b,.18,l);
     if(tp==="neutro") CI(D,b[0]+n[0]*0.35*k,b[1]+n[1]*0.35*k,0.35*k,.15,l);
     else if(tp==="retorno") L(D,...b,b[0]+u[0]*0.6*k-n[0]*0.6*k,b[1]+u[1]*0.6*k-n[1]*0.6*k,.18,l);
@@ -2567,12 +2569,12 @@ function desenhoEletrica(G,k,LM,EL,legenda=true){
     const cv=[(a[0]+b[0])/2-dy*0.12,(a[1]+b[1])/2+dx*0.12], bz=s=>[(1-s)*(1-s)*a[0]+2*(1-s)*s*cv[0]+s*s*b[0],(1-s)*(1-s)*a[1]+2*(1-s)*s*cv[1]+s*s*b[1]];
     const ra=t.n.q&&t.n.q.t==="luz"?1.8*k*SIMB:t.n.teto?0:0.6*k*SIMB, rb=t.n.pai.q&&t.n.pai.q.t==="luz"?1.8*k*SIMB:0, P=[];
     for(let i=0;i<=16;i++){ const p=bz(i/16); if(Math.hypot(p[0]-a[0],p[1]-a[1])>=ra&&Math.hypot(p[0]-b[0],p[1]-b[1])>=rb) P.push(p); }
-    if(P.length<2) return; PL(D,P,.2,"ELETRICA"); if(S.ele.fios!=="não") simbFios(D,bz(0.5),[dx/dd,dy/dd],t.cond);
-    if((t.teto&&t.cs.length)||t.dia>20){ const m=bz(0.5), nn=[-dy/dd,dx/dd], tx=`${t.teto?t.cs.join(","):""}${t.dia>20?` ${t.nE>1?t.nE+"x":""}ø${t.dia}`:""}`.trim(), c0=[m[0]+nn[0]*1.6*k,m[1]+nn[1]*1.6*k], w=tx.length*1.2*0.45*k, h=1.1*k;
-      TX(D,...c0,tx,1.2,{l:"COTAS"}); rotE.push([[c0[0]-w,c0[1]-h],[c0[0]+w,c0[1]-h],[c0[0]+w,c0[1]+h],[c0[0]-w,c0[1]+h]]); } }));
+    if(P.length<2) return; PL(D,P,.25,"ELCOND"); if(S.ele.fios!=="não") simbFios(D,bz(0.5),[dx/dd,dy/dd],t.cond);
+    if(dd>0.6||t.dia>20){ const m=bz(0.5), nn=[-dy/dd,dx/dd], tx=`${t.teto&&t.cs.length?t.cs.join(" ")+"  ":""}${t.nE>1?t.nE+"x":""}ø${POL[t.dia]||POL[20]}`.trim(), c0=[m[0]+nn[0]*1.6*k,m[1]+nn[1]*1.6*k], w=tx.length*1.2*0.45*k, h=1.1*k;
+      TX(D,...c0,tx,1.1,{l:"ELTXC"}); rotE.push([[c0[0]-w,c0[1]-h],[c0[0]+w,c0[1]-h],[c0[0]+w,c0[1]+h],[c0[0]-w,c0[1]+h]]); } }));
   // eletrodutos desenhados à mão (S.eleTub = [{pts, d: 20|25|32, piso}]): teto/parede linha cheia, piso tracejado
-  (S.eleTub||[]).forEach((t,j)=>{ const P=(t.pts||[]).map(q=>[+q[0],+q[1]]); if(P.length<2) return; PL(D,P,.3,"ELETRICA",!!t.piso); (D.eleTub=D.eleTub||[]).push({key:"et|"+j,pts:P});
-    let jm=0, lm=-1; for(let i=0;i+1<P.length;i++){ const l0=Math.hypot(P[i+1][0]-P[i][0],P[i+1][1]-P[i][1]); if(l0>lm){ lm=l0; jm=i; } } rotuloLinha(D,P[jm],P[jm+1],`ø${+t.d||25} (${POL[+t.d||25]})${t.piso?" piso":""}`,"ELETRICA"); });
+  (S.eleTub||[]).forEach((t,j)=>{ const P=(t.pts||[]).map(q=>[+q[0],+q[1]]); if(P.length<2) return; PL(D,P,.3,"ELCOND",!!t.piso); (D.eleTub=D.eleTub||[]).push({key:"et|"+j,pts:P});
+    let jm=0, lm=-1; for(let i=0;i+1<P.length;i++){ const l0=Math.hypot(P[i+1][0]-P[i][0],P[i+1][1]-P[i][1]); if(l0>lm){ lm=l0; jm=i; } } rotuloLinha(D,P[jm],P[jm+1],`ø${POL[+t.d||25]}${t.piso?" piso":""}`,"ELTXC"); });
   // fiação também no trecho do interruptor até a luz (fase e retorno)
   if(S.ele.rede!=="não"&&S.ele.fios!=="não") (EL.UN||[EL]).forEach(U=>U.RE&&U.RE.TR.forEach(t=>{ if(!t.int) return; const a=t.a, b=t.b, dx=b[0]-a[0], dy=b[1]-a[1], dd=Math.hypot(dx,dy); if(dd<0.3) return;
     const cv=[(a[0]+b[0])/2-dy*0.18,(a[1]+b[1])/2+dx*0.18], m=[0.25*a[0]+0.5*cv[0]+0.25*b[0],0.25*a[1]+0.5*cv[1]+0.25*b[1]]; simbFios(D,m,[dx/dd,dy/dd],t.cond); }));
@@ -2582,25 +2584,28 @@ function desenhoEletrica(G,k,LM,EL,legenda=true){
     let pos=null, hh=estTxt().tN; for(const ob of [obs,R.sol,[]]){ pos=lugarRotulo(r,ob,r.cx,r.cy+3.5*k,nome.length*hh*0.85*k+0.04,hh*1.6*k); if(pos) break; }   // tamanho único em todos os ambientes
     TX(D,...(pos||[r.cx,r.cy+3.5*k]),nome,hh,{b:true,l:"COTAS"}); });
   cotaH(D,bb.x0,bb.x1,bb.y0-9*k,bb.y0,f(bb.x1-bb.x0)); cotaV(D,bb.y0,bb.y1,bb.x0-9*k,bb.x0,f(bb.y1-bb.y0));
-  if(legenda){ const x0=bb.x1+16*k, y0=bb.y0, l="ELETRICA"; let y=y0; TX(D,x0,y,"LEGENDA",2,{a:"s",b:true}); y+=6*k;
-    const item=(q,txt)=>{ simbolo(D,{...q,p:[x0+2*k,y+(["luz"].includes(q.t)?0:-1.2*k)],N:[0,-1],c:"",cmd:"",leg:1}); TX(D,x0+7*k,y-0.6*k,txt,1.5,{a:"s"}); y+=6.5*k; };
-    item({t:"luz",va:"VA",cmd:"a"},"Ponto de luz no teto");
-    if(EL.pts.some(q=>q.lamp==="tub")){ const yy=y; simbolo(D,{t:"luz",lamp:"tub",p:[x0+2*k+0.6,yy],N:[0,-1],c:"",cmd:"",va:"",leg:1}); TX(D,x0+7*k+1.2,yy-0.6*k,"Luminária tubular LED 1,20 m (20 W)",1.5,{a:"s"}); y+=6.5*k; }
-    if(EL.pts.some(q=>q.lamp==="plafon")) item({t:"luz",lamp:"plafon",va:"",cmd:""},"Plafon LED");
-    item({t:"int",cmd:"a"},"Interruptor simples (1,10 m)");
-    if(EL.pts.some(q=>q.t==="arand")) item({t:"arand",va:"",cmd:""},"Arandela (luz de parede, 2,10 m)");
-    item({t:"tug",alt:"b"},"Tomada baixa (0,30 m)");
-    item({t:"tug",alt:"m"},"Tomada média (1,10 m)");
-    item({t:"tug",alt:"a"},"Tomada alta (2,20 m)");
-    item({t:"tue",ch:1,va:""},"Chuveiro (TUE)");
-    item({t:"qd"},"Quadro de distribuição (1,50 m)");
-    if((S.eleTub||[]).some(t=>t.piso)){ L(D,x0,y-1.2*k,x0+4*k,y-1.2*k,.3,l,true); TX(D,x0+7*k,y-0.6*k,"Eletroduto no piso",1.5,{a:"s"}); y+=5*k; }
-    if(EL.RE&&S.ele.rede!=="não"){ L(D,x0,y-1.2*k,x0+4*k,y-1.2*k,.2,l); TX(D,x0+7*k,y-0.6*k,"Eletroduto no forro/laje (ø20 salvo indicação)",1.5,{a:"s"}); y+=5*k;
-      TX(D,x0,y,"1,3: circuitos no eletroduto",1.4,{a:"s",l:"COTAS"}); y+=4.5*k; }
-    if(S.ele.fios!=="não"){ [["fase","Condutor fase"],["neutro","Condutor neutro"],["retorno","Condutor retorno"],["terra","Condutor terra (proteção)"]].forEach(([tp,tx])=>{ L(D,x0-0.5*k,y-1.2*k,x0+4.5*k,y-1.2*k,.2,l); simbFios(D,[x0+2*k,y-1.2*k],[1,0],[[1.5,tp]]); TX(D,x0+7*k,y-0.6*k,tx,1.5,{a:"s"}); y+=5*k; });
-      TX(D,x0,y,"#2,5: seção dos fios (mm²) quando não é 1,5",1.4,{a:"s",l:"COTAS"}); y+=4.5*k; }
-    item({t:"tue",alt:"a",ar:1,c:"",btu:""},"Ar-condicionado (2,20 m, 220 V)");
-    TX(D,x0,y,"C1-a: circuito e comando",1.4,{a:"s",l:"COTAS"});
+  if(legenda){ const x0=bb.x1+16*k, y0=bb.y0, l="ELCOND", W=78*k; let y=y0+8*k; const n0=D.p.length;
+    TX(D,x0+W/2,y0+3.2*k,"Legenda",2.4,{l:"QVER"}); L(D,x0-2*k,y0+5.4*k,x0+W,y0+5.4*k,.25,"QVER");
+    const item=(q,txt)=>{ simbolo(D,{...q,p:[x0+2*k,y+(["luz"].includes(q.t)?0:-1.2*k)],N:[0,-1],c:"",cmd:"",leg:1}); TX(D,x0+10*k,y-0.6*k,txt,1.4,{a:"s"}); y+=6.5*k; };
+    item({t:"qd"},"Quadro de distribuição - embutir a 1,50m do piso");
+    item({t:"luz",va:"VA",cmd:"a"},"Ponto de luz - lâmpada LED - sobrepor teto");
+    if(EL.pts.some(q=>q.lamp==="tub")){ const yy=y; simbolo(D,{t:"luz",lamp:"tub",p:[x0+2*k+0.6,yy],N:[0,-1],c:"",cmd:"",va:"",leg:1}); TX(D,x0+10*k+1.2,yy-0.6*k,"Luminária tubular LED 1,20 m (20 W) - sobrepor teto",1.4,{a:"s"}); y+=6.5*k; }
+    if(EL.pts.some(q=>q.lamp==="plafon")) item({t:"luz",lamp:"plafon",va:"",cmd:""},"Plafon LED - sobrepor teto");
+    item({t:"int",cmd:"a"},"Interruptor simples 1 tecla - 1,10m do piso");
+    if(EL.pts.some(q=>q.t==="arand")) item({t:"arand",va:"",cmd:""},"Arandela - parede a 2,10m do piso");
+    item({t:"tug",alt:"b"},"Tomada 2P+T a 0,30m do piso");
+    item({t:"tug",alt:"m"},"Tomada 2P+T a 1,10m do piso");
+    item({t:"tug",alt:"a"},"Tomada 2P+T a 2,20m do piso");
+    item({t:"tue",ch:1,va:""},"Ponto do chuveiro 2P+T a 2,20m do piso");
+    item({t:"tue",alt:"a",ar:1,c:"",btu:""},"Tomada 2P+T 20 A (ar-condicionado) a 2,20m do piso");
+    if((S.eleTub||[]).some(t=>t.piso)){ L(D,x0,y-1.2*k,x0+5*k,y-1.2*k,.3,l,true); TX(D,x0+10*k,y-0.6*k,"Eletroduto no piso",1.4,{a:"s"}); y+=5*k; }
+    if(EL.RE&&S.ele.rede!=="não"){ L(D,x0,y-1.2*k,x0+5*k,y-1.2*k,.25,l); TX(D,x0+10*k,y-0.6*k,"Eletroduto no forro/laje",1.4,{a:"s"}); y+=5*k; }
+    if(S.ele.fios!=="não") [["fase","Condutor fase"],["neutro","Condutor neutro"],["retorno","Condutor retorno"],["terra","Condutor terra (proteção)"]].forEach(([tp,tx])=>{ L(D,x0-0.5*k,y-1.2*k,x0+5*k,y-1.2*k,.2,l); simbFios(D,[x0+2.2*k,y-1.2*k],[1,0],[[1.5,tp]]); TX(D,x0+10*k,y-0.6*k,tx,1.4,{a:"s"}); y+=5*k; });
+    const yF=y; PL(D,[[x0-2*k,y0],[x0+W,y0],[x0+W,yF],[x0-2*k,yF],[x0-2*k,y0]],.3,"QVER");
+    // legenda das indicações
+    let y2=yF+4*k; const yI=y2; TX(D,x0+W/2,y2+3.2*k,"Legenda das indicações",2.4,{l:"QVER"}); L(D,x0-2*k,y2+5.4*k,x0+W,y2+5.4*k,.25,"QVER"); y2+=9*k;
+    [["1","número do circuito (no ponto e nos eletrodutos)"],["a","comando (letra do interruptor e da luz que ele acende)"],["100","potência do ponto (W ou VA)"],["LED / PL / TUB","lâmpada LED / plafon / luminária tubular"],["CHS","chuveiro"],["ARC12000","ar-condicionado (BTU)"],['ø3/4"',"diâmetro do eletroduto"]].forEach(([a0,tx])=>{ TX(D,x0,y2,a0,1.3,{a:"s",l:"ELTX"}); TX(D,x0+16*k,y2,tx,1.3,{a:"s"}); y2+=4.6*k; });
+    PL(D,[[x0-2*k,yI],[x0+W,yI],[x0+W,y2],[x0-2*k,y2],[x0-2*k,yI]],.3,"QVER");
   }
   return D;
 }
@@ -5563,7 +5568,7 @@ function extensao(D){
   return {x0,y0,x1,y1};
 }
 const n2=v=>(Math.round(v*100)/100).toString();
-const COR={LIMPISO:"var(--ink)",LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)",MOBILIAC:"var(--line)",ELETRICA:"var(--accent)",AGUA:"#0a9fc0",DESTAQUE:"#e02020",SIMB:"#2b44d8",HTX:"var(--ink)",HTIT:"#1a9e3a",CONEX:"var(--muted)",COLIND:"#2b44d8",PLUVIAL:"var(--steel)",PERSP:"var(--ink)",ESGOTO:"#1a9e3a",FORRO:"var(--muted)",PISO:"var(--muted)",SOLEIRA:"var(--ink)",REVEST:"var(--accent)",PAGINA:"var(--muted)",ESTRUT:"var(--soil)",VIGA:"var(--ink)",FUNDACAO:"var(--muted)",LAJE:"var(--steel)",ESCADA:"var(--ink)",EIXO:"var(--steel)",CONSTRUIR:"var(--bad)",DEMOLIR:"var(--warn)"};
+const COR={LIMPISO:"var(--ink)",LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)",MOBILIAC:"var(--line)",ELETRICA:"var(--accent)",AGUA:"#0a9fc0",DESTAQUE:"#e02020",ELSIMB:"#2b44d8",ELTX:"#2b44d8",ELCOND:"#0a9fc0",ELFIO:"var(--muted)",ELTXC:"var(--ink)",QVER:"#e02020",SIMB:"#2b44d8",HTX:"var(--ink)",HTIT:"#1a9e3a",CONEX:"var(--muted)",COLIND:"#2b44d8",PLUVIAL:"var(--steel)",PERSP:"var(--ink)",ESGOTO:"#1a9e3a",FORRO:"var(--muted)",PISO:"var(--muted)",SOLEIRA:"var(--ink)",REVEST:"var(--accent)",PAGINA:"var(--muted)",ESTRUT:"var(--soil)",VIGA:"var(--ink)",FUNDACAO:"var(--muted)",LAJE:"var(--steel)",ESCADA:"var(--ink)",EIXO:"var(--steel)",CONSTRUIR:"var(--bad)",DEMOLIR:"var(--warn)"};
 function primsSVG(D,map,k){
   let s="";
   D.p.forEach(p=>{ const cor=COR[p.l]||"var(--ink)";
@@ -7299,9 +7304,9 @@ function textosLado(P,lado,fl){
 
 /* ---------------- DXF ---------------- */
 // cores das layers no AutoCAD (ACI): paredes verdes (3), cotas cinza escuro (8), textos, títulos e mobília na cor natural (7)
-const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[3,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[8,"CONTINUOUS"],TEXTO:[7,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[7,"CONTINUOUS"],MOBILIA:[7,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[4,"CONTINUOUS"],DESTAQUE:[1,"CONTINUOUS"],SIMB:[5,"CONTINUOUS"],HTX:[7,"CONTINUOUS"],HTIT:[3,"CONTINUOUS"],CONEX:[9,"CONTINUOUS"],COLIND:[5,"CONTINUOUS"],PLUVIAL:[4,"CONTINUOUS"],PERSP:[8,"CONTINUOUS"],ESGOTO:[3,"CONTINUOUS"],FORRO:[8,"CONTINUOUS"],PISO:[9,"CONTINUOUS"],LIMPISO:[8,"CONTINUOUS"],SOLEIRA:[2,"CONTINUOUS"],REVEST:[5,"CONTINUOUS"],PAGINA:[8,"CONTINUOUS"],ESTRUT:[33,"CONTINUOUS"],VIGA:[4,"CONTINUOUS"],FUNDACAO:[8,"DASHED"],LAJE:[150,"CONTINUOUS"],ESCADA:[7,"CONTINUOUS"],EIXO:[1,"DASHED"],CONSTRUIR:[1,"CONTINUOUS"],DEMOLIR:[40,"DASHED"],GERAL:[7,"CONTINUOUS"]};
+const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[3,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[8,"CONTINUOUS"],TEXTO:[7,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[7,"CONTINUOUS"],MOBILIA:[7,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[4,"CONTINUOUS"],ELSIMB:[5,"CONTINUOUS"],ELTX:[5,"CONTINUOUS"],ELCOND:[4,"CONTINUOUS"],ELFIO:[9,"CONTINUOUS"],ELTXC:[7,"CONTINUOUS"],QVER:[1,"CONTINUOUS"],DESTAQUE:[1,"CONTINUOUS"],SIMB:[5,"CONTINUOUS"],HTX:[7,"CONTINUOUS"],HTIT:[3,"CONTINUOUS"],CONEX:[9,"CONTINUOUS"],COLIND:[5,"CONTINUOUS"],PLUVIAL:[4,"CONTINUOUS"],PERSP:[8,"CONTINUOUS"],ESGOTO:[3,"CONTINUOUS"],FORRO:[8,"CONTINUOUS"],PISO:[9,"CONTINUOUS"],LIMPISO:[8,"CONTINUOUS"],SOLEIRA:[2,"CONTINUOUS"],REVEST:[5,"CONTINUOUS"],PAGINA:[8,"CONTINUOUS"],ESTRUT:[33,"CONTINUOUS"],VIGA:[4,"CONTINUOUS"],FUNDACAO:[8,"DASHED"],LAJE:[150,"CONTINUOUS"],ESCADA:[7,"CONTINUOUS"],EIXO:[1,"DASHED"],CONSTRUIR:[1,"CONTINUOUS"],DEMOLIR:[40,"DASHED"],GERAL:[7,"CONTINUOUS"]};
 // nome e cor das layers no padrão do Eliel (modelo dele no AutoCAD); o que não está aqui sai com o nome do app
-const LMAP={DESTAQUE:["DI-Destaque",1],ESGOTO:["TQ-Tubos",3],AGUA:["AF-Tubos",4],SIMB:["Simbolos",5],HTX:["TQ-Textos tubo",7],HTIT:["DI-Títulos",3],CONEX:["TQ-Conexões",9],COLIND:["AF-Indicação coluna",5],PAREDE:["0",7],FACHADA:["0",7],ESQUADRIA:["ESQUADRILHA",116],COTAS:["cotas",250],TEXTO:["texto",7],NOMEAMB:["COR-153",153],MOBILIA:["mobiliario",252],MOBILIAC:["mobiliario",252],TELHADO:["Telhado",56],CORTE:["G_TEXTO H_5",6],PISO:["piso2",45],REVEST:["piso2",45],CONCRETO:["concreto",250],CONCRETOS:["concreto",250],HACHURA:["concreto",253],LOTE:["01 Lotes",5],TERRENO:["01 Lotes",5],TITULOS:["PRA",7],COTA:["COTA",1],CARIMBO:["0",7],QUADROS:["texto",7],PRANCHA:["0",7]};
+const LMAP={ELSIMB:["P-SIMBOL",5],ELTX:["EL-Textos pontos",5],ELCOND:["EL-Condutos",4],ELFIO:["EL-Fios",9],ELTXC:["EL-Textos condutos",7],QVER:["DI-Linhas do quadro",1],DESTAQUE:["DI-Destaque",1],ESGOTO:["TQ-Tubos",3],AGUA:["AF-Tubos",4],SIMB:["Simbolos",5],HTX:["TQ-Textos tubo",7],HTIT:["DI-Títulos",3],CONEX:["TQ-Conexões",9],COLIND:["AF-Indicação coluna",5],PAREDE:["0",7],FACHADA:["0",7],ESQUADRIA:["ESQUADRILHA",116],COTAS:["cotas",250],TEXTO:["texto",7],NOMEAMB:["COR-153",153],MOBILIA:["mobiliario",252],MOBILIAC:["mobiliario",252],TELHADO:["Telhado",56],CORTE:["G_TEXTO H_5",6],PISO:["piso2",45],REVEST:["piso2",45],CONCRETO:["concreto",250],CONCRETOS:["concreto",250],HACHURA:["concreto",253],LOTE:["01 Lotes",5],TERRENO:["01 Lotes",5],TITULOS:["PRA",7],COTA:["COTA",1],CARIMBO:["0",7],QUADROS:["texto",7],PRANCHA:["0",7]};
 const lnm=l=>(LMAP[l]?LMAP[l][0]:l);
 // tabela de layers já com os nomes do Eliel (sem repetir "0", "piso2"...)
 function dxfLayers(src){ const out={}; Object.entries(src).forEach(([k,[c,lt]])=>{ const m=LMAP[k]; out[m?m[0]:k]=[m?m[1]:c,lt]; }); return out; }
@@ -7399,8 +7404,8 @@ document.querySelectorAll("[data-dxfcopy]").forEach(b=>b.onclick=async()=>{
 });
 
 /* ---------------- PDF (escrito à mão, sem bibliotecas) ---------------- */
-const PDFRGB={DESTAQUE:[.9,0,0],ESGOTO:[0,.6,0],AGUA:[0,.6,.8],SIMB:[0,0,.9],HTIT:[0,.6,0],COLIND:[0,0,.9],CONEX:[.55,.55,.55],ESQUADRIA:[0,.6,.45],MOBILIA:[.5,.5,.5],MOBILIAC:[.62,.62,.62],NOMEAMB:[.27,.42,.62],TELHADO:[.5,.47,.05],CORTE:[.85,0,.85]};
-const PDFCOR={DESTAQUE:[0,.3],SIMB:[0,.25],HTX:[0,.18],HTIT:[0,.3],CONEX:[.55,.18],COLIND:[0,.25],NOMEAMB:[0,.2],LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25],AGUA:[0,.3],PLUVIAL:[.2,.35],PERSP:[.5,.15],ESGOTO:[.25,.5],FORRO:[.3,.15],PISO:[.45,.1],LIMPISO:[0,.3],SOLEIRA:[0,.25],REVEST:[0,.4],PAGINA:[.35,.1],ESTRUT:[0,.3],VIGA:[0,.3],FUNDACAO:[.35,.25],LAJE:[.25,.2],ESCADA:[0,.3],EIXO:[0,.2],CONSTRUIR:[.15,.3],DEMOLIR:[0,.3]};
+const PDFRGB={ELSIMB:[0,0,.9],ELTX:[0,0,.9],ELCOND:[0,.62,.8],ELFIO:[.5,.5,.5],QVER:[.9,0,0],DESTAQUE:[.9,0,0],ESGOTO:[0,.6,0],AGUA:[0,.6,.8],SIMB:[0,0,.9],HTIT:[0,.6,0],COLIND:[0,0,.9],CONEX:[.55,.55,.55],ESQUADRIA:[0,.6,.45],MOBILIA:[.5,.5,.5],MOBILIAC:[.62,.62,.62],NOMEAMB:[.27,.42,.62],TELHADO:[.5,.47,.05],CORTE:[.85,0,.85]};
+const PDFCOR={ELSIMB:[0,.25],ELTX:[0,.2],ELCOND:[0,.3],ELFIO:[.5,.18],ELTXC:[0,.18],QVER:[0,.25],DESTAQUE:[0,.3],SIMB:[0,.25],HTX:[0,.18],HTIT:[0,.3],CONEX:[.55,.18],COLIND:[0,.25],NOMEAMB:[0,.2],LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25],AGUA:[0,.3],PLUVIAL:[.2,.35],PERSP:[.5,.15],ESGOTO:[.25,.5],FORRO:[.3,.15],PISO:[.45,.1],LIMPISO:[0,.3],SOLEIRA:[0,.25],REVEST:[0,.4],PAGINA:[.35,.1],ESTRUT:[0,.3],VIGA:[0,.3],FUNDACAO:[.35,.25],LAJE:[.25,.2],ESCADA:[0,.3],EIXO:[0,.2],CONSTRUIR:[.15,.3],DEMOLIR:[0,.3]};
 function pdfTxt(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?").replace(/[\\()]/g,m=>"\\"+m); }
 function buildPDF(fmt,opt){
   const MARCA=!!(opt&&opt.paginas), mk=l=>{ if(MARCA) c.push("% L:"+l); };
