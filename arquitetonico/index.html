@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.39 · suspiro (TV) do banheiro se move e se exclui", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.40 · junção, pontos de esgoto e ralo do box se excluem", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2762,6 +2762,8 @@ function redeHidro(G,LM){
       else if(pc.nome==="tanque"){ novo("Tanque",{p:w(0.30,0),N:T.N},25,"0,90",w(0.30,0.25),50,"cs"); cs=cs||w(0.30,0.67); }
       else if(pc.nome==="máquina de lavar"){ novo("Máquina de lavar",{p:w(0.30,0),N:T.N},25,"0,90",w(0.30,0.12),50,"cs"); cs=cs||w(0.30,0.72); } });
     if(!A.length) return;
+    // ponto de esgoto mudado ou excluído pelo profissional (6.40): a saída do vaso (ramal) acompanha
+    A.forEach((a,i)=>{ if(!a.es) return; const id=`es|${r.n}|${i}`, m=(S.hidM||{})[id], o0=a.es; if((S.hidDel||{})[id]){ a.es=null; return; } if(m){ a.es=[num(m.x),num(m.y)]; if(saida&&saida.p===o0) saida={...saida,p:a.es}; } });
     { const o=(S.hidM||{})["cs|"+r.n]; if(cs&&o) cs=[num(o.x),num(o.y)]; }   // caixa sifonada mudada pelo profissional
     if(cs&&!saida) saida={p:cs,d:50};
     if((S.hidDel||{})["cs|"+r.n]) cs=null;   // caixa sifonada excluída: os aparelhos vão direto para a saída
@@ -3901,16 +3903,20 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
   G.pecas.forEach(P=>PG(D,P,"HACHURA")); G.contPar.forEach(s=>L(D,...s,.5,"PAREDE")); desenhaAberturas(D,G,G.abs); baseExt(D,G,{nv:true});
   LM=LM||layoutMoveis(G); HD=HD||redeHidro(G,LM);
-  LM.forEach(R=>{ R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des,"MOBILIAC")); if(R.banho){ const n0=D.p.length; desenhaLoucas(D,R.r,(S.hidDel||{})["cs|"+R.r.n]?{...R.banho,semRalo:true}:R.banho,k,false); for(let i=n0;i<D.p.length;i++) D.p[i].l="MOBILIAC"; } });
+  LM.forEach(R=>{ R.pos.forEach(c=>desenhaPeca(D,c.T,c.pc.des,"MOBILIAC")); if(R.banho){ const n0=D.p.length; desenhaLoucas(D,R.r,(S.hidDel||{})["cs|"+R.r.n]||(S.hidDel||{})["rb|"+R.r.n]?{...R.banho,semRalo:true}:R.banho,k,false); for(let i=n0;i<D.p.length;i++) D.p[i].l="MOBILIAC"; } });
   LM.forEach(R=>{ const r=R.r; rotuloAmb(D,r,[{t:r.n.toUpperCase(),h:estTxt().tN*0.8,b:true,l:"COTAS"}],r.cx,r.cy); });
   // tubo de ventilação (suspiro) de cada banheiro: o profissional move (S.hidM["tv|amb"]) ou exclui (S.hidDel["tv|amb"]) como as caixas (6.39)
   D.tvs=[]; const poeTV=(r,p0,lado)=>{ const id="tv|"+r.n; if((S.hidDel||{})[id]) return; const m=(S.hidM||{})[id], p=m?[num(m.x),num(m.y)]:p0;
     simbHidro(D,{t:"tv",p}); TX(D,p[0]+lado[0],p[1]+lado[1],"TV Ø50",1.3,{a:lado[0]<0?"e":"s",b:true,l:"ESGOTO"}); D.tvs.push({id,p,man:!!m,amb:r.n}); };
+  // 6.40: junção, pontos de esgoto dos aparelhos e ralo do box também se movem/excluem (pedido do Eliel: tudo que estiver na planta tem de sair)
+  D.itx=[]; const hDel=id=>!!(S.hidDel||{})[id], hPos=(id,p0)=>{ const m=(S.hidM||{})[id]; return m?[num(m.x),num(m.y)]:p0; };
+  const poeItx=(id,tp,p0,nome,amb,movel=1)=>{ if(hDel(id)) return null; const p=movel?hPos(id,p0):p0; D.itx.push({id,tp,p,nome,amb,movel,man:!!(S.hidM||{})[id]}); return p; };
+  LM.forEach(R=>{ if(!R.banho||!R.banho.box||hDel("cs|"+R.r.n)) return; const p=raloDe(R.banho); if(p) poeItx("rb|"+R.r.n,"rb",p,"Ralo do box",R.r.n,0); });
   // esgoto
   HD.salas.forEach(sa=>{ const sd=sa.saida.p;
-    sa.A.forEach(a=>{ if(!a.es) return; simbHidro(D,{t:"es",p:a.es});
-      const alvo=a.vai==="cs"&&sa.cs?sa.cs:a.vai==="saida"||a.vai==="cg"?null:sd; if(alvo&&Math.hypot(alvo[0]-a.es[0],alvo[1]-a.es[1])>0.05) tuboHid(D,`ap|${sa.r.n}|${sa.A.indexOf(a)}`,[a.es,alvo],a.dEs,{lab:false});
-      TX(D,a.es[0],a.es[1]+2.6*k,`Ø${a.dEs}`,1.3,{l:"ESGOTO"}); });
+    sa.A.forEach((a,ia)=>{ if(!a.es) return; const pe=poeItx(`es|${sa.r.n}|${ia}`,"es",a.es,`Ponto de esgoto: ${a.nome.toLowerCase()} Ø${a.dEs}`,sa.r.n); if(!pe) return; simbHidro(D,{t:"es",p:pe});
+      const alvo=a.vai==="cs"&&sa.cs?sa.cs:a.vai==="saida"||a.vai==="cg"?null:sd; if(alvo&&Math.hypot(alvo[0]-pe[0],alvo[1]-pe[1])>0.05) tuboHid(D,`ap|${sa.r.n}|${ia}`,[pe,alvo],a.dEs,{lab:false});
+      TX(D,pe[0],pe[1]+2.6*k,`Ø${a.dEs}`,1.3,{l:"ESGOTO"}); });
     // banheiro: o ralo (caixa sifonada) nunca entra dentro do vaso; sai em Ø50 e entra no tubo de saída do vaso (Ø100) por uma junção com redução 100x50,
     // com o suspiro (tubo de ventilação Ø50) no trecho entre o ralo e a junção
     const rmV=sa.saida.vaso?HD.ramal.find(rm=>rm.r===sa.r&&rm.d>=100):null;
@@ -3919,7 +3925,7 @@ function desenhoHidro(G,k,LM,HD,legenda=true){
       if(Math.hypot(sa.cs[0]-J[0],sa.cs[1]-J[1])>0.05){ tuboHid(D,"csj|"+sa.r.n,[sa.cs,J],50);
         if(rmV){ const v=[J[0]-sa.cs[0],J[1]-sa.cs[1]], lv=Math.hypot(...v)||1, t=Math.min(0.30,lv*0.4), pT=[J[0]-v[0]/lv*t,J[1]-v[1]/lv*t];
           poeTV(sa.r,pT,[-2.4*k,0.6*k]);
-          simbHidro(D,{t:"jn",p:J}); TX(D,J[0]-1.5*k,J[1]-2.4*k,"JUNÇÃO 100x50",1.2,{a:"e",l:"ESGOTO"}); } } }
+          const pj=poeItx("jn|"+sa.r.n,"jn",J,"Junção com redução 100x50",sa.r.n); if(pj){ simbHidro(D,{t:"jn",p:pj}); TX(D,pj[0]-1.5*k,pj[1]-2.4*k,"JUNÇÃO 100x50",1.2,{a:"e",l:"ESGOTO"}); } } } }
     else if(sa.saida.tv){ const tv=sa.saida.tv; poeTV(sa.r,[tv.p[0]+tv.N[0]*0.08,tv.p[1]+tv.N[1]*0.08],[tv.N[0]*4*k+2*k,tv.N[1]*4*k]); } });
   (HD.ligs||[]).forEach(([a,b],i)=>tuboHid(D,"lg|"+i,[a,b],100));
   { const nR={}; HD.ramal.forEach(rm=>{ const nm=rm.r?rm.r.n:"ext", j=nR[nm]=(nR[nm]||0)+1; tuboHid(D,`rm|${nm}|${j}`,[rm.a,rm.b],rm.d); }); }
@@ -5615,7 +5621,7 @@ function render(){ if(window.__discMostra) try{ __discMostra(); }catch(e){}
     { const am=LM.filter(R=>arPode(R.tipo)&&R.r.area>=4), AA=S.ele.arAmb||{};
       $("tabAr").innerHTML=am.length?`<tr><th>Ambiente</th><th class="n">Área (m²)</th><th>Ar-condicionado</th><th>Circuito</th></tr>`+am.map(R=>{ const o=AA[R.r.n]||"", q=EL.pts.find(x=>x.ar&&x.r===R.r);
         return `<tr><td><b>${esc(R.r.n)}</b></td><td class="n">${f(R.r.area)}</td><td><select data-ar="${esc(R.r.n)}" aria-label="Ar-condicionado de ${esc(R.r.n)}"><option value="">Automático${(()=>{ const b=arDoAmb({...R.r},R.tipo,String(S.ele.ar||"não")); return AA[R.r.n]?"":b?` (${fBtu(b)} BTU)`:" (sem ar)"; })()}</option><option value="não"${o==="não"?" selected":""}>Sem ar</option>${[9000,12000,18000,24000].map(b=>`<option value="${b}"${String(o)===String(b)?" selected":""}>${fBtu(b)} BTU</option>`).join("")}</select></td><td>${q?`C${q.c} · ${AR_VA[q.btu]||q.va} W · 220 V`:"-"}</td></tr>`; }).join(""):`<tr><td style="color:var(--muted)">Sem ambientes.</td></tr>`; }
-    const HD=redeHidro(G,LM); fossaSegue(HD); const DH=desenhoHidro(G,k,LM,HD); $("hid").innerHTML=svgDe(DH,"hid"); HDV=HD; HIDTUB=DH.tubos||[]; HIDTVS=DH.tvs||[]; hidMarca(); hidBotoes();
+    const HD=redeHidro(G,LM); fossaSegue(HD); const DH=desenhoHidro(G,k,LM,HD); $("hid").innerHTML=svgDe(DH,"hid"); HDV=HD; HIDTUB=DH.tubos||[]; HIDTVS=DH.tvs||[]; HIDX=DH.itx||[]; hidMarca(); hidBotoes();
     { const PV=redePluvial(G,HD), DP=PV?desenhoPluvial(G,k,PV):null; $("pluvDes").innerHTML=DP?svgDe(DP,"pluvDes"):""; PVV=PV&&!PV.livre?PV:null; APTUB=DP&&DP.tubosAP||[]; apMarca(); apBotoes();
       $("tabCalhas").innerHTML=PV&&PV.CL?`<tr><th>Calha</th><th class="n">Comp. (m)</th><th class="n">Vazão (L/min)</th><th>Descidas</th><th>Lado da descida</th><th>Resultado</th></tr>`+PV.CL.lista.map(c=>`<tr><td><b>${c.nome}</b></td><td class="n">${f(c.L)}</td><td class="n">${f(c.Q,0)}</td>
         <td><select data-chn="${c.nome}" aria-label="Descidas da ${c.nome}"><option value="0">Automático</option>${[1,2,3,4].map(n=>`<option value="${n}"${c.nU===n?" selected":""}>${n}</option>`).join("")}</select></td>
@@ -5844,7 +5850,7 @@ function elePainel(p0){ const P=$("elePanel"), q=ELV&&ELV.pts.find(x=>x.key===EL
 /* ---------------- Planta hidrossanitária: mover caixas e o conjunto fossa/filtro/sumidouro ---------------- */
 let HDV=null, HIDSEL=null, HIDMOVE=false;
 /* ---------------- Planta hidrossanitária: tubos editáveis (desenhar, diâmetro, 45°, caminho, apagar) ---------------- */
-let HIDTVS=[], HIDTUB=[], HIDSELT=null, HIDTUBO=null, HIDD=100; const HIDALT={};
+let HIDTVS=[], HIDX=[], HIDTUB=[], HIDSELT=null, HIDTUBO=null, HIDD=100; const HIDALT={};
 const hidTrava=()=>{ const c=$("hidTrava"); return !c||c.checked; };
 const tubManual=k=>/^m\|/.test(k);
 function tubObj(key,cria){ if(tubManual(key)) return (S.hidTubM||[])[+key.slice(2)]||null; S.hidTub=S.hidTub||{}; if(!S.hidTub[key]&&cria) S.hidTub[key]={}; return S.hidTub[key]||null; }
@@ -6000,6 +6006,7 @@ function hidItens(){ const H=HDV; if(!H) return []; const out=[], com=(S.fossa||
       nome:tc!==(c.tipo==="CG"?"cg":"ci")?NOME_RALO[tc]+(c.fim?" (final)":""):c.tipo==="CG"?"Caixa de gordura":c.fim?"Caixa de inspeção final":keys.length?"Caixa de inspeção":"Caixa de inspeção de canto",amb:c.r?c.r.n:""}); });
   (H.extra||[]).forEach(o=>out.push({id:o.key,tp:"add",j:o.j,t:o.t,p:o.p,r:o.t==="rl"?(o.len||0.8)/2:0.3,movel:1,nome:NOME_RALO[o.t]+(o.t==="cs"?" (acrescentada)":""),amb:o.r?o.r.n:""}));
   H.salas.forEach(sa=>{ if(sa.cs){ const tc=tipoCx("cs|"+sa.r.n,"cs"); out.push({id:"cs|"+sa.r.n,tp:"cs",p:sa.cs,r:0.35,keys:["cs|"+sa.r.n],movel:1,man:!!(S.hidM||{})["cs|"+sa.r.n],tAt:tc,tDef:"cs",nome:NOME_RALO[tc],amb:sa.r.n}); } });
+  HIDX.forEach(t=>out.push({id:t.id,tp:t.tp,p:t.p,r:t.tp==="rb"?0.12:0.18,keys:[t.id],movel:t.movel,man:t.man,nome:t.nome,amb:t.amb}));
   HIDTVS.forEach(t=>out.push({id:t.id,tp:"tv",p:t.p,r:0.25,keys:[t.id],movel:1,man:t.man,nome:"Tubo de ventilação (suspiro) Ø50",amb:t.amb}));
   if(H.hd) out.push({id:"agua|hd",tp:"hd",p:H.hd,r:0.30,keys:["hd"],movel:1,man:!!(S.hidM||{}).hd,nome:"Hidrômetro (padrão da água)"});
   if(H.res) out.push({id:"agua|res",tp:"res",p:H.res.p,r:0.30,keys:["res"],movel:1,man:!!(S.hidM||{}).res,nome:`Reservatório ${H.res.vol} L (caixa d'água)`});
@@ -6048,7 +6055,8 @@ function hidGrava(q,p){ const antes=hidPosItens(); hidGrava0(q,p); hidSegue(ante
 function hidGrava0(q,p){ const x=+p[0].toFixed(3), y=+p[1].toFixed(3);
   if(q.tp==="add"){ Object.assign(S.hidAdd[q.j],{x,y}); }
   else if(q.tp==="hd"||q.tp==="res"){ S.hidM=S.hidM||{}; S.hidM[q.tp]={x,y}; }
-  else if(q.tp==="tv"){ S.hidM=S.hidM||{}; S.hidM[q.id]={x,y}; }
+  else if(q.tp==="tv"||q.tp==="jn"||q.tp==="es"){ S.hidM=S.hidM||{}; S.hidM[q.id]={x,y}; }
+  else if(q.tp==="rb"){ $("hidMsg")&&($("hidMsg").textContent="O ralo do box muda de lugar na aba Banheiro (peça Ralo do box)."); return; }
   else if(q.tp==="cx"||q.tp==="cs"){ if(!q.movel){ $("hidMsg")&&($("hidMsg").textContent="Caixa de canto: ela aparece sozinha onde o coletor faz curva. Mude as outras caixas que ela acompanha."); return; }
     S.hidM=S.hidM||{}; q.keys.forEach(k=>S.hidM[k]={x,y}); if(q.fim) S.hidM.fim={x,y}; }
   else { const M=S.fossaM=S.fossaM||{}, P=HDV.fossa.pos;
@@ -6105,7 +6113,7 @@ function giroLiga(P,id,p,depois){ P.querySelectorAll("[data-giro]").forEach(b=>b
 const giraVale=q=>q&&(q.tp==="cx"||q.tp==="cs"||q.tp==="hd"||(q.tp==="add"&&!/^f/.test(q.tp)));
 function hidPainel(){ const P=$("hidPanel"), q=hidSel(); if(HIDTRIM) return hidPainelTrim(); if(HIDUNIR) return hidPainelUnir(); if(HIDTUBO) return hidPainelDesenho(); if(!q&&HIDSELT) return hidPainelTubo(); if(!q){ P.hidden=true; return; } P.hidden=false;
   const fos=q.tp==="ft"||q.tp==="ff"||q.tp==="fsm", com=(S.fossa||{}).on==="sim";
-  const dica=!q.movel?"Esta caixa fica sozinha na curva do coletor; ela muda quando você muda as outras caixas.":HIDMOVE?"<b>Toque no lugar novo</b> na planta.":q.tp==="cx"?(q.c&&q.c.livre?"Caixa solta perto do aparelho, ligada no coletor por um Ø100. Arraste de volta para perto do coletor (até 30 cm) para encaixar nele.":"Arraste para onde quiser: perto do coletor (até 30 cm) ela encaixa nele; mais longe, fica solta perto do aparelho e liga no coletor por um Ø100."):q.tp==="cs"?"Arraste para onde quiser, bem perto dos aparelhos; use as setas com passo de 1 cm para o ajuste fino.":q.tp==="add"?"Arraste para mudar de lugar; o cano até a caixa mais perto se refaz.":q.tp==="hd"?"Arraste para o lugar do padrão (no muro da frente, junto da rua). A alimentação (AL) até o reservatório e o ramal predial se refazem.":q.tp==="res"?"Arraste para o lugar da caixa d'água (em cima da laje ou do forro). A alimentação e o barrilete se refazem.":q.tp==="ft"?"Arraste para levar o tanque, o filtro e o sumidouro juntos.":fos?"Arraste para mudar só esta unidade; o cano se refaz.":"Arraste na planta, ou toque em Mover e depois no lugar novo.";
+  const dica=q.tp==="rb"?"Ralo do box (vem do arranjo do banheiro). Para mudar de lugar use a aba Banheiro; aqui dá para excluir, se você não quiser dois ralos.":q.tp==="es"?"Ponto de saída do aparelho. Arraste para acertar o lugar ou exclua se o aparelho não tem esgoto aqui (o tubo dele sai junto).":!q.movel?"Esta caixa fica sozinha na curva do coletor; ela muda quando você muda as outras caixas.":HIDMOVE?"<b>Toque no lugar novo</b> na planta.":q.tp==="cx"?(q.c&&q.c.livre?"Caixa solta perto do aparelho, ligada no coletor por um Ø100. Arraste de volta para perto do coletor (até 30 cm) para encaixar nele.":"Arraste para onde quiser: perto do coletor (até 30 cm) ela encaixa nele; mais longe, fica solta perto do aparelho e liga no coletor por um Ø100."):q.tp==="cs"?"Arraste para onde quiser, bem perto dos aparelhos; use as setas com passo de 1 cm para o ajuste fino.":q.tp==="add"?"Arraste para mudar de lugar; o cano até a caixa mais perto se refaz.":q.tp==="hd"?"Arraste para o lugar do padrão (no muro da frente, junto da rua). A alimentação (AL) até o reservatório e o ramal predial se refazem.":q.tp==="res"?"Arraste para o lugar da caixa d'água (em cima da laje ou do forro). A alimentação e o barrilete se refazem.":q.tp==="ft"?"Arraste para levar o tanque, o filtro e o sumidouro juntos.":fos?"Arraste para mudar só esta unidade; o cano se refaz.":"Arraste na planta, ou toque em Mover e depois no lugar novo.";
   P.innerHTML=`<h4>${esc(q.nome)}${q.amb?` · ${esc(q.amb)}`:""}</h4><p class="cap" style="margin:0 0 8px">${dica}${q.man?" (posição escolhida por você)":""}</p>
     <div class="row" style="margin:0;flex-wrap:wrap">${q.movel?`<button class="btn pri" data-m>${HIDMOVE?"Cancelar":"Mover"}</button><button class="btn" data-d="-1,0" aria-label="Para a esquerda">◀</button><button class="btn" data-d="0,-1" aria-label="Para cima">▲</button><button class="btn" data-d="0,1" aria-label="Para baixo">▼</button><button class="btn" data-d="1,0" aria-label="Para a direita">▶</button><select data-hpasso aria-label="Passo das setas" style="width:auto">${[[0.01,"1 cm"],[0.02,"2 cm"],[0.05,"5 cm"],[0.10,"10 cm"],[0.25,"25 cm"]].map(([v,t])=>`<option value="${v}"${Math.abs(v-HIDPASSO)<1e-6?" selected":""}>passo ${t}</option>`).join("")}</select>`:""}
     ${q.tp==="cx"||q.tp==="cs"||(q.tp==="add"&&S.hidAdd[q.j])?`<select data-tipo aria-label="Trocar o tipo" style="width:auto">${["ci","cg","cs","rs","rsc","rq",...(q.tp==="add"?["rl"]:[])].map(t=>{ const at=q.tp==="add"?S.hidAdd[q.j].t:q.tAt; return `<option value="${t}"${t===at?" selected":""}>Trocar por: ${NOME_RALO[t]}</option>`; }).join("")}</select>`:""}
