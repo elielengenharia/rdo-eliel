@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.45 · Quadro de Cargas e de Demanda no padrão do Eliel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.46 · diagrama unifilar no padrão do Eliel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2746,26 +2746,58 @@ const notasEntrada=EL=>{ const E=EL.RE.ent; return [`Carga instalada ${f(EL.tot/
   `Fios pela capacidade de corrente (NBR 5410, método B1, PVC 70 °C) com o fator de agrupamento: circuito de 25 A ou mais em eletroduto próprio e no máximo 3 circuitos por eletroduto${EL.C.some(c=>c.fioAgr>c.fio0)?`; fio aumentado pelo agrupamento: ${EL.C.filter(c=>c.fioAgr>c.fio0).map(c=>`C${c.n} (${f(c.fio0,1)} para ${f(c.fioAgr,1)} mm²)`).join(", ")}`:""}.`,
   `Queda de tensão até 4 % nos circuitos; no alimentador ${f(E.dvEnt,1)} % (total máximo de 5 %, NBR 5410). Circuitos com fio aumentado pela distância: ${EL.C.filter(c=>c.fio>(c.fioAgr||c.fio0)).map(c=>`C${c.n} (${f(c.fioAgr||c.fio0,1)} para ${f(c.fio,1)} mm²)`).join(", ")||"nenhum"}.`,
   `Quadro de ${E.qdMod} módulos (${E.mod} usados, com ${E.reserva} de reserva, NBR 5410 tabela 59). Eletrodutos de PVC corrugado embutidos no forro/laje e nas paredes; ø20 mm salvo indicação.`]; };
-function desenhoUnifilar(EL,k,Z=1){ const D=Dw(k), R=EL.RE, l="ELETRICA", X=v=>v*k*Z;
+// diagrama unifilar no padrão do Eliel (QiBuilder): caixa tracejada com o nome verde do quadro, barramentos magenta,
+// disjuntores vermelhos com a corrente em cima e a seção ao lado, caixinha de cada circuito (nº | potência | descrição) alternando
+// esquerda e direita, terra verde por fora até o aterramento; DR como bloco no barramento (os circuitos de baixo passam por ele)
+function desenhoUnifilar(EL,k,Z=1){ const D=Dw(k), R=EL.RE, X=v=>v*k*Z;
   if(!R){ TX(D,0,0,"Sem circuitos.",3); return D; }
-  const E=R.ent, dy=7, Y=8, ln=(x1,y1,x2,y2,w=.3)=>L(D,X(x1),X(y1),X(x2),X(y2),w,l), tx=(x,y,t,h=1.6,o={})=>TX(D,X(x),X(y),t,h*Z,{l:"TEXTO",...o});
-  const box=(x,y,w,h,t)=>{ ln(x,y,x+w,y); ln(x+w,y,x+w,y+h); ln(x+w,y+h,x,y+h); ln(x,y+h,x,y); if(t) tx(x+w/2,y+h/2,t,1.7,{b:true}); };
-  const disj=(x,y)=>{ ln(x,y,x+2,y); ln(x+2,y,x+6,y-2.2); ln(x+6,y-1,x+6,y+1); ln(x+6,y,x+8,y); ln(x+5.4,y-2.6,x+6.6,y-1.4,.2); };
-  const terra=(x,y)=>{ ln(x,y,x,y+2); ln(x-2,y+2,x+2,y+2); ln(x-1.3,y+2.8,x+1.3,y+2.8); ln(x-0.6,y+3.6,x+0.6,y+3.6); };
-  box(0,Y-5,16,10,"MEDIDOR"); tx(8,Y-7.5,"PADRÃO DE ENTRADA",1.4,{b:true}); tx(8,Y+7.5,`${E.nome} ${E.tensao}`,1.3);
-  ln(16,Y,40,Y); tx(28,Y-2,`#${f(E.sEnt,0)} mm² (${E.nF}F+N)`,1.3); tx(28,Y+2.2,`${f(E.Lent,0)} m`,1.3);
-  disj(40,Y); tx(44,Y-5,"DISJ. GERAL",1.3,{b:true}); tx(44,Y+3,`${E.polosG}P ${E.geral} A`,1.3);
-  ln(48,Y,60,Y); ln(54,Y,54,Y+6); box(51.5,Y+6,5,5,"DPS"); terra(54,Y+11); tx(50,Y+8.5,`${E.nF+1}x cl. II 20 kA ${E.uc} V`,1.2,{a:"e"});
-  const sem=EL.C.filter(c=>!c.dr), com=EL.C.filter(c=>c.dr), rot=c=>{ const d=c.desc.length>30?c.desc.slice(0,28)+"...":c.desc; return `C${c.n}  ${d}  ${c.va} VA  ${c.polos}P ${c.disj} A  #${f(c.fio,1)}  ${c.fase}`; };
-  let y=Y; const linha=(c,x0)=>{ ln(x0,y,84,y); disj(84,y); ln(92,y,100,y); tx(101,y,rot(c),1.5,{a:"s"}); };
-  sem.forEach(c=>{ y+=dy; linha(c,60); });
-  let yFim=y;
-  if(com.length){ y+=dy+2; const yDR=y; ln(60,y,63,y); box(63,y-3,12,6,"DR"); tx(69,y+5,`${E.drP}P ${E.drIn} A 30 mA`,1.2); ln(75,y,80,y); yFim=y;
-    com.forEach((c,i)=>{ if(i) y+=dy; linha(c,80); }); ln(80,yDR,80,y,.45); }
-  ln(60,Y,60,yFim,.45);
-  y+=dy; tx(101,y,`Reserva: ${E.reserva} espaços · quadro de ${E.qdMod} módulos`,1.4,{a:"s",l:"COTAS"});
-  y+=dy; tx(0,y,`Barramento de neutro e de terra (PE) separados (TN-S); PE na haste 5/8" x 2,40 m com cabo ${f(E.sPE,0)} mm².`,1.4,{a:"s",l:"COTAS"});
-  y+=5; tx(0,y,`Demanda ${f(E.Dm)} kVA · carga instalada ${f(EL.tot/1000)} kVA · ${E.carga.map((v,i)=>`fase ${"ABC"[i]} ${f(v/1000)} kVA`).join(" · ")}`,1.4,{a:"s",l:"COTAS"});
+  const E=R.ent, nF=E.nF||1, FS="ABC".slice(0,nF), qn=EL.qdNome&&EL.qdNome!=="QD"?EL.qdNome:"QD1";
+  const ln=(x1,y1,x2,y2,l="UNLIN",w=.25,d=false)=>L(D,X(x1),X(y1),X(x2),X(y2),w,l,d), tx=(x,y,t,h=1.5,o={})=>TX(D,X(x),X(y),t,h*Z,{l:"TEXTO",...o}), ci=(x,y,r,l,w=.2)=>CI(D,X(x),X(y),X(r),w,l);
+  // disjuntor do Eliel: duas bolinhas e o arco por cima com o risco
+  const disj=(x,y,amp,sec,lado)=>{ const r=2.0; ci(x-r,y,0.45,"UNDIS"); ci(x+r,y,0.45,"UNDIS"); const pts=[]; for(let i=0;i<=12;i++){ const an=Math.PI*i/12; pts.push([x-r*Math.cos(an),y-r*Math.sin(an)*0.9]); }
+    for(let i=0;i<12;i++) ln(...pts[i],...pts[i+1],"UNDIS",.3); ln(x,y-r*0.9,x,y-r*0.9-1.1,"UNDIS",.3); if(amp!=null) tx(x,y-5.0,`${amp} A`,1.5); if(sec!=null) tx(x+(lado<0?-4.6:4.6),y-2.6,sec,1.4,{a:lado<0?"e":"s"}); };
+  const xB=0, dxB=3.2, xN=xB+dxB*nF, xF=f0=>xB+dxB*FS.indexOf(f0), dot=(x,y)=>CI(D,X(x),X(y),X(0.45),.2,"UNLIN");
+  const C=EL.C.slice(), sem=C.filter(c=>!c.dr), com=C.filter(c=>c.dr), passo=6.5, wN=10, wW=18, wD=40, wBox=wN+wW+wD, xBkL=xB-20, xBkR=xN+20, xBoxL=xBkL-6-wBox, xBoxR=xBkR+6, xGL=xBoxL-5, xGR=xBoxR+wBox+5;
+  let y=26; const yTop=4; const linhas=[];
+  // entrada no topo: eletroduto, cabos e disjuntor geral
+  tx(xB+dxB*nF/2,yTop-4.2,`Conduto ø${(E.eEnt&&E.eEnt.pol)||'1"'}`,1.5); tx(xB+dxB*nF/2,yTop-1.6,`${nF}#${f(E.sEnt,0)}(${f(E.sEnt,0)})${f(E.sPE,0)} mm²`,1.5);
+  ln(xB-0.6,yTop+0.4,xN+0.6,yTop+0.4,"UNLIN",.2);
+  FS.split("").forEach(f0=>{ disj(xF(f0),yTop+7,null,null,-1); ln(xF(f0),yTop+0.4,xF(f0),yTop+7-2,"UNBAR",.35); });
+  ln(xN,yTop+0.4,xN,yTop+12,"UNBAR",.35); tx(xB-3.2,yTop+5.8,`${E.geral} A`,1.5,{a:"e"});
+  // DPS ligado no barramento, descendo para o terra
+  const yBarra0=yTop+9;
+  const circ=(c,i)=>{ const esq=i%2===0, yy=y; const fas=c.fase&&c.fase.length>1?c.fase.split(""):[c.fase||"A"], xb=xF(fas[0]);
+    fas.forEach(f0=>dot(xF(f0),yy)); dot(xN,yy+2.2);
+    if(esq){ ln(xF(fas[0]),yy,xBkL+2,yy); disj(xBkL,yy,c.disj,f(c.fioAgr||c.fio,1),-1); ln(xBkL-2,yy,xBoxL+wBox,yy); ln(xN,yy+2.2,xBoxL+wBox,yy+2.2);
+      const bx=xBoxL; [[0,wN,String(c.n)],[wN,wW,`${c.va} W`],[wN+wW,wD,c.desc.toUpperCase().slice(0,30)]].forEach(([o,w,t])=>{ ln(bx+o,yy-1.6,bx+o+w,yy-1.6); ln(bx+o,yy+3.4,bx+o+w,yy+3.4); ln(bx+o,yy-1.6,bx+o,yy+3.4); tx(bx+o+w/2,yy+1.4,t,1.4); }); ln(bx+wBox,yy-1.6,bx+wBox,yy+3.4);
+      ln(xGL,yy+0.9,bx,yy+0.9,"UNFIO",.3); }
+    else { ln(xF(fas[fas.length-1]),yy,xBkR-2,yy); disj(xBkR,yy,c.disj,f(c.fioAgr||c.fio,1),1); ln(xBkR+2,yy,xBoxR,yy); ln(xN,yy+2.2,xBoxR,yy+2.2);
+      const bx=xBoxR; [[0,wD,c.desc.toUpperCase().slice(0,30)],[wD,wW,`${c.va} W`],[wD+wW,wN,String(c.n)]].forEach(([o,w,t])=>{ ln(bx+o,yy-1.6,bx+o+w,yy-1.6); ln(bx+o,yy+3.4,bx+o+w,yy+3.4); ln(bx+o,yy-1.6,bx+o,yy+3.4); tx(bx+o+w/2,yy+1.4,t,1.4); }); ln(bx+wBox,yy-1.6,bx+wBox,yy+3.4);
+      ln(bx+wBox,yy+0.9,xGR,yy+0.9,"UNFIO",.3); }
+    y+=passo; };
+  sem.forEach(circ);
+  let yDR=null;
+  if(com.length){ y+=3; yDR=y; const x0=xB-2.5, x1=xN+2.5; ln(x0,y,x1,y,"UNDIS",.35); ln(x1,y,x1,y+6,"UNDIS",.35); ln(x1,y+6,x0,y+6,"UNDIS",.35); ln(x0,y+6,x0,y,"UNDIS",.35); tx((x0+x1)/2,y+3.6,"DR",1.5,{b:true}); tx(x1+1.5,y+3.4,`${E.drP}P ${E.drIn} A 30 mA`,1.3,{a:"s"});
+    y+=12; com.forEach((c,i)=>circ(c,i+sem.length)); }
+  const yFim=y-passo+4;
+  // barramentos (interrompidos pelo DR) e letras embaixo
+  const bar=(x,y0,y1)=>{ if(y1>y0) ln(x,y0,x,y1,"UNBAR",.45); };
+  [...FS.split("").map(xF),xN].forEach(x=>{ if(yDR!=null){ bar(x,yBarra0,yDR); bar(x,yDR+6,yFim); } else bar(x,yBarra0,yFim); });
+  FS.split("").forEach(f0=>tx(xF(f0),yFim+2.6,f0,1.4,{l:"UNBAR"})); tx(xN,yFim+2.6,"N",1.4,{l:"UNBAR"});
+  // DPS do lado esquerdo de cima, com o terra
+  const xD=xB-9; ln(xB,yBarra0+3,xD,yBarra0+3); dot(xB,yBarra0+3); ln(xD-1.8,yBarra0+3,xD+1.8,yBarra0+3,"UNDIS",.3); ln(xD-1.8,yBarra0+3,xD-1.8,yBarra0+7.5,"UNDIS",.3); ln(xD+1.8,yBarra0+3,xD+1.8,yBarra0+7.5,"UNDIS",.3); ln(xD-1.8,yBarra0+7.5,xD+1.8,yBarra0+7.5,"UNDIS",.3);
+  tx(xD,yBarra0+5.6,"DPS",1.1,{b:true}); tx(xD-2.5,yBarra0+5.6,`${nF+1}x 20 kA ${E.uc} V`,1.2,{a:"e"}); ln(xD,yBarra0+7.5,xD,yBarra0+10,"UNFIO",.3); ln(xD,yBarra0+10,xGL,yBarra0+10,"UNFIO",.3);
+  // terra verde por fora até o aterramento embaixo
+  const yG=yFim+6; ln(xGL,yBarra0+10,xGL,yG,"UNFIO",.3); ln(xGR,26-0.5,xGR,yG,"UNFIO",.3); ln(xGL,yG,xGR,yG,"UNFIO",.3); tx((xGL+xGR)/2,yG-1.4,"Verde",1.3,{l:"UNFIO"});
+  const xT=(xB+xN)/2, yC=yG+6; ln(xT,yG,xT,yC+2,"UNFIO",.3); ln(xT-2.4,yC+2,xT+2.4,yC+2,"UNFIO",.3); ln(xT-1.6,yC+2.8,xT+1.6,yC+2.8,"UNFIO",.3); ln(xT-0.8,yC+3.6,xT+0.8,yC+3.6,"UNFIO",.3);
+  // caixa tracejada e nome verde do quadro
+  const yP=yG+4, bx0=xGL-5, bx1=xGR+5, by0=yTop-8, by1=Math.max(yC+1,yP+3.6*(nF+1)+3);
+  [[bx0,by0,bx1,by0],[bx1,by0,bx1,by1],[bx1,by1,bx0,by1],[bx0,by1,bx0,by0]].forEach(q=>ln(...q,"UNPON",.25,true)); tx(bx0,by0-2.6,qn,2.8,{a:"s",l:"UNTIT"});
+  // potência instalada por fase e dados da entrada
+  tx(xBoxL,yP-1.5,"Potência Instalada (W)",1.4,{a:"s"}); const tot=EL.tot||C.reduce((a,c)=>a+c.va,0);
+  [...FS.split("").map((f0,i)=>[f0,Math.round((E.carga||[])[i]||0)]),["Total",tot]].forEach(([a0,v],i)=>{ const yy=yP+i*3.6; ln(xBoxL,yy,xBoxL+40,yy,"UNLIN",.18); ln(xBoxL,yy+3.6,xBoxL+40,yy+3.6,"UNLIN",.18); ln(xBoxL,yy,xBoxL,yy+3.6,"UNLIN",.18); ln(xBoxL+20,yy,xBoxL+20,yy+3.6,"UNLIN",.18); ln(xBoxL+40,yy,xBoxL+40,yy+3.6,"UNLIN",.18); tx(xBoxL+2,yy+2.5,a0,1.3,{a:"s",l:"COTAS"}); tx(xBoxL+38,yy+2.5,String(v),1.3,{a:"e",l:"COTAS"}); });
+  tx(bx0,by1+5,`Entrada ${E.nome} ${E.tensao} · medidor no padrão da concessionária · cabo ${f(E.sEnt,0)} mm² · ${f(E.Lent,0)} m até o ${qn} · disjuntor geral ${E.polosG}P ${E.geral} A`,1.4,{a:"s",l:"COTAS"});
+  tx(bx0,by1+9,`Neutro e terra (PE) separados (TN-S); PE na haste 5/8" x 2,40 m com cabo ${f(E.sPE,0)} mm². Reserva: ${E.reserva} espaços · quadro de ${E.qdMod} módulos. Demanda ${f(E.Dm)} kVA.`,1.4,{a:"s",l:"COTAS"});
   return D; }
 
 /* ---------------- Planta hidrossanitária (água fria e esgoto) ---------------- */
@@ -5601,7 +5633,7 @@ function extensao(D){
   return {x0,y0,x1,y1};
 }
 const n2=v=>(Math.round(v*100)/100).toString();
-const COR={LIMPISO:"var(--ink)",LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)",MOBILIAC:"var(--line)",ELETRICA:"var(--accent)",AGUA:"#0a9fc0",DESTAQUE:"#e02020",ELSIMB:"#2b44d8",ELTX:"#2b44d8",ELCOND:"#0a9fc0",ELFIO:"var(--muted)",ELTXC:"var(--ink)",QVER:"#e02020",SIMB:"#2b44d8",HTX:"var(--ink)",HTIT:"#1a9e3a",CONEX:"var(--muted)",COLIND:"#2b44d8",PLUVIAL:"var(--steel)",PERSP:"var(--ink)",ESGOTO:"#1a9e3a",FORRO:"var(--muted)",PISO:"var(--muted)",SOLEIRA:"var(--ink)",REVEST:"var(--accent)",PAGINA:"var(--muted)",ESTRUT:"var(--soil)",VIGA:"var(--ink)",FUNDACAO:"var(--muted)",LAJE:"var(--steel)",ESCADA:"var(--ink)",EIXO:"var(--steel)",CONSTRUIR:"var(--bad)",DEMOLIR:"var(--warn)"};
+const COR={LIMPISO:"var(--ink)",LOTE:"var(--ink)",FUNDO:"var(--sheet)",CONCRETOS:"var(--muted)",CONCRETO:"var(--ink)",CONCRETOF:"var(--sheet)",PAREDE:"var(--ink)",HACHURA:"var(--concrete)",ESQUADRIA:"var(--ink)",COTAS:"var(--muted)",TEXTO:"var(--ink)",TELHADO:"var(--ink)",PROJECAO:"var(--muted)",CORTE:"var(--steel)",TERRENO:"var(--soil)",GERAL:"var(--ink)",AJUDA:"var(--accent)",MOBILIA:"var(--ink)",MOBILIAC:"var(--line)",ELETRICA:"var(--accent)",AGUA:"#0a9fc0",DESTAQUE:"#e02020",UNLIN:"var(--muted)",UNDIS:"#e02020",UNBAR:"#d020d0",UNFIO:"#1aa83a",UNTIT:"#1aa83a",UNPON:"var(--ink)",ELSIMB:"#2b44d8",ELTX:"#2b44d8",ELCOND:"#0a9fc0",ELFIO:"var(--muted)",ELTXC:"var(--ink)",QVER:"#e02020",SIMB:"#2b44d8",HTX:"var(--ink)",HTIT:"#1a9e3a",CONEX:"var(--muted)",COLIND:"#2b44d8",PLUVIAL:"var(--steel)",PERSP:"var(--ink)",ESGOTO:"#1a9e3a",FORRO:"var(--muted)",PISO:"var(--muted)",SOLEIRA:"var(--ink)",REVEST:"var(--accent)",PAGINA:"var(--muted)",ESTRUT:"var(--soil)",VIGA:"var(--ink)",FUNDACAO:"var(--muted)",LAJE:"var(--steel)",ESCADA:"var(--ink)",EIXO:"var(--steel)",CONSTRUIR:"var(--bad)",DEMOLIR:"var(--warn)"};
 function primsSVG(D,map,k){
   let s="";
   D.p.forEach(p=>{ const cor=COR[p.l]||"var(--ink)";
@@ -7339,9 +7371,9 @@ function textosLado(P,lado,fl){
 
 /* ---------------- DXF ---------------- */
 // cores das layers no AutoCAD (ACI): paredes verdes (3), cotas cinza escuro (8), textos, títulos e mobília na cor natural (7)
-const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[3,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[8,"CONTINUOUS"],TEXTO:[7,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[7,"CONTINUOUS"],MOBILIA:[7,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[4,"CONTINUOUS"],ELSIMB:[5,"CONTINUOUS"],ELTX:[5,"CONTINUOUS"],ELCOND:[4,"CONTINUOUS"],ELFIO:[9,"CONTINUOUS"],ELTXC:[7,"CONTINUOUS"],QVER:[1,"CONTINUOUS"],DESTAQUE:[1,"CONTINUOUS"],SIMB:[5,"CONTINUOUS"],HTX:[7,"CONTINUOUS"],HTIT:[3,"CONTINUOUS"],CONEX:[9,"CONTINUOUS"],COLIND:[5,"CONTINUOUS"],PLUVIAL:[4,"CONTINUOUS"],PERSP:[8,"CONTINUOUS"],ESGOTO:[3,"CONTINUOUS"],FORRO:[8,"CONTINUOUS"],PISO:[9,"CONTINUOUS"],LIMPISO:[8,"CONTINUOUS"],SOLEIRA:[2,"CONTINUOUS"],REVEST:[5,"CONTINUOUS"],PAGINA:[8,"CONTINUOUS"],ESTRUT:[33,"CONTINUOUS"],VIGA:[4,"CONTINUOUS"],FUNDACAO:[8,"DASHED"],LAJE:[150,"CONTINUOUS"],ESCADA:[7,"CONTINUOUS"],EIXO:[1,"DASHED"],CONSTRUIR:[1,"CONTINUOUS"],DEMOLIR:[40,"DASHED"],GERAL:[7,"CONTINUOUS"]};
+const LAYERS={LOTE:[5,"CONTINUOUS"],FACHADA:[7,"CONTINUOUS"],CONCRETO:[8,"CONTINUOUS"],CONCRETOS:[8,"CONTINUOUS"],PAREDE:[3,"CONTINUOUS"],HACHURA:[8,"CONTINUOUS"],ESQUADRIA:[4,"CONTINUOUS"],COTAS:[8,"CONTINUOUS"],TEXTO:[7,"CONTINUOUS"],TELHADO:[1,"CONTINUOUS"],PROJECAO:[9,"DASHED"],CORTE:[6,"DASHED"],TERRENO:[42,"CONTINUOUS"],TITULOS:[7,"CONTINUOUS"],MOBILIA:[7,"CONTINUOUS"],MOBILIAC:[9,"CONTINUOUS"],ELETRICA:[150,"CONTINUOUS"],AGUA:[4,"CONTINUOUS"],UNLIN:[9,"CONTINUOUS"],UNDIS:[1,"CONTINUOUS"],UNBAR:[6,"CONTINUOUS"],UNFIO:[3,"CONTINUOUS"],UNTIT:[3,"CONTINUOUS"],UNPON:[7,"CONTINUOUS"],ELSIMB:[5,"CONTINUOUS"],ELTX:[5,"CONTINUOUS"],ELCOND:[4,"CONTINUOUS"],ELFIO:[9,"CONTINUOUS"],ELTXC:[7,"CONTINUOUS"],QVER:[1,"CONTINUOUS"],DESTAQUE:[1,"CONTINUOUS"],SIMB:[5,"CONTINUOUS"],HTX:[7,"CONTINUOUS"],HTIT:[3,"CONTINUOUS"],CONEX:[9,"CONTINUOUS"],COLIND:[5,"CONTINUOUS"],PLUVIAL:[4,"CONTINUOUS"],PERSP:[8,"CONTINUOUS"],ESGOTO:[3,"CONTINUOUS"],FORRO:[8,"CONTINUOUS"],PISO:[9,"CONTINUOUS"],LIMPISO:[8,"CONTINUOUS"],SOLEIRA:[2,"CONTINUOUS"],REVEST:[5,"CONTINUOUS"],PAGINA:[8,"CONTINUOUS"],ESTRUT:[33,"CONTINUOUS"],VIGA:[4,"CONTINUOUS"],FUNDACAO:[8,"DASHED"],LAJE:[150,"CONTINUOUS"],ESCADA:[7,"CONTINUOUS"],EIXO:[1,"DASHED"],CONSTRUIR:[1,"CONTINUOUS"],DEMOLIR:[40,"DASHED"],GERAL:[7,"CONTINUOUS"]};
 // nome e cor das layers no padrão do Eliel (modelo dele no AutoCAD); o que não está aqui sai com o nome do app
-const LMAP={ELSIMB:["P-SIMBOL",5],ELTX:["EL-Textos pontos",5],ELCOND:["EL-Condutos",4],ELFIO:["EL-Fios",9],ELTXC:["EL-Textos condutos",7],QVER:["DI-Linhas do quadro",1],DESTAQUE:["DI-Destaque",1],ESGOTO:["TQ-Tubos",3],AGUA:["AF-Tubos",4],SIMB:["Simbolos",5],HTX:["TQ-Textos tubo",7],HTIT:["DI-Títulos",3],CONEX:["TQ-Conexões",9],COLIND:["AF-Indicação coluna",5],PAREDE:["0",7],FACHADA:["0",7],ESQUADRIA:["ESQUADRILHA",116],COTAS:["cotas",250],TEXTO:["texto",7],NOMEAMB:["COR-153",153],MOBILIA:["mobiliario",252],MOBILIAC:["mobiliario",252],TELHADO:["Telhado",56],CORTE:["G_TEXTO H_5",6],PISO:["piso2",45],REVEST:["piso2",45],CONCRETO:["concreto",250],CONCRETOS:["concreto",250],HACHURA:["concreto",253],LOTE:["01 Lotes",5],TERRENO:["01 Lotes",5],TITULOS:["PRA",7],COTA:["COTA",1],CARIMBO:["0",7],QUADROS:["texto",7],PRANCHA:["0",7]};
+const LMAP={UNLIN:["DI-Linhas do diagrama",9],UNDIS:["DI-Disjuntor",1],UNBAR:["DI-Barramento",6],UNFIO:["DI-Fios",3],UNTIT:["DI-Título do diagrama",3],UNPON:["DI-Pontilhado",7],ELSIMB:["P-SIMBOL",5],ELTX:["EL-Textos pontos",5],ELCOND:["EL-Condutos",4],ELFIO:["EL-Fios",9],ELTXC:["EL-Textos condutos",7],QVER:["DI-Linhas do quadro",1],DESTAQUE:["DI-Destaque",1],ESGOTO:["TQ-Tubos",3],AGUA:["AF-Tubos",4],SIMB:["Simbolos",5],HTX:["TQ-Textos tubo",7],HTIT:["DI-Títulos",3],CONEX:["TQ-Conexões",9],COLIND:["AF-Indicação coluna",5],PAREDE:["0",7],FACHADA:["0",7],ESQUADRIA:["ESQUADRILHA",116],COTAS:["cotas",250],TEXTO:["texto",7],NOMEAMB:["COR-153",153],MOBILIA:["mobiliario",252],MOBILIAC:["mobiliario",252],TELHADO:["Telhado",56],CORTE:["G_TEXTO H_5",6],PISO:["piso2",45],REVEST:["piso2",45],CONCRETO:["concreto",250],CONCRETOS:["concreto",250],HACHURA:["concreto",253],LOTE:["01 Lotes",5],TERRENO:["01 Lotes",5],TITULOS:["PRA",7],COTA:["COTA",1],CARIMBO:["0",7],QUADROS:["texto",7],PRANCHA:["0",7]};
 const lnm=l=>(LMAP[l]?LMAP[l][0]:l);
 // tabela de layers já com os nomes do Eliel (sem repetir "0", "piso2"...)
 function dxfLayers(src){ const out={}; Object.entries(src).forEach(([k,[c,lt]])=>{ const m=LMAP[k]; out[m?m[0]:k]=[m?m[1]:c,lt]; }); return out; }
@@ -7439,8 +7471,8 @@ document.querySelectorAll("[data-dxfcopy]").forEach(b=>b.onclick=async()=>{
 });
 
 /* ---------------- PDF (escrito à mão, sem bibliotecas) ---------------- */
-const PDFRGB={ELSIMB:[0,0,.9],ELTX:[0,0,.9],ELCOND:[0,.62,.8],ELFIO:[.5,.5,.5],QVER:[.9,0,0],DESTAQUE:[.9,0,0],ESGOTO:[0,.6,0],AGUA:[0,.6,.8],SIMB:[0,0,.9],HTIT:[0,.6,0],COLIND:[0,0,.9],CONEX:[.55,.55,.55],ESQUADRIA:[0,.6,.45],MOBILIA:[.5,.5,.5],MOBILIAC:[.62,.62,.62],NOMEAMB:[.27,.42,.62],TELHADO:[.5,.47,.05],CORTE:[.85,0,.85]};
-const PDFCOR={ELSIMB:[0,.25],ELTX:[0,.2],ELCOND:[0,.3],ELFIO:[.5,.18],ELTXC:[0,.18],QVER:[0,.25],DESTAQUE:[0,.3],SIMB:[0,.25],HTX:[0,.18],HTIT:[0,.3],CONEX:[.55,.18],COLIND:[0,.25],NOMEAMB:[0,.2],LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25],AGUA:[0,.3],PLUVIAL:[.2,.35],PERSP:[.5,.15],ESGOTO:[.25,.5],FORRO:[.3,.15],PISO:[.45,.1],LIMPISO:[0,.3],SOLEIRA:[0,.25],REVEST:[0,.4],PAGINA:[.35,.1],ESTRUT:[0,.3],VIGA:[0,.3],FUNDACAO:[.35,.25],LAJE:[.25,.2],ESCADA:[0,.3],EIXO:[0,.2],CONSTRUIR:[.15,.3],DEMOLIR:[0,.3]};
+const PDFRGB={UNLIN:[.62,.62,.62],UNDIS:[.9,0,0],UNBAR:[.85,0,.85],UNFIO:[0,.72,0],UNTIT:[0,.72,0],ELSIMB:[0,0,.9],ELTX:[0,0,.9],ELCOND:[0,.62,.8],ELFIO:[.5,.5,.5],QVER:[.9,0,0],DESTAQUE:[.9,0,0],ESGOTO:[0,.6,0],AGUA:[0,.6,.8],SIMB:[0,0,.9],HTIT:[0,.6,0],COLIND:[0,0,.9],CONEX:[.55,.55,.55],ESQUADRIA:[0,.6,.45],MOBILIA:[.5,.5,.5],MOBILIAC:[.62,.62,.62],NOMEAMB:[.27,.42,.62],TELHADO:[.5,.47,.05],CORTE:[.85,0,.85]};
+const PDFCOR={UNLIN:[.6,.22],UNDIS:[0,.3],UNBAR:[0,.45],UNFIO:[0,.3],UNTIT:[0,.3],UNPON:[0,.25],ELSIMB:[0,.25],ELTX:[0,.2],ELCOND:[0,.3],ELFIO:[.5,.18],ELTXC:[0,.18],QVER:[0,.25],DESTAQUE:[0,.3],SIMB:[0,.25],HTX:[0,.18],HTIT:[0,.3],CONEX:[.55,.18],COLIND:[0,.25],NOMEAMB:[0,.2],LOTE:[0,.6],FUNDO:[1,0],CONCRETOS:[.32,0],CONCRETO:[0,.1],CONCRETOF:[1,0],PAREDE:[0,.5],HACHURA:[.78,0],ESQUADRIA:[0,.25],COTAS:[.3,.18],TEXTO:[0,.2],TELHADO:[0,.35],PROJECAO:[.45,.2],CORTE:[.15,.35],TERRENO:[.4,.35],GERAL:[0,.25],TITULOS:[0,.3],MOBILIA:[.15,.15],MOBILIAC:[.7,.13],ELETRICA:[0,.25],AGUA:[0,.3],PLUVIAL:[.2,.35],PERSP:[.5,.15],ESGOTO:[.25,.5],FORRO:[.3,.15],PISO:[.45,.1],LIMPISO:[0,.3],SOLEIRA:[0,.25],REVEST:[0,.4],PAGINA:[.35,.1],ESTRUT:[0,.3],VIGA:[0,.3],FUNDACAO:[.35,.25],LAJE:[.25,.2],ESCADA:[0,.3],EIXO:[0,.2],CONSTRUIR:[.15,.3],DEMOLIR:[0,.3]};
 function pdfTxt(t){ return String(t).replace(/×/g,"x").replace(/[—–]/g,"-").replace(/·/g,"-").replace(/[^\x20-\xFF]/g,"?").replace(/[\\()]/g,m=>"\\"+m); }
 function buildPDF(fmt,opt){
   const MARCA=!!(opt&&opt.paginas), mk=l=>{ if(MARCA) c.push("% L:"+l); };
