@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.51 · DXF no padrão R12 que o AutoCAD abre (nomes de layer sem acento e sem espaço)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.52 · salão comercial: luz ligada nos disjuntores do QD, sem interruptor", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2422,6 +2422,8 @@ const AR_VA={9000:1000,12000:1400,18000:2000,24000:2600}, fBtu=b=>String(b).repl
 const btuArea=a=>a<=12?9000:a<=18?12000:a<=28?18000:24000, arPode=tp=>!["banho","lavand","circ","garagem","deposito"].includes(tp);
 function arDoAmb(r,tp,arG){ const o=(S.ele.arAmb||{})[r.n]; if(o==="não") return 0; if(o&&AR_VA[+o]) return +o;
   if(arG==="não"||!["casal","solteiro","sala","escrit","salacoz"].includes(tp)) return 0; return arG==="sim"?btuArea(r.area):(AR_VA[+arG]?+arG:btuArea(r.area)); }
+// salão comercial: plafon LED 36 W (~3.000 lm), malha de ~2 m; método dos lúmens com CU 0,50 e FM 0,80 dá ~300 lux (NBR ISO/CIE 8995-1: vendas e atendimento)
+const LUX_SALAO={w:36,lm:3000,cu:0.5,fm:0.8,dx:2.0,alvo:300};
 const LAMP_VA={bulbo:100,tub:20,plafon:30}, LAMP_NOME={bulbo:"Lâmpada comum (bulbo LED)",tub:"Luminária tubular LED 1,20 m",plafon:"Plafon LED"};
 function pontosEletricos(G,LM){
   LM=LM||layoutMoveis(G); const PR=new Map(), pisoR=PZ=>{ if(!PR.has(PZ.n)) PR.set(PZ.n,{n:PZ.n,poly:PZ.poly,area:PZ.area||0,ext:true,cx:PZ.poly?PZ.poly.reduce((a,q)=>a+q[0],0)/PZ.poly.length:0,cy:PZ.poly?PZ.poly.reduce((a,q)=>a+q[1],0)/PZ.poly.length:0}); return PR.get(PZ.n); };
@@ -2450,28 +2452,41 @@ function pontosEletricos(G,LM){
     luz=luz.map(p=>pip(r.poly,...p)?p:[r.cx,r.cy]);
     // sala comercial / escritório (6.50): plafons LED distribuídos por igual na forma real da sala — fileiras (ou colunas) a cada ~2,5 m e, em cada
     // uma, luminárias espaçadas por igual no comprimento que a sala tem ali (sala trapezoidal fica com menos luminárias no lado estreito)
+    // salão comercial (6.52): sem interruptor — a luz é ligada nos disjuntores do QD da frente, em 1 a 3 circuitos (frente, meio, fundo)
+    const salao=tp==="escrit"&&S.uso==="comercial"&&S.ele.salaoInt!=="sim";
     let lampG=null; if(tp==="escrit"&&S.ele.escLuz!=="bulbo"&&r.area>=8){ const P=r.poly, dentro=p=>[[0,0],[0.6,0],[-0.6,0],[0,0.6],[0,-0.6]].every(([a,b])=>pip(P,p[0]+a,p[1]+b));
       // eixo 0: fileiras horizontais; eixo 1: colunas verticais. Fica o arranjo que deixa o ponto da sala mais longe de uma luminária mais perto dela
       const corda=(y,e)=>{ const xs=[]; P.forEach((A0,i)=>{ const B0=P[(i+1)%P.length], A=e?[A0[1],A0[0]]:A0, B=e?[B0[1],B0[0]]:B0; if((A[1]-y)*(B[1]-y)<0) xs.push(A[0]+(B[0]-A[0])*(y-A[1])/(B[1]-A[1])); }); xs.sort((u,v)=>u-v); let m=null; for(let i=0;i+1<xs.length;i+=2) if(!m||xs[i+1]-xs[i]>m[1]-m[0]) m=[xs[i],xs[i+1]]; return m; };
-      const DX=2.5, arranjo=e=>{ const g=[], v0=e?r.x0:r.y0, Hv=e?W:H, nf=Math.max(1,Math.round(Hv/DX));
+      const DX=salao?LUX_SALAO.dx:2.5, arranjo=e=>{ const g=[], v0=e?r.x0:r.y0, Hv=e?W:H, nf=Math.max(1,Math.round(Hv/DX));
         for(let j=0;j<nf;j++){ const y=v0+Hv*(j+0.5)/nf, c=corda(y,e); if(!c) continue; const Lc=c[1]-c[0], n=Math.max(1,Math.round(Lc/DX));
-          for(let i=0;i<n;i++){ const u=c[0]+Lc*(i+0.5)/n, P0=e?[y,u]:[u,y], sh=[0.3,-0.3,0.6,-0.6].map(d=>e?[y+d,u]:[u,y+d]); const q=dentro(P0)?P0:sh.find(dentro); if(q) g.push(q); } }
+          for(let i=0;i<n;i++){ const u=c[0]+Lc*(i+0.5)/n, P0=e?[y,u]:[u,y], sh=[0.3,-0.3,0.6,-0.6].map(d=>e?[y+d,u]:[u,y+d]); const q=dentro(P0)?P0:sh.find(dentro); if(q){ if(!e) q.li=[i,j]; g.push(q); } } }
         return g; };
       const pior=g=>{ let m=0; for(let x=r.x0+0.25;x<r.x1;x+=0.5) for(let y=r.y0+0.25;y<r.y1;y+=0.5) if(pip(P,x,y)) m=Math.max(m,Math.min(...g.map(q=>Math.hypot(q[0]-x,q[1]-y)))); return m; };
       // sala de 4 lados (retângulo, trapézio, paralelogramo): grade que acompanha as quatro paredes — fileiras paralelas à frente e ao fundo ao mesmo tempo
       const quad=()=>{ const Q=P.filter((q,i)=>{ const a=P[(i+P.length-1)%P.length], b=P[(i+1)%P.length]; return Math.abs((q[0]-a[0])*(b[1]-a[1])-(q[1]-a[1])*(b[0]-a[0]))>1e-3*Math.hypot(b[0]-a[0],b[1]-a[1]); }); if(Q.length!==4) return null;
         const d=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]), [A,B,C,Dq]=Q, ns=Math.max(1,Math.round((d(A,B)+d(Dq,C))/2/DX)), nt=Math.max(1,Math.round((d(A,Dq)+d(B,C))/2/DX)), g=[];
-        for(let i=0;i<ns;i++) for(let j=0;j<nt;j++){ const u=(i+0.5)/ns, v=(j+0.5)/nt, p0=[0,1].map(c=>(1-v)*((1-u)*A[c]+u*B[c])+v*((1-u)*Dq[c]+u*C[c])); if(dentro(p0)) g.push(p0); }
+        for(let i=0;i<ns;i++) for(let j=0;j<nt;j++){ const u=(i+0.5)/ns, v=(j+0.5)/nt, p0=[0,1].map(c=>(1-v)*((1-u)*A[c]+u*B[c])+v*((1-u)*Dq[c]+u*C[c])); p0.li=[i,j]; if(dentro(p0)) g.push(p0); }
         return g.length===ns*nt?g:null; };
       const A0=arranjo(0), A1=arranjo(1), g=quad()||(!A1.length?A0:!A0.length?A1:(pior(A1)+0.05*A1.length<pior(A0)+0.05*A0.length?A1:A0));
       if(g.length>=2){ const tub=S.ele.escLuz==="tub"; luz=g; lampG={lamp:tub?"tub":"plafon",...(tub?{rot:W>=H?0:1}:{})}; } }
-    const cm=letra(), vaU=lampG?Math.max(LAMP_VA[lampG.lamp]||40,Math.ceil(va/luz.length/10)*10):Math.round(va/luz.length/10)*10;
-    const Ls=luz.map(p=>add({t:"luz",p,va:vaU,cmd:cm,...(lampG||{})}));
+    const cm=letra(), vaU=salao&&lampG?LUX_SALAO.w:lampG?Math.max(LAMP_VA[lampG.lamp]||40,Math.ceil(va/luz.length/10)*10):Math.round(va/luz.length/10)*10;
+    let Ls; if(salao&&lampG){ const VF1={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente]||[0,1], ng0=luz.length<=3?1:luz.length<=8?2:3, NOMES0=ng0===1?[""]:ng0===2?["frente","fundo"]:["frente","meio","fundo"]; let ng=ng0, NOMES=NOMES0;
+        const dd=p=>p[0]*VF1[0]+p[1]*VF1[1], ord=luz.map(p=>({p,d:dd(p)})).sort((a,b)=>b.d-a.d);
+        // fileiras da grade paralelas à frente: cada fileira (ou par de fileiras) é um circuito, para não misturar lâmpadas de fileiras diferentes
+        let gDe=null; if(luz.every(p=>p.li)){ const fil=ax=>{ const m=new Map(); luz.forEach(p=>{ const kq=p.li[ax]; if(!m.has(kq)) m.set(kq,[]); m.get(kq).push(p); }); return [...m.values()]; },
+            disp=F=>F.reduce((s0,l)=>{ const ds=l.map(dd), md=ds.reduce((a,b)=>a+b,0)/ds.length; return s0+ds.reduce((a,b)=>a+(b-md)**2,0); },0)/luz.length;
+          const F0=fil(1), F1=fil(0), F=disp(F0)<=disp(F1)?F0:F1; F.sort((a,b)=>b.reduce((s0,p)=>s0+dd(p),0)/b.length-a.reduce((s0,p)=>s0+dd(p),0)/a.length);
+          const nfil=F.length, ngF=Math.min(ng0,nfil<=3?nfil:Math.min(3,Math.ceil(nfil/2))), mp=new Map(); F.forEach((l,fi)=>l.forEach(p=>mp.set(p,Math.floor(fi*ngF/nfil))));
+          if(ngF>=1&&ngF<=3){ ng=ngF; NOMES=ng===1?[""]:ng===2?["frente","fundo"]:["frente","meio","fundo"]; gDe=p=>mp.get(p); } }
+        const tam=Math.ceil(ord.length/ng);
+        Ls=ord.map((o,i)=>{ const gI=gDe?gDe(o.p):Math.min(ng-1,Math.floor(i/tam)); return add({t:"luz",p:o.p,va:vaU,cmd:gI?cm+(gI+1):cm,grp:NOMES[gI],qdCmd:1,lm:LUX_SALAO.lm,...lampG}); });
+        r.luxEst=Math.round(luz.length*LUX_SALAO.lm*LUX_SALAO.cu*LUX_SALAO.fm/Math.max(1,r.area)); }
+    else Ls=luz.map(p=>add({t:"luz",p,va:vaU,cmd:cm,...(lampG||{})}));
     const portas=ABS.filter(o=>o.g.tipo!=="Janela").sort((a,b)=>(b.g.externa?1:0)-(a.g.externa?1:0));
     let it=null;
     for(const o of portas){ const dob=!!o.g.dob, cand=[dob?-0.15:o.g.l+0.15,dob?o.g.l+0.15:-0.15];
       for(const s of cand){ const p=o.F(s); if(livre(p,o.N,0.10,1.10)){ it={p,N:o.N,u:o.u,o,s}; break; } } if(it) break; }
-    if(it) add({t:"int",p:it.p,N:it.N,cmd:cm,liga:Ls.map(l=>l.p)}); else if(portas.length) aviso.push(`${r.n}: não achei parede livre ao lado da porta para o interruptor.`);
+    if(salao&&lampG){ /* sem interruptor: o lugar ao lado da porta fica reservado (as tomadas se afastam dele e o QD vai ali) */ } else if(it) add({t:"int",p:it.p,N:it.N,cmd:cm,liga:Ls.map(l=>l.p)}); else if(portas.length) aviso.push(`${r.n}: não achei parede livre ao lado da porta para o interruptor.`);
     R.qd=()=>{ // quadro de distribuição perto da porta de entrada (depois do interruptor)
       for(const o of portas.filter(o=>o.g.externa&&o.g.tipo==="Porta")){ const dob=!!o.g.dob, fora=o.g.lado!==o.sg, lt=dob?-1:1, l0=dob?0:o.g.l;
         const cs=[0.60,0.90,1.20].map(d=>l0+lt*d).concat((fora?[0.30,0.60]:[0.40,0.70]).map(d=>(dob?o.g.l:0)-lt*d));
@@ -2553,7 +2568,8 @@ function pontosEletricos(G,LM){
   const serv=q=>MOLHADA(q.tp)||q.tp==="garagem";
   const porAmb=f0=>{ const m=new Map(); P.filter(f0).forEach(q=>{ if(!m.has(q.r)) m.set(q.r,[]); m.get(q.r).push(q); }); return [...m.values()]; };
   if(S.ele.div!=="agrupa"){   // um circuito de iluminação e um de tomadas por ambiente (comando de cada cômodo separado no quadro)
-    porAmb(q=>q.t==="luz"||q.t==="arand").forEach(l=>encher(l,`Iluminação ${l[0].r.n}`,"ilum"));
+    { const m=new Map(); P.filter(q=>q.t==="luz"||q.t==="arand").forEach(q=>{ const kk=q.r.n+"|"+(q.grp||""); if(!m.has(kk)) m.set(kk,[]); m.get(kk).push(q); });
+      m.forEach(l=>encher(l,`Iluminação ${l[0].r.n}${l[0].grp?` (${l[0].grp})`:""}`,"ilum")); }
     porAmb(q=>q.t==="tug").forEach(l=>encher(l,`Tomadas ${l[0].r.n}`,"tug")); }
   else {
   encher(P.filter(q=>q.t==="luz"&&!serv(q)),"Iluminação social","ilum"); encher(P.filter(q=>(q.t==="luz"||q.t==="arand")&&serv(q)),"Iluminação serviço e externa","ilum");
@@ -2562,7 +2578,7 @@ function pontosEletricos(G,LM){
   encher(P.filter(q=>q.t==="tug"&&q.tp==="banho"),"TUG banheiros","tug");
   encher(P.filter(q=>q.t==="tug"&&!MOLHADA(q.tp)),"TUG social","tug"); }
   P.filter(q=>q.t==="tue").forEach(q=>{ const c=novoC(q.desc,"tue",q.v); c.va=q.va; c.pts.push(q); c.amb.add(q.r.n); c.dr=MOLHADA(q.tp); q.c=c.n; });
-  C.forEach(c=>{ if(c.tipo!=="tue"&&!c.desc.endsWith([...c.amb][0])) c.desc+=` (${[...c.amb].join(", ")})`;
+  C.forEach(c=>{ if(c.tipo!=="tue"&&!c.desc.includes([...c.amb][0])) c.desc+=` (${[...c.amb].join(", ")})`;
     c.ib=c.va/c.v; c.disj=[10,16,20,25,32,40,50,63].find(x=>x>=c.ib*1.0001&&(c.tipo==="ilum"||x>=16))||63;
     const IZ=[[1.5,17.5],[2.5,24],[4,32],[6,41],[10,57],[16,76]], min=c.tipo==="ilum"?1.5:2.5; c.fio=(IZ.find(([s,iz])=>s>=min&&iz>=c.disj)||[16])[0]; });
   // as luzes de um circuito ganham o número; interruptor herda o da luz que comanda
@@ -2600,7 +2616,7 @@ function simbolo(D,q){ const k=D.k*SIMB, l="ELSIMB", lt="ELTX", [x,y]=q.p, N=q.N
   if(q.alt==="a") PG(D,[A,B,T],l); else if(q.alt==="m") PG(D,[A,P(0,0.3),T],l);
   if(q.leg) return; if(q.t==="tue"){ TX(D,...P(0,4.1),q.ar?`ARC${q.btu||""}`:"TUE",1.1,{l:lt}); TX(D,...P(0,5.7),`${q.c}  ${q.va}`,1.1,{l:lt}); } else TX(D,...P(0,4.1),String(q.c),1.1,{l:lt}); }
 // rótulo da luz do Eliel: circuito à esquerda; potência e tipo à direita; letra do comando em cima
-function rotLuz(D,dir,esq,g,q,tipo){ const k=D.k*SIMB, lt="ELTX"; TX(D,esq[0]-g,esq[1],String(q.c),1.1,{a:"e",l:lt}); TX(D,dir[0]+g,dir[1]-0.2*k,String(q.va),1.1,{a:"s",l:lt}); TX(D,dir[0]+g,dir[1]+1.5*k,tipo,1.1,{a:"s",l:lt}); TX(D,dir[0]+g*0.3,dir[1]-2.1*k,String(q.cmd||""),1.1,{a:"s",l:lt}); }
+function rotLuz(D,dir,esq,g,q,tipo){ const k=D.k*SIMB, lt="ELTX"; TX(D,esq[0]-g,esq[1],String(q.c),1.1,{a:"e",l:lt}); TX(D,dir[0]+g,dir[1]-0.2*k,String(q.va),1.1,{a:"s",l:lt}); TX(D,dir[0]+g,dir[1]+1.5*k,tipo,1.1,{a:"s",l:lt}); if(!q.qdCmd) TX(D,dir[0]+g*0.3,dir[1]-2.1*k,String(q.cmd||""),1.1,{a:"s",l:lt}); }
 // condutores no eletroduto (NBR 5444): traços atravessando o tubo; fase = traço, neutro = traço com bolinha, retorno = traço com gancho, terra = traço com barra (T)
 const POL={20:'1/2"',25:'3/4"',32:'1"'};
 function simbFios(D,m,u,cond){ if(!cond||!cond.length) return; const k=D.k*SIMB, l="ELFIO", n=[-u[1],u[0]], ord={fase:0,neutro:1,retorno:2,terra:3}, cs=cond.slice().sort((a,b)=>ord[a[1]]-ord[b[1]]), passo=1.0*k, s0=-(cs.length-1)*passo/2, h=1.3*k;
@@ -2694,7 +2710,9 @@ function desenhoQDem(U,k,Z=1){ Z=Math.min(Z,1); const D=Dw(k), E=(U.RE||{}).ent;
   gradeVermelha(D,0,0,`Quadro de Demanda (${qdN(U)})`,[{t:"Tipo de carga",w:62,esq:1},{t:"Potência instalada|(kVA)",w:30,dir:1},{t:"Fator de demanda|(%)",w:28,dir:1},{t:"Demanda|(kVA)",w:22,dir:1}],rows,{tot:1,z:Z});
   return D; }
 const fitTab=(gz,bw,bh)=>{ let d=null; for(const Z of [1.5,1.3,1.15,1,0.85,0.72,0.6,0.5,0.42]){ d=naEscala(gz(Z),100); d.zt=Z; if(d.w<=bw&&d.h<=bh) break; } return d; };
-const notasEletrica=EL=>[...(EL.multi?[`Um quadro de distribuição por sala para alugar (${EL.UN.map(U=>`${U.qdNome}: ${U.nome}`).join("; ")}), cada um com o seu medidor.`]:[]),`Tensão ${EL.VF} V${EL.VF===127?" (chuveiro e ar-condicionado em 220 V)":""}. Potência instalada: ${f(EL.tot/1000)} kVA.`,`Quantidade e potência das tomadas e da iluminação pelo mínimo da NBR 5410.`,`Circuitos com DR 30 mA: banheiro, cozinha, lavanderia, garagem e áreas externas.`,`Fios: iluminação 1,5 mm², tomadas 2,5 mm², chuveiro conforme o quadro; queda de tensão conferida em cada circuito (até 4 %).`,`Interruptores a 1,10 m, ao lado da fechadura da porta; QD a 1,50 m do piso.`];
+const notasEletrica=EL=>[...(EL.multi?[`Um quadro de distribuição por sala para alugar (${EL.UN.map(U=>`${U.qdNome}: ${U.nome}`).join("; ")}), cada um com o seu medidor.`]:[]),`Tensão ${EL.VF} V${EL.VF===127?" (chuveiro e ar-condicionado em 220 V)":""}. Potência instalada: ${f(EL.tot/1000)} kVA.`,`Quantidade e potência das tomadas e da iluminação pelo mínimo da NBR 5410.`,`Circuitos com DR 30 mA: banheiro, cozinha, lavanderia, garagem e áreas externas.`,`Fios: iluminação 1,5 mm², tomadas 2,5 mm², chuveiro conforme o quadro; queda de tensão conferida em cada circuito (até 4 %).`,`Interruptores a 1,10 m, ao lado da fechadura da porta; QD a 1,50 m do piso.`,...(()=>{ const sl=[...new Set(EL.pts.filter(q=>q.qdCmd).map(q=>q.r))]; if(!sl.length) return [];
+    return [`Iluminação dos salões sem interruptor: liga e desliga nos disjuntores do QD da frente, em circuitos separados (${sl.map(r=>`${r.n}: ${[...new Set(EL.pts.filter(q=>q.qdCmd&&q.r===r).map(q=>q.grp).filter(Boolean))].join(", ")||"1 circuito"}`).join("; ")}). Banheiro e copa com interruptor.`,
+      `Salões: plafon LED ${LUX_SALAO.w} W (~${LUX_SALAO.lm} lm) de sobrepor; iluminância média estimada pelo método dos lúmens (CU ${f(LUX_SALAO.cu)}, FM ${f(LUX_SALAO.fm)}): ${sl.map(r=>`${r.n} ~${r.luxEst} lux`).join(", ")} (referência ${LUX_SALAO.alvo} lux, NBR ISO/CIE 8995-1).`]; })()];
 
 /* ---------------- Eletrodutos, fiação, queda de tensão, demanda e entrada (NBR 5410) ---------------- */
 const RHO=0.0179, DEXT={1.5:3.0,2.5:3.7,4:4.3,6:4.9,10:6.3,16:7.5,25:9.2,35:10.5}, ELD=[[20,15.4],[25,19.0],[32,24.9],[40,31.0]];

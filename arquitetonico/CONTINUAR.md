@@ -4,6 +4,7 @@ App: https://elielengenharia.github.io/rdo-eliel/arquitetonico/ (arquivo único 
 Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
 
 ## No ar (main)
+- 6.52 — salão comercial (escrit + uso comercial; S.ele.salaoInt="sim" volta o interruptor): sem interruptor, luz ligada nos disjuntores do QD em 1 a 3 circuitos por fileira (frente/meio/fundo); plafon LED 36 W ~3000 lm em malha de ~2 m (LUX_SALAO, ~300 lux, nota com iluminância estimada). Banheiro e copa seguem com interruptor.
 - 6.51 — DXF (desenho e prancha) no R12 estrito do AutoCAD: dxfR12() deixa nomes de layer/estilo só A-Z 0-9 $ _ - (sem acento/espaço, até 31), junta layers repetidos, tira $INSUNITS e a seta _DOT sem bloco. A prancha DXF baixava mas não abria no AutoCAD.
 - 6.50 — sala comercial/escritório: plafons LED (em vez de tubulares) distribuídos por igual na forma real da sala; sala de 4 lados ganha grade que acompanha as paredes (trapézio), outras formas escolhem fileiras ou colunas pela melhor cobertura.
 - 6.49 — revisão profissional do modelo Salas comerciais Av. Paraná: estrutura convencional (pilares, vigas, sapatas), calha 15 cm, banheiro com porta abrindo para fora e basculante, fossa no lote sem caixas no passeio, ar-condicionado e LED tubular, corte BB pela Sala 1, forro e portas no corte, níveis do corte corrigidos, linhas de corte curtas, arquitetônico em prancha única A0.
