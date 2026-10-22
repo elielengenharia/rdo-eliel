@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0e1013;--card:#16191d;--line:rgba(255,255,255,.09);--text:#f3efe8;--muted:#a9a49b;--gold:#c9a86a;--gold-2:#e2c78f}
+:root{--bg:#0e1013;--card:#16191d;--line:rgba(255,255,255,.09);--text:#f3efe8;--muted:#a9a49b;--gold:#c9a86a;--gold-2:#e2c78f;--erro:#e58a7a;--ok:#8fcf9a}
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#0e1013}}
 :root[data-theme="dark"]{--bg:#0e1013}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -31,6 +31,7 @@ header{display:flex;align-items:center;gap:14px;margin-bottom:34px}
 .mono{width:48px;height:48px;border-radius:50%;border:1.5px solid var(--gold);color:var(--gold);display:grid;place-items:center;font-family:"Cormorant Garamond",serif;font-weight:600;font-size:24px;flex-shrink:0}
 header b{display:block;font-family:"Cormorant Garamond",serif;font-weight:600;font-size:24px;line-height:1.05}
 header span{font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--muted)}
+header .novo{margin-left:auto}
 .kick{font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--gold);font-weight:700}
 h1{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:clamp(32px,7vw,48px);line-height:1.05;margin:6px 0 8px}
 .lead{color:var(--muted);font-size:14.5px;max-width:520px;line-height:1.5;margin-bottom:26px}
@@ -42,20 +43,63 @@ h1{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:clamp(32px,7
 .card small{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700}
 .card h2{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:23px;line-height:1.1;margin-top:3px}
 .card p{font-size:12.5px;color:var(--muted);margin-top:3px}
+.card .aviso{display:inline-block;margin-top:6px;font-size:11.5px;color:var(--gold-2)}
 .go{flex-shrink:0;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--gold-2),var(--gold));display:grid;place-items:center;color:#15120c;font-size:18px;font-weight:700}
 footer{margin-top:34px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}
-/* botões do card */
 .acts{display:flex;gap:8px;padding:0 16px 16px}
 .acts button{font:inherit;cursor:pointer;flex:1;padding:11px 10px;border-radius:12px;font-weight:700;font-size:13px}
 .acts .send{border:0;background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#15120c}
 .acts .copy{background:none;border:1px solid var(--line);color:var(--text)}
 .wa{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:12px;border:1px solid var(--line);color:var(--text);font-weight:600;font-size:13px}
+
+/* botões gerais */
+.btn{font:inherit;cursor:pointer;border-radius:12px;padding:11px 16px;font-weight:700;font-size:13.5px;border:1px solid var(--line);background:none;color:var(--text)}
+.btn.ouro{border:0;background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#15120c}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.mini{padding:8px 12px;font-size:12.5px}
+
+/* painel Novo projeto */
+.fundo{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.fundo.on{display:flex}
+@media (min-width:700px){.fundo{align-items:center}}
+.painel{background:#14171b;border:1px solid var(--line);border-radius:22px 22px 0 0;width:100%;max-width:560px;max-height:92vh;overflow:auto;padding:20px 18px calc(env(safe-area-inset-bottom) + 20px)}
+@media (min-width:700px){.painel{border-radius:22px}}
+.painel .topo{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.painel h3{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:26px}
+.fechar{font:inherit;background:none;border:0;color:var(--muted);font-size:26px;cursor:pointer;line-height:1;padding:4px 8px}
+.passo{display:none}.passo.on{display:block}
+label{display:block;font-size:12px;font-weight:700;letter-spacing:.4px;color:var(--muted);margin:14px 0 6px}
+input[type=text],input[type=password],select{width:100%;font:inherit;font-size:15px;color:var(--text);background:#0e1013;border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+input:focus,select:focus{outline:none;border-color:var(--gold)}
+.arquivo{display:flex;align-items:center;gap:12px;border:1.5px dashed rgba(201,168,106,.45);border-radius:14px;padding:14px;cursor:pointer}
+.arquivo b{display:block;font-size:14px}
+.arquivo span{font-size:12px;color:var(--muted)}
+.arquivo input{display:none}
+.previa{margin-top:12px;border-radius:14px;overflow:hidden;background:#1d2228;aspect-ratio:16/9;display:none;position:relative}
+.previa.on{display:block}
+.previa canvas{width:100%;height:100%;display:block}
+.previa em{position:absolute;left:10px;bottom:8px;font-size:11px;font-style:normal;color:#fff;background:rgba(0,0,0,.45);padding:3px 8px;border-radius:8px}
+.txt{font-size:13.5px;line-height:1.55;color:var(--muted)}
+.txt b{color:var(--text)}
+ol.txt{padding-left:20px;margin-top:8px}ol.txt li{margin:6px 0}
+.msg{font-size:13px;margin-top:12px;min-height:18px}
+.msg.erro{color:var(--erro)}.msg.ok{color:var(--ok)}
+.linha{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.linha .btn{flex:1}
+.barra{height:6px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:14px}
+.barra i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-2));transition:width .3s}
+.pronto{text-align:center;padding:6px 0}
+.pronto .ic{width:56px;height:56px;border-radius:50%;margin:4px auto 12px;display:grid;place-items:center;background:rgba(143,207,154,.14);color:var(--ok);font-size:28px}
+.link{word-break:break-all;font-size:13px;background:#0e1013;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:12px;color:var(--gold-2)}
+.rodape-painel{margin-top:18px;font-size:12px;color:var(--muted)}
+.rodape-painel button{font:inherit;background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0}
 </style>
 </head>
 <body>
 <header>
   <div class="mono">E</div>
   <div><b>Eliel Engenharia</b><span>&amp; Arquitetura · 3D</span></div>
+  <button class="btn ouro mini novo" id="bNovo">+ Novo projeto</button>
 </header>
 
 <div class="kick">Projetos em 3D</div>
@@ -69,28 +113,357 @@ footer{margin-top:34px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;j
   <a class="wa" href="https://wa.me/5594991405022?text=Ol%C3%A1%2C%20Eng.%20Eliel!%20Quero%20um%20projeto%203D." target="_blank" rel="noopener">Falar no WhatsApp</a>
 </footer>
 
-<script>
-// Para incluir um projeto novo, acrescente uma linha aqui.
-const PROJETOS = [
+<!-- ===== Novo projeto ===== -->
+<div class="fundo" id="fundo">
+  <div class="painel" role="dialog" aria-modal="true" aria-labelledby="tNovo">
+    <div class="topo"><h3 id="tNovo">Novo projeto 3D</h3><button class="fechar" id="bFechar" aria-label="Fechar">×</button></div>
+
+    <!-- passo 1: chave do GitHub (só na primeira vez) -->
+    <section class="passo" id="pChave">
+      <p class="txt">Na primeira vez, o app precisa de uma <b>chave do seu GitHub</b> para publicar os projetos. É feito uma vez só neste aparelho.</p>
+      <ol class="txt">
+        <li>Toque em <b>Criar chave no GitHub</b> e entre na sua conta.</li>
+        <li>Em <b>Token name</b>, escreva <b>Eliel 3D</b>. Em <b>Expiration</b>, escolha <b>No expiration</b>.</li>
+        <li>Em <b>Repository access</b>, marque <b>Only select repositories</b> e escolha <b>rdo-eliel</b>.</li>
+        <li>Em <b>Permissions</b> → <b>Contents</b>, escolha <b>Read and write</b>.</li>
+        <li>Toque em <b>Generate token</b>, copie a chave e cole aqui embaixo.</li>
+      </ol>
+      <div class="linha"><a class="btn" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" style="text-align:center">Criar chave no GitHub ↗</a></div>
+      <label for="iChave">Chave (começa com github_pat_)</label>
+      <input type="password" id="iChave" autocomplete="off" placeholder="github_pat_…">
+      <div class="msg" id="mChave"></div>
+      <div class="linha"><button class="btn ouro" id="bChave">Salvar chave</button></div>
+    </section>
+
+    <!-- passo 2: dados do projeto -->
+    <section class="passo" id="pDados">
+      <label class="arquivo" for="iArq">
+        <input type="file" id="iArq" accept=".dae,.zip,.kmz">
+        <div style="font-size:26px">📦</div>
+        <div><b id="nArq">Escolher a maquete</b><span id="sArq">Arquivo .dae, .zip ou .kmz exportado do SketchUp</span></div>
+      </label>
+      <div class="previa" id="previa"><canvas id="cPrev"></canvas><em>Esta imagem vira a capa do projeto</em></div>
+      <label for="iNome">Nome do projeto</label>
+      <input type="text" id="iNome" placeholder="Ex.: Residência Almeida">
+      <label for="iCli">Nome do cliente</label>
+      <input type="text" id="iCli" placeholder="Ex.: Sargento Almeida">
+      <label for="iTipo">Tipo</label>
+      <select id="iTipo"><option>Residencial</option><option>Comercial</option><option>Galpão</option><option>Reforma</option><option>Outro</option></select>
+      <label for="iDesc">Descrição curta (opcional)</label>
+      <input type="text" id="iDesc" placeholder="Ex.: Casa térrea com 3 quartos e área gourmet">
+      <div class="msg" id="mDados"></div>
+      <div class="linha"><button class="btn ouro" id="bPublicar" disabled>Publicar projeto</button></div>
+      <div class="rodape-painel">Chave do GitHub salva neste aparelho. <button id="bTrocaChave">Trocar chave</button></div>
+    </section>
+
+    <!-- passo 3: publicando -->
+    <section class="passo" id="pEnvio">
+      <p class="txt" id="tEnvio">Publicando…</p>
+      <div class="barra"><i id="barra"></i></div>
+      <div class="msg" id="mEnvio"></div>
+      <div class="linha" id="lEnvio" style="display:none"><button class="btn" id="bVoltar">Voltar</button></div>
+    </section>
+
+    <!-- passo 4: pronto -->
+    <section class="passo" id="pPronto">
+      <div class="pronto">
+        <div class="ic">✓</div>
+        <p class="txt"><b>Projeto publicado.</b><br>O link fica no ar em <b>1 a 2 minutos</b> (é o tempo do GitHub atualizar o site).</p>
+        <div class="link" id="lnk"></div>
+      </div>
+      <div class="linha"><button class="btn ouro" id="bEnviarNovo">Enviar ao cliente</button><button class="btn" id="bCopiarNovo">Copiar link</button></div>
+      <div class="linha"><button class="btn" id="bFim">Concluir</button></div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js';
+
+const DONO = 'elielengenharia', REPO = 'rdo-eliel', RAMO = 'main';
+const BASE = 'https://elielengenharia.github.io/rdo-eliel/3d/';
+const API = `https://api.github.com/repos/${DONO}/${REPO}`;
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- lista de projetos ----------
+let PROJETOS = [
   { pasta: 'dr-tarcio', nome: 'Residência Dr. Tárcio', cliente: 'Dr. Tárcio', tipo: 'Residencial', desc: 'Casa térrea com garagem coberta' },
 ];
-const lista = document.getElementById('lista');
-const BASE = 'https://elielengenharia.github.io/rdo-eliel/3d/';
-PROJETOS.forEach((p) => {
-  const link = BASE + p.pasta + '/';
-  const msg = `Olá, ${p.cliente}! Tudo bem?\n\nSegue o projeto 3D: *${p.nome}*.\nPelo celular você pode girar a casa, ver de dia e à noite, entrar pela Planta 3D e testar cores e pisos:\n\n${link}\n\nQualquer dúvida estou à disposição.\nEng. Eliel Dias Ribeiro — Eliel Engenharia & Arquitetura`;
-  const c = document.createElement('div'); c.className = 'card';
-  c.innerHTML = `<a href="${p.pasta}/"><div class="img" style="background-image:url('${p.pasta}/capa.jpg')"></div>
-    <div class="info"><div><small>${p.tipo} · Cliente: ${p.cliente}</small><h2>${p.nome}</h2><p>${p.desc}</p></div><span class="go">›</span></div></a>
-    <div class="acts"><button class="send">Enviar ao cliente</button><button class="copy">Copiar link</button></div>`;
-  c.querySelector('.send').addEventListener('click', () => { window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank'); });
-  c.querySelector('.copy').addEventListener('click', async (e) => {
-    try { await navigator.clipboard.writeText(link); e.target.textContent = 'Link copiado ✓'; }
-    catch (err) { prompt('Copie o link:', link); }
-    setTimeout(() => (e.target.textContent = 'Copiar link'), 2200);
+const recentes = () => { try { return JSON.parse(localStorage.getItem('er3d-recentes') || '[]'); } catch { return []; } };
+function mensagem(p, link) {
+  return `Olá, ${p.cliente}! Tudo bem?\n\nSegue o projeto 3D: *${p.nome}*.\nPelo celular você pode girar a casa, ver de dia e à noite, entrar pela Planta 3D e testar cores e pisos:\n\n${link}\n\nQualquer dúvida estou à disposição.\nEng. Eliel Dias Ribeiro — Eliel Engenharia & Arquitetura`;
+}
+async function copiar(link, btn, rotulo) {
+  try { await navigator.clipboard.writeText(link); btn.textContent = 'Link copiado ✓'; }
+  catch { prompt('Copie o link:', link); }
+  setTimeout(() => (btn.textContent = rotulo), 2200);
+}
+function desenhar() {
+  const lista = $('#lista'); lista.innerHTML = '';
+  // projetos que acabaram de ser publicados e o site ainda não mostra
+  const pastas = new Set(PROJETOS.map((p) => p.pasta));
+  const pend = recentes().filter((p) => !pastas.has(p.pasta));
+  [...pend.map((p) => ({ ...p, pendente: true })), ...PROJETOS].forEach((p) => {
+    const link = BASE + p.pasta + '/';
+    const c = document.createElement('div'); c.className = 'card';
+    c.innerHTML = `<a href="${esc(p.pasta)}/"><div class="img" style="background-image:url('${esc(p.pasta)}/capa.jpg')"></div>
+      <div class="info"><div><small>${esc(p.tipo)} · Cliente: ${esc(p.cliente)}</small><h2>${esc(p.nome)}</h2>${p.desc ? `<p>${esc(p.desc)}</p>` : ''}${p.pendente ? '<span class="aviso">Publicando — fica no ar em 1 a 2 minutos</span>' : ''}</div><span class="go">›</span></div></a>
+      <div class="acts"><button class="send">Enviar ao cliente</button><button class="copy">Copiar link</button></div>`;
+    c.querySelector('.send').addEventListener('click', () => window.open('https://wa.me/?text=' + encodeURIComponent(mensagem(p, link)), '_blank'));
+    c.querySelector('.copy').addEventListener('click', (e) => copiar(link, e.target, 'Copiar link'));
+    lista.appendChild(c);
   });
-  lista.appendChild(c);
+}
+desenhar();
+fetch('projetos.json?v=' + Date.now(), { cache: 'no-store' })
+  .then((r) => (r.ok ? r.json() : null))
+  .then((d) => { if (Array.isArray(d) && d.length) { PROJETOS = d; desenhar(); } })
+  .catch(() => {});
+
+// ---------- painel ----------
+const passos = ['pChave', 'pDados', 'pEnvio', 'pPronto'];
+const mostrar = (id) => passos.forEach((p) => $('#' + p).classList.toggle('on', p === id));
+const lerChave = () => { try { return localStorage.getItem('er3d-chave') || ''; } catch { return ''; } };
+let enviando = false;
+$('#bNovo').addEventListener('click', () => { $('#fundo').classList.add('on'); mostrar(lerChave() ? 'pDados' : 'pChave'); });
+const fechar = () => { if (enviando) return; $('#fundo').classList.remove('on'); };
+$('#bFechar').addEventListener('click', fechar);
+$('#fundo').addEventListener('click', (e) => { if (e.target.id === 'fundo') fechar(); });
+$('#bTrocaChave').addEventListener('click', () => { $('#iChave').value = ''; $('#mChave').textContent = ''; mostrar('pChave'); });
+
+async function gh(caminho, opcoes = {}, chave = lerChave()) {
+  const r = await fetch(caminho.startsWith('http') ? caminho : API + caminho, {
+    ...opcoes,
+    headers: { Authorization: 'Bearer ' + chave, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opcoes.body ? { 'Content-Type': 'application/json' } : {}) },
+  });
+  if (!r.ok) {
+    let det = ''; try { det = (await r.json()).message || ''; } catch {}
+    const e = new Error(det || ('HTTP ' + r.status)); e.status = r.status; throw e;
+  }
+  return r.status === 204 ? null : r.json();
+}
+
+$('#bChave').addEventListener('click', async () => {
+  const chave = $('#iChave').value.trim(); const m = $('#mChave');
+  if (!chave) { m.className = 'msg erro'; m.textContent = 'Cole a chave primeiro.'; return; }
+  m.className = 'msg'; m.textContent = 'Conferindo a chave…'; $('#bChave').disabled = true;
+  try {
+    const repo = await gh('', {}, chave);
+    if (!repo.permissions?.push) throw Object.assign(new Error('sem permissão'), { status: 403 });
+    localStorage.setItem('er3d-chave', chave);
+    m.className = 'msg ok'; m.textContent = 'Chave certa ✓';
+    setTimeout(() => mostrar('pDados'), 500);
+  } catch (e) {
+    m.className = 'msg erro';
+    m.textContent = e.status === 401 ? 'Essa chave não foi aceita. Confira se copiou ela inteira.'
+      : (e.status === 403 || e.status === 404) ? 'A chave não tem acesso ao rdo-eliel. Refaça marcando o repositório rdo-eliel e Contents: Read and write.'
+      : 'Não deu para conferir agora (' + e.message + '). Veja a internet e tente de novo.';
+  } finally { $('#bChave').disabled = false; }
 });
+
+// ---------- arquivo da maquete ----------
+let dae = null, capa = null;
+async function lerMaquete(file) {
+  const nome = file.name.toLowerCase();
+  if (nome.endsWith('.dae')) return await file.text();
+  if (nome.endsWith('.zip') || nome.endsWith('.kmz')) {
+    const zip = await JSZip.loadAsync(file);
+    const daes = Object.values(zip.files).filter((f) => !f.dir && f.name.toLowerCase().endsWith('.dae') && !f.name.startsWith('__MACOSX'));
+    if (!daes.length) throw new Error('Não achei nenhum arquivo .dae dentro do ' + (nome.endsWith('.kmz') ? '.kmz' : '.zip') + '.');
+    daes.sort((a, b) => (b._data?.uncompressedSize || 0) - (a._data?.uncompressedSize || 0));
+    return await daes[0].async('string');
+  }
+  if (nome.endsWith('.skp')) throw new Error('Esse é o arquivo do SketchUp (.skp). No SketchUp, use Arquivo → Exportar → Modelo 3D → COLLADA (.dae), e escolha o .dae aqui.');
+  throw new Error('Use um arquivo .dae, .zip ou .kmz exportado do SketchUp.');
+}
+
+$('#iArq').addEventListener('change', async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const m = $('#mDados'); dae = null; capa = null; validar();
+  $('#nArq').textContent = file.name;
+  $('#sArq').textContent = (file.size / 1048576).toFixed(1).replace('.', ',') + ' MB · lendo…';
+  m.className = 'msg'; m.textContent = '';
+  try {
+    const txt = await lerMaquete(file);
+    if (!/<COLLADA[\s>]/i.test(txt.slice(0, 4000))) throw new Error('O arquivo não parece ser um COLLADA (.dae) válido.');
+    capa = await previa(txt);
+    dae = txt;
+    $('#sArq').textContent = (new Blob([txt]).size / 1048576).toFixed(1).replace('.', ',') + ' MB · maquete pronta ✓';
+    if (!$('#iNome').value) {
+      const base = file.name.replace(/\.(dae|zip|kmz)$/i, '').replace(/[_]+/g, ' ').replace(/\s+\d+$/, '').trim();
+      $('#iNome').value = base.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+    }
+  } catch (err) {
+    console.error(err);
+    $('#sArq').textContent = 'Arquivo .dae, .zip ou .kmz exportado do SketchUp';
+    m.className = 'msg erro'; m.textContent = err.message || 'Não consegui abrir essa maquete.';
+    $('#previa').classList.remove('on');
+  }
+  validar();
+});
+
+// prévia rápida da casa (também vira a capa)
+let rPrev = null;
+async function previa(txt) {
+  const cv = $('#cPrev'); $('#previa').classList.add('on');
+  const W = 1280, H = 720;
+  if (!rPrev) rPrev = new THREE.WebGLRenderer({ canvas: cv, antialias: true, preserveDrawingBuffer: true });
+  rPrev.setPixelRatio(1); rPrev.setSize(W, H, false); rPrev.outputColorSpace = THREE.SRGBColorSpace;
+  rPrev.shadowMap.enabled = true; rPrev.shadowMap.type = THREE.PCFSoftShadowMap;
+  rPrev.toneMapping = THREE.ACESFilmicToneMapping; rPrev.toneMappingExposure = 1.05;
+
+  const man = new THREE.LoadingManager();
+  const BRANCO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
+  man.setURLModifier((u) => (/\.(png|jpe?g|bmp|tif+)$/i.test(u) ? BRANCO : u));
+  const col = new ColladaLoader(man).parse(txt, '');
+  const modelo = col.scene;
+  const cena = new THREE.Scene();
+  cena.add(modelo); modelo.updateMatrixWorld(true);
+  const tirar = [];
+  modelo.traverse((o) => {
+    if (o.isLine || o.isLineSegments) { tirar.push(o); return; }
+    if (o.isMesh) {
+      const conv = (mt) => {
+        const vidro = (mt.opacity ?? 1) < 0.95 || /vidro|glass|transl/i.test(mt.name || '');
+        return new THREE.MeshStandardMaterial({ color: mt.color ? mt.color.clone() : 0xdddddd, roughness: vidro ? 0.1 : 0.85, metalness: 0, transparent: vidro, opacity: vidro ? 0.45 : 1, side: THREE.DoubleSide });
+      };
+      o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material);
+      o.castShadow = true; o.receiveShadow = true;
+    }
+  });
+  tirar.forEach((o) => o.parent.remove(o));
+  const caixa = new THREE.Box3().setFromObject(modelo);
+  if (caixa.isEmpty()) throw new Error('A maquete veio vazia. Confira se exportou o modelo inteiro.');
+  const centro = caixa.getCenter(new THREE.Vector3()), tam = caixa.getSize(new THREE.Vector3());
+  const raio = tam.length() / 2;
+
+  cena.background = new THREE.Color('#9cc3e6');
+  cena.add(new THREE.HemisphereLight(0xdfeeff, 0x5d6b4a, 1.1));
+  const sol = new THREE.DirectionalLight(0xfff1dc, 2.4);
+  sol.position.set(centro.x + raio * 1.2, caixa.max.y + raio * 1.6, centro.z + raio * 0.9);
+  sol.target.position.copy(centro); cena.add(sol, sol.target);
+  sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048);
+  const sc = sol.shadow.camera; sc.left = -raio * 1.5; sc.right = raio * 1.5; sc.top = raio * 1.5; sc.bottom = -raio * 1.5; sc.far = raio * 8;
+  const chao = new THREE.Mesh(new THREE.CircleGeometry(raio * 12, 48), new THREE.MeshStandardMaterial({ color: '#6f9a4e', roughness: 1 }));
+  chao.rotation.x = -Math.PI / 2; chao.position.set(centro.x, caixa.min.y - 0.01, centro.z); chao.receiveShadow = true; cena.add(chao);
+
+  const cam = new THREE.PerspectiveCamera(42, W / H, Math.max(0.05, raio / 500), raio * 40);
+  let skCam = null; modelo.traverse((o) => { if (o.isCamera && !skCam) skCam = o; });
+  if (skCam) {
+    const pos = skCam.getWorldPosition(new THREE.Vector3()), dir = skCam.getWorldDirection(new THREE.Vector3());
+    const alvo = new THREE.Ray(pos, dir).closestPointToPoint(centro, new THREE.Vector3());
+    cam.position.copy(pos); cam.lookAt(alvo);
+  } else {
+    const d = raio * 1.9;
+    cam.position.set(centro.x - d * 0.35, caixa.min.y + raio * 0.55, centro.z + d * 0.85); cam.lookAt(centro);
+  }
+  rPrev.render(cena, cam);
+  const blob = await new Promise((ok) => cv.toBlob(ok, 'image/jpeg', 0.86));
+  rPrev.renderLists.dispose();
+  return blob;
+}
+
+const camposOk = () => dae && $('#iNome').value.trim() && $('#iCli').value.trim();
+function validar() { $('#bPublicar').disabled = !camposOk(); }
+['#iNome', '#iCli'].forEach((s) => $(s).addEventListener('input', validar));
+
+// ---------- publicar ----------
+const semAcento = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+const fazPasta = (s) => semAcento(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'projeto';
+function b64deBytes(bytes) {
+  let s = ''; const P = 0x8000;
+  for (let i = 0; i < bytes.length; i += P) s += String.fromCharCode.apply(null, bytes.subarray(i, i + P));
+  return btoa(s);
+}
+const b64deTexto = (t) => b64deBytes(new TextEncoder().encode(t));
+const b64deBlob = async (b) => b64deBytes(new Uint8Array(await b.arrayBuffer()));
+function progresso(n, txt) { $('#barra').style.width = n + '%'; if (txt) $('#tEnvio').textContent = txt; }
+
+let publicado = null;
+$('#bPublicar').addEventListener('click', async () => {
+  if (!camposOk()) return;
+  const nome = $('#iNome').value.trim(), cliente = $('#iCli').value.trim(), tipo = $('#iTipo').value, desc = $('#iDesc').value.trim();
+  enviando = true; mostrar('pEnvio'); $('#lEnvio').style.display = 'none'; $('#mEnvio').textContent = '';
+  try {
+    progresso(5, 'Conferindo o site…');
+    const ref = await gh(`/git/ref/heads/${RAMO}`);
+    const commitBase = await gh(`/git/commits/${ref.object.sha}`);
+    const arvore = await gh(`/git/trees/${commitBase.tree.sha}?recursive=1`);
+    const existe = new Set(arvore.tree.map((t) => t.path));
+    const sha = (p) => arvore.tree.find((t) => t.path === p)?.sha;
+
+    let pasta = fazPasta(nome), n = 2;
+    while (existe.has('3d/' + pasta + '/index.html')) pasta = fazPasta(nome) + '-' + n++;
+    const arq = pasta.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join('-');
+
+    progresso(12, 'Montando a página do projeto…');
+    let pagina = await (await fetch('modelo/visualizador.html?v=' + Date.now(), { cache: 'no-store' })).text();
+    const troca = { __NOME__: esc(nome), __APELIDO__: esc(cliente.length > 18 ? nome.slice(0, 18) : cliente) + ' 3D', __PASTA__: pasta, __ARQ__: arq };
+    for (const [k, v] of Object.entries(troca)) pagina = pagina.split(k).join(v);
+    const manifesto = JSON.stringify({
+      name: nome + ' · Projeto 3D', short_name: (cliente.length > 18 ? nome.slice(0, 18) : cliente) + ' 3D',
+      description: 'Projeto 3D interativo — Eliel Engenharia & Arquitetura', start_url: './index.html', scope: './', display: 'standalone',
+      background_color: '#0e1013', theme_color: '#0e1013', lang: 'pt-BR',
+      icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }],
+    }, null, 2) + '\n';
+
+    // lista atualizada (lida direto do GitHub, a versão mais nova)
+    let lista = [];
+    try { const atual = await gh(`/contents/3d/projetos.json?ref=${RAMO}`); lista = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(atual.content.replace(/\n/g, '')), (c) => c.charCodeAt(0)))); } catch {}
+    if (!Array.isArray(lista) || !lista.length) lista = PROJETOS.slice();
+    const novo = { pasta, nome, cliente, tipo, desc };
+    lista = [novo, ...lista.filter((p) => p.pasta !== pasta)];
+
+    progresso(20, 'Enviando a maquete… (pode levar alguns minutos)');
+    const blobDae = await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: b64deTexto(dae), encoding: 'base64' }) });
+    progresso(70, 'Enviando a capa e a página…');
+    const blobPag = await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: b64deTexto(pagina), encoding: 'base64' }) });
+    const blobCapa = capa ? await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: await b64deBlob(capa), encoding: 'base64' }) }) : null;
+    const blobMan = await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: b64deTexto(manifesto), encoding: 'base64' }) });
+    const blobLista = await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: b64deTexto(JSON.stringify(lista, null, 2) + '\n'), encoding: 'base64' }) });
+
+    progresso(85, 'Publicando no site…');
+    const P = '3d/' + pasta + '/';
+    const itens = [
+      { path: P + 'index.html', sha: blobPag.sha },
+      { path: P + 'modelo.dae', sha: blobDae.sha },
+      { path: P + 'manifest.json', sha: blobMan.sha },
+      { path: '3d/projetos.json', sha: blobLista.sha },
+    ];
+    if (blobCapa) itens.push({ path: P + 'capa.jpg', sha: blobCapa.sha });
+    for (const ic of ['icon-180.png', 'icon-192.png', 'icon-512.png']) { const s = sha('3d/' + ic); if (s) itens.push({ path: P + ic, sha: s }); }
+    const novaArvore = await gh('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: commitBase.tree.sha, tree: itens.map((i) => ({ ...i, mode: '100644', type: 'blob' })) }) });
+    const commit = await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message: `3D: novo projeto ${nome} (${cliente})`, tree: novaArvore.sha, parents: [ref.object.sha] }) });
+    await gh(`/git/refs/heads/${RAMO}`, { method: 'PATCH', body: JSON.stringify({ sha: commit.sha }) });
+    progresso(100);
+
+    try { localStorage.setItem('er3d-recentes', JSON.stringify([novo, ...recentes().filter((p) => p.pasta !== pasta)].slice(0, 10))); } catch {}
+    PROJETOS = lista; desenhar();
+    publicado = { ...novo, link: BASE + pasta + '/' };
+    $('#lnk').textContent = publicado.link;
+    enviando = false; mostrar('pPronto');
+    // limpa o formulário para o próximo
+    dae = null; capa = null; $('#iArq').value = ''; ['#iNome', '#iCli', '#iDesc'].forEach((s) => ($(s).value = ''));
+    $('#nArq').textContent = 'Escolher a maquete'; $('#sArq').textContent = 'Arquivo .dae, .zip ou .kmz exportado do SketchUp'; $('#previa').classList.remove('on'); validar();
+  } catch (e) {
+    console.error(e);
+    enviando = false;
+    const m = $('#mEnvio'); m.className = 'msg erro';
+    m.textContent = e.status === 401 ? 'A chave do GitHub não vale mais. Toque em Voltar → Trocar chave.'
+      : e.status === 409 || e.status === 422 ? 'O site mudou enquanto publicava. Toque em Voltar e publique de novo.'
+      : e.status === 413 || /too large/i.test(e.message) ? 'A maquete ficou grande demais (limite de 100 MB). No SketchUp, apague o que não precisa (móveis, árvores, entorno) e exporte de novo.'
+      : 'Não consegui publicar: ' + e.message + '. Veja a internet e tente de novo.';
+    $('#tEnvio').textContent = 'Não publicou.'; $('#lEnvio').style.display = 'flex';
+  }
+});
+$('#bVoltar').addEventListener('click', () => mostrar('pDados'));
+$('#bEnviarNovo').addEventListener('click', () => publicado && window.open('https://wa.me/?text=' + encodeURIComponent(mensagem(publicado, publicado.link)), '_blank'));
+$('#bCopiarNovo').addEventListener('click', (e) => publicado && copiar(publicado.link, e.target, 'Copiar link'));
+$('#bFim').addEventListener('click', () => $('#fundo').classList.remove('on'));
 </script>
 </body>
 </html>

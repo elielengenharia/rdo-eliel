@@ -1,7 +1,7 @@
 // Eliel Engenharia — Service Worker v4
 // Página: busca primeiro na internet (pega sempre a versão nova) e usa o cache só quando estiver sem sinal.
 // Demais arquivos: usa o cache e atualiza em segundo plano.
-const CACHE = 'eliel-rdo-v4-5';
+const CACHE = 'eliel-rdo-v4-6';
 const ARQUIVOS = ['./', './index.html', './manifest.json', './logo.jpg', './icon-192.png', './icon-512.png', './modelo-cronograma.xlsx'];
 
 self.addEventListener('install', e => {
@@ -18,8 +18,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || !req.url.startsWith(self.location.origin)) return;
-  // os apps das subpastas (fundacao/, arquitetonico/) têm service worker próprio
-  if (/\/(fundacao|arquitetonico)\//.test(new URL(req.url).pathname)) return;
+  // os apps das subpastas (fundacao/, arquitetonico/, 3d/) cuidam do próprio carregamento
+  if (/\/(fundacao|arquitetonico|3d)\//.test(new URL(req.url).pathname)) return;
   const ehPagina = req.mode === 'navigate' || req.destination === 'document';
   if (ehPagina) {
     e.respondWith(
