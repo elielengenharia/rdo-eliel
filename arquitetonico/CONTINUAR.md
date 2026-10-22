@@ -4,6 +4,7 @@ App: https://elielengenharia.github.io/rdo-eliel/arquitetonico/ (arquivo único 
 Detalhador de Fundação: https://elielengenharia.github.io/rdo-eliel/fundacao/
 
 ## No ar (main)
+- 6.54 — elétrico com rigor NBR 5410: FCT pela temperatura sobre o forro (S.ele.tAmb, padrão 40 °C = 0,87), máx. 2 circuitos por eletroduto (FCA 0,80), cobre a 70 °C (rho 0,0206), entrada 2F+N/3F+N com 3 condutores carregados (IZB1_3); tomadas de escritório comercial (≤40 m²: 1/3 m perím. ou 1/4 m²; >40 m²: 10 + 1/10 m²; 200 VA); circuitos divididos por igual; ar-condicionado longe da fachada; quadro de demanda comercial; material do A0 soma todos os QDs; notas de critério, curto (3 kA), fixação no forro e padrão NT.001. Conferência independente em scratchpad/verif.py.
 - 6.53 — revisão do elétrico: materialEletrico soma eletrodutos, fios e entrada de todos os QDs (antes só o QD1); DR 30 mA em todas as TUG no uso comercial; plafon dos salões nomeado com 36 W na lista.
 - 6.52 — salão comercial (escrit + uso comercial; S.ele.salaoInt="sim" volta o interruptor): sem interruptor, luz ligada nos disjuntores do QD em 1 a 3 circuitos por fileira (frente/meio/fundo); plafon LED 36 W ~3000 lm em malha de ~2 m (LUX_SALAO, ~300 lux, nota com iluminância estimada). Banheiro e copa seguem com interruptor.
 - 6.51 — DXF (desenho e prancha) no R12 estrito do AutoCAD: dxfR12() deixa nomes de layer/estilo só A-Z 0-9 $ _ - (sem acento/espaço, até 31), junta layers repetidos, tira $INSUNITS e a seta _DOT sem bloco. A prancha DXF baixava mas não abria no AutoCAD.
