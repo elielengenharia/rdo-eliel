@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.52 · salão comercial: luz ligada nos disjuntores do QD, sem interruptor", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.53 · elétrico revisado: material somando todos os quadros e DR nas tomadas do comercial", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2564,7 +2564,7 @@ function pontosEletricos(G,LM){
   const circuitos=P=>{
   // circuitos
   const C=[], lim=v127?1270:2200, novoC=(desc,tipo,v)=>{ const c={n:C.length+1,desc,tipo,v,va:0,pts:[],amb:new Set(),dr:false}; C.push(c); return c; };
-  const encher=(lista,desc,tipo)=>{ let c=null; lista.forEach(q=>{ if(!c||c.va+q.va>lim){ c=novoC(desc,tipo,VF); } c.va+=q.va; c.pts.push(q); c.amb.add(q.r.n); if(MOLHADA(q.tp)||q.tp==="garagem") c.dr=true; q.c=c.n; }); };
+  const encher=(lista,desc,tipo)=>{ let c=null; lista.forEach(q=>{ if(!c||c.va+q.va>lim){ c=novoC(desc,tipo,VF); } c.va+=q.va; c.pts.push(q); c.amb.add(q.r.n); if(MOLHADA(q.tp)||q.tp==="garagem"||(tipo==="tug"&&S.uso==="comercial")) c.dr=true; q.c=c.n; }); };
   const serv=q=>MOLHADA(q.tp)||q.tp==="garagem";
   const porAmb=f0=>{ const m=new Map(); P.filter(f0).forEach(q=>{ if(!m.has(q.r)) m.set(q.r,[]); m.get(q.r).push(q); }); return [...m.values()]; };
   if(S.ele.div!=="agrupa"){   // um circuito de iluminação e um de tomadas por ambiente (comando de cada cômodo separado no quadro)
@@ -2710,7 +2710,7 @@ function desenhoQDem(U,k,Z=1){ Z=Math.min(Z,1); const D=Dw(k), E=(U.RE||{}).ent;
   gradeVermelha(D,0,0,`Quadro de Demanda (${qdN(U)})`,[{t:"Tipo de carga",w:62,esq:1},{t:"Potência instalada|(kVA)",w:30,dir:1},{t:"Fator de demanda|(%)",w:28,dir:1},{t:"Demanda|(kVA)",w:22,dir:1}],rows,{tot:1,z:Z});
   return D; }
 const fitTab=(gz,bw,bh)=>{ let d=null; for(const Z of [1.5,1.3,1.15,1,0.85,0.72,0.6,0.5,0.42]){ d=naEscala(gz(Z),100); d.zt=Z; if(d.w<=bw&&d.h<=bh) break; } return d; };
-const notasEletrica=EL=>[...(EL.multi?[`Um quadro de distribuição por sala para alugar (${EL.UN.map(U=>`${U.qdNome}: ${U.nome}`).join("; ")}), cada um com o seu medidor.`]:[]),`Tensão ${EL.VF} V${EL.VF===127?" (chuveiro e ar-condicionado em 220 V)":""}. Potência instalada: ${f(EL.tot/1000)} kVA.`,`Quantidade e potência das tomadas e da iluminação pelo mínimo da NBR 5410.`,`Circuitos com DR 30 mA: banheiro, cozinha, lavanderia, garagem e áreas externas.`,`Fios: iluminação 1,5 mm², tomadas 2,5 mm², chuveiro conforme o quadro; queda de tensão conferida em cada circuito (até 4 %).`,`Interruptores a 1,10 m, ao lado da fechadura da porta; QD a 1,50 m do piso.`,...(()=>{ const sl=[...new Set(EL.pts.filter(q=>q.qdCmd).map(q=>q.r))]; if(!sl.length) return [];
+const notasEletrica=EL=>[...(EL.multi?[`Um quadro de distribuição por sala para alugar (${EL.UN.map(U=>`${U.qdNome}: ${U.nome}`).join("; ")}), cada um com o seu medidor.`]:[]),`Tensão ${EL.VF} V${EL.VF===127?" (chuveiro e ar-condicionado em 220 V)":""}. Potência instalada: ${f(EL.tot/1000)} kVA.`,`Quantidade e potência das tomadas e da iluminação pelo mínimo da NBR 5410.`,`Circuitos com DR 30 mA: banheiro, cozinha, lavanderia, garagem e áreas externas${S.uso==="comercial"?", e todas as tomadas de uso geral":""}.`,`Fios: iluminação 1,5 mm², tomadas 2,5 mm², chuveiro conforme o quadro; queda de tensão conferida em cada circuito (até 4 %).`,`Interruptores a 1,10 m, ao lado da fechadura da porta; QD a 1,50 m do piso.`,...(()=>{ const sl=[...new Set(EL.pts.filter(q=>q.qdCmd).map(q=>q.r))]; if(!sl.length) return [];
     return [`Iluminação dos salões sem interruptor: liga e desliga nos disjuntores do QD da frente, em circuitos separados (${sl.map(r=>`${r.n}: ${[...new Set(EL.pts.filter(q=>q.qdCmd&&q.r===r).map(q=>q.grp).filter(Boolean))].join(", ")||"1 circuito"}`).join("; ")}). Banheiro e copa com interruptor.`,
       `Salões: plafon LED ${LUX_SALAO.w} W (~${LUX_SALAO.lm} lm) de sobrepor; iluminância média estimada pelo método dos lúmens (CU ${f(LUX_SALAO.cu)}, FM ${f(LUX_SALAO.fm)}): ${sl.map(r=>`${r.n} ~${r.luxEst} lux`).join(", ")} (referência ${LUX_SALAO.alvo} lux, NBR ISO/CIE 8995-1).`]; })()];
 
@@ -2791,14 +2791,18 @@ function redeEletrica(G,EL){
     nF,a,b,cAr,fa,fb,Dm,carga,Ib,geral,polosG:nF===1?2:nF,sEnt,sMin,eMinD:eMin[0],Lent,eEnt:{d:eEnt[0],pol:eEnt[1]},dvEnt:dvE(sEnt),dvMaxE,sPE,drIn,drP,dr:drC.map(c=>c.n),reserva,mod,qdMod,uc:Vfn===127?175:275};
   (S.eleTub||[]).forEach(t=>{ const P=(t.pts||[]).map(q=>[+q[0],+q[1]]); let Lt=0; for(let i=1;i<P.length;i++) Lt+=d2(P[i],P[i-1]); const d=+t.d||25; eletr[d]=(eletr[d]||0)+Lt; });   // eletrodutos desenhados à mão
   return {N,TR,fios,eletr,ent,pd}; }
-function materialEletrico(EL){ const R=EL.RE; if(!R) return []; const E=R.ent, M=[], n=t=>EL.pts.filter(q=>q.t===t).length;
+function materialEletrico(EL){ const RS=(EL.UN&&EL.UN.length?EL.UN.map(U=>U.RE):[EL.RE]).filter(Boolean); if(!RS.length) return []; const E=RS[0].ent, M=[], n=t=>EL.pts.filter(q=>q.t===t).length;
+  // um quadro por sala: soma eletrodutos e fios de todos os QDs (6.53; antes só entrava o QD1)
+  const R={eletr:{},fios:{}}; RS.forEach(r=>{ Object.entries(r.eletr).forEach(([k0,v])=>R.eletr[k0]=(R.eletr[k0]||0)+v); Object.entries(r.fios).forEach(([k0,v])=>R.fios[k0]=(R.fios[k0]||0)+v); });
+  const ES=RS.map(r=>r.ent), nQ=ES.length, porQ=nQ>1?` (${nQ} quadros)`:"";
   Object.entries(R.eletr).sort((x,y)=>x[0]-y[0]).forEach(([d,m])=>{ const mm=m*1.10; M.push([`Eletroduto PVC corrugado ø${d} mm`,"m",mm,mm<25?`${Math.ceil(mm)} m (a metro)`:`${Math.ceil(mm/50)} rolo(s) de 50 m`]); });
   const cor={fase:"fase (preto/vermelho)",neutro:"neutro (azul claro)",terra:"terra (verde)",retorno:"retorno (amarelo)"};
   Object.entries(R.fios).map(([k0,m])=>{ const [s,t]=k0.split("|"); return {s:+s,t,m:m*1.15}; }).sort((x,y)=>x.s-y.s||Object.keys(cor).indexOf(x.t)-Object.keys(cor).indexOf(y.t))
     .forEach(o=>M.push([`Cabo flexível ${f(o.s,1)} mm² 750 V, ${cor[o.t]}`,"m",o.m,o.m<50?`${Math.ceil(o.m)} m (a metro)`:`${Math.ceil(o.m/100)} rolo(s) de 100 m`]));
-  const nCond=E.nF+1; M.push([`Cabo de entrada ${f(E.sEnt,0)} mm² (${E.nF}F+N), padrão até o QD`,"m",(E.Lent+3)*nCond,`${E.Lent+3} m de cada condutor`]);
-  M.push([`Cabo terra ${f(E.sPE,0)} mm² (QD até a haste)`,"m",E.Lent+3,"-"]); M.push([`Eletroduto PVC rígido ø${E.eEnt.d} mm (${E.eEnt.pol}) do medidor ao QD`,"m",E.Lent+1,`${Math.ceil((E.Lent+1)/3)} barra(s) de 3 m`]);
-  { const lp={}; EL.pts.filter(q=>q.t==="luz").forEach(q=>{ const k0=q.lamp||"bulbo"; lp[k0]=(lp[k0]||0)+1; }); Object.entries(lp).filter(([k0])=>k0!=="bulbo").forEach(([k0,c])=>M.push([LAMP_NOME[k0]||"Lâmpada","un",c,"-"])); if(n("arand")) M.push(["Arandela de parede com lâmpada LED","un",n("arand"),"-"]); }
+  const soma=fn=>ES.reduce((a,e)=>a+fn(e),0), nCond=E.nF+1, mEnt=soma(e=>(e.Lent+3)*(e.nF+1)), mPE=soma(e=>e.Lent+3), mRig=soma(e=>e.Lent+1);
+  M.push([`Cabo de entrada ${f(E.sEnt,0)} mm² (${E.nF}F+N), padrão até o QD${porQ}`,"m",mEnt,nQ>1?`${Math.round(mEnt/nCond)} m de cada condutor`:`${E.Lent+3} m de cada condutor`]);
+  M.push([`Cabo terra ${f(E.sPE,0)} mm² (QD até a haste)${porQ}`,"m",mPE,"-"]); M.push([`Eletroduto PVC rígido ø${E.eEnt.d} mm (${E.eEnt.pol}) do medidor ao QD${porQ}`,"m",mRig,`${Math.ceil(mRig/3)} barra(s) de 3 m`]);
+  { const lp={}; EL.pts.filter(q=>q.t==="luz").forEach(q=>{ const k0=q.qdCmd&&q.lamp?q.lamp+"|s":q.lamp||"bulbo"; lp[k0]=(lp[k0]||0)+1; }); Object.entries(lp).filter(([k0])=>k0!=="bulbo").forEach(([k0,c])=>{ const [l0,sl]=k0.split("|"); M.push([sl?`${LAMP_NOME[l0]||"Luminária"} ${LUX_SALAO.w} W (~${LUX_SALAO.lm} lm), sobrepor - salões`:LAMP_NOME[l0]||"Lâmpada","un",c,"-"]); }); if(n("arand")) M.push(["Arandela de parede com lâmpada LED","un",n("arand"),"-"]); }
   M.push(["Caixa octogonal 4x4 (luz no forro/laje)","un",n("luz"),"-"],["Caixa 4x2 (interruptor, tomadas e arandelas)","un",n("int")+n("tug")+n("tue")+n("arand"),"-"]);
   M.push(["Interruptor simples 10 A com placa","un",n("int"),"-"]);
   const t20=EL.pts.filter(q=>q.t==="tug"&&q.va>=600).length+EL.pts.filter(q=>q.t==="tue"&&!q.ch).length;
@@ -2806,8 +2810,10 @@ function materialEletrico(EL){ const R=EL.RE; if(!R) return []; const E=R.ent, M
   const nch=EL.pts.filter(q=>q.ch).length; if(nch) M.push(["Saída de fio para chuveiro com conector","un",nch,"-"]);
   { const nb=EL.pts.filter(q=>q.t==="luz"&&!q.lamp).length; if(nb) M.push(["Lâmpada LED com plafon/soquete","un",nb,"-"]); }
   const dj={}; EL.C.forEach(c=>{ const k0=`Disjuntor ${c.polos}P ${c.disj} A curva C`; dj[k0]=(dj[k0]||0)+1; }); Object.entries(dj).forEach(([k0,q])=>M.push([k0,"un",q,"-"]));
-  M.push([`Disjuntor geral ${E.polosG}P ${E.geral} A`,"un",1,"-"]); if(E.dr.length) M.push([`DR ${E.drP}P ${E.drIn} A 30 mA`,"un",1,"-"]);
-  M.push([`DPS classe II 20 kA ${E.uc} V`,"un",E.nF+1,"-"],[`Quadro de distribuição de embutir ${E.qdMod} módulos com barramentos N e PE`,"un",1,"-"],["Haste de aterramento cobreada 5/8\" x 2,40 m com conector e caixa de inspeção","un",1,"-"]);
+  const conta=f0=>{ const m={}; ES.forEach(e=>{ const r0=f0(e); if(r0) m[r0[0]]=(m[r0[0]]||0)+r0[1]; }); Object.entries(m).forEach(([k0,q])=>M.push([k0,"un",q,"-"])); };
+  conta(e=>[`Disjuntor geral ${e.polosG}P ${e.geral} A`,1]); conta(e=>e.dr.length?[`DR ${e.drP}P ${e.drIn} A 30 mA`,1]:null);
+  conta(e=>[`DPS classe II 20 kA ${e.uc} V`,e.nF+1]); conta(e=>[`Quadro de distribuição de embutir ${e.qdMod} módulos com barramentos N e PE`,1]);
+  M.push(["Haste de aterramento cobreada 5/8\" x 2,40 m com conector e caixa de inspeção","un",nQ,nQ>1?"uma por quadro, interligadas":"-"]);
   return M; }
 const notasEntrada=EL=>{ const E=EL.RE.ent; return [`Carga instalada ${f(EL.tot/1000)} kVA; demanda ${f(E.Dm)} kVA (iluminação e TUG ${f(E.a)} kVA x ${f(E.fa)}${E.b?`, chuveiros ${f(E.b)} kVA x ${f(E.fb)}`:""}${E.cAr?`, ar-condicionado ${f(E.cAr)} kVA x 1,00`:""}).`,
   `Fornecimento ${E.nome.toLowerCase()} ${E.tensao}; disjuntor geral ${E.polosG}P ${E.geral} A; cabo de entrada ${f(E.sEnt,0)} mm² (${E.nF} fase${E.nF>1?"s":""} + neutro) e terra ${f(E.sPE,0)} mm², com ${f(E.Lent,0)} m (queda ${f(E.dvEnt,1)} %), em eletroduto de PVC rígido ø${E.eEnt.d} mm (${E.eEnt.pol}) do medidor até o QD.${E.sEnt>E.sMin||E.eEnt.d>E.eMinD?` Padronizado com sobra (mínimo calculado: cabo ${f(E.sMin,0)} mm², eletroduto ø${E.eMinD} mm).`:""} Disjuntor do padrão de entrada igual ou maior que o geral do QD (${E.geral} A).`,
