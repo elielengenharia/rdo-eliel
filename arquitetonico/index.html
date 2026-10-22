@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.48 · porta de abrir com folha de 4 cm e fechadura", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.49 · revisão profissional das salas comerciais da Av. Paraná", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -859,7 +859,7 @@ function modeloSalas(){ const o=defaults();
   const W=[[4.156,7.867,15.171,7.867],[4.156,7.867,2.607,6.736],[2.607,6.736,1.524,2.597],[2.119,4.872,0.818,5.154],[0.818,5.154,0.097,2.906],[0.097,2.906,13.138,0.088],[13.138,0.088,15.171,7.867],[6.377,1.549,8.029,7.867]];
   o.walls=W.map(([x1,y1,x2,y2])=>({x1,y1,x2,y2}));
   o.rooms=[{n:"Banheiro",x:1.182,y:3.992,nv:0.10},{n:"Sala comercial 1",x:4.732,y:4.942,nv:0.10},{n:"Sala comercial 2",x:10.332,y:4.342,nv:0.10}];
-  o.ab=[{n:"Sala comercial 1",t:"Porta",w:0,d:0.273,l:3.0,a:2.1,p:0,mod:"correr4",mat:"Alumínio e vidro temperado"},{n:"Sala comercial 2",t:"Porta",w:0,d:4.964,l:4.0,a:2.1,p:0,mod:"correr4",mat:"Alumínio e vidro temperado"},{n:"Sala comercial 2",t:"Janela",w:0,d:9.468,l:1.2,a:2.0,p:0.6},{n:"Sala comercial 1",t:"Janela",w:2,d:0.313,l:1.2,a:2.0,p:0.6},{n:"Banheiro",t:"Porta",w:2,d:3.4,l:0.7,a:2.1,p:0}];
+  o.ab=[{n:"Sala comercial 1",t:"Porta",w:0,d:0.273,l:3.0,a:2.1,p:0,mod:"correr4",mat:"Alumínio e vidro temperado"},{n:"Sala comercial 2",t:"Porta",w:0,d:4.964,l:4.0,a:2.1,p:0,mod:"correr4",mat:"Alumínio e vidro temperado"},{n:"Sala comercial 2",t:"Janela",w:0,d:9.468,l:1.2,a:2.0,p:0.6},{n:"Sala comercial 1",t:"Janela",w:2,d:0.313,l:1.2,a:2.0,p:0.6},{n:"Banheiro",t:"Porta",w:2,d:3.25,l:0.8,a:2.1,p:0,inv:1}];
   o.cA=null; o.cB=null; o.cAdir="lado2"; o.cBdir="lado1";   // corte A paralelo à divisa do Lote 290 (fundo), corte B paralelo à divisa do Lote 243
   o.terr=Object.assign(clone(TERR0),{forma:"pol",areaMapa:259.17,lote:"",alinha:1,encA:1,recA:0,encB:2,recB:0,calcada:2,rua:"Avenida Paraná",rua2:"Rua Guarani",
     lados:[{m:11.14,c:"Avenida Paraná",rua:"sim"},{m:21.31,c:"Lote 243",rua:"não"},{m:14.15,c:"Lote 290",rua:"não"},{m:14.69,c:"Rua Guarani",rua:"sim"},{m:4.04,c:"",rua:"sim"}],
@@ -868,6 +868,17 @@ function modeloSalas(){ const o=defaults();
   o.pd=3.50;   // pé-direito das salas comerciais
   o.tel=Object.assign(clone(TEL0),{tipo:1,dir:"lado1",telha:"Fibrocimento",inc:15,plat:"sim",cbMin:40,chMin:6,hPlat:5.00,estr:"vigota",lt:"3.66",ev:"1"});   // platibanda até 5,00 m   // uma água caindo da Av. principal para o fundo, calha de 35x20 no fundo
   o.ap=Object.assign(o.ap,{rua:"4"});   // água de chuva para a sarjeta da Rua lateral (o terreno cai para ela)
+  // revisão profissional (pedido do Eliel, 6.49): ventilação natural do banheiro (basculante na fachada da Rua Guarani, peitoril 1,50),
+  // porta do banheiro de 0,80 (uso comercial), ar-condicionado nas salas, esgoto em fossa séptica + filtro + sumidouro no fundo do lote
+  // (sem rede coletora de esgoto na rua) e corte AA paralelo à parede do fundo, passando pelo banheiro
+  o.ab.push({n:"Banheiro",t:"Janela",w:4,d:0.88,l:0.60,a:0.60,p:1.50,mod:"basculante"});
+  o.ele=Object.assign(o.ele,{ar:"sim"});
+  o.fossa=Object.assign(o.fossa,{on:"sim"});
+  o.cAdir="par5";
+  o.tel.chMin=15;   // calha de platibanda com 15 cm de profundidade (6 cm transborda para dentro da obra numa chuva forte)
+  o.estr=Object.assign(o.estr,{sis:"conv",laje:"não",fund:"sapata"});   // paredes de 5,00 m (pé-direito 3,50 + platibanda 1,50) e vãos de 3 e 4 m nas portas de vidro: pilares, vigas e sapatas
+  o.agrupar="arq1";   // projeto pequeno: arquitetônico em prancha única A0 (aprovação)
+  o.cB=3.94;   // corte BB da frente ao fundo pela Sala comercial 1 e pela porta de vidro dela: mostra o caimento do telhado e a calha do fundo
   return o; }
 // estado completo a partir de um projeto salvo (preenche o que faltar e corrige valores antigos)
 function estadoDe(o){ let S; try{ const d=defaults(); o=o||{}; S=Object.assign(d,o); if(S.emp==="Eliel Ribeiro Engenharia") S.emp="Eliel Engenharia"; /* nome fantasia no carimbo */ S.tel=Object.assign(clone(TEL0),o.tel||{}); S.viga=Object.assign({on:"sim",h:0.20},o.viga||{}); S.terr=Object.assign(clone(TERR0),o.terr||{}); S.banho=Object.assign({rev:0},o.banho||{}); S.ele=Object.assign({v:127,ar:"não",mob:"sim",rede:"sim",ent:10,qdSala:"sim",div:"amb",fios:"sim",externa:"sim",garLuz:"tub2",cabo:"auto",eEnt:"auto"},o.ele||{}); S.forro=Object.assign({tipo:"pvc",h:"",reb:""},o.forro||{}); S.pav=Object.assign({seco:"porc60",mol:"cer45",ext:"auto"},o.pav||{}); S.base=Object.assign({int:"simples",arm:"tela",veic:"carro",ext:0},o.base||{}); S.pint=Object.assign({corInt:"Branco neve",corTeto:"Branco",corFach:"",esqMad:"esmalte",corEsq:"Branco"},o.pint||{}); S.persp=Object.assign({fonte:"auto",giro:0,alt:"olho",pdf:"sim",estilo:"render",cPar:"#ece7dc",cPlat:"#ece7dc",cEsq:"#333333",vidro:"azul"},o.persp||{}); S.memo=Object.assign({obs:""},o.memo||{}); S.orc=Object.assign({bdi:20,cub:"",p:{}},o.orc||{}); S.orc.p=S.orc.p||{}; S.revp=Object.assign({int:"latex",ext:"textura"},o.revp||{}); S.fpag=Array.isArray(o.fpag)&&o.fpag.length===4?o.fpag:[{},{},{},{}]; S.esc=Object.assign({on:"não",h:"",larg:0.90,tipo:"reta",lances:"auto",pat:"",hl:"",fck:"25",sc:"2.5"},o.esc||{}); S.fossa=Object.assign({coletor:"auto",on:"não",lim:1,ci:60,local:"lote",tanque:"ret",filtro:"sim",ds:"auto",ns:"auto",dt:"auto",wt:"auto",gap:"auto",afast:"auto",lugar:"auto",afF:"auto",dir:"auto",ladoS:"auto"},o.fossa||{}); S.agua=Object.assign({forn:"Saneatins",rede:"particular",rg:1.80,rp:1.10,vol:"auto"},o.agua||{}); S.ap=Object.assign({beiral:"sim",dest:"sarjeta",i:1,rua:"frente",cond:"ext",rede:"enterrada"},o.ap||{}); ["beiral","dest","rua"].forEach(c=>{ if(typeof S.ap[c]!=="string") S.ap[c]={beiral:"sim",dest:"sarjeta",rua:"frente"}[c]; }); ["rede","qdSala"].forEach(c=>{ if(typeof S.ele[c]!=="string") S.ele[c]="sim"; }); S.estr=Object.assign({fund:"sapata",sapB:"auto",sapH:"",sapForma:"chanfrada",lastro:5,sig:150,qe:60,vmax:4.5,fck:25,prof:1.0,sis:"auto"},o.estr||{}); S.estS=Object.assign({fund:"broca",vmax:3.0,prof:1.2,cinta:"sim",vbB:"",vbH:"",ciB:"",ciH:"",plB:"",plH:""},o.estS||{}); S.lims=Array.isArray(o.lims)?o.lims:[]; S.vols=Array.isArray(o.vols)?o.vols:[]; S.est=Object.assign({tCota:1.8,tNome:1.8,tArea:1.4,lPar:0.5,lCota:0.18,marca:"ponto",fLarg:1},o.est||{}); if(!S.est.v){ if(num(S.est.tNome)===2.2) S.est.tNome=1.8; if(num(S.est.tArea)===1.7) S.est.tArea=1.4; S.est.v=2; } /* nome do ambiente menor (pedido do Eliel) */ }catch(e){ S=defaults(); } return S; }
@@ -1582,7 +1593,9 @@ function desenhoPlanta(G,k,ajuda){
     // a linha inclinada sai da faixa das cotas (gerais e das paredes) antes da bolinha, para a letra não cair em cima de uma cota
     const R={x0:bb.x0-30*k,x1:bb.x1+30*k,y0:bb.y0-30*k,y1:bb.y1+30*k}, o=P(0); let t0=-1e9, t1=1e9;
     [[d[0],o[0],R.x0,R.x1],[d[1],o[1],R.y0,R.y1]].forEach(([dd,o0,lo,hi])=>{ if(Math.abs(dd)<1e-9) return; let a1=(lo-o0)/dd, b1=(hi-o0)/dd; if(a1>b1) [a1,b1]=[b1,a1]; t0=Math.max(t0,a1); t1=Math.min(t1,b1); });
-    const e0=Math.min(ua-27*k,t0>-1e8?t0:ua-27*k), e1=Math.max(ub+27*k,t1<1e8?t1:ub+27*k);
+    // 6.49: a linha vai só até sair da faixa das cotas, contada de onde ela cruza a obra (antes usava a projeção da casa toda e, inclinada, ia longe)
+    const cr=(G.casas&&G.casas.length?G.casas:[[[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x1,bb.y1],[bb.x0,bb.y1]]]).flatMap(P0=>naLinha(P0,F,c)), uc0=cr.length?Math.min(...cr.map(v=>v[0])):ua, uc1=cr.length?Math.max(...cr.map(v=>v[1])):ub;
+    const e0=Math.min(uc0-8*k,Math.max(t0>-1e8?t0:uc0-27*k,uc0-38*k)), e1=Math.max(uc1+8*k,Math.min(t1<1e8?t1:uc1+27*k,uc1+38*k));
     L(D,...P(e0),...P(e1),.35,"CORTE",true);
     [P(e0-r),P(e1+r)].forEach(([x,y])=>{ CI(D,x,y,r,.25,"CORTE"); TX(D,x,y,corteNome(G,q),2.2,{b:true,l:"CORTE"}); const bx=x+fv[0]*(r+0.4*k), by=y+fv[1]*(r+0.4*k);   // seta: lado para onde se olha
       PG(D,[[bx-d[0]*1.2*k,by-d[1]*1.2*k],[bx+d[0]*1.2*k,by+d[1]*1.2*k],[x+fv[0]*(r+2.6*k),y+fv[1]*(r+2.6*k)]],"CORTE"); }); });
@@ -1600,6 +1613,9 @@ function desenhoPlanta(G,k,ajuda){
 /* ---------------- Cortes AA e BB ---------------- */
 function desenhoCorte(G,k,q){
   const D=Dw(k); if(G.vazio){ TX(D,0,0,"Sem paredes.",3); return D; }
+  // 6.49: no corte o zero é o piso principal (nvBase); cada ambiente fica na sua diferença para ele (antes somava o nível duas vezes: piso
+  // desenhado 0,10 acima, pé-direito 3,40 em vez de 3,50 e revestimento "até o forro +3,70")
+  const NB0=nvBase(G), rNv=r=>num(r&&r.nv)-NB0;
   const A=q==="A", PC=pecasCorte(G,q), c=PC[0].c, cAt=u=>(PC.find(p0=>u>=p0.a&&u<p0.b)||PC[PC.length-1]).c, h=G.h, pd=num(S.pd), lj=Math.max(0,num(S.laje)), ps=Math.max(0,num(S.piso)), TI=infoTelhado(G);
   const F=frameCorte(G,q), fd=F.d, fn=F.n, W=(u,v)=>[u*fd[0]+v*fn[0],u*fd[1]+v*fn[1]];   // ponto da planta a u na linha e v na normal
   const porPeca=fz=>PC.flatMap(p0=>fz(p0.c).map(([a,b])=>[Math.max(a,p0.a),Math.min(b,p0.b)]).filter(([a,b])=>b-a>1e-6));   // corte costurado: cada trecho na sua linha
@@ -1614,7 +1630,7 @@ function desenhoCorte(G,k,q){
   // terreno, contrapiso e laje
   L(D,Math.min(u0,uMin)-1.2,Y(-ps),Math.max(u1,uMax)+1.2,Y(-ps),.35,"TERRENO");
   const salas=PC.flatMap(p0=>G.roomRuns(F,p0.c).map(s0=>({...s0,u0:Math.max(s0.u0,p0.a),u1:Math.min(s0.u1,p0.b)})).filter(s0=>s0.u1-s0.u0>1e-6)), vOn=S.viga&&S.viga.on!=="não", hv=vOn?Math.min(Math.max(0,num(S.viga.h)),pd-0.5):0, zv=pd-hv;
-  salas.forEach(({r,u0:a,u1:b})=>{ RF(D,a,Y(r.nv),b,Y(r.nv-0.10),"HACHURA"); L(D,a,Y(r.nv),b,Y(r.nv),.35,"PAREDE"); L(D,a,Y(r.nv-0.10),b,Y(r.nv-0.10),.18,"PAREDE"); });
+  salas.forEach(({r,u0:a,u1:b})=>{ RF(D,a,Y(rNv(r)),b,Y(rNv(r)-0.10),"HACHURA"); L(D,a,Y(rNv(r)),b,Y(rNv(r)),.35,"PAREDE"); L(D,a,Y(rNv(r)-0.10),b,Y(rNv(r)-0.10),.18,"PAREDE"); });
   const pdU=u=>TI.pdAt?TI.pdAt(...W(u,cAt(u))):pd, topoU=u=>TI.topoAt?TI.topoAt(...W(u,cAt(u))):TI.topoPlat;   // casa com volumes: pé-direito e platibanda de cada um
   runs.forEach(([a,b])=>{ const N0=Math.max(2,Math.ceil((b-a)/0.05)), pcs=[]; for(let n=0;n<N0;n++){ const u=a+(b-a)*(n+0.5)/N0, p0=pdU(u), l0=pcs[pcs.length-1]; if(l0&&Math.abs(l0.pd-p0)<1e-6) l0.b=a+(b-a)*(n+1)/N0; else pcs.push({a:a+(b-a)*n/N0,b:a+(b-a)*(n+1)/N0,pd:p0}); }
     pcs.forEach(q=>{ if(lj>0) hachConcreto(D,q.a,Y(q.pd+lj),q.b,Y(q.pd)); else L(D,q.a,Y(q.pd),q.b,Y(q.pd),.35,"PAREDE"); }); });
@@ -1629,19 +1645,19 @@ function desenhoCorte(G,k,q){
     salas.forEach(sl=>{ const rv=RV.find(x=>x.r===sl.r); if(!rv||!(rv.h>0)) return;
       let spans=[[sl.u0,sl.u1]];
       if(rv.re!=="todas"){ spans=(rv.faces||[]).filter(e=>e.N[0]*fv[0]+e.N[1]*fv[1]<-0.99).map(e=>{ const a=e.A[0]*fd[0]+e.A[1]*fd[1], b=a+e.Le*(e.u[0]*fd[0]+e.u[1]*fd[1]); return [Math.max(Math.min(a,b),sl.u0),Math.min(Math.max(a,b),sl.u1)]; }).filter(([a,b])=>b-a>0.05); }
-      const z0=sl.r.nv, z1=z0+rv.h, um=(sl.u0+sl.u1)/2, ate=rv.h>=rv.H-0.01?`ATÉ O FORRO (${fNv(z1+nvBase(G))})`:`ATÉ ${fNv(z1+nvBase(G))}`, l1="REVEST. CERÂMICO", txt=`${l1} ${ate}`, yT=Y(z0+Math.min(rv.h*0.62,1.55));
+      const z0=rNv(sl.r), z1=z0+rv.h, um=(sl.u0+sl.u1)/2, ate=rv.h>=rv.H-0.01?`ATÉ O FORRO (${fNv(z1+nvBase(G))})`:`ATÉ ${fNv(z1+nvBase(G))}`, l1="REVEST. CERÂMICO", txt=`${l1} ${ate}`, yT=Y(z0+Math.min(rv.h*0.62,1.55));
       // rótulo em duas linhas, na largura do ambiente (banheiro estreito: letra menor, até 0,9 mm)
       const wL=(sl.u1-sl.u0)/k-2, fit=ls0=>wL/(Math.max(...ls0.map(x=>largTexto(x)))*1.39); let lsA=[l1,ate];
       if(fit(lsA)<1.0) lsA=rv.h>=rv.H-0.01?["AZULEJO","ATÉ O FORRO",fNv(z1+nvBase(G))]:["AZULEJO",`ATÉ ${fNv(z1+nvBase(G))}`];   // banheiro estreito: texto curto
       const hs=Math.max(0.9,Math.min(1.3,fit(lsA))), yLs=lsA.map((_,j)=>yT+(j-(lsA.length-1)/2)*hs*1.5*k), temPd=pdTxt.some(o=>o.sl===sl), NC=nomeCorte(sl.r,sl.u0,sl.u1);
       // respiro nas juntas em volta dos textos (nome, nível, pé-direito e o próprio rótulo)
       const caixa=(cx,cy,t,hh,b0)=>{ const w=largTexto(t,b0)*hh*1.39*k/2+0.8*k; return [cx-w,cy-hh*0.9*k,cx+w,cy+hh*0.9*k]; };
-      const fur=[...NC.ls.map((t,j)=>caixa(um,Y(sl.r.nv)-7.2*k-(NC.ls.length-1-j)*NC.hs*1.5*k,t,NC.hs,true)),[um-3.5*k,Y(sl.r.nv)-4.6*k,um+3.5*k,Y(sl.r.nv)+0.5*k],...(temPd?[caixa(um,Y(pdAmb(G,sl.r)/2),"PÉ-DIREITO 0,00",1.6,false)]:[]),...lsA.map((t,j)=>caixa(um,yLs[j],t,hs,false))];
+      const fur=[...NC.ls.map((t,j)=>caixa(um,Y(rNv(sl.r))-7.2*k-(NC.ls.length-1-j)*NC.hs*1.5*k,t,NC.hs,true)),[um-3.5*k,Y(rNv(sl.r))-4.6*k,um+3.5*k,Y(rNv(sl.r))+0.5*k],...(temPd?[caixa(um,Y(pdAmb(G,sl.r)/2),"PÉ-DIREITO 0,00",1.6,false)]:[]),...lsA.map((t,j)=>caixa(um,yLs[j],t,hs,false))];
       const dentro=(u,y)=>fur.some(([x0,y0,x1,y1])=>u>x0&&u<x1&&y>y0&&y<y1), hz=(a,b,y)=>{ let st=null; for(let n=0;n<=200;n++){ const u=a+(b-a)*n/200, ok=!dentro(u,y); if(ok&&st===null) st=u; if((!ok||n===200)&&st!==null){ const e2=ok?u:a+(b-a)*(n-1)/200; if(e2-st>1e-3) L(D,st,y,e2,y,.1,"PAGINA"); st=null; } } };
       spans.forEach(([a,b])=>{ for(let z=z0+0.30;z<z1-0.02;z+=0.30) hz(a,b,Y(z)); let lin=0; for(let z=z0;z<z1-0.02;z+=0.30,lin++){ const zt=Math.min(z1,z+0.30); for(let u=a+0.60;u<b-0.02;u+=0.60){ if(dentro(u,(Y(z)+Y(zt))/2)) continue; L(D,u,Y(z),u,Y(zt),.1,"PAGINA"); } }
         L(D,a,Y(z1),b,Y(z1),.3,"PAGINA");
         if(!vistos.has(sl.r)&&b-a>0.6){ vistos.add(sl.r); lsA.forEach((t,j)=>TX(D,um,yLs[j],t,hs,{l:"COTAS"})); } }); }); }
-  const nvAt=u=>{ const C=G.compAt(...W(u,cAt(u))); return C&&!C.ext&&C.nv!==undefined?C.nv:0; };
+  const nvAt=u=>{ const C=G.compAt(...W(u,cAt(u))); return C&&!C.ext&&C.nv!==undefined?C.nv-NB0:0; };
   const menos=(segs,z0,z1)=>segs.flatMap(([a,b])=>b<=z0||a>=z1?[[a,b]]:[[a,Math.min(b,z0)],[Math.max(a,z1),b]].filter(([p,q2])=>q2-p>1e-6));
   // paredes cortadas (com portas e janelas)
   cs.forEach(({a:ua,b:ub,ws})=>{
@@ -1656,7 +1672,11 @@ function desenhoCorte(G,k,q){
     if(!g) peds.push([base,topo]);
     else if(g.tipo==="Janela"){ const p0=num(g.a.p), p1=Math.min(vOn?zvW:topo,p0+(num(g.a.a)||1)); peds.push([base,p0],[p1,topo]);
       L(D,ua,Y(p0),ub,Y(p0),.25,"ESQUADRIA"); L(D,ua,Y(p1),ub,Y(p1),.25,"ESQUADRIA"); L(D,um,Y(p0),um,Y(p1),.18,"ESQUADRIA"); L(D,ua,Y(p0),ua,Y(p1),.13,"ESQUADRIA"); L(D,ub,Y(p0),ub,Y(p1),.13,"ESQUADRIA"); }
-    else { const p1=Math.min(vOn?zvW:topo,num(g.a.a)||2.1); peds.push([base,Math.min(0,nvL,nvR)],[p1,topo]); L(D,ua,Y(p1),ub,Y(p1),.18,"ESQUADRIA"); }
+    else { const p1=Math.min(vOn?zvW:topo,num(g.a.a)||2.1), z0=Math.min(0,nvL,nvR); peds.push([base,z0],[p1,topo]); L(D,ua,Y(p1),ub,Y(p1),.18,"ESQUADRIA");
+      // 6.49: porta cortada: marco (dois montantes) e a folha (de correr: duas folhas de vidro lado a lado; de abrir: folha de 4 cm)
+      if(g.tipo==="Porta"){ const m=modPadrao(g.a), e=Math.min(0.035,(ub-ua)/5); L(D,ua,Y(z0),ua,Y(p1),.18,"ESQUADRIA"); L(D,ub,Y(z0),ub,Y(p1),.18,"ESQUADRIA");
+        if(ehCorrer(m)){ [um-e,um+e].forEach(x=>{ L(D,x-0.006,Y(z0),x-0.006,Y(p1),.25,"ESQUADRIA"); L(D,x+0.006,Y(z0),x+0.006,Y(p1),.25,"ESQUADRIA"); }); }
+        else { L(D,um-0.02,Y(z0),um-0.02,Y(p1),.3,"ESQUADRIA"); L(D,um+0.02,Y(z0),um+0.02,Y(p1),.3,"ESQUADRIA"); } } }
     // alvenaria: tira a faixa da viga e da laje (são de concreto)
     let alv=peds; if(vOn&&hv>0) alv=menos(alv,zvW,pdW); if(lj>0) alv=menos(alv,pdW,pdW+lj);
     alv.forEach(([z0,z1])=>{ if(z1-z0<1e-6) return; RF(D,ua,Y(z1),ub,Y(z0),"HACHURA"); PL(D,[[ua,Y(z0)],[ua,Y(z1)],[ub,Y(z1)],[ub,Y(z0)],[ua,Y(z0)]],.5,"PAREDE"); });
@@ -1677,8 +1697,9 @@ function desenhoCorte(G,k,q){
     for(let i=0;i+1<U0.length;i++){ const a=U0[i], b=U0[i+1]; if(b-a<1e-6) continue; const z=zAt((a+b)/2); if(z===null){ fecha(); continue; }
       const lt=cur[cur.length-1]; if(lt&&Math.abs(lt[1]-Y(z))<1e-9){ lt[0]=b; continue; } if(lt) cur.push([a,Y(z)]); else cur.push([a,Y(z)]); cur.push([b,Y(z)]); }
     fecha(); }
-  else { for(let n=0;n<=N;n++){ const u=u0+(u1-u0)*n/N; let zb=null;
-    for(let m=0;m<=40;m++){ const v=v0+(v1-v0)*m/40; if(dT(u,v)) zb=Math.max(zb??-1e9,TI.z(...W(u,v))); }
+  else { const cU=cs.length?[Math.min(...cs.map(x=>x.a)),Math.max(...cs.map(x=>x.b))]:[u0,u1];   // 6.49: só entre as paredes cortadas (corte inclinado: o resto da obra não aparece)
+    for(let n=0;n<=N;n++){ const u=u0+(u1-u0)*n/N; if(u<cU[0]-0.01||u>cU[1]+0.01) continue; let zb=null;
+    for(let m=0;m<=40;m++){ const v=v0+(v1-v0)*m/40; if(dT(u,v)) zb=Math.max(zb??-1e9,TI.plat&&TI.topoPlat?TI.topoPlat:TI.z(...W(u,v))); }
     if(zb!==null) sil.push([u,Y(zb)]); }
   const ss=simp(sil); if(ss.length>1) PL(D,ss,.18,"PROJECAO"); }   // o que se vê atrás do corte (cumeeira, águas)
   // calhas cortadas: onde a linha de corte atravessa uma calha (platibanda: junto da face de dentro; beiral: na ponta do beiral)
@@ -1734,7 +1755,7 @@ function desenhoCorte(G,k,q){
       if(TI.plat) TX(D,ux+sg*1*k,Y(zl)+4.6*k,"VER DETALHE DA PLATIBANDA (CAMADAS)",1.2,{a:sg>0?"s":"e",l:"COTAS",mv:"l"}); });
   // nomes dos ambientes
   // nome do ambiente e, logo abaixo, o nível do piso dele
-  salas.forEach(({r,u0:a,u1:b})=>{ if(b-a<0.4) return; const NC=nomeCorte(r,a,b); NC.ls.forEach((t,j)=>TX(D,(a+b)/2,Y(r.nv)-7.2*k-(NC.ls.length-1-j)*NC.hs*1.5*k,t,NC.hs,{b:true,mv:"r"})); nivelInt(D,(a+b)/2,Y(r.nv),fNv(r.nv)); });
+  salas.forEach(({r,u0:a,u1:b})=>{ if(b-a<0.4) return; const NC=nomeCorte(r,a,b); NC.ls.forEach((t,j)=>TX(D,(a+b)/2,Y(rNv(r))-7.2*k-(NC.ls.length-1-j)*NC.hs*1.5*k,t,NC.hs,{b:true,mv:"r"})); nivelInt(D,(a+b)/2,Y(rNv(r)),fNv(num(r.nv))); });
   // cotas verticais, níveis e cota horizontal
   const pdsC=TI.vols?uniq(salas.map(s0=>pdAmb(G,s0.r))).sort((p,q)=>p-q):[pd], tops=TI.vols?uniq(cs.map(x=>topoU((x.a+x.b)/2))):[];
   const zTop=TI.plat?(TI.vols?Math.max(...tops,...pdsC):TI.topoPlat):Math.max(TI.H0,...sil.map(p=>-p[1]));
@@ -1743,12 +1764,17 @@ function desenhoCorte(G,k,q){
   const xn=Math.max(u1,uMax)+3*k;
   const nB=nvBase(G); nivel(D,xn,Y(0),fNv(nB)); pdsC.forEach(v=>nivel(D,xn,Y(v),fNv(v+nB))); tops.filter(v=>Math.abs(v-zTop)>0.01).forEach(v=>nivel(D,xn,Y(v),fNv(v+nB))); nivel(D,xn,Y(zTop),fNv(zTop+nB)); if(ps>0) nivel(D,xn,Y(-ps),fNv(nB-ps),true);
   const rr=[...salas].sort((p,q2)=>(q2.u1-q2.u0)-(p.u1-p.u0))[0];
-  pdTxt.forEach(({sl,pv})=>TX(D,(sl.u0+sl.u1)/2,Y(pv/2),`PÉ-DIREITO ${f(pv-sl.r.nv)}`,1.6,{l:"COTAS",mv:"l"}));   // um texto por altura, fora do azulejo
+  pdTxt.forEach(({sl,pv})=>TX(D,(sl.u0+sl.u1)/2,Y(pv/2),`PÉ-DIREITO ${f(pv-rNv(sl.r))}`,1.6,{l:"COTAS",mv:"l"}));   // um texto por altura, fora do azulejo
   // viga vista: a cinta da parede do fundo aparece como faixa (sem hachura) em cada ambiente
   if(vOn&&hv>0){
     salas.forEach(({r:r0,u0:a,u1:b})=>{ const z0=(TI.vols?pdAmb(G,r0):pd)-hv; L(D,a,Y(z0),b,Y(z0),.25,"PAREDE"); });
     if(rr) TX(D,(rr.u0+rr.u1)/2,Y((TI.vols?pdAmb(G,rr.r):pd)-hv)+2.4*k,`VIGA ${f(G.t*100,0)}x${f(hv*100,0)} (VISTA)`,1.5,{l:"COTAS"});
   }
+  // 6.49: forro cortado (casa sem laje): linha dupla na altura do forro de cada ambiente, com o tipo
+  if(!(lj>0)){ const FO0=forros(G), NOME={pvc:"FORRO DE PVC",gesso:"FORRO DE GESSO",madeira:"FORRO DE MADEIRA",drywall:"FORRO DE GESSO ACARTONADO"}; let rot=null;
+    salas.forEach(({r:r0,u0:a,u1:b})=>{ const fo=FO0.find(x=>x.r===r0); if(!fo||!(fo.h>0)||fo.ft==="sem") return; const z=rNv(r0)+fo.h; L(D,a,Y(z),b,Y(z),.45,"FORRO"); L(D,a,Y(z)+0.6*k,b,Y(z)+0.6*k,.18,"FORRO");
+      if(!rot||b-a>rot.b-rot.a) rot={a,b,z,t:NOME[fo.ft]||"FORRO"}; });
+    if(rot) TX(D,rot.a+(rot.b-rot.a)*0.25,Y(rot.z)+2.6*k,`${rot.t} (${fNv(rot.z+nB)})`,1.4,{l:"COTAS"}); }
   const fc=uniq(cs.flatMap(x=>[x.a,x.b]));
   cadeiaH(D,fc,Y(-ps)+7*k,Y(-ps)); cotaH(D,fc[0],fc[fc.length-1],Y(-ps)+14*k,Y(-ps)+7*k,f(fc[fc.length-1]-fc[0]));
   return D;
@@ -2376,7 +2402,7 @@ function desenhoLayout(G,k,LM){
 }
 function resumoMob(R){ const it=R.pos.map(c=>c.pc.nome+(c.pc.extra?` (${c.pc.extra})`:""));
   if(R.banho) it.push(R.banho.box?"box, vaso e lavatório":"vaso e lavatório"); if(R.carro) it.push("1 vaga de carro (1,80 x 4,30)"); return it; }
-const notasLayout=LM=>[`Mobiliário ilustrativo em medidas usuais: cama de casal 1,38 x 1,88; solteiro 0,88 x 1,88; guarda-roupa 0,55 de profundidade; sofá 0,85; bancada da cozinha 0,60.`,...((LM||[]).some(R=>R.tipo==="escrit")?[`Salas comerciais: mesa de trabalho 1,40 x 0,70 com cadeira e 2 cadeiras de visita, armário 0,80 x 0,45 e espera com 2 poltronas.`]:[]),`Os móveis foram colocados longe do giro das portas e com faixa livre para circular (0,55 a 0,90 m).`,`Conferir as medidas reais dos móveis e eletrodomésticos antes de marcar os pontos de elétrica e hidráulica.`];
+const notasLayout=LM=>[...((LM||[]).some(R=>["casal","solteiro","sala","salacoz","cozinha"].includes(R.tipo))?[`Mobiliário ilustrativo em medidas usuais: cama de casal 1,38 x 1,88; solteiro 0,88 x 1,88; guarda-roupa 0,55 de profundidade; sofá 0,85; bancada da cozinha 0,60.`]:[`Mobiliário ilustrativo em medidas usuais (a definir por cada locatário).`]),...((LM||[]).some(R=>R.tipo==="escrit")?[`Salas comerciais: mesa de trabalho 1,40 x 0,70 com cadeira e 2 cadeiras de visita, armário 0,80 x 0,45 e espera com 2 poltronas.`]:[]),`Os móveis foram colocados longe do giro das portas e com faixa livre para circular (0,55 a 0,90 m).`,`Conferir as medidas reais dos móveis e eletrodomésticos antes de marcar os pontos de elétrica e hidráulica.`];
 
 /* ---------------- Planta de pontos elétricos (NBR 5410 / símbolos NBR 5444) ---------------- */
 const MOLHADA=t=>["banho","cozinha","salacoz","lavand"].includes(t);
@@ -2402,7 +2428,7 @@ function pontosEletricos(G,LM){
   const v127=num(S.ele.v)!==220, VF=v127?127:220, pts=[], aviso=[], arG=String(S.ele.ar||"não");
   let cmd=0; const letra=()=>"abcdefghijklmnopqrstuvwxyz"[cmd++%26];
   // imóvel comercial para alugar: cada sala com o seu quadro (e medidor); banheiro e copa vão para a sala de onde se entra neles
-  const salas=LM.filter(R=>R.tipo==="escrit"), multi=S.uso==="comercial"&&S.ele.qdSala!=="não"&&salas.length>1, uni=new Map();
+  const salas=LM.filter(R=>R.tipo==="escrit").sort((a,b)=>String(a.r.n).localeCompare(String(b.r.n),"pt",{numeric:true})), multi=S.uso==="comercial"&&S.ele.qdSala!=="não"&&salas.length>1, uni=new Map();
   if(multi){ const viz=new Map(LM.map(R=>[R.r,new Set()])), quem=new Map();
     LM.forEach(R=>aberturasAmb(G,R.r).forEach(o=>{ if(o.g.externa) return; if(!quem.has(o.g)) quem.set(o.g,[]); quem.get(o.g).push(R.r); }));
     quem.forEach(rs=>rs.forEach(a=>rs.forEach(b=>{ if(a!==b&&viz.has(a)) viz.get(a).add(b); })));
@@ -2422,8 +2448,12 @@ function pontosEletricos(G,LM){
     const W=r.x1-r.x0, H=r.y1-r.y0, nl=(r.area>=14||Math.max(W,H)>=5)?2:1, va=vaLuz(r.area), c0=[(r.x0+r.x1)/2,(r.y0+r.y1)/2];
     let luz=nl===1?[pip(r.poly,...c0)?c0:[r.cx,r.cy]]:(W>=H?[[r.x0+W/4,c0[1]],[r.x0+3*W/4,c0[1]]]:[[c0[0],r.y0+H/4],[c0[0],r.y0+3*H/4]]);
     luz=luz.map(p=>pip(r.poly,...p)?p:[r.cx,r.cy]);
-    const cm=letra(), vaU=Math.round(va/luz.length/10)*10;
-    const Ls=luz.map(p=>add({t:"luz",p,va:vaU,cmd:cm}));
+    // sala comercial / escritório (6.49): luminárias tubulares LED em grade a cerca de 2,4 m (iluminação uniforme de trabalho), longe 0,6 m das paredes
+    let lampG=null; if(tp==="escrit"&&S.ele.escLuz!=="bulbo"&&r.area>=8){ const nx=Math.max(1,Math.round(W/2.4)), ny=Math.max(1,Math.round(H/2.4)), g=[], dentro=p=>[[0,0],[0.6,0],[-0.6,0],[0,0.6],[0,-0.6]].every(([a,b])=>pip(r.poly,p[0]+a,p[1]+b));
+      for(let i=0;i<nx;i++) for(let j=0;j<ny;j++){ const p=[r.x0+W*(i+0.5)/nx,r.y0+H*(j+0.5)/ny]; if(dentro(p)) g.push(p); }
+      if(g.length>=2){ luz=g; lampG={lamp:"tub",rot:W>=H?0:1}; } }
+    const cm=letra(), vaU=lampG?Math.max(40,Math.ceil(va/luz.length/10)*10):Math.round(va/luz.length/10)*10;
+    const Ls=luz.map(p=>add({t:"luz",p,va:vaU,cmd:cm,...(lampG||{})}));
     const portas=ABS.filter(o=>o.g.tipo!=="Janela").sort((a,b)=>(b.g.externa?1:0)-(a.g.externa?1:0));
     let it=null;
     for(const o of portas){ const dob=!!o.g.dob, cand=[dob?-0.15:o.g.l+0.15,dob?o.g.l+0.15:-0.15];
@@ -2461,7 +2491,7 @@ function pontosEletricos(G,LM){
     if(arBtu){ let best=null, bd=-1;
       E.forEach(e=>{ for(let s=0.40;s<=e.Le-0.40+1e-6;s+=0.10){ const p=[e.A[0]+e.u[0]*s,e.A[1]+e.u[1]*s]; if(!livre(p,e.N,0.40,2.20)) continue;
         const ds=[...pts.filter(q=>q.r===r&&q.t!=="luz").map(q=>q.p),...ABS.map(o=>[(o.a[0]+o.b[0])/2,(o.a[1]+o.b[1])/2])], d=ds.length?Math.min(...ds.map(q=>Math.hypot(q[0]-p[0],q[1]-p[1]))):1; if(d>bd){ bd=d; best={p,N:e.N}; } } });
-      if(best) add({t:"tue",p:best.p,N:best.N,alt:"a",va:AR_VA[arBtu]||1400,desc:`Ar-condicionado ${fBtu(arBtu)} BTU ${r.n}`,v:220,ar:1,btu:arBtu}); else aviso.push(`${r.n}: não achei parede livre para a tomada do ar-condicionado.`); }
+      if(best) add({t:"tue",p:best.p,N:best.N,alt:"a",va:AR_VA[arBtu]||1400,desc:`Ar-cond. ${fBtu(arBtu)} BTU ${r.n}`,v:220,ar:1,btu:arBtu}); else aviso.push(`${r.n}: não achei parede livre para a tomada do ar-condicionado.`); }
   });
   // área externa: garagem/varanda (pisos externos) com luz no teto, tomada e interruptor; arandela na fachada junto da porta de entrada
   if(S.ele.externa!=="não"&&!G.vazio){ const h=G.h, VF0={baixo:[0,1],cima:[0,-1],esq:[-1,0],dir:[1,0]}[S.frente]||[0,1];
@@ -2766,7 +2796,7 @@ function desenhoUnifilar(EL,k,Z=1){ const D=Dw(k), R=EL.RE, X=v=>v*k*Z;
   const disj=(x,y,amp,sec,lado)=>{ const r=2.0; ci(x-r,y,0.45,"UNDIS"); ci(x+r,y,0.45,"UNDIS"); const pts=[]; for(let i=0;i<=12;i++){ const an=Math.PI*i/12; pts.push([x-r*Math.cos(an),y-r*Math.sin(an)*0.9]); }
     for(let i=0;i<12;i++) ln(...pts[i],...pts[i+1],"UNDIS",.3); ln(x,y-r*0.9,x,y-r*0.9-1.1,"UNDIS",.3); if(amp!=null) tx(x,y-5.0,`${amp} A`,1.5); if(sec!=null) tx(x+(lado<0?-4.6:4.6),y-2.6,sec,1.4,{a:lado<0?"e":"s"}); };
   const xB=0, dxB=3.2, xN=xB+dxB*nF, xF=f0=>xB+dxB*FS.indexOf(f0), dot=(x,y)=>CI(D,X(x),X(y),X(0.45),.2,"UNLIN");
-  const C=EL.C.slice(), sem=C.filter(c=>!c.dr), com=C.filter(c=>c.dr), passo=6.5, wN=10, wW=18, wD=40, wBox=wN+wW+wD, xBkL=xB-20, xBkR=xN+20, xBoxL=xBkL-6-wBox, xBoxR=xBkR+6, xGL=xBoxL-5, xGR=xBoxR+wBox+5;
+  const C=EL.C.slice(), sem=C.filter(c=>!c.dr), com=C.filter(c=>c.dr), passo=6.5, wN=10, wW=18, wD=50, wBox=wN+wW+wD, xBkL=xB-20, xBkR=xN+20, xBoxL=xBkL-6-wBox, xBoxR=xBkR+6, xGL=xBoxL-5, xGR=xBoxR+wBox+5;
   let y=26; const yTop=4; const linhas=[];
   // entrada no topo: eletroduto, cabos e disjuntor geral
   tx(xB+dxB*nF/2,yTop-4.2,`Conduto ø${(E.eEnt&&E.eEnt.pol)||'1"'}`,1.5); tx(xB+dxB*nF/2,yTop-1.6,`${nF}#${f(E.sEnt,0)}(${f(E.sEnt,0)})${f(E.sPE,0)} mm²`,1.5);
@@ -2778,10 +2808,10 @@ function desenhoUnifilar(EL,k,Z=1){ const D=Dw(k), R=EL.RE, X=v=>v*k*Z;
   const circ=(c,i)=>{ const esq=i%2===0, yy=y; const fas=c.fase&&c.fase.length>1?c.fase.split(""):[c.fase||"A"], xb=xF(fas[0]);
     fas.forEach(f0=>dot(xF(f0),yy)); dot(xN,yy+2.2);
     if(esq){ ln(xF(fas[0]),yy,xBkL+2,yy); disj(xBkL,yy,c.disj,f(c.fioAgr||c.fio,1),-1); ln(xBkL-2,yy,xBoxL+wBox,yy); ln(xN,yy+2.2,xBoxL+wBox,yy+2.2);
-      const bx=xBoxL; [[0,wN,String(c.n)],[wN,wW,`${c.va} W`],[wN+wW,wD,c.desc.toUpperCase().slice(0,30)]].forEach(([o,w,t])=>{ ln(bx+o,yy-1.6,bx+o+w,yy-1.6); ln(bx+o,yy+3.4,bx+o+w,yy+3.4); ln(bx+o,yy-1.6,bx+o,yy+3.4); tx(bx+o+w/2,yy+1.4,t,1.4); }); ln(bx+wBox,yy-1.6,bx+wBox,yy+3.4);
+      const bx=xBoxL; [[0,wN,String(c.n)],[wN,wW,`${c.va} W`],[wN+wW,wD,c.desc.toUpperCase().slice(0,38)]].forEach(([o,w,t])=>{ ln(bx+o,yy-1.6,bx+o+w,yy-1.6); ln(bx+o,yy+3.4,bx+o+w,yy+3.4); ln(bx+o,yy-1.6,bx+o,yy+3.4); tx(bx+o+w/2,yy+1.4,t,1.4); }); ln(bx+wBox,yy-1.6,bx+wBox,yy+3.4);
       ln(xGL,yy+0.9,bx,yy+0.9,"UNFIO",.3); }
     else { ln(xF(fas[fas.length-1]),yy,xBkR-2,yy); disj(xBkR,yy,c.disj,f(c.fioAgr||c.fio,1),1); ln(xBkR+2,yy,xBoxR,yy); ln(xN,yy+2.2,xBoxR,yy+2.2);
-      const bx=xBoxR; [[0,wD,c.desc.toUpperCase().slice(0,30)],[wD,wW,`${c.va} W`],[wD+wW,wN,String(c.n)]].forEach(([o,w,t])=>{ ln(bx+o,yy-1.6,bx+o+w,yy-1.6); ln(bx+o,yy+3.4,bx+o+w,yy+3.4); ln(bx+o,yy-1.6,bx+o,yy+3.4); tx(bx+o+w/2,yy+1.4,t,1.4); }); ln(bx+wBox,yy-1.6,bx+wBox,yy+3.4);
+      const bx=xBoxR; [[0,wD,c.desc.toUpperCase().slice(0,38)],[wD,wW,`${c.va} W`],[wD+wW,wN,String(c.n)]].forEach(([o,w,t])=>{ ln(bx+o,yy-1.6,bx+o+w,yy-1.6); ln(bx+o,yy+3.4,bx+o+w,yy+3.4); ln(bx+o,yy-1.6,bx+o,yy+3.4); tx(bx+o+w/2,yy+1.4,t,1.4); }); ln(bx+wBox,yy-1.6,bx+wBox,yy+3.4);
       ln(bx+wBox,yy+0.9,xGR,yy+0.9,"UNFIO",.3); }
     y+=passo; };
   sem.forEach(circ);
@@ -2855,7 +2885,9 @@ function redeHidro(G,LM){
   const PS=passeios(G);
   const muro=(p,m)=>G.walls.some(w=>!w.dw&&distSeg(p,w)<m);   // muro ou parede solta: caixa e coletor não passam por cima
   const OBRA=[...(G.casas||[]),...(G.pisos||[]).map(q=>q.poly).filter(Boolean)], naObra=p=>OBRA.some(P0=>pontoDentro(p,P0));   // garagem e varanda contam como obra
-  const okP=p=>(!TL||noPasseio(p,PS,0.25)||(pontoDentro(p,TL)&&Math.min(...TL.map((a,i)=>distSeg(p,{x1:a[0],y1:a[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.25))&&!muro(p,0.25);
+  // 6.49: com fossa o esgoto fica todo no lote: caixa e coletor não vão para a calçada (só a ligação na rede pública pode)
+  const naCalc=(p,m)=>(S.fossa||{}).on!=="sim"&&noPasseio(p,PS,m);
+  const okP=p=>(!TL||naCalc(p,0.25)||(pontoDentro(p,TL)&&Math.min(...TL.map((a,i)=>distSeg(p,{x1:a[0],y1:a[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.25))&&!muro(p,0.25);
   const livre=(pa,pb)=>[0,0.25,0.5,0.75,1].every(t=>okP([pa[0]+(pb[0]-pa[0])*t,pa[1]+(pb[1]-pa[1])*t]));
   let C=(G.casas&&G.casas.length?G.casas.slice().sort((p,q)=>Math.abs(areaS(q))-Math.abs(areaS(p)))[0]:[[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x1,bb.y1],[bb.x0,bb.y1]]).map(p=>[p[0],p[1]]);
   // o anel contorna a casa junto com a garagem/varanda (pisos externos): caixa nenhuma fica dentro da garagem
@@ -2870,7 +2902,7 @@ function redeHidro(G,LM){
       // primeiro a 0,80 m; se cair numa faixa estreita do lote, vai mais para fora até a calçada; senão, dentro da obra
       const tenta=[d,1.0,1.25,1.5,1.75,2.0,2.5,3.0].find(o=>livre([a[0]+nn[0]*o+u[0]*0.3,a[1]+nn[1]*o+u[1]*0.3],[b[0]+nn[0]*o-u[0]*0.3,b[1]+nn[1]*o-u[1]*0.3]));
       // corredor estreito entre a casa e o muro/divisa: o coletor e as caixas vão no meio do corredor (antes iam para dentro da casa)
-      let dd=tenta; if(dd===undefined){ const okC=p=>!TL||noPasseio(p,PS,0.05)||(pontoDentro(p,TL)&&Math.min(...TL.map((q,i)=>distSeg(p,{x1:q[0],y1:q[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.05)&&!naObra(p)&&!muro(p,0.10);
+      let dd=tenta; if(dd===undefined){ const okC=p=>!TL||naCalc(p,0.05)||(pontoDentro(p,TL)&&Math.min(...TL.map((q,i)=>distSeg(p,{x1:q[0],y1:q[1],x2:TL[(i+1)%nT][0],y2:TL[(i+1)%nT][1]})))>=0.05)&&!naObra(p)&&!muro(p,0.10);
         const livreC=(pa,pb)=>[0,0.25,0.5,0.75,1].every(t=>okC([pa[0]+(pb[0]-pa[0])*t,pa[1]+(pb[1]-pa[1])*t]));
         let w=0; for(let o=0.10;o<=3.01;o+=0.05){ if(livreC([a[0]+nn[0]*o+u[0]*0.3,a[1]+nn[1]*o+u[1]*0.3],[b[0]+nn[0]*o-u[0]*0.3,b[1]+nn[1]*o-u[1]*0.3])) w=o; else break; }
         dd=w>=0.45?Math.max(0.25,Math.min(d,w/2+0.025)):dIn;
@@ -2944,6 +2976,9 @@ function redeHidro(G,LM){
     // não coube na frente: tenta a outra ponta do corredor (o coletor passa a correr para os fundos)
     if(corr&&longe(r)){ const tO=Math.abs(corr.tFim-corr.t1)<1e-9?corr.t0:corr.t1, r2=tenta(anelP(tO)); if(!longe(r2)){ corr.tFim=tO; r2.av=[...(r2.av||[]),`O conjunto${FSd.fil?" com filtro anaeróbio":""} não coube no canto da frente sem encostar na casa, na garagem ou no muro; ficou no fundo do corredor e o coletor corre para os fundos.${FSd.fil?" Sem o filtro ele cabe na frente.":""}`]; r=r2; } }
     return ajustaFossa(G,r); })():null;
+  // 6.49: com fossa e coletor no corredor, a caixa final fica na ponta do corredor mais perto da entrada do tanque
+  // (antes ia para a ponta da rua e o cano voltava pelo mesmo corredor até a fossa no fundo)
+  if(corr&&fossa&&fossa.pos&&fossa.pos.ent){ const e=fossa.pos.ent, dE=t=>{ const q=anelP(t); return Math.hypot(q[0]-e[0],q[1]-e[1]); }; corr.tFim=dE(corr.t0)<=dE(corr.t1)?corr.t0:corr.t1; }
   // caixa final no lado da frente (ou do lado da fossa), na posição mais perto das outras
   const dist=(a,b)=>{ const x=Math.abs(a-b)%PER; return Math.min(x,PER-x); };
   let fr=frente;
@@ -7104,7 +7139,7 @@ const discSel=()=>{ const d=S.pdfDisc||{}; return {arq:d.arq!==false,ele:d.ele!=
 // plantas numa coluna à esquerda, na mesma escala, a maior que couber; detalhes, unifilares e isométricos numa grade à direita, cada um no maior tamanho que couber.
 // Tenta várias larguras para a coluna das plantas e fica com a que ocupa mais papel.
 // tenta os quadros numa coluna própria à direita e no meio dos desenhos; fica com a que deixa os desenhos maiores
-function pranchaDisc(fs,area,TT,G){ const cand=[["col",1.5],["col",1.2],["col",1.0],["grade",1.5]].map(([m0,z0])=>({P:pranchaDisc0(fs,area,TT,G,m0,z0),z0})); ar=P=>P?P.itens.filter(it=>!it.tab).reduce((s0,it)=>s0+(!it.sem&&/^PLANTA/.test(it.titulo||"")?2.5:1)*Math.log(Math.max(1,it.d.w*it.d.h)),0):0; let best=null; cand.forEach(c=>{ if(!c.P) return; const tz=c.P.itens.filter(it=>it.tab).map(it=>it.zt||it.d.zt||1), sc=ar(c.P)+3*Math.log(Math.min(...tz,1.5)); if(!best||sc>best.sc) best={P:c.P,sc}; }); return best?best.P:null; }   // soma dos logaritmos: equilibra (não deixa um desenho enorme e os outros minúsculos)
+function pranchaDisc(fs,area,TT,G){ const cand=[["col",1.5],["col",1.2],["col",1.0],["grade",1.5]].map(([m0,z0])=>({P:pranchaDisc0(fs,area,TT,G,m0,z0),z0})); ar=P=>P?P.itens.filter(it=>!it.tab).reduce((s0,it)=>s0+(!it.sem&&/^PLANTA/.test(it.titulo||"")?2.5:1)*Math.log(Math.max(1,it.d.w*it.d.h)),0):0; let best=null; cand.forEach(c=>{ if(!c.P) return; const tz=c.P.itens.filter(it=>it.tab).map(it=>it.zt||it.d.zt||1), sc=ar(c.P)+3*Math.log(Math.min(...tz,1.5))-c.P.itens.filter(it=>!it.tab&&!it.sem&&/^PLANTA/.test(it.titulo||"")).reduce((t,it)=>t+8*Math.max(0,Math.log(it.d.s/50)),0); if(!best||sc>best.sc) best={P:c.P,sc}; }); return best?best.P:null; }   // soma dos logaritmos: equilibra (não deixa um desenho enorme e os outros minúsculos)
 function pranchaDisc0(fs,area,TT,G,modo,zMax=1.5){ const aw=area.x1-area.x0, ah=area.y1-area.y0, gx=10, gy=8;
   const tabs=[]; { const vist=new Set(); fs.forEach(fl=>{ try{ textosLado({G},fl.lado,fl).forEach(bl=>{ if(!bl.cols||!bl.rows||!bl.rows.length) return; const kk=bl.t+"|"+bl.cols.length; if(vist.has(kk)) return; vist.add(kk); tabs.push(blocoTab(bl)); }); }catch(e){} }); }
   // material em duas metades vira uma tabela só
@@ -7121,8 +7156,12 @@ function pranchaDisc0(fs,area,TT,G,modo,zMax=1.5){ const aw=area.x1-area.x0, ah=
   const cabe=(it,bw,bh)=>{ if(it.tab){ let d=null; for(const Z of [1.7,1.5,1.3,1.15,1,0.85,0.72,0.6,0.5]){ d=naEscala(it.zgen(Z),100); d.zt=Z; if(d.w<=bw&&d.h<=bh-TT) break; } return d; }
     if(it.zgen){ let d=null; for(const Z of ZS){ d=encaixar(it.zgen(Z),bw,bh-TT); if(d.w<=bw&&d.h<=bh-TT) break; } return d; } return encaixar(it.d.gen,bw,bh-TT); };
   const monta=fr=>{ const wl=RS.length?(PL0.length?aw2*fr:0):aw2, wr=PL0.length?aw2-wl-gx:aw2, itens=[]; let area0=0;
-    if(PL0.length){ const n=PL0.length, opc=[{c:1,r:n},...(n>1?[{c:n,r:1}]:[])].map(o0=>{ const bw=(wl-gx*(o0.c-1))/o0.c, bh=(ah-gy*(o0.r-1))/o0.r; let sc=null; for(const s0 of ESCALAS){ const ds=PL0.map(it=>naEscala(it.d.gen,s0)); if(ds.every(d=>d.w<=bw&&d.h<=bh-TT)){ sc=s0; break; } } return {...o0,bw,bh,sc:sc||ESCALAS[ESCALAS.length-1]}; }).sort((a,b)=>a.sc-b.sc)[0];   // plantas umas embaixo das outras ou lado a lado (casa comprida), o que der a escala maior
-      PL0.forEach((it,j)=>{ const d=naEscala(it.d.gen,opc.sc); area0+=2.5*Math.log(Math.max(1,d.w*d.h));   /* a planta pesa mais: é o desenho principal da prancha */ itens.push({...it,d,box:[area.x0+(opc.c>1?j*(opc.bw+gx):0),area.y0+(opc.r>1?j*(opc.bh+gy):0),opc.bw,opc.bh]}); }); }
+    if(PL0.length){ const n=PL0.length;   // plantas umas embaixo das outras ou lado a lado, na mesma escala (a maior que cabe); cada uma ocupa o espaço do seu tamanho (6.49: antes as caixas eram iguais e a planta grande caía para 1:75)
+      let opc=null; for(const s0 of ESCALAS){ const ds=PL0.map(it=>naEscala(it.d.gen,s0)), sumH=ds.reduce((t,d)=>t+d.h+TT,0)+gy*(n-1), sumW=ds.reduce((t,d)=>t+d.w,0)+gx*(n-1), mxW=Math.max(...ds.map(d=>d.w)), mxH=Math.max(...ds.map(d=>d.h));
+        if(mxW<=wl&&sumH<=ah){ opc={c:1,sc:s0,ds,folga:(ah-sumH)/n}; break; } if(n>1&&sumW<=wl&&mxH+TT<=ah){ opc={c:n,sc:s0,ds,folga:(wl-sumW)/n}; break; } }
+      if(!opc){ const s0=ESCALAS[ESCALAS.length-1]; opc={c:1,sc:s0,ds:PL0.map(it=>naEscala(it.d.gen,s0)),folga:0}; }
+      let off=0; PL0.forEach((it,j)=>{ const d=opc.ds[j]; area0+=2.5*Math.log(Math.max(1,d.w*d.h));   /* a planta pesa mais: é o desenho principal da prancha */
+        const box=opc.c>1?[area.x0+off,area.y0,d.w+opc.folga,ah]:[area.x0,area.y0+off,wl,d.h+TT+opc.folga]; off+=(opc.c>1?d.w+opc.folga+gx:d.h+TT+opc.folga+gy); itens.push({...it,d,box}); }); }
     if(RS.length){ const n=RS.length, x0=area.x0+(PL0.length?wl+gx:0); let best=null;
       for(const cols of [1,2,3]){ if(cols>n) break; const rows=Math.ceil(n/cols), bw=(wr-gx*(cols-1))/cols, bh=(ah-gy*(rows-1))/rows; if(bw<60||bh<50) continue;
         const ds=RS.map(it=>cabe(it,bw,bh)), a=ds.reduce((s1,d)=>s1+Math.min(d.w,bw)*Math.min(d.h,bh),0), mn=Math.min(...ds.map(d=>d.w*d.h)); if(!best||a+mn*n>best.a+best.mn*n) best={cols,rows,bw,bh,ds,a,mn}; }
@@ -7548,7 +7587,7 @@ function buildPDF(fmt,opt){
     const {D,e,k,s,w,h}=it.d, [bx,by,bw,bh]=it.box;
     const ox=bx+(bw-w)/2, oy=by+Math.max(0,(bh-TT-h)/2), X=x=>ox+(x-e.x0)/k, Y=y=>oy+(y-e.y0)/k;   // padrão Eliel: título embaixo do desenho
     // título e escala cabem na caixa do desenho (folhas com 2 ou 4 desenhos no A4)
-    { const escT=it.sem?"SEM ESCALA":`1/${s}`, DISC={arq:"PROJETO ARQUITETÔNICO",ele:"PROJETO ELÉTRICO",hid:"PROJETO HIDROSSANITÁRIO",est:"PROJETO ESTRUTURAL"}, sub=`${DISC[discFolha({lado:it.lado||P.folhas.find(F=>F.itens.includes(it))?.lado})]||"PROJETO ARQUITETÔNICO"}      ESC: ${escT}`;
+    { const escT=it.sem?"SEM ESCALA":`1/${s}`, DISC={arq:"PROJETO ARQUITETÔNICO",ele:"PROJETO ELÉTRICO",hid:"PROJETO HIDROSSANITÁRIO",est:"PROJETO ESTRUTURAL"}, sub=`${DISC[(()=>{ if(it.lado) return discFolha({lado:it.lado}); const F=P.folhas.find(F=>F.itens.includes(it)); if(!F) return "arq"; if(F.subs){ const s0=F.subs.find(x=>x.itens.some(y=>y.titulo===it.titulo))||F.subs[0]; return discFolha(s0); } return discFolha(F); })()]||"PROJETO ARQUITETÔNICO"}      ESC: ${escT}`;
       let hT=3.2, tw=it.titulo.length*hT*1.39*0.6; const wl=Math.min(bw,Math.max(tw+8,Math.min(110,bw*0.9))); if(tw>bw-2){ hT=Math.max(2,hT*(bw-2)/tw); tw=it.titulo.length*hT*1.39*0.6; }
       const tx0=Math.max(bx,Math.min(ox,bx+bw-wl)), yb=oy+h+2+hT;
       if(it.semTit){}   // tabela que já traz o título dela (Quadro de Cargas / Demanda do Eliel)
