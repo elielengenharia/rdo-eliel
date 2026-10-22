@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.44 · planta elétrica no padrão do Eliel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.45 · Quadro de Cargas e de Demanda no padrão do Eliel", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -2609,6 +2609,39 @@ function desenhoEletrica(G,k,LM,EL,legenda=true){
   }
   return D;
 }
+/* ---------------- Quadro de Cargas e Quadro de Demanda no padrão do Eliel (QiBuilder): linhas e títulos vermelhos ---------------- */
+// grade com cabeçalho de 2 linhas: cols = [{t, w, g (grupo do cabeçalho), dir (alinha à direita)}]; rows = arrays de texto; tot = última linha em negrito
+function gradeVermelha(D,x0,y0,tit,cols,rows,o={}){ const z=o.z||1, k=D.k*z, rh=4.0*k, hh=8.0*k, TX0=TX, T1=(D0,x,y,t,h,op)=>TX0(D0,x,y,t,h*z,op); W=cols.reduce((a,c)=>a+c.w,0)*k, l="QVER";
+  T1(D,x0+W/2,y0-1.4*k,tit,2.6,{l:"QVER"});
+  const L0=(xa,ya,xb,yb)=>L(D,xa,ya,xb,yb,.2,l); let x=x0; L0(x0,y0,x0+W,y0);
+  // cabeçalho: grupos ocupam a linha de cima; os outros textos em duas linhas
+  const grupos={}; cols.forEach((c,i)=>{ if(c.g){ (grupos[c.g]=grupos[c.g]||{a:x,b:x,i}).b=x+c.w*k; } else { const [t1,t2]=String(c.t).split("|"); T1(D,x+c.w*k/2,y0+2.6*k,t1,1.3,{}); if(t2) T1(D,x+c.w*k/2,y0+6.2*k,t2,1.3,{}); } x+=c.w*k; });
+  Object.entries(grupos).forEach(([g,v])=>{ T1(D,(v.a+v.b)/2,y0+2.6*k,g,1.3,{}); L0(v.a,y0+hh/2,v.b,y0+hh/2); });
+  x=x0; cols.forEach(c=>{ if(c.g) T1(D,x+c.w*k/2,y0+6.2*k,String(c.t),1.3,{}); x+=c.w*k; });
+  let y=y0+hh; L0(x0,y,x0+W,y);
+  rows.forEach((r,ri)=>{ let xx=x0; const neg=o.tot&&ri===rows.length-1; cols.forEach((c,j)=>{ const v=r[j]==null?"":String(r[j]); if(v) T1(D,c.dir?xx+c.w*k-0.8*k:c.esq?xx+0.8*k:xx+c.w*k/2,y+rh*0.72,v,1.3,{a:c.dir?"e":c.esq?"s":"m",b:neg}); xx+=c.w*k; }); y+=rh; L0(x0,y,x0+W,y); });
+  // verticais (os grupos têm a linha no meio do cabeçalho)
+  x=x0; L0(x,y0,x,y); cols.forEach((c,i)=>{ x+=c.w*k; const nx=cols[i+1], mesmo=nx&&c.g&&nx.g===c.g; L0(x,mesmo?y0+hh/2:y0,x,y); });
+  return {W,H:y-y0}; }
+const qdN=U=>U.qdNome&&U.qdNome!=="QD"?U.qdNome:"QD1";
+const IZ=(s,fca=1)=>((IZB1.find(([x])=>x>=s)||IZB1[IZB1.length-1])[1])*fca;
+function desenhoQC(U,k,Z=1){ const D=Dw(k), C=U.C||[], ehI=q=>q.t==="luz"||q.t==="arand", fp=c=>c.tipo==="tug"?0.8:1;
+  const pI=[...new Set(C.flatMap(c=>(c.pts||[]).filter(ehI).map(q=>+q.va)))].sort((a,b)=>a-b), pT=[...new Set(C.flatMap(c=>(c.pts||[]).filter(q=>!ehI(q)).map(q=>+q.va)))].sort((a,b)=>a-b);
+  const cols=[{t:"Circuito",w:12},{t:"Descrição",w:46,esq:1},{t:"Esquema",w:14},{t:"Método|de inst.",w:12},{t:"V|(V)",w:11},...pI.map(v=>({t:String(v),w:9,g:"Iluminação (W)"})),...pT.map(v=>({t:String(v),w:10,g:"Tomadas (VA)"})),
+    {t:"Pot. total|(VA)",w:15,dir:1},{t:"Pot. total|(W)",w:15,dir:1},{t:"Fases",w:10},{t:"Pot. - A|(W)",w:14,dir:1},{t:"Pot. - B|(W)",w:14,dir:1},{t:"FCA",w:9},{t:"Ib|(A)",w:10,dir:1},{t:"Seção|(mm²)",w:12,dir:1},{t:"Iz|(A)",w:10,dir:1},{t:"Disj|(A)",w:10,dir:1},{t:"dV|(%)",w:10,dir:1},{t:"Status",w:11}];
+  let tA=0, tB=0, tVA=0, tW=0; const cI=pI.map(()=>0), cT=pT.map(()=>0);
+  const rows=C.map(c=>{ const w=Math.round(c.va*fp(c)), fa=c.fase||"A", pa=fa==="AB"?w/2:fa==="A"?w:0, pb=fa==="AB"?w/2:fa==="B"?w:0, iz=IZ(c.fioAgr||c.fio,c.fca||1), ok=c.ib<=c.disj+1e-9&&c.disj<=iz+1e-9&&(c.dv==null||c.dv<=4);
+    tA+=pa; tB+=pb; tVA+=c.va; tW+=w;
+    const nI=pI.map((v,i)=>{ const n=(c.pts||[]).filter(q=>ehI(q)&&+q.va===v).length; cI[i]+=n; return n||""; }), nT=pT.map((v,i)=>{ const n=(c.pts||[]).filter(q=>!ehI(q)&&+q.va===v).length; cT[i]+=n; return n||""; });
+    return [c.lab?c.lab.replace(/^C/,""):c.n,c.desc.toUpperCase(),c.polos>1?"F+F+T":"F+N+T","B1",`${c.v} V`,...nI,...nT,c.va,w,fa,pa?Math.round(pa):"",pb?Math.round(pb):"",(c.fca||1).toFixed(2),f(c.ib,1),f(c.fioAgr||c.fio,1),f(iz,1),c.disj,c.dv!=null?f(c.dv,2):"",ok?"Ok":"Rever"]; });
+  rows.push(["TOTAL","","","","",...cI,...cT,tVA,tW,"",Math.round(tA),Math.round(tB),"","","","","","",""]);
+  gradeVermelha(D,0,0,`Quadro de Cargas (${qdN(U)})`,cols,rows,{tot:1,z:Z});
+  return D; }
+function desenhoQDem(U,k,Z=1){ Z=Math.min(Z,1); const D=Dw(k), E=(U.RE||{}).ent; if(!E) return D; const r2=v=>f(v,2);
+  const rows=[["Iluminação e TUG´s (Casas e Apartamentos)",r2(E.a),f(E.fa*100,0),r2(E.a*E.fa)],...(E.b>0?[["Chuveiros",r2(E.b),f(E.fb*100,0),r2(E.b*E.fb)]]:[]),...(E.cAr>0?[["Ar-condicionado",r2(E.cAr),"100",r2(E.cAr)]]:[]),["","","TOTAL",r2(E.Dm)]];
+  gradeVermelha(D,0,0,`Quadro de Demanda (${qdN(U)})`,[{t:"Tipo de carga",w:62,esq:1},{t:"Potência instalada|(kVA)",w:30,dir:1},{t:"Fator de demanda|(%)",w:28,dir:1},{t:"Demanda|(kVA)",w:22,dir:1}],rows,{tot:1,z:Z});
+  return D; }
+const fitTab=(gz,bw,bh)=>{ let d=null; for(const Z of [1.5,1.3,1.15,1,0.85,0.72,0.6,0.5,0.42]){ d=naEscala(gz(Z),100); d.zt=Z; if(d.w<=bw&&d.h<=bh) break; } return d; };
 const notasEletrica=EL=>[...(EL.multi?[`Um quadro de distribuição por sala para alugar (${EL.UN.map(U=>`${U.qdNome}: ${U.nome}`).join("; ")}), cada um com o seu medidor.`]:[]),`Tensão ${EL.VF} V${EL.VF===127?" (chuveiro e ar-condicionado em 220 V)":""}. Potência instalada: ${f(EL.tot/1000)} kVA.`,`Quantidade e potência das tomadas e da iluminação pelo mínimo da NBR 5410.`,`Circuitos com DR 30 mA: banheiro, cozinha, lavanderia, garagem e áreas externas.`,`Fios: iluminação 1,5 mm², tomadas 2,5 mm², chuveiro conforme o quadro; queda de tensão conferida em cada circuito (até 4 %).`,`Interruptores a 1,10 m, ao lado da fechadura da porta; QD a 1,50 m do piso.`];
 
 /* ---------------- Eletrodutos, fiação, queda de tensão, demanda e entrada (NBR 5410) ---------------- */
@@ -7177,7 +7210,9 @@ function pranchas(fmt){
     ...(rf?[{n:"",conteudo:"PLANTA DE DEMOLIR E CONSTRUIR",escala:`1:${rf.s}`,itens:[{d:rf,titulo:"PLANTA DE DEMOLIR E CONSTRUIR",box:[area.x0,area.y0,aw,ah]}],lado:"reforma",QR}]:[]),
     ...(la?[{n:"",conteudo:"PLANTA DE LAYOUT",escala:`1:${la.s}`,itens:[{d:la,titulo:"PLANTA DE LAYOUT",box:[area.x0,area.y0,aw,ah]}],lado:"layout",LM}]:[]),
     ...(el?[{n:"",conteudo:"PLANTA DE PONTOS ELÉTRICOS",escala:`1:${el.s}`,itens:[{d:el,titulo:"PLANTA DE PONTOS ELÉTRICOS",box:[area.x0,area.y0,aw,ah]}],lado:"eletrica",EL}]:[]),
-    ...uns.map(({U,un})=>({n:"",conteudo:EL.multi?`DIAGRAMA UNIFILAR ${U.qdNome} E ENTRADA - ${U.nome.toUpperCase()}`:"DIAGRAMA UNIFILAR E ENTRADA DE ENERGIA",escala:"SEM ESCALA",itens:[{d:un,zgen:Z=>k=>desenhoUnifilar(U,k,Z),titulo:EL.multi?`DIAGRAMA UNIFILAR ${U.qdNome} - ${U.nome.toUpperCase()}`:"DIAGRAMA UNIFILAR DO QUADRO DE DISTRIBUIÇÃO",sem:1,box:[area.x0,area.y0,aw,ah]}],lado:"unifilar",EL:U})),
+    ...uns.map(({U,un})=>{ const hU=ah*0.6, gq=Z=>k=>desenhoQC(U,k,Z), gd=Z=>k=>desenhoQDem(U,k,Z), qc=fitTab(gq,aw*0.74,ah-hU-6-TT), qd=fitTab(gd,aw*0.24,ah-hU-6-TT); let un2=null; for(const Z of [1.9,1.6,1.35,1.15,1,0.85]){ un2=encaixar(k=>desenhoUnifilar(U,k,Z),aw,hU-TT); if(un2.w<=aw&&un2.h<=hU-TT) break; }
+      return {n:"",conteudo:EL.multi?`DIAGRAMA UNIFILAR ${U.qdNome} E ENTRADA - ${U.nome.toUpperCase()}`:"DIAGRAMA UNIFILAR E ENTRADA DE ENERGIA",escala:"SEM ESCALA",itens:[{d:un2,zgen:Z=>k=>desenhoUnifilar(U,k,Z),titulo:EL.multi?`DIAGRAMA UNIFILAR ${U.qdNome} - ${U.nome.toUpperCase()}`:"DIAGRAMA UNIFILAR DO QUADRO DE DISTRIBUIÇÃO",sem:1,box:[area.x0,area.y0,aw,hU]},
+        ...(qc?[{d:qc,zgen:gq,semTit:1,titulo:`QUADRO DE CARGAS (${qdN(U)})`,sem:1,tab:1,box:[area.x0,area.y0+hU+6,aw*0.74,ah-hU-6]}]:[]),...(qd?[{d:qd,zgen:gd,semTit:1,titulo:`QUADRO DE DEMANDA (${qdN(U)})`,sem:1,tab:1,box:[area.x0+aw*0.76,area.y0+hU+6,aw*0.24,ah-hU-6]}]:[])],lado:"unifilar",EL:U}; }),
     ...(hi?[{n:"",conteudo:"PLANTA HIDROSSANITÁRIA",escala:`1:${hi.s}`,itens:[{d:hi,titulo:"PLANTA HIDROSSANITÁRIA",box:[area.x0,area.y0,aw,ah]}],lado:"hidro",HD}]:[]),
     ...isoF,
     ...(fs?[{n:"",conteudo:"FOSSA SÉPTICA, FILTRO ANAERÓBIO E SUMIDOURO",escala:`1:${fs.s}`,itens:[{d:fs,titulo:"CONJUNTO FOSSA SÉPTICA, FILTRO ANAERÓBIO E SUMIDOURO",box:[area.x0,area.y0,aw,ah]}],lado:"fossa",FS}]:[]),
@@ -7274,7 +7309,7 @@ function textosLado(P,lado,fl){
   if(lado==="hidesg") return [{t:"NOTAS",linhas:notasHidro(fl.HD).slice(2,5)}];
   if(lado==="hidiso"){ const H=fl.HD, cx={}; H.salas.forEach((sa,i)=>conexoesIso(H,i).forEach(([n,q])=>cx[n]=(cx[n]||0)+q)); return [{t:"ALTURAS DOS PONTOS (DO PISO ACABADO)",pc:[0.26,0.44,0.13,0.17],cols:[["AMBIENTE",0],["PEÇA",0],["Ø",1],["h (m)",1]],rows:linhasAlturas(H)},{t:"CONEXÕES DE ÁGUA FRIA (ÁREAS MOLHADAS)",cols:[["PEÇA",0],["QTD",1]],pc:[0.84,0.16],rows:Object.entries(cx).map(([n,q])=>[n,String(q)])},{t:"NOTAS",linhas:notasAgua(H)}]; }
   if(lado==="hidro"){ const H=fl.HD; return [{t:"QUADRO DE PONTOS",pc:[0.24,0.38,0.12,0.12,0.14],cols:[["AMBIENTE",0],["APARELHO",0],["AF",1],["ALT.",1],["ESG.",1]],rows:H.ap.map(a=>[a.r.n,a.nome,`Ø${a.dAf}`,a.h,a.dEs?`Ø${a.dEs}`:"ralo"])},{t:"NOTAS",linhas:notasHidro(H)}]; }
-  if(lado==="eletrica"){ const E=fl.EL; return [{t:"QUADRO DE CARGAS",pc:E.multi?[0.12,0.34,0.10,0.08,0.10,0.12,0.07,0.07]:[0.07,0.39,0.10,0.08,0.10,0.12,0.07,0.07],cols:[["C",0],["DESCRIÇÃO",0],["VA",1],["V",1],["DISJ.",1],["FIO",1],["FASE",1],["QUEDA",1]],rows:[...E.C.map(c=>[c.lab||`C${c.n}`,c.desc.length>38?c.desc.slice(0,35)+"...":c.desc,String(c.va),String(c.v),`${c.disj} A`,`${f(c.fio,1)}`+(c.dr?" DR":""),c.fase||"-",c.dv!=null?`${f(c.dv,1)}%`:"-"]),["","TOTAL INSTALADO",String(E.tot),"","","","","",1]]},{t:"NOTAS",linhas:notasEletrica(E)}]; }
+  if(lado==="eletrica"){ const E=fl.EL; return [{t:"NOTAS",linhas:notasEletrica(E)}]; return [{t:"QUADRO DE CARGAS",pc:E.multi?[0.12,0.34,0.10,0.08,0.10,0.12,0.07,0.07]:[0.07,0.39,0.10,0.08,0.10,0.12,0.07,0.07],cols:[["C",0],["DESCRIÇÃO",0],["VA",1],["V",1],["DISJ.",1],["FIO",1],["FASE",1],["QUEDA",1]],rows:[...E.C.map(c=>[c.lab||`C${c.n}`,c.desc.length>38?c.desc.slice(0,35)+"...":c.desc,String(c.va),String(c.v),`${c.disj} A`,`${f(c.fio,1)}`+(c.dr?" DR":""),c.fase||"-",c.dv!=null?`${f(c.dv,1)}%`:"-"]),["","TOTAL INSTALADO",String(E.tot),"","","","","",1]]},{t:"NOTAS",linhas:notasEletrica(E)}]; }
   if(lado==="unifilar"){ const E0=fl.EL, M=materialEletrico(E0), meio=Math.ceil(M.length/2), cur=t=>t.replace(" 750 V","").replace("preto/vermelho","preto").replace(", padrão até o QD","").replace(" de embutir","").replace(" com barramentos N e PE"," (N e PE)").replace(" com conector e caixa de inspeção"," e caixa insp.").replace(" (cozinha, serviço e ar)"," (coz./serv./ar)").replace(" com placa (NBR 14136)"," com placa"),
       lin=m=>{ const t=cur(m[0]); return [t.length>44?t.slice(0,42)+"...":t,m[1]==="m"?`${f(m[2],0)} m`:String(m[2])]; };
     return [{t:"MATERIAL ELÉTRICO",cols:[["MATERIAL",0],["QTD",1]],pc:[0.84,0.16],rows:M.slice(0,meio).map(lin)},{t:"MATERIAL (CONT.)",cols:[["MATERIAL",0],["QTD",1]],pc:[0.84,0.16],rows:M.slice(meio).map(lin)},{t:"DEMANDA E ENTRADA",linhas:notasEntrada(E0).slice(0,4)}]; }
@@ -7475,7 +7510,8 @@ function buildPDF(fmt,opt){
     { const escT=it.sem?"SEM ESCALA":`1/${s}`, DISC={arq:"PROJETO ARQUITETÔNICO",ele:"PROJETO ELÉTRICO",hid:"PROJETO HIDROSSANITÁRIO",est:"PROJETO ESTRUTURAL"}, sub=`${DISC[discFolha({lado:it.lado||P.folhas.find(F=>F.itens.includes(it))?.lado})]||"PROJETO ARQUITETÔNICO"}      ESC: ${escT}`;
       let hT=3.2, tw=it.titulo.length*hT*1.39*0.6; const wl=Math.min(bw,Math.max(tw+8,Math.min(110,bw*0.9))); if(tw>bw-2){ hT=Math.max(2,hT*(bw-2)/tw); tw=it.titulo.length*hT*1.39*0.6; }
       const tx0=Math.max(bx,Math.min(ox,bx+bw-wl)), yb=oy+h+2+hT;
-      if(it.det){ const g=PDFRGB.HTIT, hD=4.2; mk("HTIT"); c.push(`${g.map(n).join(" ")} rg`); text(tx0+1,yb-hD/2,hD,it.titulo); text(tx0+1,yb+hD*0.7,hD*0.75,it.sem?"sem escala":`escala 1:${s}`); c.push("0 0 0 rg"); if(it.det!==true){ gray(0,true); text(tx0+1,yb+hD*0.7+4,1.8,it.det); } gray(0); }
+      if(it.semTit){}   // tabela que já traz o título dela (Quadro de Cargas / Demanda do Eliel)
+      else if(it.det){ const g=PDFRGB.HTIT, hD=4.2; mk("HTIT"); c.push(`${g.map(n).join(" ")} rg`); text(tx0+1,yb-hD/2,hD,it.titulo); text(tx0+1,yb+hD*0.7,hD*0.75,it.sem?"sem escala":`escala 1:${s}`); c.push("0 0 0 rg"); if(it.det!==true){ gray(0,true); text(tx0+1,yb+hD*0.7+4,1.8,it.det); } gray(0); }
       else { mk("TITULOS"); gray(0,true); text(tx0+1,yb-hT/2,hT,it.titulo);
       mk("COTA"); c.push("0.93 0 0 rg"); poly([[tx0,yb+0.8],[tx0,yb+2.8],[tx0+wl,yb+0.8]],true); c.push("0.93 0 0 RG"); lw(.25); line(tx0,yb+0.8,tx0+wl,yb+0.8);
       mk("TITULOS"); gray(0,true); text(tx0+0.6,yb+4.3,1.6,sub); gray(0); } }
