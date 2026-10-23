@@ -751,7 +751,7 @@ async function load() {
   });
   remove.forEach((o) => o.parent.remove(o));
 
-  { const inv = model.matrixWorld.clone().invert(); TELHADOS_SANDUICHE.forEach((p) => { const t = telhadoSanduiche(p); t.applyMatrix4(inv); model.add(t); }); model.updateMatrixWorld(true); }
+  { const inv = model.matrixWorld.clone().invert(); TELHADOS_SANDUICHE.forEach((p) => { const t = telhadoSanduiche(p); t.applyMatrix4(inv); model.add(t); }); model.updateMatrixWorld(true); if (TELHADOS_SANDUICHE.length) { matsByName[SANDUICHE.topo.name] = SANDUICHE.topo; matsByName[SANDUICHE.baixo.name] = SANDUICHE.baixo; } }
   const box = caixaRobusta(model);
   box.getCenter(center); const size = box.getSize(new THREE.Vector3());
   radius = size.length() / 2; groundY = box.min.y;
