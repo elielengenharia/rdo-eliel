@@ -176,6 +176,14 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .seltools.show{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
 #selName{font-size:12.5px;font-weight:700;margin-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
 .seg.danger{color:#e07a6a}
+.mpanel{position:fixed;left:50%;transform:translate(-50%,-10px);top:calc(max(12px,env(safe-area-inset-top)) + 118px);display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;opacity:0;pointer-events:none;transition:.2s;width:min(340px,calc(100% - 32px));z-index:6}
+.mpanel.show{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.mpanel h3{font-size:13px;font-weight:700;margin:0}
+.mpanel .mrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.mpanel label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);font-weight:600}
+.mpanel input{width:100%;min-width:0;font:600 15px/1.2 inherit;font-variant-numeric:tabular-nums;color:var(--text);background:transparent;border:1px solid var(--line);border-radius:9px;padding:8px}
+.mpanel input:focus{outline:2px solid var(--gold);outline-offset:1px}
+.mpanel .mnote{font-size:11px;color:var(--muted);line-height:1.35}
 .list{position:fixed;right:16px;top:calc(max(12px,env(safe-area-inset-top)) + 66px);width:380px;max-height:calc(100% - 240px);border-radius:18px;padding:16px;display:none;flex-direction:column}
 .list-open .list{display:flex}
 .list-open .panel{display:none}
@@ -264,9 +272,20 @@ document.querySelector('.loader').addEventListener('click',function(){if(b.class
 <div class="seltools glass">
   <span id="selName">Item</span>
   <button class="seg" id="sRot">Girar 45°</button>
+  <button class="seg" id="sMed" hidden>Medidas</button>
   <button class="seg" id="sDup">Duplicar</button>
   <button class="seg danger" id="sDel">Remover</button>
   <button class="seg" id="sOk">OK</button>
+</div>
+
+<div class="mpanel glass" id="mPanel" aria-label="Medidas da marquise">
+  <h3>Medidas da marquise</h3>
+  <div class="mrow">
+    <label>Largura (m)<input type="number" inputmode="decimal" step="0.05" min="0.5" max="20" id="mW"></label>
+    <label>Balanço (m)<input type="number" inputmode="decimal" step="0.05" min="0.3" max="4" id="mD"></label>
+    <label>Altura do piso (m)<input type="number" inputmode="decimal" step="0.05" min="2" max="6" id="mH"></label>
+  </div>
+  <div class="mnote">Arraste a marquise até encostar na parede e use “Girar 45°” até o balanço ficar para fora. Na vista de planta ela aparece como uma mancha dourada no chão.</div>
 </div>
 
 <aside class="list glass" aria-label="Lista de móveis">
@@ -9353,6 +9372,49 @@ const VEHICLES = {
     extra: (g) => { B(g, 1.95, 0.02, 1.52, CAR_TRIM, -1.6, 1.111); B(g, 0.06, 0.06, 1.6, CAR_TRIM, -2.62, 1.1); B(g, 1.95, 0.05, 0.05, CAR_CHROME, -1.6, 1.12, 0.8); B(g, 1.95, 0.05, 0.05, CAR_CHROME, -1.6, 1.12, -0.8); } },
 };
 
+/* ---------- marquise (fachada) ----------
+   origem = pé da parede, no meio da largura; o balanço sai para +z (frente do objeto); p.h = altura livre do piso até a face de baixo */
+const MARQ = {
+  conc: FM('#e8e5df', { roughness: 0.88 }),
+  acm: FM('#2e3034', { roughness: 0.32, metalness: 0.55 }),
+  perfil: FM('#1d1e20', { roughness: 0.4, metalness: 0.6 }),
+  foot: new THREE.MeshBasicMaterial({ color: '#c9a86a', transparent: true, opacity: 0.45, depthWrite: false }),
+};
+function rod(g, a, b, r, m) {
+  const v = new THREE.Vector3().subVectors(b, a), L = v.length();
+  const o = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, 10), m);
+  o.position.copy(a).addScaledVector(v, 0.5); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v.normalize()); g.add(o); return o;
+}
+function marquise(g, p, kind) {
+  const w = p.w, d = p.d, h = p.h, emb = 0.05;   // entra 5 cm na parede para não ficar fresta
+  const f = B(g, w, 0.012, d, MARQ.foot, 0, 0.01, d / 2); f.userData.planOnly = true; f.visible = false;
+  if (kind === 'conc') {
+    const t = 0.10;
+    B(g, w, t, d + emb, MARQ.conc, 0, h, (d - emb) / 2);                       // laje em balanço
+    B(g, w, 0.30, 0.10, MARQ.conc, 0, h, d - 0.05);                            // testeira (viga de borda) na frente
+    [-1, 1].forEach((s) => B(g, 0.10, 0.20, d - 0.10, MARQ.conc, s * (w / 2 - 0.05), h + t, (d - 0.10) / 2)); // bordas laterais
+    B(g, w - 0.04, 0.012, 0.012, MARQ.perfil, 0, h - 0.012, d - 0.12);         // pingadeira
+  } else if (kind === 'vidro') {
+    const ph = 0.10, pw = 0.05, y = h;
+    B(g, w, ph, pw, MARQ.perfil, 0, y, d - pw / 2);                              // perfil da frente
+    B(g, w, ph, pw, MARQ.perfil, 0, y, pw / 2);                                  // perfil junto da parede
+    const n = Math.max(2, Math.round(w / 1.0) + 1);
+    for (let i = 0; i < n; i++) { const x = -w / 2 + pw / 2 + (i * (w - pw)) / (n - 1); B(g, pw, ph, d - 2 * pw, MARQ.perfil, x, y, d / 2); }
+    B(g, w, 0.012, d, MAT.glass, 0, y + ph, d / 2);                              // vidro laminado por cima
+    const xs = w > 2.4 ? [-w / 2 + 0.25, w / 2 - 0.25] : [0];
+    xs.forEach((x) => {
+      rod(g, new THREE.Vector3(x, y + ph / 2, d - pw), new THREE.Vector3(x, y + 0.9, 0.01), 0.008, MAT.steel);   // tirante
+      B(g, 0.08, 0.12, 0.02, MARQ.perfil, x, y + 0.84, 0.01);                                                   // chapa de fixação
+    });
+  } else {
+    const t = 0.25;
+    B(g, w, t, d + emb, MARQ.acm, 0, h, (d - emb) / 2);                         // caixa revestida em ACM
+    bulb(g, B(g, w - 0.10, 0.012, 0.025, MAT.bulb(), 0, h - 0.012, d - 0.08));  // fita LED embaixo, junto da frente
+  }
+}
+function showPlanOnly(o) { o.traverse((m) => { if (m.userData.planOnly) m.visible = cutOn; }); }
+const isMarq = (it) => !!(it && CAT_BY_ID[it.type]?.p);
+
 const CATALOG = [
   // Sala
   { id: 'sofa3', cat: 'Sala', name: 'Sofá 3 lugares', dim: [2.1, 0.9, 0.85], build(g) {
@@ -9432,6 +9494,9 @@ const CATALOG = [
     B(g, 1.0, 0.9, 0.65, MAT.brick); B(g, 1.04, 0.05, 0.69, MAT.granite, 0, 0.9); B(g, 0.8, 0.5, 0.5, MAT.black, 0, 0.95, -0.05);
     B(g, 1.0, 0.5, 0.65, MAT.brick, 0, 1.45); B(g, 0.4, 0.75, 0.4, MAT.brick, 0, 1.95, -0.1); } },
   // Luzes
+  { id: 'marq_conc', cat: 'Fachada', name: 'Marquise de concreto', dim: [3.0, 1.0, 2.6], p: { w: 3.0, d: 1.0, h: 2.6 }, build(g, p) { marquise(g, p, 'conc'); } },
+  { id: 'marq_vidro', cat: 'Fachada', name: 'Marquise metálica com vidro', dim: [3.0, 1.2, 2.6], p: { w: 3.0, d: 1.2, h: 2.6 }, build(g, p) { marquise(g, p, 'vidro'); } },
+  { id: 'marq_acm', cat: 'Fachada', name: 'Marquise em ACM com LED', dim: [3.0, 1.0, 2.8], p: { w: 3.0, d: 1.0, h: 2.8 }, build(g, p) { marquise(g, p, 'acm'); } },
   { id: 'pendente', cat: 'Luzes', name: 'Pendente', dim: [0.36, 0.36, 0.8], light: true, build(g) {
     C(g, 0.004, 0.004, 0.6, MAT.black, 0, 2.15); const sh = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.22, 24, 1, true), MAT.black); sh.material = MAT.black.clone(); sh.material.side = THREE.DoubleSide; sh.position.y = 2.06; g.add(sh);
     bulb(g, S(g, 0.05, MAT.bulb(), 0, 1.97, 0)); addLight(g, 'point', 1.92, 7, 9); } },
@@ -9449,8 +9514,8 @@ const CAT_BY_ID = Object.fromEntries(CATALOG.map((c) => [c.id, c]));
 const CATS = [...new Set(CATALOG.map((c) => c.cat))];
 const MAX_LIGHTS = 24;
 const JARDIM = new Set(['planta', 'arvore', 'ipe', 'palmeira', 'arbusto', 'cerca']);
-function layerOf(type) { const c = CAT_BY_ID[type]; if (!c) return 'moveis'; if (JARDIM.has(type)) return 'jardim'; if (c.cat === 'Veículos') return 'veiculos'; if (c.cat === 'Luzes') return 'luzes'; return 'moveis'; }
-const layerOn = { jardim: false, moveis: true, luzes: true, veiculos: true };
+function layerOf(type) { const c = CAT_BY_ID[type]; if (!c) return 'moveis'; if (JARDIM.has(type)) return 'jardim'; if (c.cat === 'Veículos') return 'veiculos'; if (c.cat === 'Luzes') return 'luzes'; if (c.cat === 'Fachada') return 'fachada'; return 'moveis'; }
+const layerOn = { jardim: false, moveis: true, luzes: true, veiculos: true, fachada: true };
 let jardimAntes = false;
 function applyLayers() {
   furnRoot.children.forEach((g) => { g.visible = layerOn[layerOf(g.userData.item.type)]; });
@@ -9460,7 +9525,7 @@ function applyLayers() {
 
 /* ---------- estado ---------- */
 const furnRoot = new THREE.Group(); scene.add(furnRoot);
-let items = []; // {uid, type, x, y, z, rot}
+let items = []; // {uid, type, x, y, z, rot, p?}
 let selected = null, furnishing = false, dirty = false, canEditLayout = true;
 let lightsOn = true, moodKey = 'dia', cutOn = false, cutY = 0;
 const cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
@@ -9468,10 +9533,11 @@ renderer.localClippingEnabled = true;
 
 function makeObject(it) {
   const def = CAT_BY_ID[it.type]; if (!def) return null;
-  const g = new THREE.Group(); def.build(g);
+  const g = new THREE.Group(); def.build(g, it.p || def.p);
   g.traverse((o) => { if (o.isMesh) { o.castShadow = !o.material.transparent; o.receiveShadow = true; o.userData.furn = g; } });
   g.userData.item = it; g.position.set(it.x, it.y, it.z); g.rotation.y = it.rot || 0;
   if (cutOn) g.traverse(clipMat);
+  showPlanOnly(g);
   g.visible = layerOn[layerOf(it.type)];
   return g;
 }
@@ -9494,6 +9560,7 @@ function setCut(on) {
   cutOn = on; cutY = groundY + 2.45; cutPlane.constant = cutY;
   Object.values(matsByName).forEach((m) => { m.clippingPlanes = on ? [cutPlane] : null; m.clipShadows = true; m.needsUpdate = true; });
   furnRoot.traverse(clipMat);
+  showPlanOnly(furnRoot);
 }
 function clipMat(o) { if (o.isMesh) { o.material.clippingPlanes = cutOn ? [cutPlane] : null; o.material.needsUpdate = true; } }
 
@@ -9527,9 +9594,15 @@ function select(g) {
   if (g) {
     g.traverse((o) => { if (o.isMesh && !o.material.transparent && !o.userData.isBulb) { o.userData.hl = o.material; o.material = o.material.clone(); o.material.emissive = new THREE.Color('#c9a86a'); o.material.emissiveIntensity = 0.35; } });
     $('#selName').textContent = CAT_BY_ID[g.userData.item.type].name; $('.seltools').classList.add('show');
+    $('#sMed').hidden = !isMarq(g.userData.item); if ($('#sMed').hidden) closeMed(); else if ($('#mPanel').classList.contains('show')) openMed();
   } else hideSel();
 }
-function hideSel() { $('.seltools')?.classList.remove('show'); }
+function hideSel() { $('.seltools')?.classList.remove('show'); closeMed(); }
+function closeMed() { $('#mPanel')?.classList.remove('show'); }
+function openMed() {
+  if (!selected || !isMarq(selected.userData.item)) return;
+  const p = selected.userData.item.p; $('#mW').value = p.w; $('#mD').value = p.d; $('#mH').value = p.h; $('#mPanel').classList.add('show');
+}
 let dragging = null;
 canvas.addEventListener('pointerdown', (e) => {
   if (!furnishing) return;
@@ -9550,6 +9623,7 @@ function addItem(type) {
   if (def.light && lightCount() >= MAX_LIGHTS) { toast(`Limite de ${MAX_LIGHTS} pontos de luz por projeto.`); return; }
   const p = floorHit(null) || new THREE.Vector3(center.x, groundY, center.z);
   const it = { uid: Math.random().toString(36).slice(2, 9), type, x: p.x, y: p.y, z: p.z, rot: 0 };
+  if (def.p) it.p = { ...def.p };
   items.push(it); const o = makeObject(it); furnRoot.add(o); select(o); updateLights(); renderList(); markDirty();
   if (window.innerWidth < 720) document.body.classList.add('cat-min');
 }
@@ -9558,6 +9632,7 @@ $('#sDup').addEventListener('click', () => {
   if (!selected) return; const s = selected.userData.item;
   if (CAT_BY_ID[s.type].light && lightCount() >= MAX_LIGHTS) { toast(`Limite de ${MAX_LIGHTS} pontos de luz por projeto.`); return; }
   const it = { ...s, uid: Math.random().toString(36).slice(2, 9), x: s.x + 0.5, z: s.z + 0.5 };
+  if (s.p) it.p = { ...s.p };
   items.push(it); const o = makeObject(it); furnRoot.add(o); select(o); updateLights(); renderList(); markDirty();
 });
 $('#sDel').addEventListener('click', () => {
@@ -9565,8 +9640,19 @@ $('#sDel').addEventListener('click', () => {
   items = items.filter((i) => i !== it); furnRoot.remove(selected); selected = null; hideSel(); renderList(); markDirty();
 });
 $('#sOk').addEventListener('click', () => select(null));
+$('#sMed').addEventListener('click', () => ($('#mPanel').classList.contains('show') ? closeMed() : openMed()));
+const LIM = { mW: ['w', 0.5, 20], mD: ['d', 0.3, 4], mH: ['h', 2, 6] };
+Object.entries(LIM).forEach(([id, [k, lo, hi]]) => $('#' + id).addEventListener('change', (e) => {
+  if (!selected || !isMarq(selected.userData.item)) return;
+  const v = parseFloat(String(e.target.value).replace(',', '.'));
+  const it = selected.userData.item;
+  if (!isFinite(v)) { e.target.value = it.p[k]; return; }
+  it.p[k] = Math.round(Math.min(hi, Math.max(lo, v)) * 100) / 100; e.target.value = it.p[k];
+  const o = makeObject(it); furnRoot.remove(selected); furnRoot.add(o); selected = null; select(o); updateLights(); renderList(); markDirty();
+}));
 window.addEventListener('keydown', (e) => {
   if (!furnishing || !selected) return;
+  if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.key === 'Delete' || e.key === 'Backspace') $('#sDel').click();
   if (e.key.toLowerCase() === 'r') $('#sRot').click();
 });
@@ -9609,9 +9695,12 @@ function buildCatalog() {
 
 /* ---------- lista de móveis (planilha) ---------- */
 function listRows() {
-  const counts = {};
-  items.forEach((i) => (counts[i.type] = (counts[i.type] || 0) + 1));
-  return CATALOG.filter((c) => counts[c.id]).map((c) => ({ cat: c.cat, name: c.name, dim: c.dim.map((v) => Math.round(v * 100)).join(' × '), q: counts[c.id] }));
+  const grupos = new Map(), cm = (v) => Math.round(v * 100);
+  items.forEach((i) => { const k = i.type + (i.p ? `|${i.p.w}|${i.p.d}|${i.p.h}` : ''); const r = grupos.get(k) || { it: i, q: 0 }; r.q++; grupos.set(k, r); });
+  const lista = [...grupos.values()];
+  return CATALOG.flatMap((c) => lista.filter((r) => r.it.type === c.id).map((r) => r.it.p
+    ? { cat: c.cat, name: `${c.name} (a ${String(r.it.p.h).replace('.', ',')} m do piso)`, dim: `${cm(r.it.p.w)} × ${cm(r.it.p.d)}`, q: r.q }
+    : { cat: c.cat, name: c.name, dim: c.dim.map(cm).join(' × '), q: r.q }));
 }
 function renderList() {
   const rows = listRows(), host = $('#lBody');
@@ -9644,7 +9733,7 @@ function setSaveState(msg) {
   el.textContent = msg || (dirty ? 'Salvar layout' : 'Layout salvo ✓'); el.classList.toggle('pending', dirty);
 }
 async function saveLayout() {
-  const data = { items: items.map(({ uid, type, x, y, z, rot }) => ({ uid, type, x: +x.toFixed(3), y: +y.toFixed(3), z: +z.toFixed(3), rot: +(rot || 0).toFixed(4) })) };
+  const data = { items: items.map(({ uid, type, x, y, z, rot, p }) => Object.assign({ uid, type, x: +x.toFixed(3), y: +y.toFixed(3), z: +z.toFixed(3), rot: +(rot || 0).toFixed(4) }, p ? { p: { ...p } } : {})) };
   try { localStorage.setItem(LS, JSON.stringify(data)); } catch (e) {}
   if (layoutRef) {
     setSaveState('Salvando…');
