@@ -22,6 +22,25 @@
   .panel,.list{bottom:calc(var(--dockH,170px) + 10px)!important}
   .layers{bottom:calc(var(--dockH,170px) + 10px)!important}
 }
+
+/* pintar paredes */
+.pint{position:fixed;left:16px;top:calc(max(12px,env(safe-area-inset-top)) + 66px);width:330px;border-radius:18px;padding:16px;display:none;flex-direction:column;gap:10px;z-index:5}
+.pintando .pint{display:flex}
+.pintando .dock,.pintando .proj,.pintando .panel,.pintando .list,.pintando .layers{display:none!important}
+.pint .tintas{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+.pint .tinta{aspect-ratio:1;border-radius:50%;border:2px solid var(--line);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.pint .tinta.on{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+.pint .linha{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pint .linha .seg{flex:1;text-align:center;background:rgba(127,127,127,.10)}
+.pint .linha .seg.on{background:var(--on);color:var(--on-text)}
+.pint label.outra{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.pint input[type=color]{width:38px;height:30px;border:1px solid var(--line);border-radius:8px;background:none;padding:0}
+.pint .nome{font-size:12.5px;color:var(--text);font-weight:600}
+@media (max-width:720px){
+  .pint{left:10px;right:10px;width:auto;top:auto;bottom:max(10px,env(safe-area-inset-bottom));padding:12px;gap:8px}
+  .pint .tintas{grid-template-columns:repeat(9,1fr);gap:5px}
+  .pint .chead .hint{display:none}
+}
 </style><meta name="description" content="Projeto 3D interativo da __NOME__ — Eliel Engenharia &amp; Arquitetura.">
 <meta property="og:title" content="__NOME__ · Projeto 3D">
 <meta property="og:description" content="Eliel Engenharia &amp; Arquitetura — gire a casa, veja de dia e à noite e explore por dentro.">
@@ -292,6 +311,22 @@ document.querySelector('.loader').addEventListener('click',function(){if(b.class
   <button class="glass" id="wR" aria-label="Direita">→</button>
 </div>
 
+<section class="pint glass" aria-label="Pintar paredes">
+  <div class="chead">
+    <div><h2>Pintar</h2><div class="hint">Escolha a cor e toque na parede. Arraste para girar a casa.</div></div>
+    <span class="nome" id="pNome">Branco neve</span>
+  </div>
+  <div class="tintas" id="pTintas"></div>
+  <div class="linha">
+    <label class="outra">Outra cor <input type="color" id="pOutra" value="#c08a5b"></label>
+    <button class="seg" id="pBorr">Borracha</button>
+    <button class="seg" id="pDesf">Desfazer</button>
+  </div>
+  <div class="linha">
+    <button class="seg" id="pPub" hidden>Salvar para o cliente</button>
+    <button class="cta small" id="pOk">Concluir</button>
+  </div>
+</section>
 <section class="cat glass" aria-label="Catálogo de móveis">
   <div class="chead">
     <div><h2>Mobiliar</h2><div class="hint">Toque num item para colocar. Arraste na casa para mover.</div></div>
@@ -374,6 +409,7 @@ document.querySelector('.loader').addEventListener('click',function(){if(b.class
       <button class="seg" id="bWalk">Caminhar</button>
       <button class="seg" id="bLayers">Exibir</button>
       <button class="seg" id="bList">Lista de móveis</button>
+      <button class="seg gold" id="bPint">Pintar</button>
       <button class="seg gold" id="bFurn">Mobiliar</button>
     </div>
     <div class="sp"></div>
@@ -1676,6 +1712,7 @@ function setCut(on) {
   Object.values(matsByName).forEach((m) => { m.clippingPlanes = on ? [cutPlane] : null; m.clipShadows = true; m.needsUpdate = true; });
   furnRoot.traverse(clipMat);
   showPlanOnly(furnRoot);
+  if (typeof pintGroup !== 'undefined') pintGroup.traverse(clipMat);
 }
 function clipMat(o) { if (o.isMesh) { o.material.clippingPlanes = cutOn ? [cutPlane] : null; o.material.needsUpdate = true; } }
 
@@ -1891,6 +1928,133 @@ function initFurniture() {
   }
 }
 initFurniture();
+
+/* ---------- pintar paredes (retoques e destaques) ----------
+   Toque numa face: pinta toda a face plana ligada a ela (a parede inteira do SketchUp).
+   A tinta é uma película fina por cima da parede; as pinturas ficam guardadas neste aparelho
+   e, para o engenheiro (com a chave do GitHub salva), vão para o pinturas.json do projeto. */
+const PASTA_PINT = '__PASTA__';
+const TINTAS = [
+  ['Branco neve', '#f6f5f1'], ['Off-white', '#ece6dc'], ['Gelo', '#e4e6e3'], ['Cinza claro', '#c9c8c4'], ['Cinza médio', '#8e8d8a'], ['Cinza grafite', '#4a4c4f'],
+  ['Preto fosco', '#232426'], ['Areia', '#d8c7a8'], ['Palha', '#e6d6a9'], ['Terracota', '#b4643f'], ['Verde sálvia', '#a9b59c'], ['Verde musgo', '#5f6b46'],
+  ['Azul névoa', '#b9c7d2'], ['Azul petróleo', '#2f5560'], ['Amarelo ocre', '#d39b34'], ['Rosa antigo', '#c99a92'], ['Marrom café', '#5b4334'], ['Madeira', '#9a6a42'],
+];
+var pintGroup = new THREE.Group(); pintGroup.name = 'pinturas'; scene.add(pintGroup);
+let pintando = false, corPint = TINTAS[0][1], borracha = false, pinturas = [], desfazer = [];
+const CH_PINT = 'er3d-pint-' + PASTA_PINT;
+const matTinta = new Map();
+function tintaMat(c) {
+  if (!matTinta.has(c)) matTinta.set(c, new THREE.MeshStandardMaterial({ color: c, roughness: 0.88, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  const m = matTinta.get(c); m.clippingPlanes = cutOn ? [cutPlane] : null; return m;
+}
+function malhaPintura(p) {
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p.t, 3)); g.computeVertexNormals();
+  const m = new THREE.Mesh(g, tintaMat(p.c)); m.receiveShadow = true; m.userData.pint = p; return m;
+}
+function redesenharPinturas() { pintGroup.clear(); pinturas.forEach((p) => pintGroup.add(malhaPintura(p))); }
+function guardarLocal() { try { localStorage.setItem(CH_PINT, JSON.stringify(pinturas)); } catch (e) {} }
+
+// face plana ligada ao triângulo tocado (mesma direção e mesmo plano, vizinhos por vértice)
+const adjCache = new WeakMap();
+function faceInteira(mesh, triIdx) {
+  const geo = mesh.geometry, pos = geo.attributes.position, idx = geo.index, nTri = (idx ? idx.count : pos.count) / 3;
+  const vi = (t, j) => (idx ? idx.getX(3 * t + j) : 3 * t + j);
+  let A = adjCache.get(mesh);
+  if (!A) {
+    const wp = new Float32Array(nTri * 9), v = new THREE.Vector3(), mapa = new Map();
+    for (let t = 0; t < nTri; t++) for (let j = 0; j < 3; j++) {
+      v.fromBufferAttribute(pos, vi(t, j)).applyMatrix4(mesh.matrixWorld); wp.set([v.x, v.y, v.z], 9 * t + 3 * j);
+      const k = Math.round(v.x * 200) + ',' + Math.round(v.y * 200) + ',' + Math.round(v.z * 200); let l = mapa.get(k); if (!l) mapa.set(k, (l = [])); l.push(t);
+    }
+    A = { wp, mapa }; adjCache.set(mesh, A);
+  }
+  const P = (t, j) => new THREE.Vector3(A.wp[9 * t + 3 * j], A.wp[9 * t + 3 * j + 1], A.wp[9 * t + 3 * j + 2]);
+  const nor = (t) => new THREE.Vector3().subVectors(P(t, 2), P(t, 1)).cross(new THREE.Vector3().subVectors(P(t, 0), P(t, 1))).normalize();
+  const n0 = nor(triIdx), d0 = n0.dot(P(triIdx, 0));
+  const visto = new Set([triIdx]), fila = [triIdx], out = [];
+  while (fila.length && out.length < 4000) {
+    const t = fila.pop(); out.push(t);
+    for (let j = 0; j < 3; j++) { const q = P(t, j), k = Math.round(q.x * 200) + ',' + Math.round(q.y * 200) + ',' + Math.round(q.z * 200);
+      for (const u of A.mapa.get(k) || []) { if (visto.has(u)) continue; visto.add(u);
+        const nu = nor(u); if (nu.dot(n0) > 0.9995 && Math.abs(n0.dot(P(u, 0)) - d0) < 0.004) fila.push(u); } }
+  }
+  return { tris: out, n: n0, P };
+}
+function pintarEm(hit, rayDir) {
+  const r = faceInteira(hit.object, hit.faceIndex);
+  const n = r.n.clone(); if (n.dot(rayDir) > 0) n.negate();   // película do lado de quem está olhando
+  const off = n.multiplyScalar(0.004), t = [];
+  r.tris.forEach((k) => { for (let j = 0; j < 3; j++) { const q = r.P(k, j).add(off); t.push(+q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3)); } });
+  // mesma face já pintada: troca a cor
+  const chave = t.slice(0, 9).join(',');
+  const velha = pinturas.find((p) => p.t.slice(0, 9).join(',') === chave);
+  if (velha) { desfazer.push({ tipo: 'cor', p: velha, c: velha.c }); velha.c = corPint; }
+  else { const p = { c: corPint, t }; pinturas.push(p); desfazer.push({ tipo: 'nova', p }); }
+  redesenharPinturas(); guardarLocal(); marcarPint();
+}
+function apagarEm(mesh) { const p = mesh.userData.pint; const i = pinturas.indexOf(p); if (i < 0) return; pinturas.splice(i, 1); desfazer.push({ tipo: 'apagou', p, i }); redesenharPinturas(); guardarLocal(); marcarPint(); }
+$('#pDesf').addEventListener('click', () => {
+  const a = desfazer.pop(); if (!a) { toast('Nada para desfazer.'); return; }
+  if (a.tipo === 'nova') pinturas.splice(pinturas.indexOf(a.p), 1); else if (a.tipo === 'cor') a.p.c = a.c; else pinturas.splice(a.i, 0, a.p);
+  redesenharPinturas(); guardarLocal(); marcarPint();
+});
+// toque (sem arrastar) pinta; arrastar continua girando a casa
+let toqueIni = null;
+canvas.addEventListener('pointerdown', (e) => { if (pintando) toqueIni = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+canvas.addEventListener('pointerup', (e) => {
+  if (!pintando || !toqueIni) return; const d = Math.hypot(e.clientX - toqueIni.x, e.clientY - toqueIni.y), dt = performance.now() - toqueIni.t; toqueIni = null;
+  if (d > 8 || dt > 600) return;
+  setNdc(e); ray.setFromCamera(ndc, camera);
+  if (borracha) { const h = ray.intersectObjects(pintGroup.children, false)[0]; if (h) apagarEm(h.object); else toast('Toque numa parede pintada para apagar.'); return; }
+  const h = ray.intersectObject(model, true).find((x) => x.face && !(cutOn && x.point.y > cutY - 0.05) && !x.object.userData.furn);
+  if (!h) return;
+  const hm = Array.isArray(h.object.material) ? h.object.material[h.face.materialIndex] : h.object.material;
+  if (hm && hm.userData && hm.userData.glass) { toast('Isso é vidro — toque na parede.'); return; }
+  pintarEm(h, ray.ray.direction);
+});
+// paleta de tintas
+{
+  const host = $('#pTintas');
+  const escolher = (c, nome, b) => { corPint = c; borracha = false; $('#pBorr').classList.remove('on'); host.querySelectorAll('.tinta').forEach((x) => x.classList.toggle('on', x === b)); $('#pNome').textContent = nome; };
+  TINTAS.forEach(([nome, c], i) => { const b = document.createElement('button'); b.className = 'tinta' + (i === 0 ? ' on' : ''); b.style.background = c; b.title = nome; b.setAttribute('aria-label', nome); b.addEventListener('click', () => escolher(c, nome, b)); host.appendChild(b); });
+  $('#pOutra').addEventListener('input', (e) => escolher(e.target.value, 'Cor escolhida', null));
+  $('#pBorr').addEventListener('click', () => { borracha = !borracha; $('#pBorr').classList.toggle('on', borracha); $('#pNome').textContent = borracha ? 'Borracha' : 'Toque numa cor'; });
+}
+// engenheiro: publica as pinturas no projeto (usa a chave do GitHub salva neste aparelho pelo app 3D)
+const chaveGH = () => { try { return localStorage.getItem('er3d-chave') || ''; } catch (e) { return ''; } };
+let pintPendente = false;
+function marcarPint() { pintPendente = true; const b = $('#pPub'); if (b && !b.hidden) b.textContent = 'Salvar para o cliente'; }
+async function publicarPinturas() {
+  const chave = chaveGH(); if (!chave) return;
+  const api = 'https://api.github.com/repos/elielengenharia/rdo-eliel/contents/3d/' + PASTA_PINT + '/pinturas.json';
+  const hd = { Authorization: 'Bearer ' + chave, Accept: 'application/vnd.github+json' };
+  const b = $('#pPub'); b.textContent = 'Salvando…';
+  try {
+    let sha; const r0 = await fetch(api + '?ref=main', { headers: hd, cache: 'no-store' }); if (r0.ok) sha = (await r0.json()).sha;
+    const txt = JSON.stringify(pinturas);
+    const by = new TextEncoder().encode(txt); let bin = ''; for (let i = 0; i < by.length; i += 0x8000) bin += String.fromCharCode.apply(null, by.subarray(i, i + 0x8000)); const conteudo = btoa(bin);
+    const r = await fetch(api, { method: 'PUT', headers: { ...hd, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: '3D: pinturas do projeto ' + PASTA_PINT, content: conteudo, sha, branch: 'main' }) });
+    if (!r.ok) throw new Error(r.status);
+    pintPendente = false; b.textContent = 'Salvo para o cliente ✓'; toast('Pintura salva. O cliente vê em alguns minutos.');
+  } catch (e) { b.textContent = 'Não salvou — tentar de novo'; toast('Não consegui salvar. Confira a internet.'); }
+}
+$('#pPub').addEventListener('click', publicarPinturas);
+function entrarPintura() {
+  if (walking) exitWalk(); if (furnishing) exitFurnish();
+  pintando = true; controls.autoRotate = false; $('#bRot')?.classList.remove('on');
+  document.body.classList.add('pintando'); document.body.classList.remove('panel-open', 'list-open', 'layers-open');
+  $('#pPub').hidden = !chaveGH(); if (!$('#pPub').hidden) $('#pPub').textContent = pintPendente ? 'Salvar para o cliente' : 'Salvo para o cliente ✓';
+  toast('Escolha a cor e toque na parede.');
+}
+function sairPintura() { pintando = false; document.body.classList.remove('pintando'); }
+$('#pOk').addEventListener('click', sairPintura);
+$('#bPint').addEventListener('click', () => (pintando ? sairPintura() : entrarPintura()));
+// carrega: o que foi pintado neste aparelho vale; senão, as pinturas publicadas do projeto
+(async () => {
+  let local = null; try { local = JSON.parse(localStorage.getItem(CH_PINT) || 'null'); } catch (e) {}
+  if (Array.isArray(local)) { pinturas = local; redesenharPinturas(); return; }
+  try { const r = await fetch('pinturas.json', { cache: 'no-cache' }); if (r.ok) { const d = await r.json(); if (Array.isArray(d)) { pinturas = d; redesenharPinturas(); } } } catch (e) {}
+})();
 Object.assign(window.__app, { model, THREE, groundY, floorHit, load: (d) => { items = d.items.map((i) => ({ ...i })); rebuild(); }, enterFurnish, exitFurnish, addItem, setCut, items: () => items });
 </script>
 </body>
