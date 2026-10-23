@@ -1,4 +1,28 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="description" content="Projeto 3D interativo da __NOME__ — Eliel Engenharia &amp; Arquitetura.">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
+/* celular: barra compacta com abas (sem precisar arrastar os botões para o lado) */
+.dtabs{display:none}
+.dock{touch-action:manipulation;overscroll-behavior:contain}
+@media (max-width:720px){
+  .dock{width:calc(100% - 20px);bottom:max(10px,env(safe-area-inset-bottom));padding:7px;gap:6px;border-radius:18px}
+  .dtabs{display:flex;gap:6px;align-items:center}
+  .dtabs .grp{flex:1;display:grid;grid-template-columns:repeat(3,1fr);overflow:visible}
+  .dtabs .seg{text-align:center;padding:8px 4px;font-size:12.5px}
+  .dtabs .wa{width:40px;height:40px;flex-shrink:0;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,var(--gold-2),var(--gold))}
+  .dtabs .wa svg{width:19px;height:19px;fill:#15120c}
+  .dock .row{display:block}
+  .dock .row .sp,.dock .row .cta{display:none}
+  .dock .row .grp{display:none;background:none;padding:0;overflow:visible}
+  body[data-dtab="v"] #gV,body[data-dtab="l"] #gL,body[data-dtab="m"] #gM{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+  .dock .row .grp .seg{text-align:center;padding:9px 4px;font-size:12.5px;white-space:normal;line-height:1.15;background:rgba(127,127,127,.10)}
+  .dock .row .grp .seg.on{background:var(--on)}
+  .walking .dtabs{display:none}
+  .walking #gM{display:grid!important;grid-template-columns:repeat(3,1fr);gap:4px}
+  .walking #gV,.walking #gL{display:none!important}
+  .proj{bottom:calc(var(--dockH,170px) + 10px)!important}
+  .panel,.list{bottom:calc(var(--dockH,170px) + 10px)!important}
+  .layers{bottom:calc(var(--dockH,170px) + 10px)!important}
+}
+</style><meta name="description" content="Projeto 3D interativo da __NOME__ — Eliel Engenharia &amp; Arquitetura.">
 <meta property="og:title" content="__NOME__ · Projeto 3D">
 <meta property="og:description" content="Eliel Engenharia &amp; Arquitetura — gire a casa, veja de dia e à noite e explore por dentro.">
 <meta property="og:image" content="https://elielengenharia.github.io/rdo-eliel/3d/__PASTA__/capa.jpg">
@@ -320,8 +344,16 @@ document.querySelector('.loader').addEventListener('click',function(){if(b.class
 <div class="toast glass" id="toast"></div>
 
 <nav class="dock glass">
+  <div class="dtabs">
+    <div class="grp" role="tablist" aria-label="Menu">
+      <button class="seg on" data-dtab="v">Vistas</button>
+      <button class="seg" data-dtab="l">Luz</button>
+      <button class="seg" data-dtab="m">Mais</button>
+    </div>
+    <a class="wa" id="bWa2" target="_blank" rel="noopener" aria-label="Falar com o engenheiro"></a>
+  </div>
   <div class="row r1">
-    <div class="grp" role="group" aria-label="Vistas">
+    <div class="grp" id="gV" role="group" aria-label="Vistas">
       <button class="seg on" data-view="projeto">Vista principal</button>
       <button class="seg" data-view="frente">Frente</button>
       <button class="seg" data-view="lateral">Lateral</button>
@@ -330,14 +362,14 @@ document.querySelector('.loader').addEventListener('click',function(){if(b.class
       <button class="seg" data-view="planta">Planta 3D</button>
     </div>
     <div class="sp"></div>
-    <div class="grp" role="group" aria-label="Iluminação">
+    <div class="grp" id="gL" role="group" aria-label="Iluminação">
       <button class="seg on" data-mood="dia">Dia</button>
       <button class="seg" data-mood="tarde">Pôr do sol</button>
       <button class="seg" data-mood="noite">Noite</button>
     </div>
   </div>
   <div class="row r2">
-    <div class="grp">
+    <div class="grp" id="gM">
       <button class="seg" id="bRot">Girar sozinho</button>
       <button class="seg" id="bWalk">Caminhar</button>
       <button class="seg" id="bLayers">Exibir</button>
@@ -651,6 +683,16 @@ async function abrirModelo() {
   if (!dae) throw new Error('modelo não encontrado');
   return { dae: new TextDecoder().decode(dae) };
 }
+// caixa da casa ignorando objetos pequenos soltos longe dela (boneco de escala do SketchUp, por exemplo)
+function caixaRobusta(obj) {
+  const full = new THREE.Box3().setFromObject(obj), bb = new THREE.Box3(), s = new THREE.Vector3();
+  const grandes = new THREE.Box3(), peq = [];
+  obj.traverse((o) => { if (!o.isMesh) return; bb.setFromObject(o); if (bb.isEmpty()) return; if (bb.getSize(s).length() >= 3.5) grandes.union(bb); else peq.push(bb.clone()); });
+  if (grandes.isEmpty()) return full;
+  const perto = grandes.clone().expandByScalar(1.5), out = grandes.clone();
+  peq.forEach((p) => { if (p.intersectsBox(perto)) out.union(p); });
+  return out;
+}
 async function load() {
   const arq = await abrirModelo();
   $('#loadmsg').textContent = 'Montando a maquete…';
@@ -683,7 +725,7 @@ async function load() {
   });
   remove.forEach((o) => o.parent.remove(o));
 
-  const box = new THREE.Box3().setFromObject(model);
+  const box = caixaRobusta(model);
   box.getCenter(center); const size = box.getSize(new THREE.Vector3());
   radius = size.length() / 2; groundY = box.min.y;
   ground.position.y = groundY - 0.01;
@@ -852,11 +894,19 @@ function tick() {
     if (keys.e) camera.position.addScaledVector(right, sp);
     camera.rotation.set(pitch, yaw, 0, 'YXZ');
   } else controls.update();
+  // perto/longe da câmera ajustados à distância: evita o tremido (faces piscando) no celular
+  { const nr = walking ? 0.1 : Math.min(1, Math.max(0.1, camera.position.distanceTo(controls.target) * 0.02)); if (Math.abs(camera.near - nr) > 0.005 || camera.far !== 1200) { camera.near = nr; camera.far = 1200; camera.updateProjectionMatrix(); } }
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
 
-try { await load(); } catch (err) { console.error(err); $('#loadmsg').textContent = 'Não foi possível abrir o modelo.'; }
+document.body.dataset.dtab = 'v';
+{ const wa = $('#bWa'), w2 = $('#bWa2'); if (wa && w2) { w2.href = wa.href; const ic = wa.querySelector('svg'); if (ic) w2.appendChild(ic.cloneNode(true)); } }
+document.querySelectorAll('.dtabs [data-dtab]').forEach((b) => b.addEventListener('click', () => {
+  document.body.dataset.dtab = b.dataset.dtab; document.querySelectorAll('.dtabs [data-dtab]').forEach((x) => x.classList.toggle('on', x === b)); placePad();
+}));
+window.addEventListener('resize', placePad);
+try { await load(); placePad(); } catch (err) { console.error(err); $('#loadmsg').textContent = 'Não foi possível abrir o modelo.'; }
 tick();
 window.__app = { goTo, setMood, views };
 
