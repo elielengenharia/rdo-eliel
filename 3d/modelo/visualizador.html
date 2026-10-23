@@ -683,6 +683,32 @@ async function abrirModelo() {
   if (!dae) throw new Error('modelo não encontrado');
   return { dae: new TextDecoder().decode(dae) };
 }
+/* telhado sanduíche (telha termoacústica): painel com nervuras trapezoidais no sentido da queda (eixo x)
+   p = { x0, x1, z0, z1, y0, y1 } — y0/y1 = altura do apoio (topo das terças) em x0 e x1 */
+const SANDUICHE = {
+  topo: new THREE.MeshStandardMaterial({ name: 'SANDUICHE_TOPO', color: '#cfd3d7', metalness: 0.35, roughness: 0.42, side: THREE.DoubleSide }),
+  baixo: new THREE.MeshStandardMaterial({ name: 'SANDUICHE_BAIXO', color: '#f1f0ec', roughness: 0.6, side: THREE.DoubleSide }),
+};
+function telhadoSanduiche(p) {
+  const g = new THREE.Group(), esp = 0.03, H = 0.035, mod = [[0, 0], [0.17, 0], [0.19, H], [0.23, H], [0.25, 0]];
+  const pts = []; for (let z = p.z0; z < p.z1 - 1e-6; z += 0.25) mod.slice(0, 4).forEach(([dz, h]) => { if (z + dz <= p.z1) pts.push([z + dz, h]); }); pts.push([p.z1, 0]);
+  const pos = [], ind = [];
+  pts.forEach(([z, h]) => { pos.push(p.x0, p.y0 + esp + h, z, p.x1, p.y1 + esp + h, z); });
+  for (let k = 0; k < pts.length - 1; k++) { const a = 2 * k; ind.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+  let geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(ind);
+  geo = geo.toNonIndexed(); geo.computeVertexNormals();
+  const topo = new THREE.Mesh(geo, SANDUICHE.topo);
+  const b = new THREE.BufferGeometry(); b.setAttribute('position', new THREE.Float32BufferAttribute([p.x0, p.y0, p.z0, p.x1, p.y1, p.z0, p.x0, p.y0, p.z1, p.x1, p.y1, p.z1], 3)); b.setIndex([0, 2, 1, 1, 2, 3]); b.computeVertexNormals();
+  const baixo = new THREE.Mesh(b, SANDUICHE.baixo);
+  // bordas do painel (espessura)
+  const borda = (xa, ya, xb, yb, za, zb) => { const e = new THREE.BufferGeometry(); e.setAttribute('position', new THREE.Float32BufferAttribute([xa, ya, za, xb, yb, zb, xa, ya + esp, za, xb, yb + esp, zb], 3)); e.setIndex([0, 1, 2, 1, 3, 2]); e.computeVertexNormals(); g.add(new THREE.Mesh(e, SANDUICHE.baixo)); };
+  borda(p.x0, p.y0, p.x1, p.y1, p.z0, p.z0); borda(p.x0, p.y0, p.x1, p.y1, p.z1, p.z1); borda(p.x0, p.y0, p.x0, p.y0, p.z0, p.z1); borda(p.x1, p.y1, p.x1, p.y1, p.z0, p.z1);
+  g.add(topo, baixo);
+  if (p.cumeeira) { const c = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.03, p.z1 - p.z0), SANDUICHE.topo); c.position.set(p.cumeeira, Math.max(p.y0, p.y1) + esp + H + 0.015, (p.z0 + p.z1) / 2); g.add(c); }
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  g.name = 'telhado-sanduiche'; return g;
+}
+const TELHADOS_SANDUICHE = [];
 // caixa da casa ignorando objetos pequenos soltos longe dela (boneco de escala do SketchUp, por exemplo)
 function caixaRobusta(obj) {
   const full = new THREE.Box3().setFromObject(obj), bb = new THREE.Box3(), s = new THREE.Vector3();
@@ -725,6 +751,7 @@ async function load() {
   });
   remove.forEach((o) => o.parent.remove(o));
 
+  { const inv = model.matrixWorld.clone().invert(); TELHADOS_SANDUICHE.forEach((p) => { const t = telhadoSanduiche(p); t.applyMatrix4(inv); model.add(t); }); model.updateMatrixWorld(true); }
   const box = caixaRobusta(model);
   box.getCenter(center); const size = box.getSize(new THREE.Vector3());
   radius = size.length() / 2; groundY = box.min.y;
