@@ -532,6 +532,7 @@ const FINISHES = {
   },
 };
 
+const VIDRO_OP = 0.14;   // vidro bem transparente (pedido do cliente)
 function baseMaterialFor(name, old) {
   const n = name || '';
   const p = { color: new THREE.Color(1, 1, 1), roughness: 0.75, metalness: 0, map: null };
@@ -539,8 +540,8 @@ function baseMaterialFor(name, old) {
   const hasMissingMap = old && old.map;
   if (/Glass/i.test(n)) {
     const m = new THREE.MeshPhysicalMaterial({
-      color: /Green/i.test(n) ? 0x2b3a33 : 0x6f7f88, roughness: 0.05, metalness: 0.1,
-      transparent: true, opacity: 0.42, envMapIntensity: 1.5, side: THREE.DoubleSide, depthWrite: false,
+      color: /Green/i.test(n) ? 0x2b3a33 : 0xc4d3da, roughness: 0.03, metalness: 0.05,
+      transparent: true, opacity: VIDRO_OP, envMapIntensity: 1.5, side: THREE.DoubleSide, depthWrite: false,
     });
     m.userData.glass = true; m.name = n; return m;
   }
@@ -616,7 +617,7 @@ function setMood(key) {
   scene.fog.color.set(m.mid); scene.fog.near = radius * 3; scene.fog.far = radius * 18;
   nightLights.visible = m.glow > 0;
   nightLights.children.forEach((l) => (l.intensity = l.userData.base * m.glow));
-  glassMats.forEach((g) => { g.emissive = new THREE.Color(0xffc477); g.emissiveIntensity = 0.9 * m.glow; g.opacity = m.glow > 0.5 ? 0.85 : 0.42; });
+  glassMats.forEach((g) => { g.emissive = new THREE.Color(0xffc477); g.emissiveIntensity = 0.9 * m.glow; g.opacity = m.glow > 0.5 ? 0.85 : VIDRO_OP; });
   grassTex.needsUpdate = true;
   ground.material.color.set(key === 'noite' ? '#55606a' : '#ffffff');
   envFromSky();
