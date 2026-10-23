@@ -9460,6 +9460,12 @@ function marquise(g, p, kind) {
 function showPlanOnly(o) { o.traverse((m) => { if (m.userData.planOnly) m.visible = cutOn; }); }
 const isMarq = (it) => !!(it && CAT_BY_ID[it.type]?.p);
 
+/* LED embutido: a origem é a face de baixo do teto (o item fica na altura do forro) */
+function ledEmbutido(g, comLuz) {
+  C(g, 0.065, 0.065, 0.012, MAT.white, 0, -0.012);
+  bulb(g, C(g, 0.05, 0.05, 0.004, MAT.bulb(), 0, -0.016));
+  if (comLuz) { const L = new THREE.SpotLight(0xffd7a3, 0, 9, 0.85, 0.7, 1.6); L.position.set(0, -0.04, 0); L.target.position.set(0, -3, 0); g.add(L.target); L.userData.power = 16; g.add(L); g.userData.lights = (g.userData.lights || []).concat(L); }
+}
 const CATALOG = [
   // Sala
   { id: 'sofa3', cat: 'Sala', name: 'Sofá 3 lugares', dim: [2.1, 0.9, 0.85], build(g) {
@@ -9552,6 +9558,8 @@ const CATALOG = [
   { id: 'luminaria', cat: 'Luzes', name: 'Luminária de piso', dim: [0.4, 0.4, 1.6], light: true, build(g) {
     C(g, 0.16, 0.16, 0.02, MAT.metal); C(g, 0.012, 0.012, 1.4, MAT.metal); const sh = C(g, 0.16, 0.2, 0.25, MAT.fab2.clone(), 0, 1.35); sh.material.side = THREE.DoubleSide;
     bulb(g, S(g, 0.04, MAT.bulb(), 0, 1.45, 0)); addLight(g, 'point', 1.45, 5, 6); } },
+  { id: 'ledemb', cat: 'Luzes', name: 'LED embutido no teto', dim: [0.12, 0.12, 0.02], light: true, build(g) { ledEmbutido(g, false); } },
+  { id: 'ledemb_luz', cat: 'Luzes', name: 'LED embutido com facho', dim: [0.12, 0.12, 0.02], light: true, build(g) { ledEmbutido(g, true); } },
   { id: 'arandela', cat: 'Luzes', name: 'Arandela de parede', dim: [0.12, 0.1, 0.25], light: true, build(g) {
     B(g, 0.12, 0.25, 0.08, MAT.black, 0, 1.9); bulb(g, B(g, 0.1, 0.02, 0.06, MAT.bulb(), 0, 1.89, 0.005)); bulb(g, B(g, 0.1, 0.02, 0.06, MAT.bulb(), 0, 2.14, 0.005)); addLight(g, 'point', 2.0, 5, 6); } },
 ];
