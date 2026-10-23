@@ -1214,7 +1214,7 @@ function splitInterior() {
         a.fromBufferAttribute(pos, i0).applyMatrix4(mesh.matrixWorld); b.fromBufferAttribute(pos, i1).applyMatrix4(mesh.matrixWorld); c.fromBufferAttribute(pos, i2).applyMatrix4(mesh.matrixWorld);
         n.subVectors(c, b).cross(a.clone().sub(b)).normalize(); cen.copy(a).add(b).add(c).divideScalar(3);
         let inside = false;
-        if (n.lengthSq() > 0.5) inside = blocked(cen, n, 0.02) && blocked(cen, n.clone().negate(), 0.02) && blocked(cen.clone().addScaledVector(n, 0.03), UP, 0) && blocked(cen.clone().addScaledVector(n, -0.03), UP, 0);
+        if (n.lengthSq() > 0.5 && !/_EXT$/.test(m.name)) inside = blocked(cen, n, 0.02) && blocked(cen, n.clone().negate(), 0.02) && blocked(cen.clone().addScaledVector(n, 0.03), UP, 0) && blocked(cen.clone().addScaledVector(n, -0.03), UP, 0);
         (inside ? int : ext).push(i0, i1, i2);
       }
       if (ext.length) { newGroups.push({ start: newIdx.length, count: ext.length, materialIndex: gp.materialIndex }); newIdx.push(...ext); }
