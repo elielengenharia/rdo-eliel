@@ -803,7 +803,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.55 · copiar, colar e duplicar móveis, pontos, caixas e esquadrias", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.56 · portas de vidro: Versatik, mão amiga, trilho aparente, cortina Reiki, camarão de vidro, flex, pivotante de vidro e mola de piso", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1103,7 +1103,11 @@ function geom(todas=false){
 /* ---------------- Esquadrias: modelos de abertura e material ---------------- */
 // tipos de porta e janela do mercado (planta, fachada, detalhe, ferragens e orçamento seguem o tipo)
 const MODELOS={Janela:[["correr","de correr (2 ou 4 folhas)"],["correr3","de correr 3 folhas"],["veneziana","veneziana de correr (3 folhas)"],["giro","de abrir"],["maxim-ar","maxim-ar"],["basculante","basculante"],["pivot","pivotante"],["camarao","camarão (sanfonada)"],["guilhotina","guilhotina"],["fixa","fixa"]],
-  Porta:[["giro","de abrir"],["giro2","de abrir 2 folhas"],["correr","de correr (corre para um lado)"],["correr2c","de correr, abre do meio para os lados"],["correr4","de correr 4 folhas (2 fixas + 2 de correr)"],["embutir","de correr embutida na parede"],["pivot","pivotante"],["vaivem","vai e vem"],["camarao","camarão (sanfonada)"],["enrolar","de enrolar"],["basculante","basculante (portão de garagem)"]],"Vão":[["","livre"]]};
+  Porta:[["correr","de correr tradicional (corre para um lado)","De correr (deslizantes)"],["correr2c","de correr, abre do meio para os lados","De correr (deslizantes)"],["correr4","de correr 4 folhas (2 fixas + 2 de correr)","De correr (deslizantes)"],["embutir","de correr embutida na parede","De correr (deslizantes)"],
+    ["versatik","de vidro sistema Versatik / Versatik Truck","De correr (deslizantes)"],["maoamiga","de vidro mão amiga (sequencial)","De correr (deslizantes)"],["trilhoap","de correr com trilho aparente (roldanas clássicas)","De correr (deslizantes)"],
+    ["reiki","cortina de vidro (sistema Reiki / sacada)","Articuladas e retráteis"],["camarao","camarão (sanfonada)","Articuladas e retráteis"],["camaraov","camarão de vidro (sanfonada)","Articuladas e retráteis"],["flex","flex articulada (vãos menores / box)","Articuladas e retráteis"],
+    ["giro","de abrir tradicional (dobradiça lateral)","De giro / eixo"],["giro2","de abrir 2 folhas","De giro / eixo"],["pivot","pivotante","De giro / eixo"],["pivotv","pivotante de vidro","De giro / eixo"],["mola","de vidro com mola hidráulica de piso (comercial / loja)","De giro / eixo"],["vaivem","vai e vem","De giro / eixo"],
+    ["enrolar","de enrolar","Outras"],["basculante","basculante (portão de garagem)","Outras"]],"Vão":[["","livre"]]};
 // materiais das esquadrias (escolha em cada uma ou o padrão do projeto em Dados > Portas, janelas e vãos)
 const MATS={Janela:["Vidro temperado 8 mm","Alumínio e vidro","Madeira e vidro","Madeira (veneziana)","Ferro (metalon) e vidro","Aço (veneziana de chapa)","PVC e vidro"],
   Porta:["Madeira","Vidro temperado 10 mm","Alumínio e vidro","Alumínio e vidro temperado","Ferro (metalon)","Aço (chapa)","PVC"]};
@@ -1116,14 +1120,21 @@ function modPadrao(a){ const t=["Porta","Janela","Vão"].includes(a.t)?a.t:"Port
   return t==="Porta"?(num(a.l)>=2.4?"correr4":"giro"):t==="Janela"?((num(a.a)||1)<=0.6?"maxim-ar":"correr"):""; }
 const nomeMod=(t,m)=>t==="Vão"?"Vão livre":`${t} ${((MODELOS[t]||[]).find(v=>v[0]===m)||["",""])[1]}`.trim();
 function nFolhas(t,m,l){ if(t==="Janela") return m==="correr"?(l>=2?4:2):m==="correr3"||m==="veneziana"?3:m==="giro"?(l>0.8?2:1):m==="fixa"||m==="pivot"?1:m==="guilhotina"?2:m==="camarao"?(l>=1.6?6:4):(l>1.2?2:1);
+  if(t==="Porta"&&MODBASE[m]) return m==="maoamiga"?Math.max(3,Math.ceil(l/0.9)):m==="reiki"?Math.max(3,Math.ceil(l/0.65)):m==="flex"?2:m==="pivotv"?1:m==="versatik"||m==="trilhoap"?(l>=1.6?2:1):m==="camaraov"?(l>=1.4?6:4):(l>=1.2?2:1);
   if(t==="Porta") return m==="correr4"?4:m==="correr2c"||m==="giro2"?2:m==="correr"?(l>=1.6?2:1):m==="embutir"||m==="pivot"||m==="enrolar"||m==="basculante"?1:m==="vaivem"?(l>=1.2?2:1):m==="camarao"?(l>=1.4?6:4):(l>=1.2?2:1); return 0; }
-const ehCorrer=m=>m==="correr"||m==="correr4"||m==="correr2c"||m==="embutir";
+// modelos que desenham como um modelo base (6.56): o nome, as folhas, as ferragens e o material são do modelo escolhido
+const MODBASE={versatik:"correr",maoamiga:"correr",trilhoap:"correr",reiki:"camarao",camaraov:"camarao",flex:"camarao",pivotv:"pivot",mola:"vaivem"};
+const mb=m=>MODBASE[m]||m, MODVIDRO=new Set(["versatik","maoamiga","reiki","camaraov","pivotv","mola"]);
+const ehCorrer=m=>["correr","correr4","correr2c","embutir"].includes(mb(m));
+// opções do select de modelo, em grupos (De correr / Articuladas / De giro)
+function opcoesMod(t,sel){ const ls=MODELOS[t]||MODELOS.Porta; let out="", g0=null;
+  ls.forEach(([v,t2,gr])=>{ if(gr!==g0){ if(g0) out+="</optgroup>"; if(gr) out+=`<optgroup label="${esc(gr)}">`; g0=gr; } out+=`<option value="${v}"${sel===v?" selected":""}>${esc(t2)}</option>`; }); return out+(g0?"</optgroup>":""); }
 /* ---------------- Esquadrias: códigos P1, J1, V1 por tipo e medida ---------------- */
 function esquadrias(G){
   const grupos=new Map(), cont={Porta:0,Janela:0,"Vão":0}, pref={Porta:"P",Janela:"J","Vão":"V"};
   [...G.abs].sort((p,q)=>["Porta","Janela","Vão"].indexOf(p.tipo)-["Porta","Janela","Vão"].indexOf(q.tipo)||p.l-q.l||num(p.a.a)-num(q.a.a)).forEach(g=>{
     const a=num(g.a.a)||ABDEF[g.tipo].a, p=g.tipo==="Janela"?num(g.a.p):0;
-    const mod=modPadrao(g.a), mat=String(g.a.mat||matPad(g.tipo,g.externa)).trim()||matPad(g.tipo,g.externa), nf=nFolhas(g.tipo,mod,g.l);
+    const mod=modPadrao(g.a), matP=g.tipo==="Porta"&&MODVIDRO.has(mod)?"Vidro temperado 10 mm":matPad(g.tipo,g.externa), mat=String(g.a.mat||matP).trim()||matP, nf=nFolhas(g.tipo,mod,g.l);
     g.mod=mod; g.nf=nf; g.mat=mat;
     const fol=g.tipo==="Porta"?(g.a.fol||folhaPadrao(g)):""; g.fol=fol;
     // porta de banheiro (fechadura com tranqueta) e porta externa (cilindro) ganham código próprio
@@ -1404,17 +1415,22 @@ function desenhaAberturas(D,G,lista){ const h=G.h, k=D.k;
     const w=g.w, ln=(s,n)=>[w.x1+w.ux*s+g.nX*n, w.y1+w.uy*s+g.nY*n], s0=g.d, s1=g.d+g.l, sm=(s0+s1)/2;
     if(g.tipo==="Janela"){ [-h,h].forEach(n=>L(D,...ln(s0,n),...ln(s1,n),.18,"ESQUADRIA")); [-h/3,h/3].forEach(n=>L(D,...ln(s0,n),...ln(s1,n),.25,"ESQUADRIA")); }
     else if(g.tipo==="Vão"){ L(D,...ln(s0,0),...ln(s1,0),.18,"ESQUADRIA",true); }
-    else if(ehCorrer(modPadrao(g.a))){ const m=modPadrao(g.a), n=nFolhas("Porta",m,g.l), wf=g.l/n, sb=0.04;
-      [-h,h].forEach(nn=>L(D,...ln(s0,nn),...ln(s1,nn),.13,"ESQUADRIA"));
-      for(let i=0;i<n;i++){ const fixa=m==="correr4"&&(i===0||i===n-1), off=(m==="correr4"?(fixa?-1:1):(i%2?1:-1))*h/3, a=s0+i*wf-(i>0?sb:0), b=s0+(i+1)*wf+(i<n-1?sb:0);
-        L(D,...ln(a,off),...ln(b,off),.45,"ESQUADRIA"); }
+    else if(ehCorrer(modPadrao(g.a))){ const m0=modPadrao(g.a), m=mb(m0), n=nFolhas("Porta",m0,g.l), wf=g.l/n, sb=0.04, vd=g.a.dob?1:-1, ldA=g.lado||1;
+      if(m0==="trilhoap"){ // trilho aparente: a folha corre por fora, encostada na face da parede, e é maior que o vão
+        const o=ldA*(h+0.03), ex=0.05; L(D,...ln(s0,ldA*h),...ln(s1,ldA*h),.13,"ESQUADRIA");
+        if(n===1){ const a=s0-ex, b=s1+ex; L(D,...ln(a,o),...ln(b,o),.45,"ESQUADRIA"); const ra=vd<0?s0-g.l-ex:s0-ex, rb=vd<0?s1+ex:s1+g.l+ex; L(D,...ln(ra,o+ldA*0.03),...ln(rb,o+ldA*0.03),.13,"ESQUADRIA",true); }
+        else { L(D,...ln(s0-ex,o),...ln(sm,o),.45,"ESQUADRIA"); L(D,...ln(sm,o),...ln(s1+ex,o),.45,"ESQUADRIA"); L(D,...ln(s0-g.l/2-ex,o+ldA*0.03),...ln(s1+g.l/2+ex,o+ldA*0.03),.13,"ESQUADRIA",true); }
+        TX(D,...ln(sm,o+ldA*(2.2*k)),"TRILHO APARENTE",1.1,{l:"COTAS",mv:"l"}); }
+      else { [-h,h].forEach(nn=>L(D,...ln(s0,nn),...ln(s1,nn),.13,"ESQUADRIA"));
+      for(let i=0;i<n;i++){ const fixa=m==="correr4"&&(i===0||i===n-1), off=m0==="maoamiga"?(-1+2*i/(n-1))*h*0.6:(m==="correr4"?(fixa?-1:1):(i%2?1:-1))*h/3, a=s0+i*wf-(i>0?sb:0), b=s0+(i+1)*wf+(i<n-1?sb:0);
+        L(D,...ln(a,off),...ln(b,off),m0==="versatik"||m0==="maoamiga"?.35:.45,"ESQUADRIA"); } }
       // setas mostrando para onde as folhas correm (dob = corre para o outro lado)
-      const vd=g.a.dob?1:-1, mv=m==="correr4"?[[1,-1],[2,1]]:m==="correr2c"?[[0,-1],[1,1]]:n===1?[[0,vd]]:[[0,-1],[1,1]];
+      const mv=m0==="maoamiga"?[...Array(n).keys()].filter(i=>vd<0?i>0:i<n-1).map(i=>[i,vd]):m0==="trilhoap"?(n===1?[[0,vd]]:[[0,-1],[1,1]]):m==="correr4"?[[1,-1],[2,1]]:m==="correr2c"?[[0,-1],[1,1]]:n===1?[[0,vd]]:[[0,-1],[1,1]];
       if(m==="correr2c"){ [[s0-wf,s0],[s1,s1+wf]].forEach(([a,b])=>L(D,...ln(a,h/3),...ln(b,h/3),.13,"ESQUADRIA",true)); }   // onde as folhas recolhem
       if(m==="embutir"){ const a=vd<0?s0-g.l:s1, b=vd<0?s0:s1+g.l; L(D,...ln(a,0),...ln(b,0),.3,"ESQUADRIA",true); }   /* folha recolhida dentro da parede */
       mv.forEach(([i,vai])=>{ const c=s0+(i+0.5)*wf, d=wf*0.3, p1=ln(c-vai*d,-g.lado*0), p2=ln(c+vai*d,0), o=g.lado*(h+1.6*k), a=ln(c-vai*d,o), b=ln(c+vai*d,o); L(D,...a,...b,.18,"ESQUADRIA");
         const ux=(b[0]-a[0]), uy=(b[1]-a[1]), ul=Math.hypot(ux,uy)||1, s2=1.1*k; PG(D,[b,[b[0]-ux/ul*s2*1.6-uy/ul*s2*0.6,b[1]-uy/ul*s2*1.6+ux/ul*s2*0.6],[b[0]-ux/ul*s2*1.6+uy/ul*s2*0.6,b[1]-uy/ul*s2*1.6-ux/ul*s2*0.6]],"ESQUADRIA"); }); }
-    else { const m=modPadrao(g.a), sH=g.dob?s1:s0, sO=g.dob?s0:s1, ld=g.lado, face=ld*h, dS=Math.sign(sO-sH);
+    else { const m0=modPadrao(g.a), m=mb(m0), sH=g.dob?s1:s0, sO=g.dob?s0:s1, ld=g.lado, face=ld*h, dS=Math.sign(sO-sH);
       // folha de madeira com 4 cm de espessura (padrão do Eliel) e a dobradiça no batente
       const folha=(a,b,lado,trac)=>{ const f0=lado*h, e=0.04, sg=Math.sign(b-a)||1, hinge=ln(a,f0), fim=ln(a,f0+lado*Math.abs(b-a)), outro=ln(b,f0), h2=ln(a+sg*e,f0), f2=ln(a+sg*e,f0+lado*(Math.abs(b-a)-0.005));
         PL(D,[hinge,fim,f2,h2,hinge],.3,"ESQUADRIA",trac);
@@ -1423,10 +1439,15 @@ function desenhaAberturas(D,G,lista){ const h=G.h, k=D.k;
         const Lf=Math.abs(b-a), t=Lf-0.07, m0=a+sg*e/2; PG(D,[ln(a+sg*0.006,f0+lado*(t-0.035)),ln(a+sg*(e-0.006),f0+lado*(t-0.035)),ln(a+sg*(e-0.006),f0+lado*(t+0.035)),ln(a+sg*0.006,f0+lado*(t+0.035))],"ESQUADRIA");
         [[a,a-sg*0.07],[a+sg*e,a+sg*(e+0.07)]].forEach(([x1,x2])=>{ L(D,...ln(x1,f0+lado*t),...ln(x2,f0+lado*t),.3,"ESQUADRIA"); L(D,...ln(x2,f0+lado*t),...ln(x2,f0+lado*(t-0.09)),.3,"ESQUADRIA"); }); };
       if(m==="giro2"||(m==="giro"&&g.l>=1.2)){ folha(s0,sm,ld); folha(s1,sm,ld); }   // duas folhas, uma em cada batente
-      else if(m==="vaivem"){ if(g.l>=1.2){ [ld,-ld].forEach(lv=>{ folha(s0,sm,lv,lv!==ld); folha(s1,sm,lv,lv!==ld); }); } else { folha(sH,sO,ld); folha(sH,sO,-ld,true); } }
+      else if(m==="vaivem"){ if(m0==="mola") TX(D,...ln(sm,-ld*(h+1.8*k)),"MOLA DE PISO",1.1,{l:"COTAS",mv:"l"}); if(g.l>=1.2){ [ld,-ld].forEach(lv=>{ folha(s0,sm,lv,lv!==ld); folha(s1,sm,lv,lv!==ld); }); } else { folha(sH,sO,ld); folha(sH,sO,-ld,true); } }
       else if(m==="pivot"){ const off=Math.min(0.15,g.l*0.15), P=ln(sH+dS*off,0), L1=g.l-off, nx=g.nX*ld, ny=g.nY*ld;   // eixo deslocado: a folha gira para os dois lados do eixo
         L(D,P[0]-nx*off,P[1]-ny*off,P[0]+nx*L1,P[1]+ny*L1,.35,"ESQUADRIA"); AR(D,...P,P[0]+nx*L1,P[1]+ny*L1,...ln(sO,0),.18,"ESQUADRIA"); AR(D,...P,P[0]-nx*off,P[1]-ny*off,...ln(sH,0),.18,"ESQUADRIA"); CI(D,...P,0.03,.25,"ESQUADRIA"); }
-      else if(m==="camarao"){ const n=nFolhas("Porta",m,g.l), np=n/2, amp=Math.min(0.45,g.l/n*0.85);   // folhas dobradas em zigue-zague junto de cada batente
+      else if(m0==="reiki"){ const n=nFolhas("Porta",m0,g.l), wp=Math.min(0.75,g.l/n);   // cortina de vidro: painéis giram e ficam empilhados num batente, de lado para a parede
+        for(let i=0;i<n;i++){ const sp=sH+dS*(0.03+i*0.03); L(D,...ln(sp,face),...ln(sp,face+ld*wp),.3,"ESQUADRIA"); }
+        L(D,...ln(s0,face),...ln(s1,face),.13,"ESQUADRIA",true); TX(D,...ln(sm,-ld*(h+1.8*k)),"CORTINA DE VIDRO",1.1,{l:"COTAS",mv:"l"}); }
+      else if(m0==="flex"){ const amp=Math.min(0.40,g.l/2*0.85);   // flex: duas folhas articuladas que dobram juntas num batente
+        PL(D,[ln(sH,face),ln(sH+dS*0.06,face+ld*amp),ln(sH+dS*0.12,face)],.35,"ESQUADRIA"); L(D,...ln(s0,face),...ln(s1,face),.13,"ESQUADRIA",true); }
+      else if(m==="camarao"){ const n=nFolhas("Porta",m0,g.l), np=n/2, amp=Math.min(0.45,g.l/n*0.85);   // folhas dobradas em zigue-zague junto de cada batente
         [[s0,1],[s1,-1]].forEach(([b0,dr])=>{ const pts=[]; for(let i=0;i<=np;i++) pts.push(ln(b0+dr*i*0.06,face+ld*(i%2?amp:0))); PL(D,pts,.35,"ESQUADRIA"); }); L(D,...ln(s0,face),...ln(s1,face),.13,"ESQUADRIA",true); }
       else if(m==="enrolar"){ L(D,...ln(s0,-ld*h*0.6),...ln(s1,-ld*h*0.6),.5,"ESQUADRIA",true); TX(D,...ln(sm,-ld*(h+1.8*k)),"DE ENROLAR",1.2,{l:"COTAS",mv:"l"}); }
       else if(m==="basculante"){ const dp=Math.min(1.2,num(g.a.a)*0.4||0.8); PL(D,[ln(s0,face),ln(s0,face+ld*dp),ln(s1,face+ld*dp),ln(s1,face)],.18,"ESQUADRIA",true); TX(D,...ln(sm,face+ld*dp/2),"BASCULANTE",1.2,{l:"COTAS",mv:"l"}); }
@@ -1790,7 +1811,7 @@ function fachadas(){
   return [[fr,"FACHADA FRONTAL"+ru(S.terr.rua)],[lado([-V[0],-V[1]]),"FACHADA POSTERIOR"],[lado(dirV),"FACHADA LATERAL DIREITA"+(e==="dir"?ru(S.terr.rua2||"RUA LATERAL"):"")],[lado([-dirV[0],-dirV[1]]),"FACHADA LATERAL ESQUERDA"+(e==="esq"?ru(S.terr.rua2||"RUA LATERAL"):"")]];
 }
 // folhas dentro do marco, com o símbolo de abertura: seta = correr; linhas tracejadas = abrir (o bico aponta para o lado que abre)
-function desenhaFolhas(D,tipo,mod,nf,x0,x1,z0,z1){
+function desenhaFolhas(D,tipo,mod,nf,x0,x1,z0,z1){ if(tipo==="Porta") mod=mb(mod);
   const k=D.k, Y=z=>-z, box=(xa,za,xb,zb,lw)=>PL(D,[[xa,Y(za)],[xb,Y(za)],[xb,Y(zb)],[xa,Y(zb)],[xa,Y(za)]],lw,"ESQUADRIA");   // (x, z) de um canto e do outro
   const tri=(a,c,b,d,lado)=>{ const P={esq:[[a,c],[b,(c+d)/2],[a,d]],dir:[[b,c],[a,(c+d)/2],[b,d]],cima:[[a,d],[(a+b)/2,c],[b,d]]}[lado]; PL(D,P.map(([x,z])=>[x,Y(z)]),.18,"ESQUADRIA",true); };
   const seta=(xa,xb,z)=>{ L(D,xa,Y(z),xb,Y(z),.25,"ESQUADRIA"); const s0=1.3*k, dr=Math.sign(xb-xa)||1; PG(D,[[xb,Y(z)],[xb-dr*s0*1.7,Y(z)-s0*0.6],[xb-dr*s0*1.7,Y(z)+s0*0.6]],"ESQUADRIA"); };
@@ -1848,8 +1869,16 @@ function desenhoEsquadria(q,k){
 /* ---------------- Detalhe das portas ---------------- */
 const FOLHAS=[["lisa","Lisa (semi-oca)"],["macica","Maciça lisa"],["almofadada","Almofadada"],["frisada","Frisada (frisos horizontais)"],["veneziana","Veneziana"],["vidro","Com visor de vidro"],["vtemp","Vidro temperado 10 mm"]];
 const nomeFolha=t=>(FOLHAS.find(q=>q[0]===t)||FOLHAS[0])[1];
-const folhaPadrao=g=>/vidro/i.test(String(g.a&&g.a.mat||""))?"vtemp":g.externa?"macica":"lisa";
-function ferragens(q){ const extra={correr2c:"Kit para porta de correr 2 folhas abrindo do centro (trilho, roldanas, fechadura bico de papagaio)",embutir:"Kit de porta de correr embutida (caixilho metálico na parede, trilho, roldanas e puxador concha)",pivot:"Pivô superior e inferior (ou mola de piso), puxador vertical e fechadura com cilindro",vaivem:"Dobradiças vai e vem (ou mola de piso) e placas de proteção",camarao:"Kit para porta camarão (trilho superior, rodízios e dobradiças entre folhas)",enrolar:"Porta de enrolar em aço com eixo, molas, guias laterais, travas e cadeado (motor opcional)",basculante:"Portão basculante com contrapeso ou molas, trilhos laterais, fechadura e puxador (motor opcional)",giro2:null}[q.mod];
+const folhaPadrao=g=>/vidro/i.test(String(g.mat||g.a&&g.a.mat||""))?"vtemp":g.externa?"macica":"lisa";
+function ferragens(q){ const extra={correr2c:"Kit para porta de correr 2 folhas abrindo do centro (trilho, roldanas, fechadura bico de papagaio)",embutir:"Kit de porta de correr embutida (caixilho metálico na parede, trilho, roldanas e puxador concha)",pivot:"Pivô superior e inferior (ou mola de piso), puxador vertical e fechadura com cilindro",vaivem:"Dobradiças vai e vem (ou mola de piso) e placas de proteção",camarao:"Kit para porta camarão (trilho superior, rodízios e dobradiças entre folhas)",enrolar:"Porta de enrolar em aço com eixo, molas, guias laterais, travas e cadeado (motor opcional)",basculante:"Portão basculante com contrapeso ou molas, trilhos laterais, fechadura e puxador (motor opcional)",giro2:null,
+    versatik:"Kit Versatik (ou Versatik Truck para folhas pesadas): trilho superior aparente, roldanas, guia de piso e puxador; vidro temperado 10 mm",
+    maoamiga:"Kit mão amiga (sequencial): trilhos superiores paralelos, uma folha puxa a outra ao abrir, roldanas, guias de piso e fechadura de piso",
+    trilhoap:"Kit de porta de correr com trilho aparente (trilho sobreposto na parede, roldanas clássicas, batedores, guia de piso e puxador)",
+    reiki:"Kit cortina de vidro (sistema Reiki): trilhos superior e inferior em alumínio, roldanas, pivôs, fechos entre painéis e vedação; painéis de vidro temperado 8 ou 10 mm",
+    camaraov:"Kit porta camarão de vidro: trilho superior, rodízios, dobradiças de vidro entre folhas, guia de piso e fechadura",
+    flex:"Kit porta flex articulada: trilho superior, rodízio, dobradiça central entre as 2 folhas e puxador",
+    pivotv:"Pivô superior e inferior para vidro (ou mola de piso), puxador tubular e fechadura de vidro com cilindro; vidro temperado 10 mm",
+    mola:"Mola hidráulica de piso embutida com pivô superior, ferragens de vidro (canto, bandeira), puxador tubular e fechadura de piso; vidro temperado 10 mm"}[q.mod];
   if(extra) return [extra,/madeira/i.test(String(q.mat))?`Batente e guarnição em madeira; acabamento em verniz ou esmalte sintético`:`Marco e acabamento em ${String(q.mat).toLowerCase()} conforme o fabricante`];
   const fech=q.mod==="correr4"?"Kit para porta de correr 4 folhas (trilho duplo, roldanas, fechadura central com cilindro)":q.mod==="correr"?"Kit para porta de correr (trilho, roldanas e puxador concha)":q.ext?"Fechadura externa com cilindro e maçaneta tipo alavanca":q.ban?"Fechadura tipo banheiro (tranqueta) e maçaneta tipo alavanca":"Fechadura interna e maçaneta tipo alavanca";
   return [fech+(q.mod==="giro2"||(q.mod==="giro"&&q.nf===2)?"; a folha passiva com fecho unha (ferrolho) em cima e embaixo":""),ehCorrer(q.mod)?"":`${q.nf*3} dobradiças 3½" x 3" (3 por folha)`,/madeira/i.test(String(q.mat))?`Batente e guarnição em madeira; acabamento em verniz ou esmalte sintético`:`Contramarco e marco em ${String(q.mat).toLowerCase()}, vedação com silicone; acabamento conforme o fabricante`].filter(Boolean); }
@@ -2252,7 +2281,7 @@ function zonasAmb(G,r){ const h=G.h, Z={porta:[],jan:[]};
     [1,-1].forEach(s=>{ if(pip(r.poly,mx+g.nX*(h+0.05)*s,my+g.nY*(h+0.05)*s)) sg=s; }); if(!sg) return;
     const u=[g.w.ux,g.w.uy], N=[g.nX*sg,g.nY*sg], F=(s,t)=>[g.p0[0]+u[0]*s+N[0]*(h+t),g.p0[1]+u[1]*s+N[1]*(h+t)], ret=(s0,s1,t)=>[F(s0,0),F(s1,0),F(s1,t),F(s0,t)];
     if(g.tipo==="Janela") Z.jan.push(ret(0,g.l,0.30));
-    else { const m=modPadrao(g.a), abre=g.tipo==="Porta"&&!ehCorrer(m)&&!["enrolar","camarao"].includes(m)&&(g.lado===sg||m==="vaivem"||m==="pivot"), dp=m==="giro2"||(m==="giro"&&g.l>=1.2)||m==="vaivem"&&g.l>=1.2?g.l/2:m==="basculante"?1.2:g.l; Z.porta.push(ret(-0.05,g.l+0.05,Math.max(0.80,abre?dp+0.05:0)));
+    else { const m=mb(modPadrao(g.a)), abre=g.tipo==="Porta"&&!ehCorrer(m)&&!["enrolar","camarao"].includes(m)&&(g.lado===sg||m==="vaivem"||m==="pivot"), dp=m==="giro2"||(m==="giro"&&g.l>=1.2)||m==="vaivem"&&g.l>=1.2?g.l/2:m==="basculante"?1.2:g.l; Z.porta.push(ret(-0.05,g.l+0.05,Math.max(0.80,abre?dp+0.05:0)));
       if(m==="embutir"||m==="correr2c") Z.porta.push(ret(m==="embutir"?-g.l:-g.l/2,g.l*(m==="embutir"?2:1.5),0.10)); } });
   return Z; }
 const trf=(T,s,t)=>{ const ss=T.m>0?s:T.w-s, tt=t+(T.off||0); return [T.A[0]+T.u[0]*(T.s0+ss)+T.N[0]*tt,T.A[1]+T.u[1]*(T.s0+ss)+T.N[1]*tt]; };   // T.off: peça afastada da parede
@@ -6636,7 +6665,7 @@ function painelParede(w,s){
 }
 let SELAB=-1;
 // toque de novo na porta: passa pelas 4 posições (dobradiça de um lado/outro x abre para um lado/outro da parede)
-function girarPorta(i){ const a=S.ab[i]; if(!a) return; const m=modPadrao(a);
+function girarPorta(i){ const a=S.ab[i]; if(!a) return; const m=mb(modPadrao(a));
   if(ehCorrer(m)){ const st=(a.dob?1:0)+(a.inv?2:0), nx=["correr","embutir"].includes(m)?(st+1)%4:(st^2); a.dob=!!(nx&1); a.inv=!!(nx&2); }
   else if(m==="enrolar"||m==="basculante"){ a.inv=!a.inv; }
   else { const g0=GG&&GG.abs.find(x=>x.k===i), d0=g0?!!g0.dob:!!a.dob, ordem=[[0,0],[1,0],[1,1],[0,1]], at=ordem.findIndex(([d,v])=>d===(d0?1:0)&&v===(a.inv?1:0)), [d,v]=ordem[(at+1)%4]; a.dob=!!d; a.inv=!!v; }
@@ -6653,11 +6682,11 @@ function painelAbertura(i){
       <label>Peitoril (m)<input type="number" step="0.05" data-c="p" value="${a.p}"${a.t==="Janela"?"":" disabled"}></label>
       <label>Distância do começo (m)<input type="number" step="0.05" data-c="d" value="${a.d}"></label>
       <label>Local / nome<input type="text" data-c="n" value="${esc(a.n||"")}"></label>
-      <label>Modelo<select data-c="mod">${(MODELOS[a.t]||MODELOS.Porta).map(([v,t2])=>`<option value="${v}"${modPadrao(a)===v?" selected":""}>${t2}</option>`).join("")}</select></label>
+      <label>Modelo<select data-c="mod">${opcoesMod(a.t,modPadrao(a))}</select></label>
       <label>Material${selMat(a.t,a.mat||(g?g.mat:matPad(a.t,false)),'data-c="mat"')}</label>
       ${a.t==="Porta"?`<label>Folha<select data-c="fol">${FOLHAS.map(([v,t2])=>`<option value="${v}"${(a.fol||(g?g.fol:"lisa"))===v?" selected":""}>${t2}</option>`).join("")}</select></label>`:""}
     </div>
-    <div class="row">${a.t==="Porta"?`<button class="btn pri" data-girar>Girar / espelhar</button>`:""}${a.t==="Porta"?(m0=>ehCorrer(m0)?`<button class="btn" data-tg="inv">Folha do outro lado da parede</button>${["correr","embutir"].includes(m0)?`<button class="btn" data-tg="dob">Correr para o outro lado</button>`:""}`:["enrolar"].includes(m0)?`<button class="btn" data-tg="inv">Do outro lado da parede</button>`:`<button class="btn" data-tg="inv">Abrir para o outro lado</button><button class="btn" data-tg="dob">${m0==="pivot"?"Eixo do outro lado":"Trocar dobradiça"}</button>`)(modPadrao(a)):""}<button class="btn" data-dup title="Põe outra igual na mesma parede">Duplicar</button><button class="btn" data-cop title="Depois toque em outra parede (vale em outro projeto)">Copiar</button><button class="btn dng" data-del>Excluir</button><button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" data-abmsg style="margin:6px 0 0"></p>`;
+    <div class="row">${a.t==="Porta"?`<button class="btn pri" data-girar>Girar / espelhar</button>`:""}${a.t==="Porta"?(m0=>ehCorrer(m0)?`<button class="btn" data-tg="inv">Folha do outro lado da parede</button>${["correr","embutir"].includes(m0)?`<button class="btn" data-tg="dob">Correr para o outro lado</button>`:""}`:["enrolar"].includes(m0)?`<button class="btn" data-tg="inv">Do outro lado da parede</button>`:`<button class="btn" data-tg="inv">Abrir para o outro lado</button><button class="btn" data-tg="dob">${m0==="pivot"?"Eixo do outro lado":"Trocar dobradiça"}</button>`)(mb(modPadrao(a))):""}<button class="btn" data-dup title="Põe outra igual na mesma parede">Duplicar</button><button class="btn" data-cop title="Depois toque em outra parede (vale em outro projeto)">Copiar</button><button class="btn dng" data-del>Excluir</button><button class="btn x" data-close aria-label="Fechar">×</button></div><p class="cap" data-abmsg style="margin:6px 0 0"></p>`;
   P.querySelectorAll("[data-c]").forEach(el=>el.addEventListener("change",()=>{ const c=el.dataset.c; if(c==="mat"&&el.value==="__outro"){ const v=prompt("Material da esquadria:",a.mat||""); if(!v){ painelAbertura(i); return; } el.value=v; a.mat=v.trim(); renderAb(); render(); painelAbertura(i); return; } a[c]=(c==="t"||c==="n"||c==="mod"||c==="mat"||c==="fol")?el.value:num(el.value);
     if(c==="t"){ const df=ABDEF[a.t]; a.a=df.a; a.p=df.p; delete a.mod; delete a.mat; } renderAb(); render(); painelAbertura(i); }));
   P.querySelectorAll("[data-tg]").forEach(b=>b.onclick=()=>{ a[b.dataset.tg]=!a[b.dataset.tg]; render(); painelAbertura(i); });
@@ -6739,7 +6768,7 @@ function renderAb(){
     `<tr><td><select data-i="${i}" data-c="t" aria-label="Tipo">${["Porta","Janela","Vão"].map(t=>`<option${a.t===t?" selected":""}>${t}</option>`).join("")}</select></td>
     <td><select data-i="${i}" data-c="w" aria-label="Parede">${opW.map(j=>`<option value="${j}"${Math.round(num(a.w))===j?" selected":""}>${j+1}</option>`).join("")}</select></td>
     ${["d","l","a","p"].map(c=>`<td><input type="number" step="0.05" data-i="${i}" data-c="${c}" value="${a[c]}" aria-label="${c}"${c==="p"&&a.t!=="Janela"?" disabled":""}></td>`).join("")}
-    <td><select data-i="${i}" data-c="mod" aria-label="Modelo">${(MODELOS[a.t]||MODELOS.Porta).map(([v,t2])=>`<option value="${v}"${modPadrao(a)===v?" selected":""}>${t2}</option>`).join("")}</select></td>
+    <td><select data-i="${i}" data-c="mod" aria-label="Modelo">${opcoesMod(a.t,modPadrao(a))}</select></td>
     <td>${selMat(a.t,a.mat||(GG&&(GG.abs.find(g=>g.k===i)||{}).mat)||matPad(a.t,false),`data-i="${i}" data-c="mat" aria-label="Material"`)}</td>
     <td><input type="text" data-i="${i}" data-c="n" value="${esc(a.n||"")}" aria-label="Local"></td><td><button class="btn x" data-del="${i}" aria-label="Remover abertura">×</button></td></tr>`).join("");
 }
@@ -7529,7 +7558,7 @@ function textosLado(P,lado,fl){
   if(lado==="locacao"&&fl.LC.pil){ const LC=fl.LC; const rows=LC.pil.map(q=>[q.nome,f(q.X),f(q.Y)]), por=12, bl=[]; for(let i=0;i<rows.length;i+=por) bl.push({t:i?"QUADRO DE LOCAÇÃO (CONT.)":"QUADRO DE LOCAÇÃO DOS PILARES",cols:[["PILAR",0],["X (m)",1],["Y (m)",1]],pc:[0.34,0.33,0.33],rows:rows.slice(i,i+por)});   // muitos pilares: o quadro continua na coluna do lado
     return [...bl,{t:"NOTAS",linhas:notasLocPil(LC)}]; }
   if(lado==="locacao"){ const LC=fl.LC; return [{t:"QUADRO DE LOCAÇÃO",cols:[["EIXO",0],["MEDIDO DE",0],["DIST. (m)",1]],pc:[0.16,0.56,0.28],rows:[...LC.eixos.slice().sort((p,q)=>p.nome.localeCompare(q.nome,"pt",{numeric:true})).map(e=>[e.nome,e.ref,f(e.d,3)]),...LC.incl.flatMap((w,j)=>[[`C${j+1}a`,"alinhamento; divisa esq.",`${f(w.fa,2)}; ${f(w.ra,2)}`],[`C${j+1}b`,"alinhamento; divisa esq.",`${f(w.fb,2)}; ${f(w.rb,2)}`]])]},{t:"NOTAS",linhas:notasLocacao(LC)}]; }
-  if(lado==="portas") return [{t:"QUADRO DE PORTAS",cols:[["CÓD.",0],["FOLHA E FECHADURA",0],["FOLHA",1],["VÃO OSSO",1],["ABRE",1],["QTD",1]],rows:Q.filter(q=>q.tipo==="Porta").map(q=>[q.cod,`${nomeFolha(q.fol)} · ${q.mod==="correr4"?"kit correr 4F":q.mod==="correr"?"kit correr":q.ext?"cilindro":q.ban?"banheiro":"interna"}`,`${f(q.l)}x${f(q.a)}`,`${f(q.l+0.10)}x${f(q.a+0.05)}`,({correr:"correr",correr2c:"correr (centro)",correr4:"correr",embutir:"correr embutida",pivot:"pivotante",vaivem:"vai e vem",camarao:"camarão",enrolar:"enrolar",basculante:"basculante",giro2:"giro 2 folhas"}[q.mod]||"giro"),String(q.q)])},
+  if(lado==="portas") return [{t:"QUADRO DE PORTAS",cols:[["CÓD.",0],["FOLHA E FECHADURA",0],["FOLHA",1],["VÃO OSSO",1],["ABRE",1],["QTD",1]],rows:Q.filter(q=>q.tipo==="Porta").map(q=>[q.cod,`${nomeFolha(q.fol)} · ${MODBASE[q.mod]?({versatik:"kit Versatik",maoamiga:"kit mão amiga",trilhoap:"trilho aparente",reiki:"kit Reiki",camaraov:"kit camarão vidro",flex:"kit flex",pivotv:"pivô vidro",mola:"mola de piso"})[q.mod]:q.mod==="correr4"?"kit correr 4F":q.mod==="correr"?"kit correr":q.ext?"cilindro":q.ban?"banheiro":"interna"}`,`${f(q.l)}x${f(q.a)}`,`${f(q.l+0.10)}x${f(q.a+0.05)}`,({correr:"correr",correr2c:"correr (centro)",correr4:"correr",embutir:"correr embutida",pivot:"pivotante",vaivem:"vai e vem",camarao:"camarão",enrolar:"enrolar",basculante:"basculante",giro2:"giro 2 folhas",versatik:"correr",maoamiga:"correr sequencial",trilhoap:"correr aparente",reiki:"cortina",camaraov:"camarão",flex:"articulada",pivotv:"pivotante",mola:"vai e vem (mola)"}[q.mod]||"giro"),String(q.q)])},
     {t:"NOTAS",linhas:["Medidas da folha; vão em osso = folha + 10 cm na largura e + 5 cm na altura (batente e folga para espuma).","Batente na largura da parede, fixado com espuma expansiva ou parafuso e bucha; guarnição de 5 cm nos dois lados.","Maçaneta a 1,05 m do piso acabado; 3 dobradiças por folha.","Portas de banheiro e área molhada: madeira resistente à umidade ou com selador e verniz."]}];
   if(lado==="estrutura"){ const E=fl.ET; return [{t:"QUANTITATIVO DE MADEIRA",cols:[["PEÇA",0],["METROS",1]],rows:[...(E.VG?[[`Caibros 5x${f(num(S.tel.hCaib)||6,0)}`,f(E.Lt)],[`Vigotas (${E.vigotas.length} un)`,f(E.Lv)],[`Telhas ${f(E.VG.lt)} m`,`${E.VG.nT} un`]]:[["Terças e cumeeira 6x16",f(E.Lt)]]),...(E.E.cb?[["Caibros 5x6",f(E.Lc)],["Ripas 1,5x5",f(E.Lr)]]:[]),["Área de telhado (m²)",f(E.TI.areaInc)]]},{t:"NOTAS",linhas:notasTelhado(E)}]; }
   if(lado==="pagina"){ const AF=areasFachadas(G), qf=quantFachadas(AF); return [{t:"QUADRO DE MATERIAIS DAS FACHADAS",pc:[0.24,0.40,0.18,0.18],cols:[["FACHADA",0],["MATERIAL",0],["ÁREA m²",1],["COMPRA",1]],rows:AF.flatMap(F=>Object.entries(F.m).map(([m,a])=>[F.titulo.replace("FACHADA ","").toLowerCase(),nomeMatF(m),f(a),["textura","latex"].includes(m)?"-":f(a*1.1)]))},
