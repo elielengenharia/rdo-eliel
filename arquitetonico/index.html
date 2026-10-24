@@ -179,7 +179,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <button class="btn" id="comeceOk" type="button">Entendi</button></div>
     <div class="sheet" id="pdSheet">
       <h2>Desenhar paredes</h2>
-      <p class="cap">Como no SketchUp: escolha o <b>tipo</b> da parede (da genérica ao drywall, bloco, concreto ou vidro) e a <b>espessura</b>, toque no começo e vá tocando em cada canto; toque de novo no último ponto para parar. A parede gruda nas <b>pontas</b> (quadrado verde), no <b>meio</b> e no <b>eixo</b> de outra parede (encontro em T), trava em <b>90° e 45°</b> e se <b>alinha</b> com as pontas (linha roxa). Para a medida exata, digite o <b>comprimento</b> e toque na seta (ou Enter). Em <b>Selecionar</b>, toque numa parede para trocar tipo e espessura; arraste a bolinha da ponta para mover o canto. Em <b>Portas e janelas</b>, escolha janela, porta ou vão e toque em cima da parede: aparecem em azul as <b>distâncias até as paredes</b> dos dois lados; toque nela e <b>arraste</b> para a direita ou a esquerda (ela para no meio do vão), ou digite a distância no painel. Para apagar, use a <b>🧽 Apagar</b> e toque na parede, porta ou janela (ou <b>↶ Desfazer</b> logo depois de errar). No computador, a tecla <b>Delete</b> apaga o que está escolhido ou debaixo do mouse; desenhando, tira a última parede. Dois dedos (ou a roda do mouse) dão zoom.</p>
+      <p class="cap">Como no SketchUp: escolha o <b>tipo</b> da parede (da genérica ao drywall, bloco, concreto ou vidro) e a <b>espessura</b>, toque no começo e vá tocando em cada canto; toque de novo no último ponto para parar. A parede gruda nas <b>pontas</b> (quadrado verde), no <b>meio</b> e no <b>eixo</b> de outra parede (encontro em T), tem <b>polar tracking</b> (linha-guia pontilhada verde no ângulo escolhido: 90°, 45°, 30°, 15°...; F10 liga/desliga; Shift segurado trava em 90°) e se <b>alinha</b> com as pontas (linha roxa). Para a medida exata, digite o <b>comprimento</b> e toque na seta (ou Enter). Em <b>Selecionar</b>, toque numa parede para trocar tipo e espessura; arraste a bolinha da ponta para mover o canto. Em <b>Portas e janelas</b>, escolha janela, porta ou vão e toque em cima da parede: aparecem em azul as <b>distâncias até as paredes</b> dos dois lados; toque nela e <b>arraste</b> para a direita ou a esquerda (ela para no meio do vão), ou digite a distância no painel. Para apagar, use a <b>🧽 Apagar</b> e toque na parede, porta ou janela (ou <b>↶ Desfazer</b> logo depois de errar). No computador, a tecla <b>Delete</b> apaga o que está escolhido ou debaixo do mouse; desenhando, tira a última parede. Dois dedos (ou a roda do mouse) dão zoom.</p>
       <div id="pdBar" style="margin:4px 0 6px"></div>
       <div class="row" style="margin:0 0 6px;gap:6px;flex-wrap:wrap;align-items:center"><label style="font-size:13px;display:flex;gap:6px;align-items:center">Comprimento (m)<input type="text" inputmode="decimal" id="pdLen" placeholder="ex.: 3,50" style="width:90px"></label>
         <button class="btn" data-pdir="1,0" aria-label="Para a direita">→</button><button class="btn" data-pdir="-1,0" aria-label="Para a esquerda">←</button><button class="btn" data-pdir="0,-1" aria-label="Para cima">↑</button><button class="btn" data-pdir="0,1" aria-label="Para baixo">↓</button><button class="btn" data-pdir="1,-1" aria-label="Diagonal para cima e direita">↗</button><button class="btn" data-pdir="1,1" aria-label="Diagonal para baixo e direita">↘</button>
@@ -832,7 +832,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.65 · 3D: a obra em 3D para girar com o mouse", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.66 · polar tracking nas paredes (linha-guia, ângulo escolhido, F10 e Shift)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -8525,8 +8525,8 @@ $("impApply").onclick=()=>{ if(!IMP) return;
    ====================================================================== */
 const PD=(()=>{ let o={}; try{ o=JSON.parse(localStorage.getItem("arq-pd")||"{}")||{}; }catch(e){}
   return {ferr:"des",tp:o.tp||"gen",e:o.e||"",grade:o.grade||0.05,orto:o.orto!==false,ini:null,cur:null,snap:null,sel:-1,selAb:-1,vista:null,ultDir:[1,0],cadeia0:null,
-    ab:Object.assign({t:"Janela",l:1.20,a:1.00,p:1.10,mod:""},o.ab||{}),bon:o.bon||10,cotasTodas:!!o.cotasTodas}; })();
-const pdGuarda=()=>{ try{ localStorage.setItem("arq-pd",JSON.stringify({tp:PD.tp,e:PD.e,grade:PD.grade,orto:PD.orto,ab:PD.ab,bon:PD.bon,cotasTodas:PD.cotasTodas})); }catch(e){} };
+    ab:Object.assign({t:"Janela",l:1.20,a:1.00,p:1.10,mod:""},o.ab||{}),bon:o.bon||10,cotasTodas:!!o.cotasTodas,polInc:o.polInc||45,shift:false}; })();
+const pdGuarda=()=>{ try{ localStorage.setItem("arq-pd",JSON.stringify({tp:PD.tp,e:PD.e,grade:PD.grade,orto:PD.orto,ab:PD.ab,bon:PD.bon,cotasTodas:PD.cotasTodas,polInc:PD.polInc})); }catch(e){} };
 /* ---- portas e janelas na área de desenho (6.60, pedido do Eliel): toca na parede para pôr; aparecem as distâncias até as paredes
    (e até a esquadria vizinha) dos dois lados; arrasta para a direita ou a esquerda, com passo da grade e parada no meio do vão ---- */
 function abVizinhos(k){ const G=GG; if(!G||G.vazio) return null; const g=G.abs.find(x=>x.k===k); if(!g) return null; const w=g.w, faces=[0,w.L];
@@ -8589,11 +8589,12 @@ function pdEncaixa(p,ini,ignora){ const V=PD.vista, tol=14*V.mpp, Ws=S.walls.map
   Ws.forEach(w=>{ [w.a,w.b].forEach(q=>tenta(q,"ponta",Math.hypot(q[0]-p[0],q[1]-p[1]))); });
   if(!best) Ws.forEach(w=>{ const m=[(w.a[0]+w.b[0])/2,(w.a[1]+w.b[1])/2]; tenta(m,"meio",Math.hypot(m[0]-p[0],m[1]-p[1])); });
   if(best) return best;
-  let q=p.slice(), tipo="livre", guia=null;
+  let q=p.slice(), tipo="livre", guia=null, pol=false, angP=null;
   if(ini){ let dx=q[0]-ini[0], dy=q[1]-ini[1], L=Math.hypot(dx,dy); if(L>1e-6){ let an=Math.atan2(dy,dx)*180/Math.PI;
-      if(PD.orto){ const a90=Math.round(an/90)*90, a45=Math.round(an/45)*45; if(Math.abs(an-a90)<8) an=a90; else if(Math.abs(an-a45)<5) an=a45; }
+      // 6.66: polar tracking (como no AutoCAD): passo de ângulo escolhido (90, 45, 30, 15...); Shift segurado = só 90° (orto)
+      if(PD.orto||PD.shift){ const inc=PD.shift?90:(num(PD.polInc)||45), tolA=PD.shift?181:Math.min(6,Math.max(1.5,inc/3)), mA=Math.round(an/inc)*inc; if(Math.abs(an-mA)<tolA){ an=mA; pol=true; } }
       const g=PD.grade, Lr=Math.max(g,Math.round(L/g)*g), ux=Math.cos(an*Math.PI/180), uy=Math.sin(an*Math.PI/180);
-      q=[ini[0]+ux*Lr,ini[1]+uy*Lr]; tipo=an%90===0?"esquadro":an%45===0?"45°":"livre";
+      q=[ini[0]+ux*Lr,ini[1]+uy*Lr]; tipo=pol?"polar":"livre"; angP=an;
       // alinhado com a ponta de outra parede (como as linhas pontilhadas do SketchUp): ajusta o comprimento para bater no x ou no y dela
       if(an%90===0){ const hz=Math.abs(uy)<0.5; Ws.forEach(w=>[w.a,w.b].forEach(e=>{ const dv=hz?Math.abs(e[0]-q[0]):Math.abs(e[1]-q[1]); if(dv<tol*0.6&&(!guia||dv<guia.d)) guia={e,d:dv}; }));
         if(guia){ if(Math.abs(uy)<0.5) q[0]=guia.e[0]; else q[1]=guia.e[1]; tipo="alinhado"; } } } }
@@ -8604,7 +8605,7 @@ function pdEncaixa(p,ini,ignora){ const V=PD.vista, tol=14*V.mpp, Ws=S.walls.map
       // com começo e esquadro: o ponto fica na direção travada, só que encostado no eixo
       let qq=pr; if(ini&&tipo!=="livre"){ const ux=q[0]-ini[0], uy=q[1]-ini[1], I=interLin(ini,[ux,uy],w.a,[dx,dy]); if(I&&Math.hypot(I[0]-pr[0],I[1]-pr[1])<tol) qq=I; }
       q=[r3(qq[0]),r3(qq[1])]; tipo="naParede"; best={d}; } });
-  return {p:[r3(q[0]),r3(q[1])],tipo,guia:guia&&guia.e,d:0}; }
+  return {p:[r3(q[0]),r3(q[1])],tipo,guia:guia&&guia.e,d:0,pol,angP}; }
 function pdNovaParede(a,b){ if(Math.hypot(b[0]-a[0],b[1]-a[1])<0.02) return false; const w={x1:a[0],y1:a[1],x2:b[0],y2:b[1]};
   if(PD.tp&&PD.tp!=="gen") w.tp=PD.tp; const e=num(PD.e)/100; if(e>=0.02&&(!tipoPar(PD.tp)||Math.abs(e-(tipoPar(PD.tp)[2]||num(S.esp)))>1e-4)) w.e=+e.toFixed(3);
   if(famPar(w)==="dw") w.mat="dw"; S.walls.push(w); (PD.cadeia=PD.cadeia||[]).push({i:S.walls.length-1,a:a.slice()}); return true; }
@@ -8656,7 +8657,8 @@ function pdBarra(){ const b=$("pdBar"); if(!b) return;
     <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-pcot${PD.cotasTodas?" checked":""}>Distâncias de todas</label>`:`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Tipo<select data-pb="tp" style="width:auto;max-width:260px">${opcoesTipoPar(PD.tp)}</select></label>
     <label style="font-size:13px;display:flex;gap:6px;align-items:center">Espessura (cm)<input type="number" step="0.5" min="2" data-pb="e" value="${PD.e}" placeholder="${f((tipoPar(PD.tp)&&tipoPar(PD.tp)[2]||num(S.esp))*100,1).replace(",0","")}" style="width:72px"></label>`}
     <label style="font-size:13px;display:flex;gap:6px;align-items:center">Grade<select data-pb="grade" style="width:auto">${[[0.01,"1 cm"],[0.05,"5 cm"],[0.10,"10 cm"],[0.25,"25 cm"]].map(([v,t])=>`<option value="${v}"${Math.abs(v-PD.grade)<1e-6?" selected":""}>${t}</option>`).join("")}</select></label>
-    <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-pb="orto"${PD.orto?" checked":""}>Travar 90° e 45°</label>
+    <label style="font-size:13px;display:flex;gap:4px;align-items:center" title="Polar tracking (F10). Segure Shift para travar em 90°."><input type="checkbox" data-pb="orto"${PD.orto?" checked":""}>Polar (F10)</label>
+    <label style="font-size:13px;display:flex;gap:6px;align-items:center">Ângulo<select data-pb="polInc" style="width:auto">${[90,45,30,22.5,15,10,5].map(v=>`<option value="${v}"${Math.abs(v-num(PD.polInc))<1e-6?" selected":""}>${f(v,v%1?1:0)}°</option>`).join("")}</select></label>
     <button class="btn" data-pz="-1" aria-label="Afastar">−</button><button class="btn" data-pz="1" aria-label="Aproximar">+</button><button class="btn" data-pz="0">Enquadrar</button></div>`; }
 function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; if(!PD.vista) pdEnquadra(); const V=PD.vista, [cw,ch]=pdTam(), W=cw*V.mpp, H=ch*V.mpp, m=V.mpp, out=[];
   // grade: 1 m (e 10 cm de perto), linhas de 5 m mais fortes
@@ -8695,12 +8697,17 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
   const sn=PD.snap; if(PD.ferr==="des"&&sn){ const q=sn.p;
     if(PD.ini){ const a=PD.ini, L=Math.hypot(q[0]-a[0],q[1]-a[1]), e=num(PD.e)/100>=0.02?num(PD.e)/100:(tipoPar(PD.tp)&&tipoPar(PD.tp)[2]||num(S.esp));
       if(L>1e-4){ const n=[-(q[1]-a[1])/L*e/2,(q[0]-a[0])/L*e/2]; out.push(`<polygon points="${pts([[a[0]+n[0],a[1]+n[1]],[q[0]+n[0],q[1]+n[1]],[q[0]-n[0],q[1]-n[1]],[a[0]-n[0],a[1]-n[1]]])}" fill="rgba(37,99,235,.18)" stroke="#2563eb" stroke-width="1" vector-effect="non-scaling-stroke"/>`);
-        const an=Math.atan2(q[1]-a[1],q[0]-a[0])*180/Math.PI; out.push(tx((a[0]+q[0])/2,(a[1]+q[1])/2-14*m,`${f(L)} m${sn.tipo==="esquadro"||sn.tipo==="45°"?` · ${f(((-an%360)+360)%360,0)}°`:""}`,13,"#1d4ed8")); }
+        const an=Math.atan2(q[1]-a[1],q[0]-a[0])*180/Math.PI, angT=((-an%360)+360)%360, angS=(Math.abs(angT-Math.round(angT))<0.01?f(angT,0):f(angT,1)).replace(/^360$/,"0");
+        if(sn.pol){ const u=[(q[0]-a[0])/L,(q[1]-a[1])/L], R=Math.max(W,H)*3;   // linha-guia do polar: sai do último ponto e passa do cursor
+          out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${a[0]+u[0]*R}" y2="${a[1]+u[1]*R}" stroke="#16a34a" stroke-width="1.2" stroke-dasharray="7 5" vector-effect="non-scaling-stroke"/>`);
+          const t=`Polar: ${f(L)} < ${angS}°`, wT=t.length*7.2*m+12*m, bx=q[0]+14*m+wT>V.x0+W-6*m?q[0]-14*m-wT:q[0]+14*m, by=q[1]+34*m>V.y0+H?q[1]-34*m:q[1]+14*m;   // na beirada vira para dentro
+          out.push(`<rect x="${bx}" y="${by}" width="${wT}" height="${20*m}" rx="${4*m}" fill="#111827" fill-opacity=".86"/>`,`<text x="${bx+6*m}" y="${by+10*m}" font-size="${12.5*m}" fill="#fff" dominant-baseline="middle" style="font-family:system-ui,sans-serif">${esc(t)}</text>`); }
+        else out.push(tx((a[0]+q[0])/2,(a[1]+q[1])/2-14*m,`${f(L)} m · ${angS}°`,13,"#1d4ed8")); }
       out.push(`<circle cx="${a[0]}" cy="${a[1]}" r="${4*m}" fill="#2563eb"/>`); }
     if(sn.guia) out.push(`<line x1="${sn.guia[0]}" y1="${sn.guia[1]}" x2="${q[0]}" y2="${q[1]}" stroke="#9333ea" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>`);
     const cor={ponta:"#16a34a",meio:"#0891b2",naParede:"#dc2626",alinhado:"#9333ea"}[sn.tipo]||"#2563eb";
     out.push(sn.tipo==="ponta"?`<rect x="${q[0]-5*m}" y="${q[1]-5*m}" width="${10*m}" height="${10*m}" fill="none" stroke="${cor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`:`<circle cx="${q[0]}" cy="${q[1]}" r="${5*m}" fill="none" stroke="${cor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`);
-    const nome={ponta:"ponta",meio:"meio da parede",naParede:"na parede",alinhado:"alinhado",esquadro:"",["45°"]:"45°"}[sn.tipo]; if(nome) out.push(tx(q[0]+9*m,q[1]+12*m,nome,10,cor,"start")); }
+    const nome={ponta:"ponta",meio:"meio da parede",naParede:"na parede",alinhado:"alinhado"}[sn.tipo]; if(nome) out.push(tx(q[0]+9*m,q[1]+12*m,nome,10,cor,"start")); }
   el.innerHTML=`<svg viewBox="${V.x0} ${V.y0} ${W} ${H}" width="100%" height="100%" style="display:block" xmlns="http://www.w3.org/2000/svg">${out.join("")}</svg>`; }
 // toques e mouse
 { const ptrs=new Map(); let gesto=null, toque=null, arrV=null;
@@ -8744,6 +8751,8 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
   document.addEventListener("wheel",ev=>{ const E=el(); if(!E||!E.contains(ev.target)) return; ev.preventDefault(); pdZoom(Math.exp(-ev.deltaY*0.0015),ev.clientX,ev.clientY); },{passive:false});
   document.addEventListener("contextmenu",ev=>{ const E=el(); if(E&&E.contains(ev.target)) ev.preventDefault(); });
   document.addEventListener("keydown",ev=>{ const E=el(); if(!E||E.closest("[hidden]")) return; const ativo=document.activeElement, emCampo=/INPUT|SELECT|TEXTAREA/.test(ativo&&ativo.tagName);
+    if(ev.key==="F10"){ ev.preventDefault(); PD.orto=!PD.orto; pdGuarda(); pdBarra(); pdMsg(PD.orto?`Polar ligado (${f(num(PD.polInc),num(PD.polInc)%1?1:0)}°).`:"Polar desligado."); if(PD.cur){ PD.snap=pdEncaixa(PD.cur,PD.ini); pdDesenha(); } return; }
+    if(ev.key==="Shift"&&!PD.shift){ PD.shift=true; if(PD.cur&&PD.ini){ PD.snap=pdEncaixa(PD.cur,PD.ini); pdDesenha(); } }
     if(ev.key==="Escape"&&PD.ini){ pdFim("Parou."); return; }
     if(ev.key==="Enter"&&ativo&&ativo.id==="pdLen"){ ev.preventDefault(); pdComprimento(); return; }
     // como no SketchUp: com o desenho em andamento, os números digitados vão direto para o comprimento
@@ -8760,6 +8769,8 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
       if(ha){ ev.preventDefault(); S.ab.splice(ha.k,1); pdAplica(); pdDesenha(); pdMsg("Esquadria apagada (Delete). ↶ Desfazer volta."); return; }
       S.walls.forEach((w,i)=>{ const d=distSeg(p,{x1:num(w.x1),y1:num(w.y1),x2:num(w.x2),y2:num(w.y2)})-espPar(w)/2; if(d<tol&&(!hw||d<hw.d)) hw={i,d}; });
       if(hw){ ev.preventDefault(); pdApagar(hw.i); pdMsg("Parede apagada (Delete). ↶ Desfazer volta."); } } });
+document.addEventListener("keyup",ev=>{ if(ev.key==="Shift"&&PD.shift){ PD.shift=false; if(PD.cur&&PD.ini){ PD.snap=pdEncaixa(PD.cur,PD.ini); pdDesenha(); } } });
+window.addEventListener("blur",()=>{ PD.shift=false; });
 // Delete também nas outras plantas: peça do Layout e porta/janela escolhida na Planta baixa
 document.addEventListener("keydown",ev=>{ if(ev.key!=="Delete"&&ev.key!=="Backspace") return; const a=document.activeElement; if(a&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)) return;
   const aba=abaAtual();
@@ -8778,7 +8789,7 @@ document.addEventListener("keydown",ev=>{ if(ev.key!=="Delete"&&ev.key!=="Backsp
       if(c==="t"){ A.t=t.value; const df=ABDEF[A.t]; A.a=df.a; A.p=df.p; A.l=df.l; A.mod=""; } else if(c==="mod") A.mod=t.value; else if(num(t.value)>=0) A[c]=num(t.value);
       pdGuarda(); pdBarra(); return; }
     if(!t.dataset||!t.dataset.pb) return; const c=t.dataset.pb;
-    if(c==="tp"){ PD.tp=t.value; PD.e=""; } if(c==="e") PD.e=num(t.value)>=2?+num(t.value).toFixed(1):""; if(c==="grade") PD.grade=num(t.value)||0.05; if(c==="orto") PD.orto=t.checked; pdGuarda(); pdBarra(); pdDesenha(); });
+    if(c==="tp"){ PD.tp=t.value; PD.e=""; } if(c==="e") PD.e=num(t.value)>=2?+num(t.value).toFixed(1):""; if(c==="grade") PD.grade=num(t.value)||0.05; if(c==="orto") PD.orto=t.checked; if(c==="polInc") PD.polInc=num(t.value)||45; pdGuarda(); pdBarra(); pdDesenha(); });
   window.addEventListener("resize",()=>pdDesenha()); }
 { const r0=render; render=function(){ const v=r0.apply(this,arguments); try{ if(PD.sel>=S.walls.length) PD.sel=-1; if(PD.selAb>=S.ab.length) PD.selAb=-1; pdDesenha(); }catch(e){} return v; }; }
 setTimeout(()=>{ try{ pdBarra(); pdEnquadra(); pdDesenha(); }catch(e){} },0);
