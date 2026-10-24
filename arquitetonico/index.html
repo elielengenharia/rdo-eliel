@@ -816,7 +816,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.60 · portas e janelas na área de desenho, com distâncias até as paredes e arrastar", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.61 · boneca: medida em destaque, encaixe e distâncias de todas as esquadrias", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -8508,8 +8508,8 @@ $("impApply").onclick=()=>{ if(!IMP) return;
    ====================================================================== */
 const PD=(()=>{ let o={}; try{ o=JSON.parse(localStorage.getItem("arq-pd")||"{}")||{}; }catch(e){}
   return {ferr:"des",tp:o.tp||"gen",e:o.e||"",grade:o.grade||0.05,orto:o.orto!==false,ini:null,cur:null,snap:null,sel:-1,selAb:-1,vista:null,ultDir:[1,0],cadeia0:null,
-    ab:Object.assign({t:"Janela",l:1.20,a:1.00,p:1.10,mod:""},o.ab||{})}; })();
-const pdGuarda=()=>{ try{ localStorage.setItem("arq-pd",JSON.stringify({tp:PD.tp,e:PD.e,grade:PD.grade,orto:PD.orto,ab:PD.ab})); }catch(e){} };
+    ab:Object.assign({t:"Janela",l:1.20,a:1.00,p:1.10,mod:""},o.ab||{}),bon:o.bon||10,cotasTodas:!!o.cotasTodas}; })();
+const pdGuarda=()=>{ try{ localStorage.setItem("arq-pd",JSON.stringify({tp:PD.tp,e:PD.e,grade:PD.grade,orto:PD.orto,ab:PD.ab,bon:PD.bon,cotasTodas:PD.cotasTodas})); }catch(e){} };
 /* ---- portas e janelas na área de desenho (6.60, pedido do Eliel): toca na parede para pôr; aparecem as distâncias até as paredes
    (e até a esquadria vizinha) dos dois lados; arrasta para a direita ou a esquerda, com passo da grade e parada no meio do vão ---- */
 function abVizinhos(k){ const G=GG; if(!G||G.vazio) return null; const g=G.abs.find(x=>x.k===k); if(!g) return null; const w=g.w, faces=[0,w.L];
@@ -8522,13 +8522,17 @@ function abVizinhos(k){ const G=GG; if(!G||G.vazio) return null; const g=G.abs.f
   return {g,w,esq,dir,de:L1-esq,dd:dir-R1,inv,vert,dA:inv?dir-R1:L1-esq,dB:inv?L1-esq:dir-R1,nA:vert?"de cima":"da esquerda",nB:vert?"de baixo":"da direita"}; }
 function abLado(g){ const G=GG, m=[(g.p0[0]+g.p1[0])/2,(g.p0[1]+g.p1[1])/2], o=g.w.h+0.08; for(const sg of [1,-1]){ const C=G.compAt(m[0]+g.nX*o*sg,m[1]+g.nY*o*sg); if(C&&!C.ext) return sg; } return 1; }
 function abNovo(w,s){ const A=PD.ab, l=Math.min(num(A.l)||1,Math.max(0.3,w.L-0.1)), d=Math.max(0,Math.min(w.L-l,Math.round((s-l/2)/PD.grade)*PD.grade));
-  const o={n:"",t:A.t,w:w.i,d:+d.toFixed(3),l:+l.toFixed(3),a:num(A.a)||ABDEF[A.t].a,p:A.t==="Janela"?num(A.p):0}; if(A.mod) o.mod=A.mod; S.ab.push(o); return S.ab.length-1; }
+  const o={n:"",t:A.t,w:w.i,d:+d.toFixed(3),l:+l.toFixed(3),a:num(A.a)||ABDEF[A.t].a,p:A.t==="Janela"?num(A.p):0}; if(A.mod) o.mod=A.mod; S.ab.push(o); const k=S.ab.length-1;
+  // porta posta perto do canto (até 60 cm da parede): encosta com a boneca escolhida (padrão 10 cm)
+  if(A.t==="Porta"){ GG=geom(); const V=abVizinhos(k), b=num(PD.bon)/100; if(V&&b>0){ if(V.de<0.6&&V.de<=V.dd) o.d=+(V.esq+b).toFixed(3); else if(V.dd<0.6) o.d=+(V.dir-b-l).toFixed(3); } }
+  return k; }
 // leva a esquadria k para perto do ponto p (na mesma parede; longe dela e perto de outra, muda de parede)
 function abArrasta(k,p,off){ const a=S.ab[k], G=GG; let w=G.walls.find(x=>x.i===Math.round(num(a.w))); if(!w) return;
   const dW=x=>distSeg(p,{x1:x.x1,y1:x.y1,x2:x.x2,y2:x.y2}); if(dW(w)>Math.max(0.45,w.h+0.3)){ const o=G.walls.filter(x=>x!==w&&x.L>num(a.l)+0.1).sort((x,y)=>dW(x)-dW(y))[0]; if(o&&dW(o)<0.35){ w=o; a.w=o.i; off=-num(a.l)/2; } }
   const l=num(a.l), sP=(p[0]-w.x1)*w.ux+(p[1]-w.y1)*w.uy+(off||0); a.d=+Math.max(0,Math.min(w.L-l,sP)).toFixed(3); GG=geom();
   const V=abVizinhos(k); if(!V) return; const gr=PD.grade, tol=10*PD.vista.mpp;
-  let d=V.esq+Math.round((a.d-V.esq)/gr)*gr; const meio=(V.esq+V.dir-l)/2; if(Math.abs(a.d-meio)<tol) d=meio;   // gruda no meio do vão
+  let d=V.esq+Math.round((a.d-V.esq)/gr)*gr; const meio=(V.esq+V.dir-l)/2, b=num(PD.bon)/100; if(Math.abs(a.d-meio)<tol) d=meio;   // gruda no meio do vão
+  if(b>0){ if(Math.abs(a.d-(V.esq+b))<tol) d=V.esq+b; if(Math.abs(a.d-(V.dir-b-l))<tol) d=V.dir-b-l; }   // e na boneca, dos dois lados
   a.d=+Math.max(0,Math.min(w.L-l,d)).toFixed(3); GG=geom(); }
 function pdPainelAb(){ const P=$("pdPanel"), a=S.ab[PD.selAb]; if(!P) return; if(!a){ P.hidden=true; return; } P.hidden=false; const k=PD.selAb, V=abVizinhos(k), g=V&&V.g;
   P.innerHTML=`<h4>${esc(g&&g.cod||a.t)} · ${esc(a.t)} ${f(num(a.l))} x ${f(num(a.a))}${a.t==="Janela"?` · peitoril ${f(num(a.p))}`:""} · parede ${Math.round(num(a.w))+1}</h4><div class="form">
@@ -8538,7 +8542,7 @@ function pdPainelAb(){ const P=$("pdPanel"), a=S.ab[PD.selAb]; if(!P) return; if
     <label>Altura (m)<input type="number" step="0.05" data-pq="a" value="${num(a.a)}"></label>
     ${a.t==="Janela"?`<label>Peitoril (m)<input type="number" step="0.05" data-pq="p" value="${num(a.p)}"></label>`:""}
     ${V?`<label>Distância ${V.nA} (m)<input type="number" step="0.01" min="0" data-pq="dA" value="${+V.dA.toFixed(3)}"></label><label>Distância ${V.nB} (m)<input type="number" step="0.01" min="0" data-pq="dB" value="${+V.dB.toFixed(3)}"></label>`:""}</div>
-    <div class="row" style="margin:0;flex-wrap:wrap"><button class="btn" data-qa="meio">Centralizar no vão</button>${a.t==="Porta"?`<button class="btn" data-qa="gira">Girar / espelhar</button>`:""}<button class="btn" data-qa="padrao">Usar nas próximas</button><button class="btn dng" data-qa="del">Excluir</button><button class="btn x" data-qa="x" aria-label="Fechar">×</button></div>
+    <div class="row" style="margin:0;flex-wrap:wrap">${V?`<button class="btn" data-qa="bonA">Boneca de ${f(num(PD.bon),0)} cm ${V.vert?"em cima":"à esquerda"}</button><button class="btn" data-qa="bonB">Boneca de ${f(num(PD.bon),0)} cm ${V.vert?"embaixo":"à direita"}</button>`:""}<button class="btn" data-qa="meio">Centralizar no vão</button>${a.t==="Porta"?`<button class="btn" data-qa="gira">Girar / espelhar</button>`:""}<button class="btn" data-qa="padrao">Usar nas próximas</button><button class="btn dng" data-qa="del">Excluir</button><button class="btn x" data-qa="x" aria-label="Fechar">×</button></div>
     <p class="cap" style="margin:6px 0 0">Arraste a ${a.t==="Porta"?"porta":a.t==="Janela"?"janela":"abertura"} na parede para a direita ou a esquerda: as distâncias em azul mudam junto e ela para no meio do vão. A distância é da face da parede (ou da esquadria vizinha) até a beirada do vão.</p>`;
   P.querySelectorAll("[data-pq]").forEach(el=>el.addEventListener("change",()=>{ const c=el.dataset.pq, v=num(el.value);
     if(c==="t"){ a.t=el.value; const df=ABDEF[a.t]; a.a=df.a; a.p=df.p; delete a.mod; delete a.mat; }
@@ -8553,6 +8557,7 @@ function pdPainelAb(){ const P=$("pdPanel"), a=S.ab[PD.selAb]; if(!P) return; if
     if(q==="gira"){ girarPorta(k); PD.selAb=k; pdPainelAb(); pdDesenha(); return; }
     if(q==="padrao"){ PD.ab={t:a.t,l:num(a.l),a:num(a.a),p:num(a.p),mod:a.mod||""}; pdGuarda(); pdBarra(); pdMsg("As próximas saem com este tipo e tamanho."); return; }
     if(q==="meio"&&V) a.d=+((V.esq+V.dir-num(a.l))/2).toFixed(3);
+    if((q==="bonA"||q==="bonB")&&V){ const b=num(PD.bon)/100, doComeco=(q==="bonA")!==V.inv; a.d=+(doComeco?V.esq+b:V.dir-b-num(a.l)).toFixed(3); }
     pdAplica(); pdPainelAb(); pdDesenha(); }); }
 const pdEl=()=>$("pdDes");
 function pdTam(){ const el=pdEl(); if(!el) return [800,500]; const r=el.getBoundingClientRect(); return [Math.max(200,r.width),Math.max(200,r.height)]; }
@@ -8629,7 +8634,9 @@ function pdBarra(){ const b=$("pdBar"); if(!b) return;
     ${PD.ab.t!=="Vão"?`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Modelo<select data-pab="mod" style="width:auto;max-width:220px">${opcoesMod(PD.ab.t,PD.ab.mod||modPadrao({t:PD.ab.t,l:PD.ab.l,a:PD.ab.a}))}</select></label>`:""}
     <label style="font-size:13px;display:flex;gap:6px;align-items:center">Largura (m)<input type="number" step="0.05" data-pab="l" value="${PD.ab.l}" style="width:70px"></label>
     <label style="font-size:13px;display:flex;gap:6px;align-items:center">Altura (m)<input type="number" step="0.05" data-pab="a" value="${PD.ab.a}" style="width:70px"></label>
-    ${PD.ab.t==="Janela"?`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Peitoril (m)<input type="number" step="0.05" data-pab="p" value="${PD.ab.p}" style="width:70px"></label>`:""}`:`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Tipo<select data-pb="tp" style="width:auto;max-width:260px">${opcoesTipoPar(PD.tp)}</select></label>
+    ${PD.ab.t==="Janela"?`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Peitoril (m)<input type="number" step="0.05" data-pab="p" value="${PD.ab.p}" style="width:70px"></label>`:""}
+    <label style="font-size:13px;display:flex;gap:6px;align-items:center">Boneca (cm)<input type="number" step="1" min="0" data-pbon value="${PD.bon}" style="width:60px"></label>
+    <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-pcot${PD.cotasTodas?" checked":""}>Distâncias de todas</label>`:`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Tipo<select data-pb="tp" style="width:auto;max-width:260px">${opcoesTipoPar(PD.tp)}</select></label>
     <label style="font-size:13px;display:flex;gap:6px;align-items:center">Espessura (cm)<input type="number" step="0.5" min="2" data-pb="e" value="${PD.e}" placeholder="${f((tipoPar(PD.tp)&&tipoPar(PD.tp)[2]||num(S.esp))*100,1).replace(",0","")}" style="width:72px"></label>`}
     <label style="font-size:13px;display:flex;gap:6px;align-items:center">Grade<select data-pb="grade" style="width:auto">${[[0.01,"1 cm"],[0.05,"5 cm"],[0.10,"10 cm"],[0.25,"25 cm"]].map(([v,t])=>`<option value="${v}"${Math.abs(v-PD.grade)<1e-6?" selected":""}>${t}</option>`).join("")}</select></label>
     <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-pb="orto"${PD.orto?" checked":""}>Travar 90° e 45°</label>
@@ -8650,16 +8657,20 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
         out.push(`<line x1="${hg[0]+g.nX*h*ld}" y1="${hg[1]+g.nY*h*ld}" x2="${tip[0]}" y2="${tip[1]}" stroke="${cor}" stroke-width="1.2" vector-effect="non-scaling-stroke"/><path d="M${tip[0]},${tip[1]} A${r},${r} 0 0 ${((ot[0]-hg[0])*g.nY-(ot[1]-hg[1])*g.nX)*ld>0?1:0} ${ot[0]+g.nX*h*ld},${ot[1]+g.nY*h*ld}" fill="none" stroke="${cor}" stroke-width="0.8" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/>`); }
       if(g.l/m>26) out.push(tx((g.p0[0]+g.p1[0])/2-g.nX*(h+8*m)*abLado(g),(g.p0[1]+g.p1[1])/2-g.nY*(h+8*m)*abLado(g),g.cod||g.tipo[0],10,cor)); });
     // cotas temporárias da esquadria escolhida: da parede da esquerda até ela, a largura e dela até a parede da direita
-    if(PD.selAb>=0){ const V=abVizinhos(PD.selAb); if(V){ const g=V.g, w=V.w, sg=abLado(g), o=(w.h+18*m)*sg, Pt=s=>[w.x1+w.ux*s+w.nX*o,w.y1+w.uy*s+w.nY*o], an=Math.atan2(w.uy,w.ux)*180/Math.PI, rot=an>90||an<-90?an+180:an;
-      [[V.esq,g.d],[g.d,g.d+g.l],[g.d+g.l,V.dir]].forEach(([s0,s1],j)=>{ if(s1-s0<0.005) return; const a=Pt(s0), b=Pt(s1), c=Pt((s0+s1)/2), cor=j===1?"#475569":"#2563eb";
-        out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${cor}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`);
-        [a,b].forEach(q=>out.push(`<line x1="${q[0]-w.nX*5*m}" y1="${q[1]-w.nY*5*m}" x2="${q[0]+w.nX*5*m}" y2="${q[1]+w.nY*5*m}" stroke="${cor}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`));
-        out.push(`<g transform="rotate(${rot} ${c[0]} ${c[1]})">${tx(c[0],c[1]-7*m,f(s1-s0),j===1?11:12.5,cor)}</g>`); }); } }
+    // boneca = o pedaço de parede entre a esquadria e a parede do lado; na medida escolhida fica verde e escrito "boneca"
+    const bon=num(PD.bon)/100, cotaAb=(k,leve)=>{ const V=abVizinhos(k); if(!V) return; const g=V.g, w=V.w, sg=abLado(g), o=(w.h+(leve?11:18)*m)*sg, Pt=s=>[w.x1+w.ux*s+w.nX*o,w.y1+w.uy*s+w.nY*o], an=Math.atan2(w.uy,w.ux)*180/Math.PI, rot=an>90||an<-90?an+180:an;
+      [[V.esq,g.d],[g.d,g.d+g.l],[g.d+g.l,V.dir]].forEach(([s0,s1],j)=>{ if(s1-s0<0.005||(leve&&j===1)) return; const L0=s1-s0, ehBon=j!==1&&bon>0&&Math.abs(L0-bon)<0.005, a=Pt(s0), b=Pt(s1), c=Pt((s0+s1)/2), cor=j===1?"#475569":ehBon?"#16a34a":"#2563eb";
+        out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${cor}" stroke-width="${leve?1:1.2}" vector-effect="non-scaling-stroke"/>`);
+        [a,b].forEach(q=>out.push(`<line x1="${q[0]-w.nX*4*m}" y1="${q[1]-w.nY*4*m}" x2="${q[0]+w.nX*4*m}" y2="${q[1]+w.nY*4*m}" stroke="${cor}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`));
+        const curta=L0/m<40&&j!==1, txt=ehBon?`boneca ${f(L0)}`:f(L0), oo=o+sg*(curta?13*m:0), cen=[w.x1+w.ux*((s0+s1)/2)+w.nX*oo,w.y1+w.uy*((s0+s1)/2)+w.nY*oo];   // cota curta: o número vai mais para dentro do ambiente, sem pisar nas outras
+        out.push(`<g transform="rotate(${rot} ${cen[0]} ${cen[1]})">${tx(cen[0],cen[1]-(curta?0:7*m),txt,leve?10.5:(j===1?11:12.5),cor)}</g>`); }); };
+    if(PD.cotasTodas) G.abs.forEach(g=>{ if(g.k!==PD.selAb) cotaAb(g.k,true); });
+    if(PD.selAb>=0) cotaAb(PD.selAb,false);
     (G.rooms||[]).forEach(r=>{ if(r.n&&r.area>1) out.push(tx(r.cx,r.cy,`${r.n} ${f(r.area)} m²`,11,"#64748b")); }); }
   // comprimento e espessura de cada parede (de perto)
   S.walls.forEach((w,i)=>{ const a=[num(w.x1),num(w.y1)], b=[num(w.x2),num(w.y2)], L=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L<0.05) return; const px=L/m;
     if(w.st==="d") out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#dc2626" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>`);
-    if(px>60){ const e=espPar(w), n=[-(b[1]-a[1])/L,(b[0]-a[0])/L], o=e/2+9*m, an=Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI, rot=an>90||an<-90?an+180:an, c=[(a[0]+b[0])/2+n[0]*o,(a[1]+b[1])/2+n[1]*o];
+    if(px>60&&!(PD.cotasTodas&&PD.ferr==="ab")){ const e=espPar(w), n=[-(b[1]-a[1])/L,(b[0]-a[0])/L], o=e/2+9*m, an=Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI, rot=an>90||an<-90?an+180:an, c=[(a[0]+b[0])/2+n[0]*o,(a[1]+b[1])/2+n[1]*o];
       out.push(`<g transform="rotate(${rot} ${c[0]} ${c[1]})">${tx(c[0],c[1],`${f(L)}${px>130?` · ${f(e*100,1).replace(",0","")} cm`:""}`,10.5,PD.sel===i?"#2563eb":"#0f172a")}</g>`); } });
   // pontas (bolinhas para arrastar no Selecionar)
   if(PD.ferr==="sel"){ const vis=new Set(); S.walls.forEach(w=>[[w.x1,w.y1],[w.x2,w.y2]].forEach(([x,y])=>{ const k=Math.round(num(x)*100)+","+Math.round(num(y)*100); if(vis.has(k)) return; vis.add(k); out.push(`<circle cx="${num(x)}" cy="${num(y)}" r="${5*m}" fill="#fff" stroke="#2563eb" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`); })); }
@@ -8700,7 +8711,7 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
     if(PD.ferr==="des"){ const p=pdMundo(ev); PD.cur=p; PD.snap=pdEncaixa(p,PD.ini); pdDesenha(); } },true);
   const fim=ev=>{ if(!ptrs.has(ev.pointerId)) return; ptrs.delete(ev.pointerId); if(gesto){ if(ptrs.size<2) gesto=null; return; } const t=toque; toque=null; if(!t) return;
     if(t.mao) return;
-    if(t.ab){ if(t.moveu||t.novo){ pdAplica(); const V=abVizinhos(t.ab.k); pdMsg(V?`${t.novo?"Colocada":"Movida"}: ${f(V.dA)} m ${V.nA} e ${f(V.dB)} m ${V.nB}.`:""); } pdPainelAb(); pdDesenha(); return; }
+    if(t.ab){ if(t.moveu||t.novo){ pdAplica(); const V=abVizinhos(t.ab.k); pdMsg(V?`${t.novo?"Colocada":"Movida"}: ${f(V.dA)} m ${V.nA} e ${f(V.dB)} m ${V.nB}.${[V.dA,V.dB].some(x=>Math.abs(x-num(PD.bon)/100)<0.005)?` Boneca de ${f(num(PD.bon),0)} cm.`:""}`:""); } pdPainelAb(); pdDesenha(); return; }
     if(arrV){ const a=arrV; arrV=null; if(t.moveu){ pdAplica(); pdMsg("Canto movido."); pdDesenha(); return; } }
     const p=pdMundo(ev);
     if(PD.ferr==="des"){ pdPonto(p); return; }
@@ -8721,7 +8732,10 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
     if(b.dataset.pz!=null){ const z=+b.dataset.pz; if(z===0){ pdEnquadra(); pdDesenha(); } else pdZoom(z>0?1.4:1/1.4); }
     if(b.dataset.pdir){ const [dx,dy]=b.dataset.pdir.split(",").map(Number); pdComprimento([dx,dy]); }
     if(b.dataset.pdac==="fim") pdFim(); if(b.dataset.pdac==="desf"){ if(UNDO.length){ $("btnDesfazer").click(); PD.ini=null; pdDesenha(); } } });
-  document.addEventListener("change",ev=>{ const t=ev.target; if(t.dataset&&t.dataset.pab){ const c=t.dataset.pab, A=PD.ab;
+  document.addEventListener("change",ev=>{ const t=ev.target;
+    if(t.matches&&t.matches("[data-pbon]")){ PD.bon=Math.max(0,num(t.value)); pdGuarda(); pdDesenha(); if(PD.selAb>=0) pdPainelAb(); return; }
+    if(t.matches&&t.matches("[data-pcot]")){ PD.cotasTodas=t.checked; pdGuarda(); pdDesenha(); return; }
+    if(t.dataset&&t.dataset.pab){ const c=t.dataset.pab, A=PD.ab;
       if(c==="t"){ A.t=t.value; const df=ABDEF[A.t]; A.a=df.a; A.p=df.p; A.l=df.l; A.mod=""; } else if(c==="mod") A.mod=t.value; else if(num(t.value)>=0) A[c]=num(t.value);
       pdGuarda(); pdBarra(); return; }
     if(!t.dataset||!t.dataset.pb) return; const c=t.dataset.pb;
