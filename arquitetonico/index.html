@@ -327,11 +327,11 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
         <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-v3c="tel" checked>Telhado</label>
         <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-v3c="arestas" checked>Arestas</label>
         <label style="font-size:13px;display:flex;gap:6px;align-items:center">Cortar na altura<input type="range" min="0" max="6" step="0.05" value="0" data-v3c="corte" style="width:140px"><span id="v3CorteV" style="min-width:70px">sem corte</span></label>
-        <button class="btn" data-v3="vol" id="v3Vol" aria-pressed="false" title="Toque na face de fora de uma parede para pôr o volume">▣ Volume</button><select id="v3VolTipo" style="width:auto" aria-label="Tipo de volume"></select><select id="v3VolMat" style="width:auto" aria-label="Material do volume"></select><button class="btn" data-v3="marq" id="v3Marq" aria-pressed="false" title="Toque na face de fora de uma parede para pôr uma marquise">▭ Marquise</button><button class="btn" data-v3="puxar" id="v3Puxar" aria-pressed="false" title="Empurrar/Puxar (como no SketchUp)">⇔ Puxar paredes</button><button class="btn" data-v3="foto">Baixar imagem</button></div>
+        <button class="btn" data-v3="vol" id="v3Vol" aria-pressed="false" title="Toque na face de fora de uma parede para pôr o volume">▣ Volume</button><select id="v3VolTipo" style="width:auto" aria-label="Tipo de volume"></select><select id="v3VolMat" style="width:auto" aria-label="Material do volume"></select><button class="btn" data-v3="marq" id="v3Marq" aria-pressed="false" title="Toque na face de fora de uma parede para pôr uma marquise">▭ Marquise</button><button class="btn" data-v3="mover" id="v3Mover" aria-pressed="false" title="Mover volume ou marquise (atalho M)">✥ Mover (M)</button><button class="btn" data-v3="puxar" id="v3Puxar" aria-pressed="false" title="Empurrar/Puxar (atalho P)">⇔ Puxar (P)</button><button class="btn" data-v3="foto">Baixar imagem</button></div>
       <div id="v3d" style="height:min(72vh,680px);border:1px solid var(--line,#d6dbe3);border-radius:10px;overflow:hidden;background:#eef2f7"><p class="cap" style="padding:12px">Abrindo o 3D…</p></div>
       <div id="v3Painel" class="panel" hidden style="margin-top:8px"></div>
       <p class="cap" id="v3Msg" role="status" style="margin:6px 0 0"></p>
-      <p class="cap" style="margin:4px 0 0"><b>⇔ Puxar paredes</b> (Empurrar/Puxar do SketchUp): ligue e arraste a <b>face de uma parede</b> para levar a parede para um lado ou para o outro (as paredes ligadas nela esticam ou encolhem junto, de 5 em 5 cm), ou arraste o <b>topo</b> para mudar a altura (pé-direito). Fora das paredes, o mouse continua girando a vista. <b>▣ Volume</b>: escolha caixote, moldura (em volta da porta/janela), faixa horizontal ou pilar, e o material (EPS, steel frame com placa, ACM ou concreto); ligue e toque na face de fora da parede. Toque no volume para mudar as medidas, ou puxe as faces com o ⇔ Puxar (frente = saliência, lados = largura, em cima/embaixo = altura). <b>▭ Marquise</b>: ligue e toque na face de fora de uma parede (em cima da porta ou da janela) para pôr uma marquise de EPS (isopor) com placas, de steel frame com drywall ou de concreto; toque nela para mudar as medidas, ou use o Puxar na frente (balanço), nas pontas (comprimento), em cima (espessura) e embaixo (altura).</p>
+      <p class="cap" style="margin:4px 0 0"><b>⇔ Puxar paredes</b> (Empurrar/Puxar do SketchUp): ligue e arraste a <b>face de uma parede</b> para levar a parede para um lado ou para o outro (as paredes ligadas nela esticam ou encolhem junto, de 5 em 5 cm), ou arraste o <b>topo</b> para mudar a altura (pé-direito). Fora das paredes, o mouse continua girando a vista. <b>✥ Mover (M)</b>: arraste um volume ou marquise pela parede (para os lados e para cima/baixo); com a peça escolhida, as <b>setas</b> do teclado andam 5 cm (Shift + seta = 1 cm). Atalhos: <b>M</b> mover, <b>P</b> puxar, <b>Esc</b> sair, <b>Delete</b> apagar. <b>▣ Volume</b>: escolha caixote, moldura (em volta da porta/janela), faixa horizontal ou pilar, e o material (EPS, steel frame com placa, ACM ou concreto); ligue e toque na face de fora da parede. Toque no volume para mudar as medidas, ou puxe as faces com o ⇔ Puxar (frente = saliência, lados = largura, em cima/embaixo = altura). <b>▭ Marquise</b>: ligue e toque na face de fora de uma parede (em cima da porta ou da janela) para pôr uma marquise de EPS (isopor) com placas, de steel frame com drywall ou de concreto; toque nela para mudar as medidas, ou use o Puxar na frente (balanço), nas pontas (comprimento), em cima (espessura) e embaixo (altura).</p>
     </div>
   </section>
   <section id="tab-ref" hidden>
@@ -834,7 +834,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.71 · 3D gira apertando a rodinha do mouse (como no SketchUp)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.72 · 3D: mover volumes e marquises (M), setas, P para puxar, Esc", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -8917,9 +8917,11 @@ function v3Vista(nome){ if(!V3.pronto||!V3.bb) return; const b=V3.bb, T=V3.T, c=
 async function v3Mostra(){ const ok=await v3Carrega(); if(!ok) return; v3Tamanho(); const novo=!V3.bb; v3Monta(); if(novo) v3Vista("persp"); }
 // botões e opções
 document.addEventListener("click",ev=>{ const b=ev.target.closest("[data-v3]"); if(!b) return; const a=b.dataset.v3;
-  if(a==="vol"){ V3.volModo=!V3.volModo; if(V3.volModo&&V3.marqModo){ V3.marqModo=false; const bm=$("v3Marq"); bm.className="btn"; bm.setAttribute("aria-pressed","false"); } b.setAttribute("aria-pressed",V3.volModo?"true":"false"); b.className=V3.volModo?"btn pri":"btn"; V3.msgAte=Date.now()+6000; $("v3Msg").textContent=V3.volModo?`Volume (${nomeVF($("v3VolTipo").value).toLowerCase()}): toque na face de fora de uma parede.`:"Volume desligado."; return; }
-  if(a==="marq"){ V3.marqModo=!V3.marqModo; if(V3.marqModo&&V3.volModo){ V3.volModo=false; const bv=$("v3Vol"); bv.className="btn"; bv.setAttribute("aria-pressed","false"); } b.setAttribute("aria-pressed",V3.marqModo?"true":"false"); b.className=V3.marqModo?"btn pri":"btn"; V3.msgAte=Date.now()+6000; $("v3Msg").textContent=V3.marqModo?"Marquise: toque na face de fora de uma parede, onde ela vai ficar.":"Marquise desligado."; return; }
-  if(a==="puxar"){ V3.puxar=!V3.puxar; b.setAttribute("aria-pressed",V3.puxar?"true":"false"); b.className=V3.puxar?"btn pri":"btn"; $("v3Msg").textContent=V3.puxar?"Puxar ligado: arraste a face de uma parede (para os lados) ou o topo (altura).":"Puxar desligado."; return; }
+  if(a==="vol"){ V3.mover=false; V3.puxar=false; ["v3Mover","v3Puxar"].forEach(id=>{ const e=$(id); if(e){ e.className="btn"; e.setAttribute("aria-pressed","false"); } }); V3.volModo=!V3.volModo; if(V3.volModo&&V3.marqModo){ V3.marqModo=false; const bm=$("v3Marq"); bm.className="btn"; bm.setAttribute("aria-pressed","false"); } b.setAttribute("aria-pressed",V3.volModo?"true":"false"); b.className=V3.volModo?"btn pri":"btn"; V3.msgAte=Date.now()+6000; $("v3Msg").textContent=V3.volModo?`Volume (${nomeVF($("v3VolTipo").value).toLowerCase()}): toque na face de fora de uma parede.`:"Volume desligado."; return; }
+  if(a==="marq"){ V3.mover=false; V3.puxar=false; ["v3Mover","v3Puxar"].forEach(id=>{ const e=$(id); if(e){ e.className="btn"; e.setAttribute("aria-pressed","false"); } }); V3.marqModo=!V3.marqModo; if(V3.marqModo&&V3.volModo){ V3.volModo=false; const bv=$("v3Vol"); bv.className="btn"; bv.setAttribute("aria-pressed","false"); } b.setAttribute("aria-pressed",V3.marqModo?"true":"false"); b.className=V3.marqModo?"btn pri":"btn"; V3.msgAte=Date.now()+6000; $("v3Msg").textContent=V3.marqModo?"Marquise: toque na face de fora de uma parede, onde ela vai ficar.":"Marquise desligado."; return; }
+  if(a==="mover"){ v3Modo(V3.mover?null:"mover"); return; }
+  if(a==="puxar"){ v3Modo(V3.puxar?null:"puxar"); return; }
+  if(a==="puxar_old"){ V3.puxar=!V3.puxar; b.setAttribute("aria-pressed",V3.puxar?"true":"false"); b.className=V3.puxar?"btn pri":"btn"; $("v3Msg").textContent=V3.puxar?"Puxar ligado: arraste a face de uma parede (para os lados) ou o topo (altura).":"Puxar desligado."; return; }
   if(a==="foto"){ if(!V3.pronto) return; V3.r.render(V3.cena,V3.cam); const url=V3.r.domElement.toDataURL("image/png"), l=document.createElement("a"); l.href=url; l.download=`${(S.obra||"obra").replace(/[^\w\-]+/g,"_")}_3d.png`; document.body.appendChild(l); l.click(); l.remove(); return; }
   v3Vista(a); });
 document.addEventListener("change",ev=>{ const t=ev.target; if(!t.dataset||t.dataset.v3c==null) return; const c=t.dataset.v3c;
@@ -9000,6 +9002,23 @@ function v3PainelVf(){ const P=$("v3Painel"); if(!P) return; const k=V3.selVf, v
       V3.selVf=k; V3.selMq=-1; save(); render(); v3PainelVf(); $("v3Msg").textContent=`${nomeVF(S.vfac[k].tipo)} colocado. Mude as medidas no painel ou puxe as faces com o ⇔ Puxar.`; return; }
     if(!h&&V3.selVf>=0){ V3.selVf=-1; const P=$("v3Painel"); if(P&&!(V3.selMq>=0)) P.hidden=true; v3Monta(); } },true);
   document.addEventListener("keydown",ev=>{ if((ev.key==="Delete"||ev.key==="Backspace")&&abaAtual()==="v3"&&V3.selVf>=0&&S.vfac&&S.vfac[V3.selVf]){ const a=document.activeElement; if(a&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)) return; ev.preventDefault(); S.vfac.splice(V3.selVf,1); V3.selVf=-1; const P=$("v3Painel"); if(P) P.hidden=true; save(); render(); } }); }
+/* ---- Modos e atalhos do 3D (6.72): M = mover, P = puxar, Esc = sair; setas empurram a peça escolhida ---- */
+function v3Modo(md){ V3.mover=md==="mover"; V3.puxar=md==="puxar"; if(md){ V3.volModo=false; V3.marqModo=false; }
+  [["v3Mover",V3.mover],["v3Puxar",V3.puxar],["v3Vol",V3.volModo],["v3Marq",V3.marqModo]].forEach(([id,on])=>{ const b=$(id); if(b){ b.className=on?"btn pri":"btn"; b.setAttribute("aria-pressed",on?"true":"false"); } });
+  V3.msgAte=Date.now()+6000; $("v3Msg").textContent=V3.mover?"Mover (M): arraste um volume ou marquise pela face da parede (para os lados e para cima/baixo, de 5 em 5 cm). Setas também movem a peça escolhida; Shift + seta = 1 cm.":V3.puxar?"Puxar (P): arraste a face de uma parede, volume ou marquise.":"Nenhuma ferramenta (Esc)."; }
+// peça escolhida: volume ou marquise; move ao longo da parede (ds) e na altura (dz)
+function v3MovePeca(ds,dz){ const v=V3.selVf>=0?(S.vfac||[])[V3.selVf]:null, m=!v&&V3.selMq>=0?(S.marq||[])[V3.selMq]:null, o=v||m; if(!o) return false;
+  o.d=+(num(o.d)+ds).toFixed(3); o.z=+Math.max(0,num(o.z)+dz).toFixed(3); save(); render(); if(v) v3PainelVf(); else v3PainelMq(); V3.msgAte=Date.now()+4000; $("v3Msg").textContent=`${v?nomeVF(v.tipo):"Marquise"}: começa a ${f(num(o.d))} m na parede, base a ${f(num(o.z))} m.`; return true; }
+document.addEventListener("keydown",ev=>{ if(abaAtual()!=="v3"||!V3.pronto) return; const a=document.activeElement; if(a&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)) return;
+  const k=ev.key.toLowerCase(); if(ev.ctrlKey||ev.metaKey||ev.altKey) return;
+  if(k==="m"){ ev.preventDefault(); v3Modo(V3.mover?null:"mover"); return; }
+  if(k==="p"){ ev.preventDefault(); v3Modo(V3.puxar?null:"puxar"); return; }
+  if(k==="escape"){ v3Modo(null); return; }
+  if(["arrowleft","arrowright","arrowup","arrowdown"].includes(k)&&(V3.selVf>=0||V3.selMq>=0)){ ev.preventDefault();
+    const pc=V3.selVf>=0?volsFachada(GG).find(x=>x.i===V3.selVf):marquises(GG).find(x=>x.i===V3.selMq); if(!pc) return; const st=ev.shiftKey?0.01:0.05;
+    // seta para a direita = anda para a direita na tela (a parede pode ter sido desenhada ao contrário)
+    const c=centro(pc.caixas?pc.caixas[0].poly:pc.poly), a3=new V3.T.Vector3(c[0],-c[1],0).project(V3.cam), b3=new V3.T.Vector3(c[0]+pc.u[0],-(c[1]+pc.u[1]),0).project(V3.cam), sx=b3.x>=a3.x?1:-1;
+    if(k==="arrowright") v3MovePeca(st*sx,0); if(k==="arrowleft") v3MovePeca(-st*sx,0); if(k==="arrowup") v3MovePeca(0,st); if(k==="arrowdown") v3MovePeca(0,-st); } });
 /* ---- Empurrar/Puxar no 3D (6.68, pedido do Eliel): arrastar a face da parede move a parede na direção dela; arrastar o topo muda o pé-direito ---- */
 { let pux=null; const raio=()=>new V3.T.Raycaster();
   const ndc=ev=>{ const r=V3.r.domElement.getBoundingClientRect(); return new V3.T.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1); };
@@ -9007,7 +9026,11 @@ function v3PainelVf(){ const P=$("v3Painel"); if(!P) return; const k=V3.selVf, v
   const paredeEm=(p,topo)=>{ let b=null; (GG.walls||[]).forEach(w=>{ const d=distSeg(p,w)-w.h; if(d<(topo?0.02:0.04)&&(!b||d<b.d)) b={w,d}; }); return b&&b.w; };
   const etq=(ev,t)=>{ let e=$("v3Etq"); const box=$("v3d"); if(!e){ box.style.position="relative"; box.insertAdjacentHTML("beforeend",`<div id="v3Etq" style="position:absolute;pointer-events:none;background:#111827;color:#fff;font-size:12.5px;padding:3px 8px;border-radius:6px;opacity:.9;white-space:nowrap"></div>`); e=$("v3Etq"); }
     if(!t){ e.hidden=true; return; } const r=box.getBoundingClientRect(); e.hidden=false; e.textContent=t; e.style.left=(ev.clientX-r.left+14)+"px"; e.style.top=(ev.clientY-r.top+14)+"px"; };
-  document.addEventListener("pointerdown",ev=>{ if(!V3.puxar||!V3.pronto||ev.button!==0) return; const el=V3.r.domElement; if(ev.target!==el) return;
+  document.addEventListener("pointerdown",ev=>{ if(V3.mover&&V3.pronto&&ev.button===0&&ev.target===V3.r.domElement){ const el=V3.r.domElement, rc=raio(); rc.setFromCamera(ndc(ev),V3.cam);
+      const h=rc.intersectObjects(V3.grupo?V3.grupo.children.filter(o=>/^(vf|marq):/.test(o.name)):[],false)[0]; if(!h) return; const T=V3.T, vf=/^vf:/.test(h.object.name), pc=vf?h.object.userData.V:h.object.userData.M, o=vf?S.vfac[pc.i]:S.marq[pc.i];
+      ev.stopImmediatePropagation(); ev.preventDefault(); try{ el.setPointerCapture(ev.pointerId); }catch(e){} V3.ctl.enabled=false; if(vf){ V3.selVf=pc.i; V3.selMq=-1; } else { V3.selMq=pc.i; V3.selVf=-1; }
+      const n3=new T.Vector3(pc.n[0],-pc.n[1],0); pux={tipo:"mov",vf,pc,o,o0:{d:num(o.d),z:num(o.z)},u3:[pc.u[0],-pc.u[1]],id:ev.pointerId,plano:new T.Plane().setFromNormalAndCoplanarPoint(n3,h.point),p0:h.point.clone(),ultimo:null}; return; }
+    if(!V3.puxar||!V3.pronto||ev.button!==0) return; const el=V3.r.domElement; if(ev.target!==el) return;
     { const rc=raio(); rc.setFromCamera(ndc(ev),V3.cam); const hv=rc.intersectObjects(V3.grupo?V3.grupo.children.filter(o=>/^vf:/.test(o.name)):[],false)[0];
       if(hv&&hv.face){ const Vf=hv.object.userData.V, v=S.vfac[Vf.i], T=V3.T, nz=hv.face.normal.z, n3=[Vf.n[0],-Vf.n[1]], u3=[Vf.u[0],-Vf.u[1]], fn=[hv.face.normal.x,hv.face.normal.y], dn=fn[0]*n3[0]+fn[1]*n3[1], du=fn[0]*u3[0]+fn[1]*u3[1];
         const qual=nz>0.7?"top":nz<-0.7?"base":dn>0.7?"b":du>0.7?"l1":du<-0.7?"l0":null; if(qual){ ev.stopImmediatePropagation(); ev.preventDefault(); try{ el.setPointerCapture(ev.pointerId); }catch(e){} V3.ctl.enabled=false; V3.selVf=Vf.i; V3.selMq=-1;
@@ -9029,9 +9052,11 @@ function v3PainelVf(){ const P=$("v3Painel"); if(!P) return; const k=V3.selVf, v
       S.walls.forEach((q,j)=>{ if(j===w.i) return; [["x1","y1"],["x2","y2"]].forEach(([a,b])=>{ const E=[orig[j][a],orig[j][b]]; if(Math.hypot(E[0]-A[0],E[1]-A[1])<0.006||Math.hypot(E[0]-B[0],E[1]-B[1])<0.006||distSeg(E,{x1:A[0],y1:A[1],x2:B[0],y2:B[1]})<0.01) liga.push([j,a,b]); }); });
       pux={tipo:"m",id:ev.pointerId,i:w.i,n,liga,orig,plano:new T.Plane(new T.Vector3(0,0,1),-h.point.z),p0:h.point.clone()}; }
     pux.ultimo=null; },true);
-  document.addEventListener("pointermove",ev=>{ if(!V3.puxar||!V3.pronto) return; const el=V3.r.domElement;
-    if(!pux){ if(ev.target===el){ const h=acerta(ev); const ok=h&&h.face&&(Math.abs(h.face.normal.z)<0.3||h.face.normal.z>0.7)&&paredeEm([h.point.x,-h.point.y],h.face.normal.z>0.7); el.style.cursor=ok?(h.face.normal.z>0.7?"ns-resize":"move"):"grab"; } return; }
+  document.addEventListener("pointermove",ev=>{ if((!V3.puxar&&!V3.mover)||!V3.pronto) return; const el=V3.r.domElement;
+    if(!pux){ if(V3.mover){ if(ev.target===el){ const rc=raio(); rc.setFromCamera(ndc(ev),V3.cam); el.style.cursor=rc.intersectObjects(V3.grupo?V3.grupo.children.filter(o=>/^(vf|marq):/.test(o.name)):[],false).length?"move":"grab"; } return; } if(ev.target===el){ const h=acerta(ev); const ok=h&&h.face&&(Math.abs(h.face.normal.z)<0.3||h.face.normal.z>0.7)&&paredeEm([h.point.x,-h.point.y],h.face.normal.z>0.7); el.style.cursor=ok?(h.face.normal.z>0.7?"ns-resize":"move"):"grab"; } return; }
     if(ev.pointerId!==pux.id) return; const T=V3.T, rc=raio(); rc.setFromCamera(ndc(ev),V3.cam); const P=new T.Vector3(); if(!rc.ray.intersectPlane(pux.plano,P)) return;
+    if(pux.tipo==="mov"){ const d3=[P.x-pux.p0.x,P.y-pux.p0.y], st=x=>Math.round(x/0.05)*0.05, ds=st(d3[0]*pux.u3[0]+d3[1]*pux.u3[1]), dz=st(P.z-pux.p0.z), t=`↔ ${f(Math.abs(ds))} m  ↕ ${f(dz)} m`;
+      if(t===pux.ultimo) return; pux.ultimo=t; pux.o.d=+(pux.o0.d+ds).toFixed(3); pux.o.z=+Math.max(0,pux.o0.z+dz).toFixed(3); etq(ev,t); GG=geom(); v3Monta(); return; }
     if(pux.tipo==="vf"){ const q=pux.qual, o=pux.o, v=pux.v, d3=[P.x-pux.p0.x,P.y-pux.p0.y], dz=P.z-pux.p0.z, st=x=>Math.round(x/0.05)*0.05, su=d3[0]*pux.u3[0]+d3[1]*pux.u3[1]; let t="";
       if(q==="b"){ v.b=+Math.max(0.01,Math.round((o.b+(d3[0]*pux.n3[0]+d3[1]*pux.n3[1]))/0.01)*0.01).toFixed(2); t=`Saliência ${f(v.b*100,0)} cm`; }
       else if(q==="l1"){ v.l=+Math.max(0.05,o.l+st(su)).toFixed(3); t=`Largura ${f(v.l)} m`; }
@@ -9054,6 +9079,7 @@ function v3PainelVf(){ const P=$("v3Painel"); if(!P) return; const k=V3.selVf, v
       etq(ev,`Parede ${pux.i+1}: ${d>=0?"+":""}${f(d)} m`); }
     GG=geom(); v3Monta(); },true);
   const fim=ev=>{ if(!pux||ev.pointerId!==pux.id) return; const p0=pux; pux=null; V3.ctl.enabled=true; etq(ev,null);
+    if(p0.tipo==="mov"){ if(p0.ultimo){ save(); render(); if(p0.vf) v3PainelVf(); else v3PainelMq(); V3.msgAte=Date.now()+6000; $("v3Msg").textContent=`${p0.vf?nomeVF(p0.pc.tipo):"Marquise"} movido(a). Setas ajustam fino (Shift + seta = 1 cm). ↶ Desfazer volta.`; } return; }
     if(p0.tipo==="vf"){ if(p0.ultimo){ save(); render(); v3PainelVf(); V3.msgAte=Date.now()+6000; $("v3Msg").textContent=`${nomeVF(p0.Vf.tipo)} ${p0.Vf.i+1}: ${p0.ultimo}.`; } return; }
     if(p0.tipo==="mq"){ if(p0.ultimo){ save(); render(); v3PainelMq(); V3.msgAte=Date.now()+6000; $("v3Msg").textContent=`Marquise ${p0.M.i+1}: ${p0.ultimo}.`; } return; }
     if(p0.ultimo!==null&&p0.ultimo!==0){ save(); renderWalls(); loadForm&&p0.tipo==="h"&&loadForm(); render(); V3.msgAte=Date.now()+6000; $("v3Msg").textContent=p0.tipo==="h"?`Pé-direito agora ${f(num(S.pd))} m.`:`Parede ${p0.i+1} movida ${f(Math.abs(p0.ultimo))} m. As paredes ligadas acompanharam. ↶ Desfazer volta.`; } };
