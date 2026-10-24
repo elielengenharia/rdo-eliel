@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js","three/addons/":"./vendor/"}}</script>
 <meta name="theme-color" content="#1A2130">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -144,6 +145,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
 
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="planta" aria-selected="true">Planta</button>
+    <button role="tab" data-tab="v3" aria-selected="false">3D</button>
     <button role="tab" data-tab="ref" aria-selected="false">Reforma</button>
     <button role="tab" data-tab="lay" aria-selected="false">Layout</button>
     <button role="tab" data-tab="ele" aria-selected="false">Elétrica</button>
@@ -316,6 +318,20 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
   </section>
 
   <!-- REFORMA -->
+  <section id="tab-v3" hidden>
+    <div class="sheet">
+      <h2>3D</h2>
+      <p class="cap">A obra em 3D, montada da planta: paredes com portas e janelas, piso, platibanda e telhado. <b>Mouse:</b> botão esquerdo gira (sai do plano XY e mostra o Z, as alturas), botão direito arrasta, roda aproxima. <b>Celular:</b> um dedo gira, dois dedos aproximam e arrastam. Mudou algo na planta, o 3D acompanha.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin:4px 0 8px">
+        <button class="btn pri" data-v3="persp">Perspectiva</button><button class="btn" data-v3="cima">De cima (planta)</button><button class="btn" data-v3="frente">Frente</button><button class="btn" data-v3="dir">Direita</button><button class="btn" data-v3="esq">Esquerda</button><button class="btn" data-v3="fundos">Fundos</button>
+        <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-v3c="tel" checked>Telhado</label>
+        <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-v3c="arestas" checked>Arestas</label>
+        <label style="font-size:13px;display:flex;gap:6px;align-items:center">Cortar na altura<input type="range" min="0" max="6" step="0.05" value="0" data-v3c="corte" style="width:140px"><span id="v3CorteV" style="min-width:70px">sem corte</span></label>
+        <button class="btn" data-v3="foto">Baixar imagem</button></div>
+      <div id="v3d" style="height:min(72vh,680px);border:1px solid var(--line,#d6dbe3);border-radius:10px;overflow:hidden;background:#eef2f7"><p class="cap" style="padding:12px">Abrindo o 3D…</p></div>
+      <p class="cap" id="v3Msg" role="status" style="margin:6px 0 0"></p>
+    </div>
+  </section>
   <section id="tab-ref" hidden>
     <div class="sheet">
       <h2>Planta de demolir e construir</h2>
@@ -816,7 +832,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.64 · atalho Delete para apagar paredes, portas, janelas e móveis", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.65 · 3D: a obra em 3D para girar com o mouse", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -5593,7 +5609,7 @@ function orelhas(P0){ let P=P0.slice(); if(areaS(P)<0) P.reverse(); const out=[]
       if(P.some(p=>p!==a&&p!==b&&p!==c&&dentro(p,a,b,c))) continue; out.push([a,b,c]); P.splice(i,1); ok=true; break; } if(!ok) break; }
   if(P.length===3) out.push(P.slice()); return out; }
 function maquete3dApp(G){ if(G.vazio) return null; const tris=[], cols=[], mat=[], lines=[], lk=[], pd=num(S.pd), lj=Math.max(0,num(S.laje)), TI=infoTelhado(G), ps=Math.max(0,num(S.piso)), CP=coresPersp();
-  const tri=(a,b,c,kd)=>{ tris.push([a,b,c]); cols.push(kd==="telha"?(COR_TELHA[S.tel.telha]||COR_TELHA["Cerâmica"]):kd==="chao"?[0.74,0.74,0.72]:kd==="forro"?CP.plat:CP[kd]); mat.push(kd); }, quad=(a,b,c,d,kd)=>{ tri(a,b,c,kd); tri(a,c,d,kd); }, ln=(a,b,k0=0)=>{ lines.push([a,b]); lk.push(k0); };
+  const tri=(a,b,c,kd)=>{ tris.push([a,b,c]); cols.push(kd==="telha"?(COR_TELHA[S.tel.telha]||COR_TELHA["Cerâmica"]):kd==="chao"?[0.74,0.74,0.72]:kd==="forro"||kd==="tst"?CP.plat:CP[kd]); mat.push(kd); }, quad=(a,b,c,d,kd)=>{ tri(a,b,c,kd); tri(a,c,d,kd); }, ln=(a,b,k0=0)=>{ lines.push([a,b]); lk.push(k0); };
   const dSeg=(p,s0)=>{ const vx=s0[2]-s0[0], vy=s0[3]-s0[1], l2=vx*vx+vy*vy||1e-12, t=Math.max(0,Math.min(1,((p[0]-s0[0])*vx+(p[1]-s0[1])*vy)/l2)); return Math.hypot(p[0]-s0[0]-vx*t,p[1]-s0[1]-vy*t); };
   const naExt=(a,b)=>{ const m=[(a[0]+b[0])/2,(a[1]+b[1])/2]; return G.contExt.some(s0=>dSeg(m,s0)<0.02); };
   const topoExt=TI.plat?(TI.topoPlat||pd+lj):pd+lj, zP=pd+lj, sobe=!TI.plat, R=TI.R;
@@ -5658,9 +5674,9 @@ function maquete3dApp(G){ if(G.vazio) return null; const tris=[], cols=[], mat=[
     pecaT(Pg,0,"telha"); if(!TI.plat) pecaT(Pg,-esp,"forro"); }));   // com beiral: forro do beiral por baixo da telha
   if(!TI.plat){ const B4=[[R.x0,R.y0],[R.x1,R.y0],[R.x1,R.y1],[R.x0,R.y1]];   // testeira em volta do beiral, seguindo a inclinação
     B4.forEach((a,i)=>{ const b=B4[(i+1)%4], ts=quebras(a,b); for(let j=0;j+1<ts.length;j++){ const p=noSeg(a,b,ts[j]), q=noSeg(a,b,ts[j+1]);
-      quad([p[0],p[1],Z(...p)-esp],[q[0],q[1],Z(...q)-esp],[q[0],q[1],Z(...q)],[p[0],p[1],Z(...p)],"plat"); ln([p[0],p[1],Z(...p)],[q[0],q[1],Z(...q)]); ln([p[0],p[1],Z(...p)-esp],[q[0],q[1],Z(...q)-esp]); }
-      ln([a[0],a[1],Z(...a)-esp],[a[0],a[1],Z(...a)]); }); }
-  [...TI.cum,...TI.esp].forEach(([a,b,c,d])=>ln([a,b,Z(a,b)+0.01],[c,d,Z(c,d)+0.01])); };
+      quad([p[0],p[1],Z(...p)-esp],[q[0],q[1],Z(...q)-esp],[q[0],q[1],Z(...q)],[p[0],p[1],Z(...p)],"tst"); ln([p[0],p[1],Z(...p)],[q[0],q[1],Z(...q)],9); ln([p[0],p[1],Z(...p)-esp],[q[0],q[1],Z(...q)-esp],9); }
+      ln([a[0],a[1],Z(...a)-esp],[a[0],a[1],Z(...a)],9); }); }
+  [...TI.cum,...TI.esp].forEach(([a,b,c,d])=>ln([a,b,Z(a,b)+0.01],[c,d,Z(c,d)+0.01],9)); };
   (TI.vols||[TI]).forEach(telhadoDe);   // casa com volumes: um telhado em cada
   // calçada em volta (o chão fica sempre por último)
   const bb=G.bb, m0=1.5; quad([bb.x0-m0,bb.y0-m0,-ps-0.01],[bb.x1+m0,bb.y0-m0,-ps-0.01],[bb.x1+m0,bb.y1+m0,-ps-0.01],[bb.x0-m0,bb.y1+m0,-ps-0.01],"chao");
@@ -7280,8 +7296,9 @@ $("layAmb").addEventListener("change",e=>{ const i=e.target.dataset.lay; if(i==n
 $("layAmb").addEventListener("click",e=>{ const b=e.target.closest("[data-var]"); if(!b||!GG) return; const lb=labDe(GG.rooms[+b.dataset.var]); lb.mv=Math.round(num(lb.mv))+1; render(); });
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
-  ["planta","ref","lay","ele","hid","for","pis","rvp","pag","mem","orc","cortes","cob","fach","sit","pint","persp","estr","estS","esca","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
+  ["planta","v3","ref","lay","ele","hid","for","pis","rvp","pag","mem","orc","cortes","cob","fach","sit","pint","persp","estr","estS","esca","ban","dados"].forEach(t=>$("tab-"+t).hidden=(t!==b.dataset.tab));
   clipBarra(); if(b.dataset.tab==="planta") setTimeout(()=>{ try{ if(!PD.vista||PD.vista.mpp>0.19) pdEnquadra(); pdDesenha(); }catch(e){} },0);
+  if(b.dataset.tab==="v3") v3Mostra();
   if(b.dataset.tab==="mem") renderMemorial();
   if(b.dataset.tab==="orc") renderOrc();
   if(b.dataset.tab==="pag") render();
@@ -8765,6 +8782,76 @@ document.addEventListener("keydown",ev=>{ if(ev.key!=="Delete"&&ev.key!=="Backsp
   window.addEventListener("resize",()=>pdDesenha()); }
 { const r0=render; render=function(){ const v=r0.apply(this,arguments); try{ if(PD.sel>=S.walls.length) PD.sel=-1; if(PD.selAb>=S.ab.length) PD.selAb=-1; pdDesenha(); }catch(e){} return v; }; }
 setTimeout(()=>{ try{ pdBarra(); pdEnquadra(); pdDesenha(); }catch(e){} },0);
+/* ======================================================================
+   3D (6.65, pedido do Eliel): a obra em 3D para girar com o mouse. A maquete é a mesma das Perspectivas
+   (paredes com portas e janelas, piso, platibanda, telhado), montada da planta; three.js 0.160 (MIT) guardado no próprio site em vendor/, funciona sem internet depois da primeira vez.
+   Mouse: botão esquerdo gira (do plano XY para ver o Z), botão direito arrasta, roda aproxima.
+   Celular: um dedo gira, dois dedos aproximam e arrastam.
+   ====================================================================== */
+const V3={pronto:false,carregando:null,cfg:(()=>{ try{ return JSON.parse(localStorage.getItem("arq-3d")||"{}")||{}; }catch(e){ return {}; } })()};
+V3.cfg=Object.assign({tel:true,corte:0,arestas:true},V3.cfg);
+const v3Guarda=()=>{ try{ localStorage.setItem("arq-3d",JSON.stringify(V3.cfg)); }catch(e){} };
+async function v3Carrega(){ if(V3.pronto) return true; if(V3.carregando) return V3.carregando;
+  V3.carregando=(async()=>{ const el=$("v3d"); try{
+      const T=await import("three"), {OrbitControls}=await import("three/addons/controls/OrbitControls.js");
+      V3.T=T; const r=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true}); r.setPixelRatio(Math.min(2,devicePixelRatio||1)); r.localClippingEnabled=true; r.setClearColor(0xeef2f7);
+      el.innerHTML=""; el.appendChild(r.domElement); r.domElement.style.display="block"; r.domElement.style.width="100%"; r.domElement.style.height="100%"; r.domElement.style.touchAction="none";
+      const cena=new T.Scene(), cam=new T.PerspectiveCamera(45,1,0.05,500); cam.up.set(0,0,1);
+      cena.add(new T.HemisphereLight(0xffffff,0x9aa3ad,1.15)); const sol=new T.DirectionalLight(0xffffff,1.25); sol.position.set(-12,-18,25); cena.add(sol); const sol2=new T.DirectionalLight(0xffffff,0.35); sol2.position.set(15,10,8); cena.add(sol2);
+      const ctl=new OrbitControls(cam,r.domElement); ctl.enableDamping=true; ctl.dampingFactor=0.12; ctl.screenSpacePanning=true; ctl.maxPolarAngle=Math.PI*0.49;   // não passa para baixo do chão
+      ctl.mouseButtons={LEFT:T.MOUSE.ROTATE,MIDDLE:T.MOUSE.DOLLY,RIGHT:T.MOUSE.PAN}; ctl.touches={ONE:T.TOUCH.ROTATE,TWO:T.TOUCH.DOLLY_PAN};
+      r.domElement.addEventListener("contextmenu",e=>e.preventDefault());
+      Object.assign(V3,{r,cena,cam,ctl,grupo:null,pronto:true,plano:new T.Plane(new T.Vector3(0,0,-1),1e3)});
+      new ResizeObserver(()=>v3Tamanho()).observe(el); v3Tamanho();
+      const laco=()=>{ requestAnimationFrame(laco); const vis=!$("tab-v3").hidden; if(!vis) return; ctl.update(); r.render(cena,cam); }; laco();
+      return true; }
+    catch(e){ el.innerHTML=`<div class="alert bad">Não deu para abrir o 3D aqui (${esc(e.message||String(e))}). O 3D precisa de um navegador com WebGL (Chrome, Edge ou Safari atualizados); feche e abra o app e tente de novo.</div>`; V3.carregando=null; return false; } })();
+  return V3.carregando; }
+function v3Tamanho(){ if(!V3.pronto) return; const el=$("v3d"), w=Math.max(200,el.clientWidth), h=Math.max(200,el.clientHeight); V3.r.setSize(w,h,false); V3.cam.aspect=w/h; V3.cam.updateProjectionMatrix(); }
+// monta as malhas a partir da maquete do app: paredes/piso/esquadrias, telhado (telha, rufo, forro) e vidro separados
+function v3Monta(){ if(!V3.pronto) return; const T=V3.T, G=GG; if(V3.grupo){ V3.cena.remove(V3.grupo); V3.grupo.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); V3.grupo=null; }
+  const msg=$("v3Msg"); if(!G||G.vazio){ if(msg) msg.textContent="Sem paredes ainda: desenhe a planta na aba Planta."; return; }
+  let M=null; try{ M=maqueteAtual(G); }catch(e){ M=null; } if(!M||!M.tris||!M.tris.length){ if(msg) msg.textContent="Não deu para montar a maquete desta planta."; return; }
+  const W=p=>[p[0],-p[1],p[2]], tel=new Set(["telha","rufo","forro","tst"]), grupo=new T.Group(), clip=[V3.plano];
+  const parte=(filtro,mat)=>{ const pos=[], cor=[]; M.tris.forEach((t,i)=>{ if(!filtro(M.mat&&M.mat[i],i)) return; const c=(M.cols&&M.cols[i])||[0.85,0.85,0.85]; t.forEach(p=>{ pos.push(...W(p)); cor.push(...c); }); });
+    if(!pos.length) return null; const g=new T.BufferGeometry(); g.setAttribute("position",new T.Float32BufferAttribute(pos,3)); g.setAttribute("color",new T.Float32BufferAttribute(cor,3)); g.computeVertexNormals(); const me=new T.Mesh(g,mat); grupo.add(me); return me; };
+  const vid=(m,i)=>m==="vid"||(M.vid&&M.vid[i]);
+  parte((m,i)=>!vid(m,i)&&!tel.has(m),new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide,clippingPlanes:clip}));
+  const mt=parte((m,i)=>!vid(m,i)&&tel.has(m),new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide,clippingPlanes:clip})); if(mt) mt.name="telhado";
+  parte((m,i)=>vid(m,i),new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide,transparent:true,opacity:0.42,depthWrite:false,clippingPlanes:clip}));
+  if(M.lines&&M.lines.length){
+    const ps=[[],[]]; M.lines.forEach(([a,b],i)=>ps[M.lk&&M.lk[i]===9?1:0].push(...W(a),...W(b)));   // 9 = aresta do telhado (some junto com ele)
+    ps.forEach((pos,j)=>{ if(!pos.length) return; const g=new T.BufferGeometry(); g.setAttribute("position",new T.Float32BufferAttribute(pos,3));
+      const ls=new T.LineSegments(g,new T.LineBasicMaterial({color:0x1f2937,transparent:true,opacity:0.55,clippingPlanes:clip})); ls.name=j?"arestasTel":"arestas"; grupo.add(ls); }); }
+  // piso de cada ambiente (e das áreas externas cobertas) no nível dele
+  { const pos=[], NB=nvBase(G); [...(G.rooms||[]),...(G.pisos||[])].forEach(r=>{ if(!r.poly||r.poly.length<3) return; const z=(num(r.nv)||0)-NB+0.002; let tr=[]; try{ tr=orelhas(r.poly); }catch(e){ tr=[]; }
+      tr.forEach(t=>t.forEach(p=>pos.push(p[0],-p[1],z))); });
+    if(pos.length){ const g=new T.BufferGeometry(); g.setAttribute("position",new T.Float32BufferAttribute(pos,3)); g.computeVertexNormals(); grupo.add(new T.Mesh(g,new T.MeshLambertMaterial({color:0xd9d2c3,side:T.DoubleSide,clippingPlanes:clip}))); } }
+  // chão em volta e grade de 1 m
+  const bb=G.bb, cx=(bb.x0+bb.x1)/2, cy=-(bb.y0+bb.y1)/2, R=Math.max(bb.x1-bb.x0,bb.y1-bb.y0)+12, ps=Math.max(0,num(S.piso));
+  const chao=new T.Mesh(new T.PlaneGeometry(R*2,R*2),new T.MeshLambertMaterial({color:0xdfe6d8})); chao.position.set(cx,cy,-ps-0.005); grupo.add(chao);
+  const gr=new T.GridHelper(R*2,Math.round(R*2),0xb8c2b0,0xcfd8c6); gr.rotation.x=Math.PI/2; gr.position.set(cx,cy,-ps-0.002); grupo.add(gr);
+  V3.cena.add(grupo); V3.grupo=grupo; V3.bb={x0:bb.x0,x1:bb.x1,y0:-bb.y1,y1:-bb.y0,z0:-ps,z1:Math.max(...M.tris.flat().map(p=>p[2]))};
+  v3Aplica(); if(msg) msg.textContent=`${M.tris.length} triângulos · ${G.walls.length} paredes · ${G.abs.length} portas e janelas.`; }
+function v3Aplica(){ if(!V3.grupo) return; const c=V3.cfg; V3.grupo.children.forEach(o=>{ if(o.name==="telhado") o.visible=!!c.tel; if(o.name==="arestas") o.visible=!!c.arestas; if(o.name==="arestasTel") o.visible=!!c.arestas&&!!c.tel; });
+  V3.plano.constant=c.corte>0?c.corte:1e3; }
+// vistas prontas: az = ângulo em volta (0 = olhando a frente da casa), el = altura do olhar
+function v3Vista(nome){ if(!V3.pronto||!V3.bb) return; const b=V3.bb, T=V3.T, c=new T.Vector3((b.x0+b.x1)/2,(b.y0+b.y1)/2,(b.z0+b.z1)/3), R=Math.max(b.x1-b.x0,b.y1-b.y0,b.z1-b.z0)*1.35+3;
+  const Vf=(VISTA[S.frente]||VISTA.baixo).V, af=Math.atan2(Vf[1],Vf[0]);   // direção da frente na planta (y para baixo) → no 3D y troca de sinal
+  const ang={persp:[af-0.75,0.55],frente:[af,0.05],fundos:[af+Math.PI,0.05],esq:[af-Math.PI/2,0.05],dir:[af+Math.PI/2,0.05],cima:[af,1.5605]}[nome]||[af-0.75,0.55];
+  const [a,e]=ang, dx=Math.cos(a), dy=-Math.sin(a);
+  V3.cam.position.set(c.x+dx*R*Math.cos(e),c.y+dy*R*Math.cos(e),c.z+R*Math.sin(e)); V3.ctl.target.copy(c); V3.cam.updateProjectionMatrix(); V3.ctl.update(); }
+async function v3Mostra(){ const ok=await v3Carrega(); if(!ok) return; v3Tamanho(); const novo=!V3.bb; v3Monta(); if(novo) v3Vista("persp"); }
+// botões e opções
+document.addEventListener("click",ev=>{ const b=ev.target.closest("[data-v3]"); if(!b) return; const a=b.dataset.v3;
+  if(a==="foto"){ if(!V3.pronto) return; V3.r.render(V3.cena,V3.cam); const url=V3.r.domElement.toDataURL("image/png"), l=document.createElement("a"); l.href=url; l.download=`${(S.obra||"obra").replace(/[^\w\-]+/g,"_")}_3d.png`; document.body.appendChild(l); l.click(); l.remove(); return; }
+  v3Vista(a); });
+document.addEventListener("change",ev=>{ const t=ev.target; if(!t.dataset||t.dataset.v3c==null) return; const c=t.dataset.v3c;
+  if(c==="tel") V3.cfg.tel=t.checked; if(c==="arestas") V3.cfg.arestas=t.checked; if(c==="corte"){ V3.cfg.corte=num(t.value); const o=$("v3CorteV"); if(o) o.textContent=V3.cfg.corte>0?f(V3.cfg.corte)+" m":"sem corte"; }
+  v3Guarda(); v3Aplica(); });
+document.addEventListener("input",ev=>{ const t=ev.target; if(t.dataset&&t.dataset.v3c==="corte"){ V3.cfg.corte=num(t.value); const o=$("v3CorteV"); if(o) o.textContent=V3.cfg.corte>0?f(V3.cfg.corte)+" m":"sem corte"; v3Aplica(); } });
+// a planta mudou com o 3D aberto: remonta
+{ const r1=render; let tm=0; render=function(){ const v=r1.apply(this,arguments); try{ if(V3.pronto&&!$("tab-v3").hidden){ clearTimeout(tm); tm=setTimeout(v3Monta,120); } }catch(e){} return v; }; }
 /* ======================================================================
    ZOOM NAS PLANTAS DE EDIÇÃO (pedido do Eliel, 6.38): aproximar o desenho para pôr caixas, tubos e peças com
    mais controle. Botões − / + / Ajustar em cima de cada planta, Ctrl + rodinha (ou pinça no touchpad) no ponto do
