@@ -321,7 +321,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
   <section id="tab-v3" hidden>
     <div class="sheet">
       <h2>3D</h2>
-      <p class="cap">A obra em 3D, montada da planta: paredes com portas e janelas, piso, platibanda e telhado. <b>Mouse:</b> botão esquerdo gira (sai do plano XY e mostra o Z, as alturas), botão direito arrasta, roda aproxima. <b>Celular:</b> um dedo gira, dois dedos aproximam e arrastam. Mudou algo na planta, o 3D acompanha.</p>
+      <p class="cap">A obra em 3D, montada da planta: paredes com portas e janelas, piso, platibanda e telhado. <b>Mouse:</b> aperte a <b>rodinha</b> e arraste para girar (sai do plano XY e mostra o Z, as alturas), como no SketchUp; <b>Shift + rodinha</b> ou botão direito arrasta; girar a rodinha aproxima e afasta. O botão esquerdo também gira quando não está em cima de uma ferramenta. <b>Celular:</b> um dedo gira, dois dedos aproximam e arrastam. Mudou algo na planta, o 3D acompanha.</p>
       <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin:4px 0 8px">
         <button class="btn pri" data-v3="persp">Perspectiva</button><button class="btn" data-v3="cima">De cima (planta)</button><button class="btn" data-v3="frente">Frente</button><button class="btn" data-v3="dir">Direita</button><button class="btn" data-v3="esq">Esquerda</button><button class="btn" data-v3="fundos">Fundos</button>
         <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-v3c="tel" checked>Telhado</label>
@@ -834,7 +834,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.70 · volumes de fachada no 3D: caixote, moldura, faixa e pilar em EPS, steel frame, ACM ou concreto", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.71 · 3D gira apertando a rodinha do mouse (como no SketchUp)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -8859,7 +8859,8 @@ async function v3Carrega(){ if(V3.pronto) return true; if(V3.carregando) return 
       const cena=new T.Scene(), cam=new T.PerspectiveCamera(45,1,0.05,500); cam.up.set(0,0,1);
       cena.add(new T.HemisphereLight(0xffffff,0x9aa3ad,1.15)); const sol=new T.DirectionalLight(0xffffff,1.25); sol.position.set(-12,-18,25); cena.add(sol); const sol2=new T.DirectionalLight(0xffffff,0.35); sol2.position.set(15,10,8); cena.add(sol2);
       const ctl=new OrbitControls(cam,r.domElement); ctl.enableDamping=true; ctl.dampingFactor=0.12; ctl.screenSpacePanning=true; ctl.maxPolarAngle=Math.PI*0.49;   // não passa para baixo do chão
-      ctl.mouseButtons={LEFT:T.MOUSE.ROTATE,MIDDLE:T.MOUSE.DOLLY,RIGHT:T.MOUSE.PAN}; ctl.touches={ONE:T.TOUCH.ROTATE,TWO:T.TOUCH.DOLLY_PAN};
+      ctl.mouseButtons={LEFT:T.MOUSE.ROTATE,MIDDLE:T.MOUSE.ROTATE,RIGHT:T.MOUSE.PAN};   // 6.71: apertar a rodinha e arrastar gira (como no SketchUp); Shift + rodinha arrasta; girar a rodinha aproxima
+      r.domElement.addEventListener("mousedown",e=>{ if(e.button===1) e.preventDefault(); }); r.domElement.addEventListener("auxclick",e=>{ if(e.button===1) e.preventDefault(); }); ctl.touches={ONE:T.TOUCH.ROTATE,TWO:T.TOUCH.DOLLY_PAN};
       r.domElement.addEventListener("contextmenu",e=>e.preventDefault());
       Object.assign(V3,{r,cena,cam,ctl,grupo:null,pronto:true,plano:new T.Plane(new T.Vector3(0,0,-1),1e3)});
       new ResizeObserver(()=>v3Tamanho()).observe(el); v3Tamanho();
