@@ -607,7 +607,7 @@ function baseMaterialFor(name, old) {
   if (/Plywood/i.test(n)) Object.assign(p, { map: TEX.wood(), roughness: 0.6 });
   else if (/Grid_60x30/i.test(n)) Object.assign(p, FINISHES.piso.options[0].make());
   else if (/Wood_Chips/i.test(n)) Object.assign(p, { map: TEX.sand(), roughness: 1 });
-  else if (/Concrete/i.test(n)) Object.assign(p, { map: TEX.concrete(), roughness: 0.9 });
+  else if (/Concrete|Soft_Cloud/i.test(n)) Object.assign(p, { map: TEX.concrete(), roughness: 0.9 });
   else if (/Corrogated/i.test(n)) Object.assign(p, { map: TEX.corrugated(), roughness: 0.35, metalness: 0.6 });
   else if (/Aluminum/i.test(n)) Object.assign(p, { color: new THREE.Color('#2b2c2e'), roughness: 0.35, metalness: 0.8 });
   else if (/Granite/i.test(n)) Object.assign(p, { map: TEX.granite(), roughness: 0.25 });
@@ -774,6 +774,49 @@ const TELHADOS_SANDUICHE = [
   { x0: 10.10, x1: 16.87, z0: -26.85, z1: -20.00, y0: 2.95, y1: 3.55 },                     // garagem
   { x0: 16.90, x1: 21.75, z0: -25.55, z1: -18.90, y0: 3.26, y1: 3.97 },                     // varanda gourmet: cai para o lado da garagem
 ];
+/* ---------- lote: solo rebaixado com grama, calçada de 80 cm e piscina (projeto Almeida Sargento) ---------- */
+const LOTE = {
+  yGrama: -0.10,                                            // solo da frente 10 cm abaixo do piso
+  frente: { x0: 16.87, x1: 21.62, z0: -17.95, z1: -12.18 },  // trecho cortado do piso (na frente da calçada de 80 cm da varanda)
+  piscina: { x0: 18.70, x1: 21.20, z0: -17.55, z1: -12.55, prof: 1.40, borda: 0.30 },   // 2,50 x 5,00 m
+  gramaPlana: [ { x0: 9.30, x1: 12.10, z0: -39.40, z1: -27.00 }, { x0: 9.30, x1: 21.55, z0: -42.25, z1: -39.55 } ],   // corredor lateral e fundos
+};
+function construirLote() {
+  const L = LOTE, P = L.piscina, b = P.borda, g = new THREE.Group(); g.name = 'lote'; scene.add(g);
+  // chão de grama geral desce para o nível do solo rebaixado e ganha um furo no lugar da piscina
+  ground.position.y = L.yGrama - 0.002;
+  const furo = { value: new THREE.Vector4(P.x0, P.z0, P.x1, P.z1) };
+  ground.material.onBeforeCompile = (sh) => { sh.uniforms.uFuro = furo;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPosG;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvWPosG = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPosG;\nuniform vec4 uFuro;').replace('void main() {', 'void main() {\n  if (vWPosG.x > uFuro.x && vWPosG.x < uFuro.z && vWPosG.z > uFuro.y && vWPosG.z < uFuro.w) discard;'); };
+  ground.material.needsUpdate = true;
+  const caixa = (w, h, d, x, y, z, m) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+  // meio-fio (degrau de 10 cm) da calçada e da garagem para o solo rebaixado
+  const conc = new THREE.MeshStandardMaterial({ color: '#b9b5ad', roughness: 0.9 }), F = L.frente;
+  caixa(F.x1 - F.x0, -L.yGrama, 0.05, (F.x0 + F.x1) / 2, L.yGrama / 2, F.z0 + 0.025, conc);
+  caixa(0.05, -L.yGrama, F.z1 - F.z0, F.x0 + 0.025, L.yGrama / 2, (F.z0 + F.z1) / 2, conc);
+  // borda da piscina em pedra clara (atérmica), 2 cm acima da grama
+  const pedra = new THREE.MeshStandardMaterial({ color: '#ddd0b4', roughness: 0.85 }), yb = L.yGrama + 0.02;
+  caixa(P.x1 - P.x0 + 2 * b, 0.06, b, (P.x0 + P.x1) / 2, yb - 0.03, P.z0 - b / 2, pedra);
+  caixa(P.x1 - P.x0 + 2 * b, 0.06, b, (P.x0 + P.x1) / 2, yb - 0.03, P.z1 + b / 2, pedra);
+  caixa(b, 0.06, P.z1 - P.z0, P.x0 - b / 2, yb - 0.03, (P.z0 + P.z1) / 2, pedra);
+  caixa(b, 0.06, P.z1 - P.z0, P.x1 + b / 2, yb - 0.03, (P.z0 + P.z1) / 2, pedra);
+  // tanque com pastilha azul 5x5
+  const fundo = L.yGrama - P.prof - 0.10, alt = yb - 0.06 - fundo;
+  const past = (rx, ry) => { const t = tileTex({ base: '#3d8fb5', grout: '#d6eef5', cols: 10, rows: 10, vary: 0.09, gw: 3 }); t.repeat.set(rx, ry); return new THREE.MeshStandardMaterial({ map: t, roughness: 0.25, side: THREE.DoubleSide }); };
+  const parede = (w, x, z, ry) => { const o = new THREE.Mesh(new THREE.PlaneGeometry(w, alt), past(w / 0.5, alt / 0.5)); o.position.set(x, fundo + alt / 2, z); o.rotation.y = ry; o.receiveShadow = true; g.add(o); };
+  parede(P.x1 - P.x0, (P.x0 + P.x1) / 2, P.z0, 0); parede(P.x1 - P.x0, (P.x0 + P.x1) / 2, P.z1, Math.PI);
+  parede(P.z1 - P.z0, P.x0, (P.z0 + P.z1) / 2, Math.PI / 2); parede(P.z1 - P.z0, P.x1, (P.z0 + P.z1) / 2, -Math.PI / 2);
+  const piso = new THREE.Mesh(new THREE.PlaneGeometry(P.x1 - P.x0, P.z1 - P.z0), past((P.x1 - P.x0) / 0.5, (P.z1 - P.z0) / 0.5)); piso.rotation.x = -Math.PI / 2; piso.position.set((P.x0 + P.x1) / 2, fundo, (P.z0 + P.z1) / 2); g.add(piso);
+  // água
+  const agua = new THREE.Mesh(new THREE.PlaneGeometry(P.x1 - P.x0, P.z1 - P.z0), new THREE.MeshPhysicalMaterial({ color: '#5fc3e4', roughness: 0.04, metalness: 0, transparent: true, opacity: 0.55, envMapIntensity: 1.4, depthWrite: false }));
+  agua.rotation.x = -Math.PI / 2; agua.position.set((P.x0 + P.x1) / 2, yb - 0.10, (P.z0 + P.z1) / 2); agua.renderOrder = 3; g.add(agua);
+  // grama por cima do piso nos fundos e no corredor lateral (solo)
+  const gt = TEX.grass(); gt.repeat.set(1, 1);
+  L.gramaPlana.forEach((r) => { const t = gt.clone(); t.needsUpdate = true; t.repeat.set((r.x1 - r.x0) / 1.2, (r.z1 - r.z0) / 1.2);
+    const o = new THREE.Mesh(new THREE.PlaneGeometry(r.x1 - r.x0, r.z1 - r.z0), new THREE.MeshStandardMaterial({ map: t, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    o.rotation.x = -Math.PI / 2; o.position.set((r.x0 + r.x1) / 2, 0.004, (r.z0 + r.z1) / 2); o.receiveShadow = true; g.add(o); });
+}
 // caixa da casa ignorando objetos pequenos soltos longe dela (boneco de escala do SketchUp, por exemplo)
 function caixaRobusta(obj) {
   const full = new THREE.Box3().setFromObject(obj), bb = new THREE.Box3(), s = new THREE.Vector3();
@@ -822,6 +865,7 @@ async function load() {
   radius = size.length() / 2; groundY = box.min.y;
   ground.position.y = groundY - 0.01;
   ground.position.x = center.x; ground.position.z = center.z;
+  construirLote();
 
   const sc = sun.shadow.camera; const s = radius * 1.4;
   sc.left = -s; sc.right = s; sc.top = s; sc.bottom = -s; sc.near = 0.5; sc.far = radius * 6; sc.updateProjectionMatrix();
