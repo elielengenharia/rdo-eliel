@@ -36,6 +36,11 @@
 .pint label.outra{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
 .pint input[type=color]{width:38px;height:30px;border:1px solid var(--line);border-radius:8px;background:none;padding:0}
 .pint .nome{font-size:12.5px;color:var(--text);font-weight:600}
+.pint .alt{gap:5px}
+.pint .alt .seg{flex:1 1 auto;padding:8px 6px;font-size:12.5px}
+.pint .alt label{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--muted)}
+.pint .alt input{width:62px;text-align:center;font:600 14px/1.2 inherit;color:var(--text);background:rgba(127,127,127,.10);border:1px solid var(--line);border-radius:9px;padding:6px 4px}
+.pint .alt input:disabled{opacity:.4}
 @media (max-width:720px){
   .pint{left:10px;right:10px;width:auto;top:auto;bottom:max(10px,env(safe-area-inset-bottom));padding:12px;gap:8px}
   .pint .tintas{grid-template-columns:repeat(9,1fr);gap:5px}
@@ -315,6 +320,12 @@ document.querySelector('.loader').addEventListener('click',function(){if(b.class
   <div class="chead">
     <div><h2>Pintar</h2><div class="hint">Escolha a cor e toque na parede. Arraste para girar a casa.</div></div>
     <span class="nome" id="pNome">Branco neve</span>
+  </div>
+  <div class="linha alt" role="group" aria-label="Altura da pintura">
+    <button class="seg on" data-alt="tudo">Parede inteira</button>
+    <button class="seg" data-alt="ate">Até</button>
+    <button class="seg" data-alt="acima">Acima de</button>
+    <label><input type="number" id="pAlt" value="1.50" step="0.05" min="0.05" max="10" inputmode="decimal" disabled aria-label="Altura em metros"> m</label>
   </div>
   <div class="tintas" id="pTintas"></div>
   <div class="linha">
@@ -1980,11 +1991,34 @@ function faceInteira(mesh, triIdx) {
   }
   return { tris: out, n: n0, P };
 }
+// corta um triângulo num plano horizontal (y = lim) e devolve os pedaços de baixo (ou de cima) em triângulos
+function cortarY(tri, lim, abaixo) {
+  const dentro = (p) => (abaixo ? p.y <= lim + 1e-6 : p.y >= lim - 1e-6), poli = [];
+  for (let i = 0; i < 3; i++) { const a = tri[i], b = tri[(i + 1) % 3], ia = dentro(a), ib = dentro(b);
+    if (ia) poli.push(a); if (ia !== ib) poli.push(a.clone().lerp(b, (lim - a.y) / (b.y - a.y))); }
+  const out = []; for (let k = 1; k < poli.length - 1; k++) out.push([poli[0], poli[k], poli[k + 1]]);
+  return out;
+}
+let modoAlt = 'tudo', altPint = 1.5;
+document.querySelectorAll('.pint [data-alt]').forEach((b) => b.addEventListener('click', () => {
+  modoAlt = b.dataset.alt; document.querySelectorAll('.pint [data-alt]').forEach((x) => x.classList.toggle('on', x === b));
+  $('#pAlt').disabled = modoAlt === 'tudo';
+  if (modoAlt !== 'tudo') toast(modoAlt === 'ate' ? `Pinta do pé da parede até ${String(altPint).replace('.', ',')} m` : `Pinta de ${String(altPint).replace('.', ',')} m para cima`);
+}));
+$('#pAlt').addEventListener('change', (e) => { const v = parseFloat(String(e.target.value).replace(',', '.')); altPint = isFinite(v) ? Math.min(10, Math.max(0.05, v)) : altPint; e.target.value = altPint.toFixed(2); });
 function pintarEm(hit, rayDir) {
   const r = faceInteira(hit.object, hit.faceIndex);
   const n = r.n.clone(); if (n.dot(rayDir) > 0) n.negate();   // película do lado de quem está olhando
-  const off = n.multiplyScalar(0.004), t = [];
-  r.tris.forEach((k) => { for (let j = 0; j < 3; j++) { const q = r.P(k, j).add(off); t.push(+q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3)); } });
+  // altura: parede inteira, ou só até / acima de X metros contados do pé daquela parede
+  let base = Infinity; r.tris.forEach((k) => { for (let j = 0; j < 3; j++) base = Math.min(base, r.P(k, j).y); });
+  const lim = base + altPint;
+  const off = n.multiplyScalar(modoAlt === 'tudo' ? 0.004 : 0.0055), t = [];
+  r.tris.forEach((k) => {
+    const tri = [r.P(k, 0), r.P(k, 1), r.P(k, 2)];
+    const pedacos = modoAlt === 'tudo' ? [tri] : cortarY(tri, lim, modoAlt === 'ate');
+    pedacos.forEach((pd) => pd.forEach((q0) => { const q = q0.clone().add(off); t.push(+q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3)); }));
+  });
+  if (!t.length) { toast(modoAlt === 'acima' ? 'Essa parede é mais baixa que essa altura.' : 'Altura muito pequena para essa parede.'); return; }
   // mesma face já pintada: troca a cor
   const chave = t.slice(0, 9).join(',');
   const velha = pinturas.find((p) => p.t.slice(0, 9).join(',') === chave);
