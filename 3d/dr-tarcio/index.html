@@ -319,6 +319,7 @@ document.querySelector('.loader').addEventListener('click',function(){if(b.class
     <button class="seg" id="pBorr">Borracha</button>
     <button class="seg" id="pDesf">Desfazer</button>
     <button class="seg" id="pLimpa">Limpar tudo</button>
+    <button class="seg" id="pProp" hidden>Ver proposta</button>
   </div>
   <div class="linha">
     <button class="seg" id="pPub" hidden>Salvar para o cliente</button>
@@ -10011,10 +10012,11 @@ $('#pDesf').addEventListener('click', () => {
   if (a.tipo === 'tudo') pinturas = a.lista; else if (a.tipo === 'nova') { pinturas.splice(pinturas.indexOf(a.p), 1); (a.removidas || []).forEach((o) => pinturas.splice(o.i, 0, o.p)); } else if (a.tipo === 'cor') a.p.c = a.c; else pinturas.splice(a.i, 0, a.p);
   redesenharPinturas(); guardarLocal(); marcarPint();
 });
+fetch('pinturas.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (Array.isArray(d) && d.length) { const b = $('#pProp'); b.hidden = false; b.onclick = () => { desfazer.push({ tipo: 'tudo', lista: pinturas.slice() }); pinturas = d.map((p) => ({ ...p })); redesenharPinturas(); guardarLocal(); toast('Proposta de cores carregada. Pode mexer à vontade.'); }; } }).catch(() => {});
 $('#pLimpa').addEventListener('click', () => {
   if (!pinturas.length) { toast('Não tem pintura para limpar.'); return; }
   if (!confirm('Apagar todas as pinturas desta maquete?')) return;
-  desfazer.push({ tipo: 'tudo', lista: pinturas.slice() }); pinturas = []; redesenharPinturas(); guardarLocal(); marcarPint(); toast('Pinturas apagadas. Use Desfazer se quiser voltar.');
+  desfazer.push({ tipo: 'tudo', lista: pinturas.slice() }); pinturas = []; redesenharPinturas(); try { localStorage.removeItem(CH_PINT); } catch (e) {} marcarPint(); toast('Pinturas apagadas. Use Desfazer se quiser voltar.');
 });
 // toque (sem arrastar) pinta; arrastar continua girando a casa
 let toqueIni = null;
@@ -10092,10 +10094,17 @@ $('#bPint').addEventListener('click', () => (pintando ? sairPintura() : entrarPi
 // carrega: o que foi pintado neste aparelho vale; senão, as pinturas publicadas do projeto
 (async () => {
   let local = null; try { local = JSON.parse(localStorage.getItem(CH_PINT) || 'null'); } catch (e) {}
-  if (Array.isArray(local)) { pinturas = local; redesenharPinturas(); return; }
+  if (Array.isArray(local) && local.length) { pinturas = local; redesenharPinturas(); return; }
   try { const r = await fetch('pinturas.json', { cache: 'no-cache' }); if (r.ok) { const d = await r.json(); if (Array.isArray(d)) { pinturas = d; redesenharPinturas(); } } } catch (e) {}
 })();
-Object.assign(window.__app, { model, THREE, groundY, floorHit, load: (d) => { items = d.items.map((i) => ({ ...i })); rebuild(); }, enterFurnish, exitFurnish, addItem, setCut, items: () => items });
+function pintarRaio(origem, dir, cor, corte) {
+  const o = new THREE.Vector3(...origem), d = new THREE.Vector3(...dir).normalize(), rc = new THREE.Raycaster(o, d);
+  const h = rc.intersectObject(model, true).find((x) => x.face); if (!h) return false;
+  const c0 = corPint; corPint = cor;
+  let ct = null; if (corte) { const r = faceInteira(h.object, h.faceIndex), n = r.n.clone(); let u = new THREE.Vector3().crossVectors(UPV, n); u = u.lengthSq() < 1e-4 ? new THREE.Vector3(1, 0, 0) : u.normalize(); ct = { eixo: corte.eixo === 'v' ? UPV.clone() : u, val: corte.val, menor: corte.menor }; }
+  pintarEm(h, d, ct); corPint = c0; return true;
+}
+Object.assign(window.__app, { camera, pintarRaio, pinturas: () => pinturas, model, THREE, groundY, floorHit, load: (d) => { items = d.items.map((i) => ({ ...i })); rebuild(); }, enterFurnish, exitFurnish, addItem, setCut, items: () => items });
 </script>
 </body>
 </html>
