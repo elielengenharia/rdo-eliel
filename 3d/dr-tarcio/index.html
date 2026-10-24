@@ -10020,7 +10020,7 @@ $('#pDesf').addEventListener('click', () => {
   if (a.tipo === 'tudo') pinturas = a.lista; else if (a.tipo === 'nova') { pinturas.splice(pinturas.indexOf(a.p), 1); (a.removidas || []).forEach((o) => pinturas.splice(o.i, 0, o.p)); } else if (a.tipo === 'cor') a.p.c = a.c; else pinturas.splice(a.i, 0, a.p);
   redesenharPinturas(); guardarLocal(); marcarPint();
 });
-fetch('pinturas.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (Array.isArray(d) && d.length) { const b = $('#pProp'); b.hidden = false; b.onclick = () => { desfazer.push({ tipo: 'tudo', lista: pinturas.slice() }); pinturas = d.map((p) => ({ ...p })); redesenharPinturas(); guardarLocal(); toast('Proposta de cores carregada. Pode mexer à vontade.'); }; } }).catch(() => {});
+fetch('pinturas.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (Array.isArray(d) && d.length) { const b = $('#pProp'); b.hidden = false; b.onclick = () => { desfazer.push({ tipo: 'tudo', lista: pinturas.slice() }); pinturas = d.map((p) => ({ ...p })); redesenharPinturas(); try { localStorage.removeItem(CH_PINT); } catch (e) {} toast('Proposta de cores carregada. Pode mexer à vontade.'); }; } }).catch(() => {});
 $('#pLimpa').addEventListener('click', () => {
   if (!pinturas.length) { toast('Não tem pintura para limpar.'); return; }
   if (!confirm('Apagar todas as pinturas desta maquete?')) return;
