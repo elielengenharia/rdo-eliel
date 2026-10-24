@@ -137,7 +137,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <h1>Projeto Arquitetônico e Complementares</h1>
       <div class="sub"><span class="feat">Planta baixa com áreas e cotas · Demolir e construir · Layout com móveis · Pontos elétricos · Hidrossanitário · Forro · Piso · Revestimento de parede · Paginação da fachada · Memorial descritivo · Orçamento estimado · Cortes AA e BB · Cobertura · Fachadas · Situação · Escada · Banheiro · Quadro de esquadrias · Águas pluviais · Pintura · Estrutural · Diagrama unifilar · Perspectivas · </span><b id="versao"></b></div>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="stamp" id="stamp"></div><button class="btn pri" id="btnInstalar" type="button" hidden>Instalar no computador / celular</button></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><div class="stamp" id="stamp"></div><div id="verApp" style="font-size:12px;color:var(--muted,#64748b)"></div><button class="btn pri" id="btnInstalar" type="button" hidden>Instalar no computador / celular</button></div>
   </header>
   <div class="panel" id="instAjuda" hidden style="margin:10px 16px"></div>
   <div id="undoBar" style="position:fixed;left:12px;bottom:12px;z-index:70;display:flex;gap:6px;box-shadow:0 2px 10px rgba(0,0,0,.18);border-radius:10px">
@@ -832,7 +832,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.66 · polar tracking nas paredes (linha-guia, ângulo escolhido, F10 e Shift)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.67 · aviso de versão nova com botão Atualizar e número da versão no topo", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -8863,6 +8863,22 @@ document.addEventListener("change",ev=>{ const t=ev.target; if(!t.dataset||t.dat
 document.addEventListener("input",ev=>{ const t=ev.target; if(t.dataset&&t.dataset.v3c==="corte"){ V3.cfg.corte=num(t.value); const o=$("v3CorteV"); if(o) o.textContent=V3.cfg.corte>0?f(V3.cfg.corte)+" m":"sem corte"; v3Aplica(); } });
 // a planta mudou com o 3D aberto: remonta
 { const r1=render; let tm=0; render=function(){ const v=r1.apply(this,arguments); try{ if(V3.pronto&&!$("tab-v3").hidden){ clearTimeout(tm); tm=setTimeout(v3Monta,120); } }catch(e){} return v; }; }
+/* ======================================================================
+   VERSÃO NOVA (6.67): o app confere versao.json no servidor (sem cache) ao abrir, a cada 5 minutos e ao voltar
+   para a tela; se houver versão mais nova que a aberta, mostra uma faixa com "Atualizar agora", que limpa o
+   cache do app e recarrega. O número da versão aberta fica no topo.
+   ====================================================================== */
+const VNUM=s=>{ const m=String(s||"").match(/(\d+)\.(\d+)/); return m?(+m[1])*1000+(+m[2]):0; };
+function verMostra(){ const e=$("verApp"); if(e) e.textContent=VERSAO_N; }
+async function atualizarApp(){ const b=$("verBar"); if(b) b.innerHTML="Atualizando…";
+  try{ if("caches" in window){ const ks=await caches.keys(); await Promise.all(ks.filter(k=>/^arquitetonico-/.test(k)).map(k=>caches.delete(k))); } }catch(e){}
+  try{ if(navigator.serviceWorker){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.update().catch(()=>{}))); } }catch(e){}
+  const u=new URL(location.href); u.searchParams.set("v",Date.now().toString(36)); location.replace(u.toString()); }
+async function verConfere(){ try{ const r=await fetch("versao.json?t="+Date.now(),{cache:"no-store"}); if(!r.ok) return; const o=await r.json(), rem=VNUM(o.v), loc=VNUM(VERSAO_N);
+    if(rem>loc){ let b=$("verBar"); if(!b){ document.body.insertAdjacentHTML("afterbegin",`<div id="verBar" role="status" style="position:sticky;top:0;z-index:90;background:#1d4ed8;color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px"></div>`); b=$("verBar"); }
+      b.innerHTML=`<span style="flex:1 1 220px">Tem versão nova do app: <b>${esc(o.v)}</b>${o.o?` · ${esc(o.o)}`:""} (você está na ${esc(VERSAO_N.replace(/^versão /,""))}).</span><button class="btn" id="verAtu" style="background:#fff;color:#1d4ed8;border-color:#fff">Atualizar agora</button>`;
+      $("verAtu").onclick=atualizarApp; } }catch(e){} }
+verMostra(); setTimeout(verConfere,1500); setInterval(verConfere,5*60*1000); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) verConfere(); });
 /* ======================================================================
    ZOOM NAS PLANTAS DE EDIÇÃO (pedido do Eliel, 6.38): aproximar o desenho para pôr caixas, tubos e peças com
    mais controle. Botões − / + / Ajustar em cima de cada planta, Ctrl + rodinha (ou pinça no touchpad) no ponto do
