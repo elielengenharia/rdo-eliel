@@ -38,9 +38,8 @@
 .pint .nome{font-size:12.5px;color:var(--text);font-weight:600}
 .pint .alt{gap:5px}
 .pint .alt .seg{flex:1 1 auto;padding:8px 6px;font-size:12.5px}
-.pint .alt label{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--muted)}
-.pint .alt input{width:62px;text-align:center;font:600 14px/1.2 inherit;color:var(--text);background:rgba(127,127,127,.10);border:1px solid var(--line);border-radius:9px;padding:6px 4px}
-.pint .alt input:disabled{opacity:.4}
+.pint .passo{font-size:13px;font-weight:600;color:var(--gold);line-height:1.35;min-height:18px}
+.medida{position:fixed;left:0;top:0;pointer-events:none;padding:5px 10px;border-radius:9px;background:var(--on);color:var(--on-text);font:700 13px/1.2 Manrope,system-ui,sans-serif;transform:translate(-50%,-140%);display:none;z-index:7;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 @media (max-width:720px){
   .pint{left:10px;right:10px;width:auto;top:auto;bottom:max(10px,env(safe-area-inset-bottom));padding:12px;gap:8px}
   .pint .tintas{grid-template-columns:repeat(9,1fr);gap:5px}
@@ -321,12 +320,12 @@ document.querySelector('.loader').addEventListener('click',function(){if(b.class
     <div><h2>Pintar</h2><div class="hint">Escolha a cor e toque na parede. Arraste para girar a casa.</div></div>
     <span class="nome" id="pNome">Branco neve</span>
   </div>
-  <div class="linha alt" role="group" aria-label="Altura da pintura">
-    <button class="seg on" data-alt="tudo">Parede inteira</button>
-    <button class="seg" data-alt="ate">Até</button>
-    <button class="seg" data-alt="acima">Acima de</button>
-    <label><input type="number" id="pAlt" value="1.50" step="0.05" min="0.05" max="10" inputmode="decimal" disabled aria-label="Altura em metros"> m</label>
+  <div class="linha alt" role="group" aria-label="Como pintar">
+    <button class="seg on" data-modo="tudo">Parede inteira</button>
+    <button class="seg" data-modo="linha">Com linha</button>
+    <button class="seg" id="pCanc" hidden>Cancelar linha</button>
   </div>
+  <div class="passo" id="pPasso">Toque na parede para pintar.</div>
   <div class="tintas" id="pTintas"></div>
   <div class="linha">
     <label class="outra">Outra cor <input type="color" id="pOutra" value="#c08a5b"></label>
@@ -338,6 +337,7 @@ document.querySelector('.loader').addEventListener('click',function(){if(b.class
     <button class="cta small" id="pOk">Concluir</button>
   </div>
 </section>
+<div class="medida" id="pMed"></div>
 <section class="cat glass" aria-label="Catálogo de móveis">
   <div class="chead">
     <div><h2>Mobiliar</h2><div class="hint">Toque num item para colocar. Arraste na casa para mover.</div></div>
@@ -1997,34 +1997,65 @@ function faceInteira(mesh, triIdx) {
   }
   return { tris: out, n: n0, P };
 }
-// corta um triângulo num plano horizontal (y = lim) e devolve os pedaços de baixo (ou de cima) em triângulos
-function cortarY(tri, lim, abaixo) {
-  const dentro = (p) => (abaixo ? p.y <= lim + 1e-6 : p.y >= lim - 1e-6), poli = [];
+// corta um triângulo por uma linha (plano: ponto·eixo = val) e devolve o lado escolhido em triângulos
+function cortarPlano(tri, eixo, val, menor) {
+  const s = (p) => p.dot(eixo), dentro = (p) => (menor ? s(p) <= val + 1e-6 : s(p) >= val - 1e-6), poli = [];
   for (let i = 0; i < 3; i++) { const a = tri[i], b = tri[(i + 1) % 3], ia = dentro(a), ib = dentro(b);
-    if (ia) poli.push(a); if (ia !== ib) poli.push(a.clone().lerp(b, (lim - a.y) / (b.y - a.y))); }
+    if (ia) poli.push(a); if (ia !== ib) poli.push(a.clone().lerp(b, (val - s(a)) / (s(b) - s(a)))); }
   const out = []; for (let k = 1; k < poli.length - 1; k++) out.push([poli[0], poli[k], poli[k + 1]]);
   return out;
 }
-let modoAlt = 'tudo', altPint = 1.5;
-document.querySelectorAll('.pint [data-alt]').forEach((b) => b.addEventListener('click', () => {
-  modoAlt = b.dataset.alt; document.querySelectorAll('.pint [data-alt]').forEach((x) => x.classList.toggle('on', x === b));
-  $('#pAlt').disabled = modoAlt === 'tudo';
-  if (modoAlt !== 'tudo') toast(modoAlt === 'ate' ? `Pinta do pé da parede até ${String(altPint).replace('.', ',')} m` : `Pinta de ${String(altPint).replace('.', ',')} m para cima`);
-}));
-$('#pAlt').addEventListener('change', (e) => { const v = parseFloat(String(e.target.value).replace(',', '.')); altPint = isFinite(v) ? Math.min(10, Math.max(0.05, v)) : altPint; e.target.value = altPint.toFixed(2); });
-function pintarEm(hit, rayDir) {
+/* modo "Com linha": 1) toca na parede (fica dourada)  2) arrasta o dedo: puxa a linha (deitada se arrastar para cima/baixo, em pé se arrastar para o lado)
+   3) toca no lado da linha que quer pintar */
+let modoPint = 'tudo', sel = null;
+const UPV = new THREE.Vector3(0, 1, 0), selGroup = new THREE.Group(); selGroup.name = 'selecao-pintura'; scene.add(selGroup);
+const OURO = new THREE.MeshBasicMaterial({ color: '#c9a86a', depthTest: false, transparent: true });
+const passo = (t) => { $('#pPasso').textContent = t; };
+const fmtM = (v) => v.toFixed(2).replace('.', ',') + ' m';
+function textoPasso() { if (borracha) return 'Toque numa parede pintada para apagar.'; return modoPint === 'tudo' ? 'Toque na parede para pintar ela inteira.' : '1. Toque na parede que quer pintar.'; }
+function limparSel() { sel = null; selGroup.clear(); $('#pMed').style.display = 'none'; $('#pCanc').hidden = true; controls.enabled = !walking; passo(textoPasso()); }
+function selecionar(h, dir) {
+  const r = faceInteira(h.object, h.faceIndex), n = r.n.clone(); if (n.dot(dir) > 0) n.negate();
+  let u = new THREE.Vector3().crossVectors(UPV, n), vAx;
+  if (u.lengthSq() < 1e-4) { u.set(1, 0, 0); vAx = new THREE.Vector3(0, 0, 1); } else { u.normalize(); vAx = UPV.clone(); }
+  const mn = { u: Infinity, v: Infinity }, mx = { u: -Infinity, v: -Infinity };
+  r.tris.forEach((k) => { for (let j = 0; j < 3; j++) { const p = r.P(k, j), a = p.dot(u), b = p.dot(vAx); mn.u = Math.min(mn.u, a); mx.u = Math.max(mx.u, a); mn.v = Math.min(mn.v, b); mx.v = Math.max(mx.v, b); } });
+  const p0 = r.P(r.tris[0], 0), plano = new THREE.Plane().setFromNormalAndCoplanarPoint(r.n, p0);
+  const t = [], off = n.clone().multiplyScalar(0.007);
+  r.tris.forEach((k) => { for (let j = 0; j < 3; j++) { const q = r.P(k, j).add(off); t.push(q.x, q.y, q.z); } });
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(t, 3));
+  selGroup.clear(); selGroup.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: '#c9a86a', transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 })));
+  sel = { h, dir: dir.clone(), tris: new Set(r.tris), obj: h.object, n, u, vAx, mn, mx, p0, plano, eixo: null, val: null };
+  controls.enabled = false; $('#pCanc').hidden = false;
+  passo('2. Arraste o dedo na parede para puxar a linha.');
+}
+function pontoFace(a, b) {
+  const { u, vAx, p0, plano, n } = sel;
+  const p = p0.clone().addScaledVector(u, a - p0.dot(u)).addScaledVector(vAx, b - p0.dot(vAx));
+  return plano.projectPoint(p, new THREE.Vector3()).addScaledVector(n, 0.012);
+}
+function desenharLinha() {
+  while (selGroup.children.length > 1) selGroup.remove(selGroup.children[1]);
+  const { mn, mx, eixo, val } = sel;
+  const A = eixo === 'v' ? pontoFace(mn.u, val) : pontoFace(val, mn.v), B = eixo === 'v' ? pontoFace(mx.u, val) : pontoFace(val, mx.v);
+  const d = new THREE.Vector3().subVectors(B, A), L = d.length(); if (L < 1e-3) return;
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, L, 8), OURO); c.renderOrder = 10;
+  c.position.copy(A).addScaledVector(d, 0.5); c.quaternion.setFromUnitVectors(UPV, d.normalize()); selGroup.add(c);
+  const meio = A.clone().lerp(B, 0.5).project(camera), rc0 = canvas.getBoundingClientRect(), m = $('#pMed');
+  m.style.left = (rc0.left + (meio.x + 1) / 2 * rc0.width) + 'px'; m.style.top = (rc0.top + (1 - meio.y) / 2 * rc0.height) + 'px';
+  m.textContent = eixo === 'v' ? `${fmtM(val - mn.v)} do pé · ${fmtM(mx.v - val)} até o topo` : `${fmtM(val - mn.u)} de um lado · ${fmtM(mx.u - val)} do outro`;
+  m.style.display = 'block';
+}
+function pintarEm(hit, rayDir, corte) {
   const r = faceInteira(hit.object, hit.faceIndex);
   const n = r.n.clone(); if (n.dot(rayDir) > 0) n.negate();   // película do lado de quem está olhando
-  // altura: parede inteira, ou só até / acima de X metros contados do pé daquela parede
-  let base = Infinity; r.tris.forEach((k) => { for (let j = 0; j < 3; j++) base = Math.min(base, r.P(k, j).y); });
-  const lim = base + altPint;
-  const off = n.multiplyScalar(modoAlt === 'tudo' ? 0.004 : 0.0055), t = [];
+  const off = n.multiplyScalar(corte ? 0.0055 : 0.004), t = [];
   r.tris.forEach((k) => {
     const tri = [r.P(k, 0), r.P(k, 1), r.P(k, 2)];
-    const pedacos = modoAlt === 'tudo' ? [tri] : cortarY(tri, lim, modoAlt === 'ate');
+    const pedacos = corte ? cortarPlano(tri, corte.eixo, corte.val, corte.menor) : [tri];
     pedacos.forEach((pd) => pd.forEach((q0) => { const q = q0.clone().add(off); t.push(+q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3)); }));
   });
-  if (!t.length) { toast(modoAlt === 'acima' ? 'Essa parede é mais baixa que essa altura.' : 'Altura muito pequena para essa parede.'); return; }
+  if (!t.length) { toast('Toque do lado da linha que tem parede.'); return; }
   // mesma face já pintada: troca a cor
   const chave = t.slice(0, 9).join(',');
   const velha = pinturas.find((p) => p.t.slice(0, 9).join(',') === chave);
@@ -2040,25 +2071,47 @@ $('#pDesf').addEventListener('click', () => {
 });
 // toque (sem arrastar) pinta; arrastar continua girando a casa
 let toqueIni = null;
-canvas.addEventListener('pointerdown', (e) => { if (pintando) toqueIni = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+canvas.addEventListener('pointerdown', (e) => { if (!pintando) return; toqueIni = { x: e.clientX, y: e.clientY, t: performance.now(), eixo: null }; if (modoPint === 'linha' && sel) try { canvas.setPointerCapture(e.pointerId); } catch (er) {} });
+canvas.addEventListener('pointermove', (e) => {
+  if (!pintando || modoPint !== 'linha' || !sel || !toqueIni) return;
+  const dx = e.clientX - toqueIni.x, dy = e.clientY - toqueIni.y; if (Math.hypot(dx, dy) < 6) return;
+  if (!toqueIni.eixo) toqueIni.eixo = Math.abs(dy) >= Math.abs(dx) ? 'v' : 'u';
+  setNdc(e); ray.setFromCamera(ndc, camera); const p = ray.ray.intersectPlane(sel.plano, new THREE.Vector3()); if (!p) return;
+  const eixo = toqueIni.eixo, ax = eixo === 'v' ? sel.vAx : sel.u, lo = eixo === 'v' ? sel.mn.v : sel.mn.u, hi = eixo === 'v' ? sel.mx.v : sel.mx.u;
+  sel.eixo = eixo; sel.val = Math.round(Math.min(hi - 0.01, Math.max(lo + 0.01, p.dot(ax))) * 100) / 100;
+  desenharLinha(); passo('3. Toque no lado da linha que quer pintar.');
+});
 canvas.addEventListener('pointerup', (e) => {
   if (!pintando || !toqueIni) return; const d = Math.hypot(e.clientX - toqueIni.x, e.clientY - toqueIni.y), dt = performance.now() - toqueIni.t; toqueIni = null;
   if (d > 8 || dt > 600) return;
   setNdc(e); ray.setFromCamera(ndc, camera);
   if (borracha) { const h = ray.intersectObjects(pintGroup.children, false)[0]; if (h) apagarEm(h.object); else toast('Toque numa parede pintada para apagar.'); return; }
   const h = ray.intersectObject(model, true).find((x) => x.face && !(cutOn && x.point.y > cutY - 0.05) && !x.object.userData.furn);
+  if (modoPint === 'linha' && sel && sel.eixo) {
+    const p = ray.ray.intersectPlane(sel.plano, new THREE.Vector3());
+    if (p) { const ax = sel.eixo === 'v' ? sel.vAx : sel.u; pintarEm(sel.h, sel.dir, { eixo: ax, val: sel.val, menor: p.dot(ax) < sel.val }); limparSel(); return; }
+  }
   if (!h) return;
   const hm = Array.isArray(h.object.material) ? h.object.material[h.face.materialIndex] : h.object.material;
   if (hm && hm.userData && hm.userData.glass) { toast('Isso é vidro — toque na parede.'); return; }
+  if (modoPint === 'linha') {
+    if (sel && h.object === sel.obj && sel.tris.has(h.faceIndex)) { toast('Agora arraste o dedo na parede para puxar a linha.'); return; }
+    selecionar(h, ray.ray.direction); return;
+  }
   pintarEm(h, ray.ray.direction);
 });
+document.querySelectorAll('.pint [data-modo]').forEach((b) => b.addEventListener('click', () => {
+  modoPint = b.dataset.modo; borracha = false; $('#pBorr').classList.remove('on');
+  document.querySelectorAll('.pint [data-modo]').forEach((x) => x.classList.toggle('on', x === b)); limparSel();
+}));
+$('#pCanc').addEventListener('click', limparSel);
 // paleta de tintas
 {
   const host = $('#pTintas');
   const escolher = (c, nome, b) => { corPint = c; borracha = false; $('#pBorr').classList.remove('on'); host.querySelectorAll('.tinta').forEach((x) => x.classList.toggle('on', x === b)); $('#pNome').textContent = nome; };
   TINTAS.forEach(([nome, c], i) => { const b = document.createElement('button'); b.className = 'tinta' + (i === 0 ? ' on' : ''); b.style.background = c; b.title = nome; b.setAttribute('aria-label', nome); b.addEventListener('click', () => escolher(c, nome, b)); host.appendChild(b); });
   $('#pOutra').addEventListener('input', (e) => escolher(e.target.value, 'Cor escolhida', null));
-  $('#pBorr').addEventListener('click', () => { borracha = !borracha; $('#pBorr').classList.toggle('on', borracha); $('#pNome').textContent = borracha ? 'Borracha' : 'Toque numa cor'; });
+  $('#pBorr').addEventListener('click', () => { borracha = !borracha; $('#pBorr').classList.toggle('on', borracha); $('#pNome').textContent = borracha ? 'Borracha' : 'Toque numa cor'; limparSel(); });
 }
 // engenheiro: publica as pinturas no projeto (usa a chave do GitHub salva neste aparelho pelo app 3D)
 const chaveGH = () => { try { return localStorage.getItem('er3d-chave') || ''; } catch (e) { return ''; } };
@@ -2084,9 +2137,9 @@ function entrarPintura() {
   pintando = true; controls.autoRotate = false; $('#bRot')?.classList.remove('on');
   document.body.classList.add('pintando'); document.body.classList.remove('panel-open', 'list-open', 'layers-open');
   $('#pPub').hidden = !chaveGH(); if (!$('#pPub').hidden) $('#pPub').textContent = pintPendente ? 'Salvar para o cliente' : 'Salvo para o cliente ✓';
-  toast('Escolha a cor e toque na parede.');
+  limparSel();
 }
-function sairPintura() { pintando = false; document.body.classList.remove('pintando'); }
+function sairPintura() { limparSel(); pintando = false; document.body.classList.remove('pintando'); }
 $('#pOk').addEventListener('click', sairPintura);
 $('#bPint').addEventListener('click', () => (pintando ? sairPintura() : entrarPintura()));
 // carrega: o que foi pintado neste aparelho vale; senão, as pinturas publicadas do projeto
