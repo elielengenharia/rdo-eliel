@@ -816,7 +816,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.61 · boneca: medida em destaque, encaixe e distâncias de todas as esquadrias", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.62 · portas e janelas na área de desenho com o símbolo certo de cada modelo", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -8652,11 +8652,11 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
       out.push(`<polygon points="${pts(w.poly)}" fill="${PD.sel===w.i?"#93c5fd":cor}" stroke="${PD.sel===w.i?"#2563eb":"#1f2937"}" stroke-width="${PD.sel===w.i?2:1}" vector-effect="non-scaling-stroke"/>`); });
     G.abs.forEach(g=>{ const h=g.w.h+0.004, P=[[g.p0[0]+g.nX*h,g.p0[1]+g.nY*h],[g.p1[0]+g.nX*h,g.p1[1]+g.nY*h],[g.p1[0]-g.nX*h,g.p1[1]-g.nY*h],[g.p0[0]-g.nX*h,g.p0[1]-g.nY*h]], sel=g.k===PD.selAb, cor=g.tipo==="Janela"?"#0891b2":g.tipo==="Porta"?"#b45309":"#64748b";
       out.push(`<polygon points="${pts(P)}" fill="${sel?"#dbeafe":"#fff"}" stroke="${sel?"#2563eb":cor}" stroke-width="${sel?2:1.2}" vector-effect="non-scaling-stroke"/>`);
-      if(g.tipo==="Janela") out.push(`<line x1="${g.p0[0]}" y1="${g.p0[1]}" x2="${g.p1[0]}" y2="${g.p1[1]}" stroke="${cor}" stroke-width="1" vector-effect="non-scaling-stroke"/>`);
-      if(g.tipo==="Porta"){ const sg=abLado(g), r=g.l, hg=g.dob?g.p1:g.p0, ot=g.dob?g.p0:g.p1, ld=(g.lado||sg), tip=[hg[0]+g.nX*(r)*ld,hg[1]+g.nY*(r)*ld];
-        out.push(`<line x1="${hg[0]+g.nX*h*ld}" y1="${hg[1]+g.nY*h*ld}" x2="${tip[0]}" y2="${tip[1]}" stroke="${cor}" stroke-width="1.2" vector-effect="non-scaling-stroke"/><path d="M${tip[0]},${tip[1]} A${r},${r} 0 0 ${((ot[0]-hg[0])*g.nY-(ot[1]-hg[1])*g.nX)*ld>0?1:0} ${ot[0]+g.nX*h*ld},${ot[1]+g.nY*h*ld}" fill="none" stroke="${cor}" stroke-width="0.8" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/>`); }
       if(g.l/m>26) out.push(tx((g.p0[0]+g.p1[0])/2-g.nX*(h+8*m)*abLado(g),(g.p0[1]+g.p1[1])/2-g.nY*(h+8*m)*abLado(g),g.cod||g.tipo[0],10,cor)); });
     // cotas temporárias da esquadria escolhida: da parede da esquerda até ela, a largura e dela até a parede da direita
+    // 6.62: símbolo de cada esquadria igual ao da planta baixa (correr, abrir, 2 folhas, pivotante, camarão, cortina de vidro, mola, enrolar...)
+    try{ if(G.abs.some(g=>g.lado===undefined)) esquadrias(G); const Dq=Dw(m); desenhaAberturas(Dq,G,G.abs); Dq.p=Dq.p.filter(p0=>p0.t!=="t"); Dq.p.forEach(p0=>{ if(p0.w) p0.w=Math.max(1,p0.w*2.4); });
+      out.push(`<g transform="matrix(${m},0,0,${m},${V.x0},${V.y0})">${primsSVG(Dq,(x,y)=>[(x-V.x0)/m,(y-V.y0)/m],m)}</g>`); }catch(e){}
     // boneca = o pedaço de parede entre a esquadria e a parede do lado; na medida escolhida fica verde e escrito "boneca"
     const bon=num(PD.bon)/100, cotaAb=(k,leve)=>{ const V=abVizinhos(k); if(!V) return; const g=V.g, w=V.w, sg=abLado(g), o=(w.h+(leve?11:18)*m)*sg, Pt=s=>[w.x1+w.ux*s+w.nX*o,w.y1+w.uy*s+w.nY*o], an=Math.atan2(w.uy,w.ux)*180/Math.PI, rot=an>90||an<-90?an+180:an;
       [[V.esq,g.d],[g.d,g.d+g.l],[g.d+g.l,V.dir]].forEach(([s0,s1],j)=>{ if(s1-s0<0.005||(leve&&j===1)) return; const L0=s1-s0, ehBon=j!==1&&bon>0&&Math.abs(L0-bon)<0.005, a=Pt(s0), b=Pt(s1), c=Pt((s0+s1)/2), cor=j===1?"#475569":ehBon?"#16a34a":"#2563eb";
