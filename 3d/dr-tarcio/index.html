@@ -45,7 +45,14 @@
   .pint .tintas{grid-template-columns:repeat(9,1fr);gap:5px}
   .pint .chead .hint{display:none}
 }
-</style><meta name="description" content="Projeto 3D interativo da Residência Dr. Tárcio — Eliel Engenharia &amp; Arquitetura.">
+
+.pint .rotulo{font:700 10.5px/1 Manrope,system-ui,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--gold);margin-top:2px}
+.pint .revs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pint .rev{display:flex;flex-direction:column;gap:3px;align-items:stretch;text-align:left;font-size:10.5px;line-height:1.15;color:var(--muted)}
+.pint .rev i{display:block;aspect-ratio:1;border-radius:8px;background-size:cover;border:2px solid var(--line)}
+.pint .rev.on i{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+.pint .rev.on{color:var(--text)}
+@media (max-width:720px){ .pint .revs{display:flex;overflow-x:auto;gap:6px;padding-bottom:2px;scrollbar-width:none} .pint .revs::-webkit-scrollbar{display:none} .pint .rev{flex:0 0 74px;font-size:9.5px} .pint .rev i{aspect-ratio:auto;height:40px} }</style><meta name="description" content="Projeto 3D interativo da Residência Dr. Tárcio — Eliel Engenharia &amp; Arquitetura.">
 <meta property="og:title" content="Residência Dr. Tárcio · Projeto 3D">
 <meta property="og:description" content="Eliel Engenharia &amp; Arquitetura — gire a casa, veja de dia e à noite e explore por dentro.">
 <meta property="og:image" content="https://elielengenharia.github.io/rdo-eliel/3d/dr-tarcio/capa.jpg">
@@ -313,7 +320,10 @@ document.querySelector('.loader').addEventListener('click',function(){if(b.class
     <button class="seg" id="pCanc" hidden>Cancelar linha</button>
   </div>
   <div class="passo" id="pPasso">Toque na parede para pintar.</div>
+  <div class="rotulo">Tinta</div>
   <div class="tintas" id="pTintas"></div>
+  <div class="rotulo">Revestimento · área molhada</div>
+  <div class="revs" id="pRevs"></div>
   <div class="linha">
     <label class="outra">Outra cor <input type="color" id="pOutra" value="#c08a5b"></label>
     <button class="seg" id="pBorr">Borracha</button>
@@ -9908,12 +9918,51 @@ function tintaMat(c, l = 0) {
   if (!matTinta.has(k)) matTinta.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: 0.88, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 - l, polygonOffsetUnits: -4 - 6 * l }));
   const m = matTinta.get(k); m.clippingPlanes = cutOn ? [cutPlane] : null; return m;
 }
+/* revestimentos de parede (cerâmica e porcelanato): textura com rejunte em escala real, alinhada à parede */
+const REVEST = [
+  { id: 'pb', name: 'Porcelanato branco 60×120', size: 1.2, rough: 0.15, t: { base: '#ecebe7', grout: '#d2cfc9', cols: 2, rows: 1, vary: 0.012, gw: 3, speck: 8000, speckAmp: 0.03 } },
+  { id: 'pc', name: 'Porcelanato cinza 60×120', size: 1.2, rough: 0.25, t: { base: '#a6a49f', grout: '#86847f', cols: 2, rows: 1, vary: 0.03, gw: 3 } },
+  { id: 'pm', name: 'Porcelanato mármore 60×120', size: 1.2, rough: 0.1, t: { base: '#efefed', grout: '#d6d6d4', cols: 2, rows: 1, vary: 0.012, gw: 3, veins: 22, veinColor: 'rgba(110,112,120,.30)' } },
+  { id: 'pg', name: 'Porcelanato grafite 60×120', size: 1.2, rough: 0.3, t: { base: '#55575a', grout: '#3f4144', cols: 2, rows: 1, vary: 0.03, gw: 3, speckAmp: 0.08 } },
+  { id: 'pw', name: 'Porcelanato madeira 20×120', size: 1.2, rough: 0.45, t: { base: '#a37a55', grout: '#6d4f35', cols: 6, rows: 1, vary: 0.09, wood: true, stagger: true, gw: 2 } },
+  { id: 'cb', name: 'Cerâmica branca 32×60', size: 1.2, rough: 0.2, t: { base: '#f1f0ec', grout: '#cfcbc4', cols: 2, rows: 4, vary: 0.02, gw: 4 } },
+  { id: 'cm', h: true, name: 'Metrô branco 7,5×15', size: 0.6, rough: 0.12, t: { base: '#f3f2ef', grout: '#c9c5bd', cols: 4, rows: 8, vary: 0.03, gw: 5, stagger: true } },
+  { id: 'cv', h: true, name: 'Cerâmica verde 7,5×15', size: 0.6, rough: 0.15, t: { base: '#7f9483', grout: '#d9d6cf', cols: 4, rows: 8, vary: 0.06, gw: 5, stagger: true } },
+];
+const REV_BY = Object.fromEntries(REVEST.map((r) => [r.id, r]));
+const revTex = new Map();
+function revTextura(r) {
+  if (!revTex.has(r.id)) {
+    // fiada corrida na horizontal (metrô): gera com linhas e colunas trocadas e gira 90°
+    const tx = r.h ? tileTex({ ...r.t, cols: r.t.rows, rows: r.t.cols }) : tileTex(r.t);
+    if (r.h) { tx.center.set(0.5, 0.5); tx.rotation = Math.PI / 2; }
+    revTex.set(r.id, tx);
+  }
+  return revTex.get(r.id);
+}
+const revMats = new Map();
+function revMat(id, l = 0) {
+  const k = id + '|' + l;
+  if (!revMats.has(k)) { const r = REV_BY[id]; revMats.set(k, new THREE.MeshStandardMaterial({ map: revTextura(r), roughness: r.rough, metalness: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 - l, polygonOffsetUnits: -4 - 6 * l })); }
+  const m = revMats.get(k); m.clippingPlanes = cutOn ? [cutPlane] : null; return m;
+}
 function malhaPintura(p) {
   const l = p.l || 0, g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p.t, 3));
   if (l && p.n) g.translate(p.n[0] * 0.002 * l, p.n[1] * 0.002 * l, p.n[2] * 0.002 * l);
   g.computeVertexNormals();
-  const m = new THREE.Mesh(g, tintaMat(p.c, l)); m.receiveShadow = true; m.renderOrder = 1 + l; m.userData.pint = p; return m;
+  let mat;
+  if (p.r && REV_BY[p.r]) {
+    // UV no plano da parede: u na horizontal da parede, v na vertical (em metros / tamanho da textura); a paginação começa no piso
+    const r = REV_BY[p.r], n = new THREE.Vector3(...(p.n || [0, 0, 1]));
+    let u = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), n); if (u.lengthSq() < 1e-4) u.set(1, 0, 0); u.normalize();
+    const vAx = Math.abs(n.y) > 0.9 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
+    const pos = g.attributes.position, uv = new Float32Array(pos.count * 2), q = new THREE.Vector3(), base = typeof groundY === 'number' ? groundY : 0;
+    for (let i = 0; i < pos.count; i++) { q.fromBufferAttribute(pos, i); uv[2 * i] = q.dot(u) / r.size; uv[2 * i + 1] = (q.dot(vAx) - (vAx.y ? base : 0)) / r.size; }
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); mat = revMat(p.r, l);
+  } else mat = tintaMat(p.c, l);
+  const m = new THREE.Mesh(g, mat); m.receiveShadow = true; m.renderOrder = 1 + l; m.userData.pint = p; return m;
 }
+let revSel = null;
 function redesenharPinturas() { pintGroup.clear(); pinturas.forEach((p) => pintGroup.add(malhaPintura(p))); }
 function guardarLocal() { try { localStorage.setItem(CH_PINT, JSON.stringify(pinturas)); } catch (e) {} }
 
@@ -10010,7 +10059,7 @@ function pintarEm(hit, rayDir, corte) {
   if (!corte) { removidas = daFace; removidas.slice().reverse().forEach((o) => pinturas.splice(o.i, 1)); }   // parede inteira: cobre tudo o que tinha nela
   else l = 1 + daFace.reduce((m, o) => Math.max(m, o.p.l || 0), 0);
   if (l > 12) { toast('Muitas demãos nessa parede. Pinte a parede inteira para recomeçar.'); return; }
-  const p = { c: corPint, t, f, l, n: [nVis.x, nVis.y, nVis.z].map((a) => +a.toFixed(3)) };
+  const p = { c: corPint, t, f, l, n: [nVis.x, nVis.y, nVis.z].map((a) => +a.toFixed(3)) }; if (revSel) p.r = revSel;
   pinturas.push(p); desfazer.push({ tipo: 'nova', p, removidas: removidas.map((o) => ({ p: o.p, i: o.i })) });
   redesenharPinturas(); guardarLocal(); marcarPint();
 }
@@ -10065,7 +10114,14 @@ $('#pCanc').addEventListener('click', limparSel);
 // paleta de tintas
 {
   const host = $('#pTintas');
-  const escolher = (c, nome, b) => { corPint = c; borracha = false; $('#pBorr').classList.remove('on'); host.querySelectorAll('.tinta').forEach((x) => x.classList.toggle('on', x === b)); $('#pNome').textContent = nome; };
+  const escolher = (c, nome, b) => { corPint = c; revSel = null; document.querySelectorAll('.pint .rev').forEach((x) => x.classList.remove('on')); borracha = false; $('#pBorr').classList.remove('on'); host.querySelectorAll('.tinta').forEach((x) => x.classList.toggle('on', x === b)); $('#pNome').textContent = nome; };
+  const hr = $('#pRevs');
+  REVEST.forEach((r) => { const b = document.createElement('button'); b.className = 'rev'; b.title = r.name;
+    let url = ''; try { url = revTextura(r).image.toDataURL('image/jpeg', 0.6); } catch (e) {}
+    b.innerHTML = `<i style="background-image:url(${url})"></i><span>${r.name}</span>`;
+    b.addEventListener('click', () => { revSel = r.id; corPint = r.t.base; borracha = false; $('#pBorr').classList.remove('on');
+      host.querySelectorAll('.tinta').forEach((x) => x.classList.remove('on')); hr.querySelectorAll('.rev').forEach((x) => x.classList.toggle('on', x === b)); $('#pNome').textContent = r.name; });
+    hr.appendChild(b); });
   TINTAS.forEach(([nome, c], i) => { const b = document.createElement('button'); b.className = 'tinta' + (i === 0 ? ' on' : ''); b.style.background = c; b.title = nome; b.setAttribute('aria-label', nome); b.addEventListener('click', () => escolher(c, nome, b)); host.appendChild(b); });
   $('#pOutra').addEventListener('input', (e) => escolher(e.target.value, 'Cor escolhida', null));
   $('#pBorr').addEventListener('click', () => { borracha = !borracha; $('#pBorr').classList.toggle('on', borracha); $('#pNome').textContent = borracha ? 'Borracha' : 'Toque numa cor'; limparSel(); });
@@ -10108,9 +10164,9 @@ $('#bPint').addEventListener('click', () => (pintando ? sairPintura() : entrarPi
 function pintarRaio(origem, dir, cor, corte) {
   const o = new THREE.Vector3(...origem), d = new THREE.Vector3(...dir).normalize(), rc = new THREE.Raycaster(o, d);
   const h = rc.intersectObject(model, true).find((x) => x.face); if (!h) return false;
-  const c0 = corPint; corPint = cor;
+  const c0 = corPint, r0 = revSel; if (String(cor).startsWith('rev:')) { revSel = cor.slice(4); corPint = REV_BY[revSel].t.base; } else { revSel = null; corPint = cor; }
   let ct = null; if (corte) { const r = faceInteira(h.object, h.faceIndex), n = r.n.clone(); let u = new THREE.Vector3().crossVectors(UPV, n); u = u.lengthSq() < 1e-4 ? new THREE.Vector3(1, 0, 0) : u.normalize(); ct = { eixo: corte.eixo === 'v' ? UPV.clone() : u, val: corte.val, menor: corte.menor }; }
-  pintarEm(h, d, ct); corPint = c0; return true;
+  pintarEm(h, d, ct); corPint = c0; revSel = r0; return true;
 }
 Object.assign(window.__app, { camera, pintarRaio, pinturas: () => pinturas, model, THREE, groundY, floorHit, load: (d) => { items = d.items.map((i) => ({ ...i })); rebuild(); }, enterFurnish, exitFurnish, addItem, setCut, items: () => items });
 </script>
