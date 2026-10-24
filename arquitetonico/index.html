@@ -327,10 +327,11 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
         <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-v3c="tel" checked>Telhado</label>
         <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-v3c="arestas" checked>Arestas</label>
         <label style="font-size:13px;display:flex;gap:6px;align-items:center">Cortar na altura<input type="range" min="0" max="6" step="0.05" value="0" data-v3c="corte" style="width:140px"><span id="v3CorteV" style="min-width:70px">sem corte</span></label>
-        <button class="btn" data-v3="puxar" id="v3Puxar" aria-pressed="false" title="Empurrar/Puxar (como no SketchUp)">⇔ Puxar paredes</button><button class="btn" data-v3="foto">Baixar imagem</button></div>
+        <button class="btn" data-v3="marq" id="v3Marq" aria-pressed="false" title="Toque na face de fora de uma parede para pôr uma marquise">▭ Marquise</button><button class="btn" data-v3="puxar" id="v3Puxar" aria-pressed="false" title="Empurrar/Puxar (como no SketchUp)">⇔ Puxar paredes</button><button class="btn" data-v3="foto">Baixar imagem</button></div>
       <div id="v3d" style="height:min(72vh,680px);border:1px solid var(--line,#d6dbe3);border-radius:10px;overflow:hidden;background:#eef2f7"><p class="cap" style="padding:12px">Abrindo o 3D…</p></div>
+      <div id="v3Painel" class="panel" hidden style="margin-top:8px"></div>
       <p class="cap" id="v3Msg" role="status" style="margin:6px 0 0"></p>
-      <p class="cap" style="margin:4px 0 0"><b>⇔ Puxar paredes</b> (Empurrar/Puxar do SketchUp): ligue e arraste a <b>face de uma parede</b> para levar a parede para um lado ou para o outro (as paredes ligadas nela esticam ou encolhem junto, de 5 em 5 cm), ou arraste o <b>topo</b> para mudar a altura (pé-direito). Fora das paredes, o mouse continua girando a vista.</p>
+      <p class="cap" style="margin:4px 0 0"><b>⇔ Puxar paredes</b> (Empurrar/Puxar do SketchUp): ligue e arraste a <b>face de uma parede</b> para levar a parede para um lado ou para o outro (as paredes ligadas nela esticam ou encolhem junto, de 5 em 5 cm), ou arraste o <b>topo</b> para mudar a altura (pé-direito). Fora das paredes, o mouse continua girando a vista. <b>▭ Marquise</b>: ligue e toque na face de fora de uma parede (em cima da porta ou da janela) para pôr uma marquise de EPS (isopor) com placas, de steel frame com drywall ou de concreto; toque nela para mudar as medidas, ou use o Puxar na frente (balanço), nas pontas (comprimento), em cima (espessura) e embaixo (altura).</p>
     </div>
   </section>
   <section id="tab-ref" hidden>
@@ -833,7 +834,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.68 · puxar paredes no 3D (Empurrar/Puxar como no SketchUp)", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.69 · marquise no 3D (EPS com placas, steel frame com drywall ou concreto), na planta, fachadas, memorial e orçamento", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -1588,6 +1589,23 @@ function rotuloAmb(D,r,ls,x,y,obs=[]){ const k=D.k, P=paraDentro(r.poly,0.05)||r
   if(!best) best={p:c,u:[1,0],L0:esc(ls.slice(0,1),0.5),solto:1};   // não coube: pode ser empurrado um pouco pelos textos vizinhos
   const u=best.u, v=[-u[1],u[0]], ang=Math.atan2(u[1],u[0])*180/Math.PI; let dd=-alt(best.L0)/2;
   best.L0.forEach(l=>{ const hh=l.h*1.45*k, cc=dd+hh/2; TX(D,best.p[0]+v[0]*cc,best.p[1]+v[1]*cc,l.t,l.h,{b:!!l.b,l:l.l||(l.b&&l===best.L0[0]?"NOMEAMB":"TEXTO"),mv:best.solto?"r":"f",...(Math.abs(ang)>0.5?{rot:ang}:{})}); dd+=hh; }); }   // fica no meio: os outros textos é que desviam dele
+/* ---------------- Marquises (6.69, pedido do Eliel): placa em balanço presa na face de uma parede ----------------
+   S.marq=[{w, d, l, b, e, z, lado, tipo}] · w = parede, d = começo ao longo dela, l = comprimento, b = balanço (projeção),
+   e = espessura, z = altura do fundo, lado = face (+1/−1 da normal da parede), tipo = eps | dw | conc */
+const TIPOS_MARQ=[["eps","EPS (isopor) revestido com placa cimentícia e drywall RU"],["dw","Estrutura de steel frame com placas de drywall RU e cimentícia"],["conc","Concreto armado"]];
+const nomeMarq=t=>((TIPOS_MARQ.find(x=>x[0]===t)||TIPOS_MARQ[0])[1]);
+function marquises(G){ if(!G||G.vazio) return []; return (S.marq||[]).map((m,i)=>{ const w=G.walls.find(x=>x.i===Math.round(num(m.w))); if(!w) return null;
+    const l=Math.max(0.3,num(m.l)||2), b=Math.max(0.2,num(m.b)||0.8), e=Math.max(0.05,num(m.e)||0.12), z=num(m.z)||2.4, d=Math.max(-w.h,Math.min(w.L+w.h-0.3,num(m.d))), sg=num(m.lado)<0?-1:1, n=[w.nX*sg,w.nY*sg];
+    const P=s=>[w.x1+w.ux*s+n[0]*w.h,w.y1+w.uy*s+n[1]*w.h], a=P(d), c=P(d+l), poly=[a,c,[c[0]+n[0]*b,c[1]+n[1]*b],[a[0]+n[0]*b,a[1]+n[1]*b]];
+    return {i,m,w,l,d,b,e,z,n,u:[w.ux,w.uy],poly,tipo:TIPOS_MARQ.some(t=>t[0]===m.tipo)?m.tipo:"eps"}; }).filter(Boolean); }
+// quantitativos de uma marquise (placas 1,20 x 2,40 com 10% de perda)
+function quantMarq(M){ const {l,b,e}=M, top=l*b, fundo=l*b, frente=l*e, lados=2*b*e, area=top+fundo+frente+lados, nPl=Math.ceil(area*1.1/2.88), mf=Math.ceil(l/0.60)+1, out=[];
+  if(M.tipo==="eps") out.push(["Bloco de EPS (isopor) alta densidade (F3 ou mais)",`${f(l*b*e,3)} m³`],["Placa cimentícia 10 mm em cima e na frente + drywall RU no fundo",`${nPl} placas (${f(area,2)} m²)`],["Mão-francesa / suporte metálico chumbado na parede (a cada 60 cm)",`${mf} un`],["Perfil guia galvanizado no contorno (cima e embaixo)",`${f(2*2*(l+b),2)} m`],["Tela de fibra de vidro + argamassa colante/base coat",`${f(area*1.1,2)} m²`],["Fita, massa e parafusos para placa",`${f(area,2)} m²`]);
+  else if(M.tipo==="dw") out.push(["Montantes e guias de steel frame (estrutura da marquise)",`${f(2*(l+b)*2+Math.ceil(l/0.4)*b,2)} m`],["Placa cimentícia 10 mm em cima e na frente + drywall RU no fundo",`${nPl} placas (${f(area,2)} m²)`],["Chumbadores na parede (a cada 60 cm)",`${mf} un`],["Fita, massa e parafusos para placa",`${f(area,2)} m²`]);
+  else out.push(["Concreto fck 25 MPa",`${f(l*b*e,3)} m³`],["Forma (fundo, frente e laterais)",`${f(fundo+frente+lados,2)} m²`],["Aço CA-50 (estimado 90 kg/m³)",`${f(l*b*e*90,1)} kg`]);
+  out.push(["Impermeabilização em cima (manta líquida, caimento 1% para fora)",`${f(top*1.1,2)} m²`],["Pingadeira na frente e nas laterais",`${f(l+2*b,2)} m`]); return out; }
+function desenhaMarqPlanta(D,G){ const k=D.k; marquises(G).forEach(M=>{ PL(D,[...M.poly,M.poly[0]],.25,"PROJECAO",true); const c=centro(M.poly);
+  TX(D,c[0],c[1],`MARQUISE ${f(M.l)} x ${f(M.b)}`,1.4,{l:"COTAS",mv:"c"}); TX(D,c[0],c[1]+2.2*k,`(projeção, fundo a ${fNv(M.z+nvBase(G))})`,1.1,{l:"COTAS",mv:"c"}); }); }
 function desenhoPlanta(G,k,ajuda){
   const D=Dw(k), h=G.h, bb=G.bb, cg=S.cotGer!=="não";   // cg: cotas gerais em cima e à esquerda (opção da aba Planta)
   if(G.vazio){ TX(D,0,0,"Sem paredes. Cadastre ou importe a planta na aba Dados.",3); return D; }
@@ -1627,7 +1645,7 @@ function desenhoPlanta(G,k,ajuda){
     ed.forEach(e=>{ if(!usa.has(e)&&!e.soltas.length) return;
       const ts=uniq([0,e.Lr,...e.soltas.flatMap(o=>[o.t0,o.t1])].filter(t=>t>=-0.001&&t<=e.Lr+0.001)).sort((p,q)=>p-q);
       cadeiaAlinhada(D,e.a,e.u,e.n,ts,3,true); }); });
-  desenhaAberturas(D,G,G.abs);
+  desenhaAberturas(D,G,G.abs); desenhaMarqPlanta(D,G);
   desenhaPisosExt(D,G,{pag:true});
   // números das cotas internas: o nome do ambiente desvia deles
   const obsCota=D.p.filter(q=>q.t==="t"&&q.l==="COTAS").map(q=>{ const w=largTexto(q.txt)*q.h*1.39*k/2+1.4*k, hh=q.h*0.8*k+0.8*k, a=(q.rot||0)*Math.PI/180, c=Math.cos(a), sn=Math.sin(a);
@@ -2089,6 +2107,9 @@ function desenhoFachada(G,k,lado,pag=null){
   const ex=G.contExt.flatMap(([x1,y1,x2,y2])=>[U(x1,y1),U(x2,y2)]), e0=Math.min(...ex), e1=Math.max(...ex);
   cotaH(D,e0,e1,Y(-ps)+7*k,Y(-ps),f(e1-e0));
   if(pag){ TX(D,(e0+e1)/2,Y(-ps)+14*k,`CORPO: ${nomeMatF(pag.corpo).toUpperCase()}`+(pag.base!=="nenhum"?`   ·   EMBASAMENTO ATÉ ${f(pag.hb)} m: ${nomeMatF(pag.base).toUpperCase()}`:""),1.8,{b:true,l:"COTAS"}); }
+  // marquises: de frente aparece a faixa da espessura; de lado, o perfil com o balanço (a parede de trás fica escondida)
+  marquises(G).forEach(M=>{ const fr=M.n[0]*V[0]+M.n[1]*V[1]; if(fr<-0.3) return; const us=M.poly.map(p=>U(...p)), a=Math.min(...us), b=Math.max(...us); if(b-a<0.02) return;
+    const r=[[a,Y(M.z)],[b,Y(M.z)],[b,Y(M.z+M.e)],[a,Y(M.z+M.e)]]; PG(D,r,"FUNDO"); PL(D,[...r,r[0]],.35,"PAREDE"); L(D,a,Y(M.z+M.e-0.02),b,Y(M.z+M.e-0.02),.13,"PAREDE"); });
   return D;
 }
 
@@ -4446,6 +4467,7 @@ function memorial(){
   const ETm=G.vazio?null:estruturaTelhado(G);
   sec("7. COBERTURA",[`Telhado em ${TI.nome}, telha ${String(S.tel.telha).toLowerCase()}${ETm&&ETm.VG?` de ${f(ETm.VG.lt)} m`:""}, inclinação de ${f(num(S.tel.inc),0)}%, ${ETm&&ETm.VG?`sobre ${vigMat().txt} a cada ${f(ETm.VG.ev)} m no sentido do caimento, apoiadas no topo das paredes, e caibros 5x${f(num(S.tel.hCaib)||6,0)} cm de madeira tratada atravessados a cada ${f(ETm.VG.ec)} m na rampa (o 1º logo depois da calha), para cada emenda da telha cair sobre um caibro.`:"sobre estrutura de madeira tratada (ou metálica) dimensionada para o vão."}`,
     TI.plat?(CLm=>`Telhado escondido por platibanda, com calha em chapa galvanizada de ${CLm?`${f(CLm.bMax*100,0)} x ${f(CLm.hMax*100,0)} cm (${f(CLm.Ltot)} m, caimento de ${f(CLm.ic*100,1)}%)`:"seção conforme projeto"}, dimensionada pela NBR 10844 para chuva de ${CLm?f(CLm.I,0):"160"} mm/h, rufo e contra-rufo, ${CLm?CLm.nAP:""} condutores verticais de PVC até a caixa de areia e ladrão Ø50 na platibanda.`)(calhasPlat(G,TI)):`Beiral de ${f(TI.b)} m em todo o contorno.`,`Área de telhado: ${f(TI.areaInc)} m² (projeção ${f(TI.areaProj)} m²).`]);
+  { const MQ=marquises(G); if(MQ.length) sec("7.1 MARQUISES",MQ.map((M,i)=>`Marquise ${i+1}: ${nomeMarq(M.tipo)}, ${f(M.l)} m de comprimento, balanço de ${f(M.b)} m e ${f(M.e*100,0)} cm de espessura, com o fundo a ${fNv(M.z+nvBase(G))}. ${M.tipo==="conc"?"Armada e engastada na viga/cinta da parede.":"Presa na parede por mãos-francesas metálicas chumbadas a cada 60 cm; o bloco não é estrutural, só fecha e dá a forma."} Em cima, impermeabilização com caimento de 1% para fora e pingadeira na frente e nas laterais.`)); }
   sec("8. ESQUADRIAS",[...Q.map(q=>`${q.cod}: ${q.desc}${q.tipo==="Porta"?` (folha ${nomeFolha(q.fol).toLowerCase()}; ${ferragens(q)[0].toLowerCase()})`:""}${q.tipo!=="Vão"?`, ${q.nf} ${q.nf===1?"folha":"folhas"}`:""}, ${q.mat.toLowerCase()}, ${f(q.l)} x ${f(q.a)} m${q.tipo==="Janela"?`, peitoril ${f(q.p)} m`:""} - ${q.q} ${q.q===1?"unidade":"unidades"}.`),
     Q.length?`Ferragens e fechaduras de boa qualidade; portas de madeira com batente e guarnição; janelas com vidro liso de 4 mm (box e fixas em vidro temperado).`:""]);
   { const RV=revParede(G,LM,FO), FA=fachadaRev(G);
@@ -4867,7 +4889,7 @@ const notasReforma=q=>[`Demolição: ${f(q.dem)} m² de alvenaria (${f(q.Ld)} m 
 
 /* ---------------- Orçamento estimado ---------------- */
 // preços de referência (R$, material + mão de obra): o usuário ajusta na tabela (SINAPI / fornecedor local)
-const PRECO0={fach_porc:180,fach_cer:120,fach_pedra:160,fach_tijolinho:140,fach_ripado:260,fach_acm:420,demolicao:35,retirada:60,entulho:90,limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
+const PRECO0={marq_eps:480,marq_dw:560,marq_conc:650,fach_porc:180,fach_cer:120,fach_pedra:160,fach_tijolinho:140,fach_ripado:260,fach_acm:420,demolicao:35,retirada:60,entulho:90,limpeza:4.5,locacao:12,fundacao:280,cinta:95,laje:145,alvenaria:75,reboco:45,ceramica:85,madeiramento:95,
   telha_Cerâmica:55,telha_Concreto:60,telha_Fibrocimento:40,telha_Metálica:75,telha_Termoacústica:160,cumeeira:35,calha:90,condutor:45,rufo:40,
   porta:850,porta_vidro:950,porta_fer:1200,porta_aco:1100,porta_pvc:1300,janela_vt:480,janela_mad:700,janela_fer:420,janela_aco:400,janela_pvc:850,vigota:32,caibro:14,janela:650,box:900,contrapiso:45,pint_teto:22,pint_esq:38,piso_arm:70,regulariz:30,piso_car:115,piso_cam:165,piso_porc60:120,piso_porc80:150,piso_porcA60:125,piso_porcA80:155,piso_concreto:85,piso_cer60:85,piso_cer45:75,piso_cer33:65,piso_vinil:110,piso_cimento:40,rodape:25,soleira:120,peitoril:140,
   forro_pvc:75,forro_gesso:90,forro_drywall:110,parede_dw:150,forro_madeira:140,forro_laje:25,rodaforro:12,pt_ele:180,qd:900,padrao:1800,aterr:180,pt_agua:220,pt_esgoto:180,tubo_ap:55,cx_areia:280,caixa:350,ralo:95,reservatorio:900,reg_gaveta:85,reg_pressao:95,cavalete:350,fossa:6500,
@@ -4901,6 +4923,7 @@ function orcamento(){
   if(TI.plat){ const CLo=calhasPlat(G,TI); it(CLo?`Calha galvanizada ${f(CLo.bMax*100,0)}x${f(CLo.hMax*100,0)} cm`:"Calha e rufo galvanizados","m",CLo?CLo.Ltot:perExt,"calha"); if(CLo) it((RF=>RF?`Rufo metálico ${RUFO_NOME[RF.cor]} (moldura, aba ${f(RF.h*100,0)} cm) e contra-rufo na platibanda`:"Rufo e contra-rufo galvanizados na platibanda")(rufoCfg(TI)),"m",perExt,"rufo");
     if(CLo) it(`Condutores de água pluvial (${CLo.lista.map(c=>`${c.nC}xØ${c.dia}`).join(", ")}) com ralo hemisférico`,"m",CLo.lista.reduce((s0,c)=>s0+c.nC*((TI.pdAt?TI.pdAt((c.seg[0]+c.seg[2])/2,(c.seg[1]+c.seg[3])/2):num(S.pd))+Math.max(0,num(S.laje))+0.5),0),"condutor"); }
   else { const CLb=calhasBeiral(G,TI); if(CLb){ it(`Calha de beiral galvanizada ${f(CLb.bMax*100,0)}x${f(CLb.hMax*100,0)} cm`,"m",CLb.Ltot,"calha"); it(`Condutores de água pluvial (${CLb.lista.map(c=>`${c.nC}xØ${Math.max(75,c.dia)}`).join(", ")})`,"m",CLb.nAP*(num(S.pd)+0.5),"condutor"); } }
+  marquises(G).forEach((M,i)=>{ if(!E.length||et.n!=="COBERTURA") etapa("COBERTURA"); it(`Marquise ${i+1}: ${nomeMarq(M.tipo)} ${f(M.l)} x ${f(M.b)} m, e = ${f(M.e*100,0)} cm (com impermeabilização e pingadeira)`,"m²",M.l*M.b,"marq_"+M.tipo); });
   etapa("ESQUADRIAS");
   const pkP=m=>/vidro|alum/i.test(m)?"porta_vidro":/ferro|metalon/i.test(m)?"porta_fer":/a[cç]o|chapa/i.test(m)?"porta_aco":/pvc/i.test(m)?"porta_pvc":"porta", pkJ=m=>/alum/i.test(m)?"janela":/temperad/i.test(m)?"janela_vt":/madeira/i.test(m)?"janela_mad":/ferro|metalon/i.test(m)?"janela_fer":/a[cç]o|chapa/i.test(m)?"janela_aco":/pvc/i.test(m)?"janela_pvc":"janela";
   Q.filter(q=>q.tipo==="Porta").forEach(q=>pkP(q.mat)==="porta_vidro"?it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)} (${q.q} un)`,"m²",q.l*q.a*q.q,"porta_vidro"):it(`${q.cod} - ${q.desc} ${q.mat.toLowerCase()} ${f(q.l)}x${f(q.a)}`,"un",q.q,pkP(q.mat)));
@@ -8801,7 +8824,7 @@ setTimeout(()=>{ try{ pdBarra(); pdEnquadra(); pdDesenha(); }catch(e){} },0);
    Celular: um dedo gira, dois dedos aproximam e arrastam.
    ====================================================================== */
 const V3={pronto:false,carregando:null,cfg:(()=>{ try{ return JSON.parse(localStorage.getItem("arq-3d")||"{}")||{}; }catch(e){ return {}; } })()};
-V3.cfg=Object.assign({tel:true,corte:0,arestas:true},V3.cfg);
+V3.cfg=Object.assign({tel:true,corte:0,arestas:true},V3.cfg); V3.selMq=-1;
 const v3Guarda=()=>{ try{ localStorage.setItem("arq-3d",JSON.stringify(V3.cfg)); }catch(e){} };
 async function v3Carrega(){ if(V3.pronto) return true; if(V3.carregando) return V3.carregando;
   V3.carregando=(async()=>{ const el=$("v3d"); try{
@@ -8835,6 +8858,12 @@ function v3Monta(){ if(!V3.pronto) return; const T=V3.T, G=GG; if(V3.grupo){ V3.
     const ps=[[],[]]; M.lines.forEach(([a,b],i)=>ps[M.lk&&M.lk[i]===9?1:0].push(...W(a),...W(b)));   // 9 = aresta do telhado (some junto com ele)
     ps.forEach((pos,j)=>{ if(!pos.length) return; const g=new T.BufferGeometry(); g.setAttribute("position",new T.Float32BufferAttribute(pos,3));
       const ls=new T.LineSegments(g,new T.LineBasicMaterial({color:0x1f2937,transparent:true,opacity:0.55,clippingPlanes:clip})); ls.name=j?"arestasTel":"arestas"; grupo.add(ls); }); }
+  // marquises (caixa em balanço na face da parede); a escolhida fica azul
+  marquises(G).forEach(M=>{ const q=M.poly.map(p=>[p[0],-p[1]]), z0=M.z, z1=M.z+M.e, pos=[], F=(a,b,c)=>pos.push(...a,...b,...c), A=q.map(p=>[p[0],p[1],z0]), B=q.map(p=>[p[0],p[1],z1]);
+    F(A[0],A[2],A[1]); F(A[0],A[3],A[2]); F(B[0],B[1],B[2]); F(B[0],B[2],B[3]); for(let j=0;j<4;j++){ const k2=(j+1)%4; F(A[j],A[k2],B[k2]); F(A[j],B[k2],B[j]); }
+    const g=new T.BufferGeometry(); g.setAttribute("position",new T.Float32BufferAttribute(pos,3)); g.computeVertexNormals();
+    const cor=M.tipo==="conc"?0xb8bec8:M.tipo==="dw"?0xe9e4d8:0xf1efe9, me=new T.Mesh(g,new T.MeshLambertMaterial({color:V3.selMq===M.i?0x93c5fd:cor,side:T.DoubleSide,clippingPlanes:clip})); me.name="marq:"+M.i; me.userData.M=M; grupo.add(me);
+    const ed=new T.LineSegments(new T.EdgesGeometry(g),new T.LineBasicMaterial({color:V3.selMq===M.i?0x2563eb:0x1f2937,clippingPlanes:clip})); ed.name="marqE"; grupo.add(ed); });
   // piso de cada ambiente (e das áreas externas cobertas) no nível dele
   { const pos=[], NB=nvBase(G); [...(G.rooms||[]),...(G.pisos||[])].forEach(r=>{ if(!r.poly||r.poly.length<3) return; const z=(num(r.nv)||0)-NB+0.002; let tr=[]; try{ tr=orelhas(r.poly); }catch(e){ tr=[]; }
       tr.forEach(t=>t.forEach(p=>pos.push(p[0],-p[1],z))); });
@@ -8856,6 +8885,7 @@ function v3Vista(nome){ if(!V3.pronto||!V3.bb) return; const b=V3.bb, T=V3.T, c=
 async function v3Mostra(){ const ok=await v3Carrega(); if(!ok) return; v3Tamanho(); const novo=!V3.bb; v3Monta(); if(novo) v3Vista("persp"); }
 // botões e opções
 document.addEventListener("click",ev=>{ const b=ev.target.closest("[data-v3]"); if(!b) return; const a=b.dataset.v3;
+  if(a==="marq"){ V3.marqModo=!V3.marqModo; b.setAttribute("aria-pressed",V3.marqModo?"true":"false"); b.className=V3.marqModo?"btn pri":"btn"; V3.msgAte=Date.now()+6000; $("v3Msg").textContent=V3.marqModo?"Marquise: toque na face de fora de uma parede, onde ela vai ficar.":"Marquise desligado."; return; }
   if(a==="puxar"){ V3.puxar=!V3.puxar; b.setAttribute("aria-pressed",V3.puxar?"true":"false"); b.className=V3.puxar?"btn pri":"btn"; $("v3Msg").textContent=V3.puxar?"Puxar ligado: arraste a face de uma parede (para os lados) ou o topo (altura).":"Puxar desligado."; return; }
   if(a==="foto"){ if(!V3.pronto) return; V3.r.render(V3.cena,V3.cam); const url=V3.r.domElement.toDataURL("image/png"), l=document.createElement("a"); l.href=url; l.download=`${(S.obra||"obra").replace(/[^\w\-]+/g,"_")}_3d.png`; document.body.appendChild(l); l.click(); l.remove(); return; }
   v3Vista(a); });
@@ -8863,6 +8893,37 @@ document.addEventListener("change",ev=>{ const t=ev.target; if(!t.dataset||t.dat
   if(c==="tel") V3.cfg.tel=t.checked; if(c==="arestas") V3.cfg.arestas=t.checked; if(c==="corte"){ V3.cfg.corte=num(t.value); const o=$("v3CorteV"); if(o) o.textContent=V3.cfg.corte>0?f(V3.cfg.corte)+" m":"sem corte"; }
   v3Guarda(); v3Aplica(); });
 document.addEventListener("input",ev=>{ const t=ev.target; if(t.dataset&&t.dataset.v3c==="corte"){ V3.cfg.corte=num(t.value); const o=$("v3CorteV"); if(o) o.textContent=V3.cfg.corte>0?f(V3.cfg.corte)+" m":"sem corte"; v3Aplica(); } });
+/* ---- Marquise no 3D (6.69): pôr, escolher, painel com medidas e quantitativos ---- */
+function v3PainelMq(){ const P=$("v3Painel"); if(!P) return; const k=V3.selMq, m=(S.marq||[])[k]; if(!m){ P.hidden=true; return; } const M=marquises(GG).find(x=>x.i===k); if(!M){ P.hidden=true; return; } P.hidden=false;
+  P.innerHTML=`<h4>Marquise ${k+1} · parede ${M.w.i+1} · ${f(M.l)} x ${f(M.b)} m · ${f(M.e*100,0)} cm</h4><div class="form">
+    <label>Tipo<select data-mq="tipo">${TIPOS_MARQ.map(([v,t])=>`<option value="${v}"${M.tipo===v?" selected":""}>${esc(t)}</option>`).join("")}</select></label>
+    <label>Comprimento (m)<input type="number" step="0.05" min="0.3" data-mq="l" value="${+M.l.toFixed(3)}"></label>
+    <label>Balanço / projeção (m)<input type="number" step="0.05" min="0.2" data-mq="b" value="${+M.b.toFixed(3)}"></label>
+    <label>Espessura (cm)<input type="number" step="1" min="5" data-mq="ecm" value="${+(M.e*100).toFixed(1)}"></label>
+    <label>Altura do fundo (m)<input type="number" step="0.05" data-mq="z" value="${+M.z.toFixed(3)}"></label>
+    <label>Começa a (m) do início da parede<input type="number" step="0.05" data-mq="d" value="${+M.d.toFixed(3)}"></label></div>
+    <div class="row" style="margin:0;flex-wrap:wrap"><button class="btn" data-mqa="centro">Centralizar na porta/janela embaixo</button><button class="btn" data-mqa="lado">Passar para o outro lado da parede</button><button class="btn" data-mqa="dup">Duplicar</button><button class="btn dng" data-mqa="del">Excluir (Delete)</button><button class="btn x" data-mqa="x" aria-label="Fechar">×</button></div>
+    <div class="tbl" style="margin-top:8px"><table><tr><th>Material (estimativa)</th><th class="n">Quantidade</th></tr>${quantMarq(M).map(([a,b])=>`<tr><td>${esc(a)}</td><td class="n">${esc(b)}</td></tr>`).join("")}</table></div>
+    <p class="cap" style="margin:6px 0 0">Entra na planta baixa (projeção tracejada), nas fachadas, no memorial e no orçamento (etapa Cobertura). ${M.tipo==="eps"?"O EPS não é estrutural: quem segura são as mãos-francesas metálicas chumbadas na parede; o EPS dá a forma e recebe tela e base coat.":M.tipo==="conc"?"Concreto: confira a armadura e o engaste com o projeto estrutural.":"Steel frame: os montantes formam a estrutura e ficam chumbados na parede."}</p>`;
+  P.querySelectorAll("[data-mq]").forEach(el=>el.addEventListener("change",()=>{ const c=el.dataset.mq, v=num(el.value); if(c==="tipo") m.tipo=el.value; else if(c==="ecm"){ if(v>=5) m.e=+(v/100).toFixed(3); } else if(isFinite(v)) m[c]=+v.toFixed(3); save(); render(); v3PainelMq(); }));
+  P.querySelectorAll("[data-mqa]").forEach(b=>b.onclick=()=>{ const a=b.dataset.mqa;
+    if(a==="x"){ V3.selMq=-1; v3PainelMq(); v3Monta(); return; }
+    if(a==="del"){ S.marq.splice(k,1); V3.selMq=-1; save(); render(); v3PainelMq(); return; }
+    if(a==="dup"){ S.marq.push({...m,d:+(num(m.d)+num(m.l)+0.3).toFixed(3)}); V3.selMq=S.marq.length-1; }
+    if(a==="lado") m.lado=num(m.lado)<0?1:-1;
+    if(a==="centro"){ const gs=GG.abs.filter(g=>g.w===M.w).map(g=>({g,c:g.d+g.l/2})); if(gs.length){ const g0=gs.sort((x,y)=>Math.abs(x.c-(M.d+M.l/2))-Math.abs(y.c-(M.d+M.l/2)))[0]; m.d=+(g0.c-M.l/2).toFixed(3); } }
+    save(); render(); v3PainelMq(); }); }
+function v3NovaMq(w,s0,lado){ const gs=GG.abs.filter(g=>g.w===w&&s0>=g.d-0.6&&s0<=g.d+g.l+0.6), alto=gs.reduce((mx,g)=>Math.max(mx,g.tipo==="Janela"?num(g.a.p)+(num(g.a.a)||1):num(g.a.a)||2.1),0);
+  const g0=gs.sort((x,y)=>Math.abs(x.d+x.l/2-s0)-Math.abs(y.d+y.l/2-s0))[0], l=g0?Math.max(1.2,+(g0.l+0.6).toFixed(2)):2.0, c=g0?g0.d+g0.l/2:s0, pdW=num(S.pd)||2.8;
+  (S.marq=S.marq||[]).push({w:w.i,d:+Math.max(-w.h,c-l/2).toFixed(3),l,b:0.80,e:0.12,z:+Math.min(pdW-0.12,Math.max(2.30,alto+0.15)).toFixed(2),lado,tipo:"eps"}); return S.marq.length-1; }
+{ let down=null; const ndc=ev=>{ const r=V3.r.domElement.getBoundingClientRect(); return new V3.T.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1); };
+  document.addEventListener("pointerdown",ev=>{ if(V3.pronto&&ev.target===V3.r.domElement) down={x:ev.clientX,y:ev.clientY,t:Date.now()}; },true);
+  document.addEventListener("pointerup",ev=>{ if(!V3.pronto||ev.target!==V3.r.domElement||!down) return; const mv=Math.hypot(ev.clientX-down.x,ev.clientY-down.y); down=null; if(mv>6||!V3.grupo) return;
+    const rc=new V3.T.Raycaster(); rc.setFromCamera(ndc(ev),V3.cam); const objs=V3.grupo.children.filter(o=>o.isMesh&&(/^marq:/.test(o.name)||o.name==="base")), hs=rc.intersectObjects(objs,false); const h=hs[0]; if(!h) { if(V3.selMq>=0&&!V3.marqModo){ V3.selMq=-1; v3PainelMq(); v3Monta(); } return; }
+    if(/^marq:/.test(h.object.name)){ V3.selMq=+h.object.name.slice(5); v3PainelMq(); v3Monta(); return; }
+    if(V3.marqModo&&h.face&&Math.abs(h.face.normal.z)<0.3){ const p=[h.point.x,-h.point.y]; let bw=null; GG.walls.forEach(w=>{ const d=distSeg(p,w)-w.h; if(d<0.04&&(!bw||d<bw.d)) bw={w,d}; }); if(!bw) return;
+      const w=bw.w, s0=(p[0]-w.x1)*w.ux+(p[1]-w.y1)*w.uy, lado=((p[0]-w.x1)*w.nX+(p[1]-w.y1)*w.nY)>=0?1:-1; V3.selMq=v3NovaMq(w,s0,lado); save(); render(); v3PainelMq(); V3.msgAte=Date.now()+6000; $("v3Msg").textContent="Marquise colocada. Mude as medidas no painel ou puxe as faces dela com o ⇔ Puxar."; } },true);
+  document.addEventListener("keydown",ev=>{ if((ev.key==="Delete"||ev.key==="Backspace")&&abaAtual()==="v3"&&V3.selMq>=0&&S.marq&&S.marq[V3.selMq]){ const a=document.activeElement; if(a&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)) return; ev.preventDefault(); S.marq.splice(V3.selMq,1); V3.selMq=-1; save(); render(); v3PainelMq(); } }); }
 /* ---- Empurrar/Puxar no 3D (6.68, pedido do Eliel): arrastar a face da parede move a parede na direção dela; arrastar o topo muda o pé-direito ---- */
 { let pux=null; const raio=()=>new V3.T.Raycaster();
   const ndc=ev=>{ const r=V3.r.domElement.getBoundingClientRect(); return new V3.T.Vector2(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1); };
@@ -8870,7 +8931,13 @@ document.addEventListener("input",ev=>{ const t=ev.target; if(t.dataset&&t.datas
   const paredeEm=(p,topo)=>{ let b=null; (GG.walls||[]).forEach(w=>{ const d=distSeg(p,w)-w.h; if(d<(topo?0.02:0.04)&&(!b||d<b.d)) b={w,d}; }); return b&&b.w; };
   const etq=(ev,t)=>{ let e=$("v3Etq"); const box=$("v3d"); if(!e){ box.style.position="relative"; box.insertAdjacentHTML("beforeend",`<div id="v3Etq" style="position:absolute;pointer-events:none;background:#111827;color:#fff;font-size:12.5px;padding:3px 8px;border-radius:6px;opacity:.9;white-space:nowrap"></div>`); e=$("v3Etq"); }
     if(!t){ e.hidden=true; return; } const r=box.getBoundingClientRect(); e.hidden=false; e.textContent=t; e.style.left=(ev.clientX-r.left+14)+"px"; e.style.top=(ev.clientY-r.top+14)+"px"; };
-  document.addEventListener("pointerdown",ev=>{ if(!V3.puxar||!V3.pronto||ev.button!==0) return; const el=V3.r.domElement; if(ev.target!==el) return; const h=acerta(ev); if(!h||!h.face) return;
+  document.addEventListener("pointerdown",ev=>{ if(!V3.puxar||!V3.pronto||ev.button!==0) return; const el=V3.r.domElement; if(ev.target!==el) return;
+    { const rc=raio(); rc.setFromCamera(ndc(ev),V3.cam); const hm=rc.intersectObjects(V3.grupo?V3.grupo.children.filter(o=>/^marq:/.test(o.name)):[],false)[0];
+      if(hm&&hm.face){ const M=hm.object.userData.M, m=S.marq[M.i], T=V3.T, nz=hm.face.normal.z, n3=[M.n[0],-M.n[1]], u3=[M.u[0],-M.u[1]], fn=[hm.face.normal.x,hm.face.normal.y], dn=fn[0]*n3[0]+fn[1]*n3[1], du=fn[0]*u3[0]+fn[1]*u3[1];
+        const qual=nz>0.7?"e":nz<-0.7?"z":dn>0.7?"b":du>0.7?"l1":du<-0.7?"l0":null; if(qual){ ev.stopImmediatePropagation(); ev.preventDefault(); try{ el.setPointerCapture(ev.pointerId); }catch(e){} V3.ctl.enabled=false; V3.selMq=M.i;
+          const vert=qual==="e"||qual==="z", dc=new T.Vector3(); V3.cam.getWorldDirection(dc); dc.z=0; if(dc.lengthSq()<1e-6) dc.set(0,1,0); dc.normalize();
+          pux={tipo:"mq",qual,id:ev.pointerId,M,m,o:{...m},p0:hm.point.clone(),n3,u3,plano:vert?new T.Plane().setFromNormalAndCoplanarPoint(dc.negate(),hm.point):new T.Plane(new T.Vector3(0,0,1),-hm.point.z),ultimo:null}; return; } } }
+    const h=acerta(ev); if(!h||!h.face) return;
     const T=V3.T, nz=h.face.normal.z, p=[h.point.x,-h.point.y], topo=nz>0.7, lado=Math.abs(nz)<0.3; if(!topo&&!lado) return; const w=paredeEm(p,topo); if(!w) return;
     ev.stopImmediatePropagation(); ev.preventDefault(); try{ el.setPointerCapture(ev.pointerId); }catch(e){} V3.ctl.enabled=false;
     const orig=S.walls.map(q=>({x1:num(q.x1),y1:num(q.y1),x2:num(q.x2),y2:num(q.y2)}));
@@ -8884,6 +8951,13 @@ document.addEventListener("input",ev=>{ const t=ev.target; if(t.dataset&&t.datas
   document.addEventListener("pointermove",ev=>{ if(!V3.puxar||!V3.pronto) return; const el=V3.r.domElement;
     if(!pux){ if(ev.target===el){ const h=acerta(ev); const ok=h&&h.face&&(Math.abs(h.face.normal.z)<0.3||h.face.normal.z>0.7)&&paredeEm([h.point.x,-h.point.y],h.face.normal.z>0.7); el.style.cursor=ok?(h.face.normal.z>0.7?"ns-resize":"move"):"grab"; } return; }
     if(ev.pointerId!==pux.id) return; const T=V3.T, rc=raio(); rc.setFromCamera(ndc(ev),V3.cam); const P=new T.Vector3(); if(!rc.ray.intersectPlane(pux.plano,P)) return;
+    if(pux.tipo==="mq"){ const q=pux.qual, o=pux.o, d3=[P.x-pux.p0.x,P.y-pux.p0.y], dz=P.z-pux.p0.z, st=x=>Math.round(x/0.05)*0.05; let t="";
+      if(q==="b"){ const v=st(d3[0]*pux.n3[0]+d3[1]*pux.n3[1]); pux.m.b=+Math.max(0.2,num(o.b)+v).toFixed(3); t=`Balanço ${f(pux.m.b)} m`; }
+      else if(q==="l1"){ const v=st(d3[0]*pux.u3[0]+d3[1]*pux.u3[1]); pux.m.l=+Math.max(0.3,num(o.l)+v).toFixed(3); t=`Comprimento ${f(pux.m.l)} m`; }
+      else if(q==="l0"){ const v=st(-(d3[0]*pux.u3[0]+d3[1]*pux.u3[1])); const l=Math.max(0.3,num(o.l)+v); pux.m.d=+(num(o.d)+num(o.l)-l).toFixed(3); pux.m.l=+l.toFixed(3); t=`Comprimento ${f(l)} m`; }
+      else if(q==="e"){ const e=Math.max(0.05,Math.round((num(o.e)+dz)/0.01)*0.01); pux.m.e=+e.toFixed(2); t=`Espessura ${f(e*100,0)} cm`; }
+      else if(q==="z"){ pux.m.z=+(num(o.z)+st(dz)).toFixed(2); t=`Fundo a ${f(pux.m.z)} m`; }
+      if(t===pux.ultimo) return; pux.ultimo=t; etq(ev,t); GG=geom(); v3Monta(); return; }
     if(pux.tipo==="h"){ const pd=Math.max(2.2,Math.min(8,Math.round((pux.pd0+(P.z-pux.z0))/0.05)*0.05)); if(pd===pux.ultimo) return; pux.ultimo=pd; S.pd=+pd.toFixed(2); etq(ev,`Pé-direito ${f(pd)} m`); }
     else { const d3=[P.x-pux.p0.x,-(P.y-pux.p0.y)], d=Math.round((d3[0]*pux.n[0]+d3[1]*pux.n[1])/0.05)*0.05; if(d===pux.ultimo) return; pux.ultimo=d;
       const mv=(o,a,b)=>[+(o[a]+pux.n[0]*d).toFixed(3),+(o[b]+pux.n[1]*d).toFixed(3)];
@@ -8892,6 +8966,7 @@ document.addEventListener("input",ev=>{ const t=ev.target; if(t.dataset&&t.datas
       etq(ev,`Parede ${pux.i+1}: ${d>=0?"+":""}${f(d)} m`); }
     GG=geom(); v3Monta(); },true);
   const fim=ev=>{ if(!pux||ev.pointerId!==pux.id) return; const p0=pux; pux=null; V3.ctl.enabled=true; etq(ev,null);
+    if(p0.tipo==="mq"){ if(p0.ultimo){ save(); render(); v3PainelMq(); V3.msgAte=Date.now()+6000; $("v3Msg").textContent=`Marquise ${p0.M.i+1}: ${p0.ultimo}.`; } return; }
     if(p0.ultimo!==null&&p0.ultimo!==0){ save(); renderWalls(); loadForm&&p0.tipo==="h"&&loadForm(); render(); V3.msgAte=Date.now()+6000; $("v3Msg").textContent=p0.tipo==="h"?`Pé-direito agora ${f(num(S.pd))} m.`:`Parede ${p0.i+1} movida ${f(Math.abs(p0.ultimo))} m. As paredes ligadas acompanharam. ↶ Desfazer volta.`; } };
   document.addEventListener("pointerup",fim,true); document.addEventListener("pointercancel",fim,true); }
 // a planta mudou com o 3D aberto: remonta
