@@ -177,7 +177,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <button class="btn" id="comeceOk" type="button">Entendi</button></div>
     <div class="sheet" id="pdSheet">
       <h2>Desenhar paredes</h2>
-      <p class="cap">Como no SketchUp: escolha o <b>tipo</b> da parede (da genérica ao drywall, bloco, concreto ou vidro) e a <b>espessura</b>, toque no começo e vá tocando em cada canto; toque de novo no último ponto para parar. A parede gruda nas <b>pontas</b> (quadrado verde), no <b>meio</b> e no <b>eixo</b> de outra parede (encontro em T), trava em <b>90° e 45°</b> e se <b>alinha</b> com as pontas (linha roxa). Para a medida exata, digite o <b>comprimento</b> e toque na seta (ou Enter). Em <b>Selecionar</b>, toque numa parede para trocar tipo e espessura; arraste a bolinha da ponta para mover o canto. Dois dedos (ou a roda do mouse) dão zoom.</p>
+      <p class="cap">Como no SketchUp: escolha o <b>tipo</b> da parede (da genérica ao drywall, bloco, concreto ou vidro) e a <b>espessura</b>, toque no começo e vá tocando em cada canto; toque de novo no último ponto para parar. A parede gruda nas <b>pontas</b> (quadrado verde), no <b>meio</b> e no <b>eixo</b> de outra parede (encontro em T), trava em <b>90° e 45°</b> e se <b>alinha</b> com as pontas (linha roxa). Para a medida exata, digite o <b>comprimento</b> e toque na seta (ou Enter). Em <b>Selecionar</b>, toque numa parede para trocar tipo e espessura; arraste a bolinha da ponta para mover o canto. Em <b>Portas e janelas</b>, escolha janela, porta ou vão e toque em cima da parede: aparecem em azul as <b>distâncias até as paredes</b> dos dois lados; toque nela e <b>arraste</b> para a direita ou a esquerda (ela para no meio do vão), ou digite a distância no painel. Dois dedos (ou a roda do mouse) dão zoom.</p>
       <div id="pdBar" style="margin:4px 0 6px"></div>
       <div class="row" style="margin:0 0 6px;gap:6px;flex-wrap:wrap;align-items:center"><label style="font-size:13px;display:flex;gap:6px;align-items:center">Comprimento (m)<input type="text" inputmode="decimal" id="pdLen" placeholder="ex.: 3,50" style="width:90px"></label>
         <button class="btn" data-pdir="1,0" aria-label="Para a direita">→</button><button class="btn" data-pdir="-1,0" aria-label="Para a esquerda">←</button><button class="btn" data-pdir="0,-1" aria-label="Para cima">↑</button><button class="btn" data-pdir="0,1" aria-label="Para baixo">↓</button><button class="btn" data-pdir="1,-1" aria-label="Diagonal para cima e direita">↗</button><button class="btn" data-pdir="1,1" aria-label="Diagonal para baixo e direita">↘</button>
@@ -816,7 +816,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.59 · corte com terreno, baldrame, contrapiso, vergas, viga de respaldo e cinta da platibanda", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.60 · portas e janelas na área de desenho, com distâncias até as paredes e arrastar", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -8507,8 +8507,53 @@ $("impApply").onclick=()=>{ if(!IMP) return;
    ligadas nele vão junto). Mão: arrasta a vista. Pinça ou roda do mouse = zoom.
    ====================================================================== */
 const PD=(()=>{ let o={}; try{ o=JSON.parse(localStorage.getItem("arq-pd")||"{}")||{}; }catch(e){}
-  return {ferr:"des",tp:o.tp||"gen",e:o.e||"",grade:o.grade||0.05,orto:o.orto!==false,ini:null,cur:null,snap:null,sel:-1,vista:null,ultDir:[1,0],cadeia0:null}; })();
-const pdGuarda=()=>{ try{ localStorage.setItem("arq-pd",JSON.stringify({tp:PD.tp,e:PD.e,grade:PD.grade,orto:PD.orto})); }catch(e){} };
+  return {ferr:"des",tp:o.tp||"gen",e:o.e||"",grade:o.grade||0.05,orto:o.orto!==false,ini:null,cur:null,snap:null,sel:-1,selAb:-1,vista:null,ultDir:[1,0],cadeia0:null,
+    ab:Object.assign({t:"Janela",l:1.20,a:1.00,p:1.10,mod:""},o.ab||{})}; })();
+const pdGuarda=()=>{ try{ localStorage.setItem("arq-pd",JSON.stringify({tp:PD.tp,e:PD.e,grade:PD.grade,orto:PD.orto,ab:PD.ab})); }catch(e){} };
+/* ---- portas e janelas na área de desenho (6.60, pedido do Eliel): toca na parede para pôr; aparecem as distâncias até as paredes
+   (e até a esquadria vizinha) dos dois lados; arrasta para a direita ou a esquerda, com passo da grade e parada no meio do vão ---- */
+function abVizinhos(k){ const G=GG; if(!G||G.vazio) return null; const g=G.abs.find(x=>x.k===k); if(!g) return null; const w=g.w, faces=[0,w.L];
+  G.walls.forEach(q=>{ if(q===w) return; const den=w.ux*q.uy-w.uy*q.ux; if(Math.abs(den)<1e-6) return;
+    const s0=((q.x1-w.x1)*q.uy-(q.y1-w.y1)*q.ux)/den, t0=((q.x1-w.x1)*w.uy-(q.y1-w.y1)*w.ux)/den; if(s0<-0.02||s0>w.L+0.02||t0<-q.h-0.03||t0>q.L+q.h+0.03) return;
+    const e=q.h/Math.abs(den); faces.push(s0-e,s0+e); });
+  G.abs.forEach(o=>{ if(o.w===w&&o.k!==k) faces.push(o.d,o.d+o.l); });
+  const L1=g.d, R1=g.d+g.l, esq=Math.max(...faces.filter(v=>v<=L1+1e-6)), dir=Math.min(...faces.filter(v=>v>=R1-1e-6));
+  const inv=w.ux<-0.5||(Math.abs(w.ux)<=0.5&&w.uy<0), vert=Math.abs(w.ux)<=0.5;   // lado A = esquerda (ou de cima) na tela
+  return {g,w,esq,dir,de:L1-esq,dd:dir-R1,inv,vert,dA:inv?dir-R1:L1-esq,dB:inv?L1-esq:dir-R1,nA:vert?"de cima":"da esquerda",nB:vert?"de baixo":"da direita"}; }
+function abLado(g){ const G=GG, m=[(g.p0[0]+g.p1[0])/2,(g.p0[1]+g.p1[1])/2], o=g.w.h+0.08; for(const sg of [1,-1]){ const C=G.compAt(m[0]+g.nX*o*sg,m[1]+g.nY*o*sg); if(C&&!C.ext) return sg; } return 1; }
+function abNovo(w,s){ const A=PD.ab, l=Math.min(num(A.l)||1,Math.max(0.3,w.L-0.1)), d=Math.max(0,Math.min(w.L-l,Math.round((s-l/2)/PD.grade)*PD.grade));
+  const o={n:"",t:A.t,w:w.i,d:+d.toFixed(3),l:+l.toFixed(3),a:num(A.a)||ABDEF[A.t].a,p:A.t==="Janela"?num(A.p):0}; if(A.mod) o.mod=A.mod; S.ab.push(o); return S.ab.length-1; }
+// leva a esquadria k para perto do ponto p (na mesma parede; longe dela e perto de outra, muda de parede)
+function abArrasta(k,p,off){ const a=S.ab[k], G=GG; let w=G.walls.find(x=>x.i===Math.round(num(a.w))); if(!w) return;
+  const dW=x=>distSeg(p,{x1:x.x1,y1:x.y1,x2:x.x2,y2:x.y2}); if(dW(w)>Math.max(0.45,w.h+0.3)){ const o=G.walls.filter(x=>x!==w&&x.L>num(a.l)+0.1).sort((x,y)=>dW(x)-dW(y))[0]; if(o&&dW(o)<0.35){ w=o; a.w=o.i; off=-num(a.l)/2; } }
+  const l=num(a.l), sP=(p[0]-w.x1)*w.ux+(p[1]-w.y1)*w.uy+(off||0); a.d=+Math.max(0,Math.min(w.L-l,sP)).toFixed(3); GG=geom();
+  const V=abVizinhos(k); if(!V) return; const gr=PD.grade, tol=10*PD.vista.mpp;
+  let d=V.esq+Math.round((a.d-V.esq)/gr)*gr; const meio=(V.esq+V.dir-l)/2; if(Math.abs(a.d-meio)<tol) d=meio;   // gruda no meio do vão
+  a.d=+Math.max(0,Math.min(w.L-l,d)).toFixed(3); GG=geom(); }
+function pdPainelAb(){ const P=$("pdPanel"), a=S.ab[PD.selAb]; if(!P) return; if(!a){ P.hidden=true; return; } P.hidden=false; const k=PD.selAb, V=abVizinhos(k), g=V&&V.g;
+  P.innerHTML=`<h4>${esc(g&&g.cod||a.t)} · ${esc(a.t)} ${f(num(a.l))} x ${f(num(a.a))}${a.t==="Janela"?` · peitoril ${f(num(a.p))}`:""} · parede ${Math.round(num(a.w))+1}</h4><div class="form">
+    <label>Tipo<select data-pq="t">${["Porta","Janela","Vão"].map(t=>`<option${a.t===t?" selected":""}>${t}</option>`).join("")}</select></label>
+    ${a.t!=="Vão"?`<label>Modelo<select data-pq="mod">${opcoesMod(a.t,modPadrao(a))}</select></label>`:""}
+    <label>Largura (m)<input type="number" step="0.05" min="0.3" data-pq="l" value="${num(a.l)}"></label>
+    <label>Altura (m)<input type="number" step="0.05" data-pq="a" value="${num(a.a)}"></label>
+    ${a.t==="Janela"?`<label>Peitoril (m)<input type="number" step="0.05" data-pq="p" value="${num(a.p)}"></label>`:""}
+    ${V?`<label>Distância ${V.nA} (m)<input type="number" step="0.01" min="0" data-pq="dA" value="${+V.dA.toFixed(3)}"></label><label>Distância ${V.nB} (m)<input type="number" step="0.01" min="0" data-pq="dB" value="${+V.dB.toFixed(3)}"></label>`:""}</div>
+    <div class="row" style="margin:0;flex-wrap:wrap"><button class="btn" data-qa="meio">Centralizar no vão</button>${a.t==="Porta"?`<button class="btn" data-qa="gira">Girar / espelhar</button>`:""}<button class="btn" data-qa="padrao">Usar nas próximas</button><button class="btn dng" data-qa="del">Excluir</button><button class="btn x" data-qa="x" aria-label="Fechar">×</button></div>
+    <p class="cap" style="margin:6px 0 0">Arraste a ${a.t==="Porta"?"porta":a.t==="Janela"?"janela":"abertura"} na parede para a direita ou a esquerda: as distâncias em azul mudam junto e ela para no meio do vão. A distância é da face da parede (ou da esquadria vizinha) até a beirada do vão.</p>`;
+  P.querySelectorAll("[data-pq]").forEach(el=>el.addEventListener("change",()=>{ const c=el.dataset.pq, v=num(el.value);
+    if(c==="t"){ a.t=el.value; const df=ABDEF[a.t]; a.a=df.a; a.p=df.p; delete a.mod; delete a.mat; }
+    else if(c==="mod") a.mod=el.value;
+    else if(c==="l"&&v>=0.3){ const m=num(a.d)+num(a.l)/2; a.l=+v.toFixed(3); a.d=+Math.max(0,m-v/2).toFixed(3); }
+    else if(c==="a"&&v>0) a.a=v; else if(c==="p") a.p=v;
+    else if((c==="dA"||c==="dB")&&V&&v>=0){ const doComeco=(c==="dA")!==V.inv; a.d=+(doComeco?V.esq+v:V.dir-v-num(a.l)).toFixed(3); }
+    pdAplica(); pdPainelAb(); pdDesenha(); }));
+  P.querySelectorAll("[data-qa]").forEach(b=>b.onclick=()=>{ const q=b.dataset.qa;
+    if(q==="x"){ PD.selAb=-1; pdPainelAb(); pdDesenha(); return; }
+    if(q==="del"){ S.ab.splice(k,1); PD.selAb=-1; pdAplica(); pdPainelAb(); pdDesenha(); return; }
+    if(q==="gira"){ girarPorta(k); PD.selAb=k; pdPainelAb(); pdDesenha(); return; }
+    if(q==="padrao"){ PD.ab={t:a.t,l:num(a.l),a:num(a.a),p:num(a.p),mod:a.mod||""}; pdGuarda(); pdBarra(); pdMsg("As próximas saem com este tipo e tamanho."); return; }
+    if(q==="meio"&&V) a.d=+((V.esq+V.dir-num(a.l))/2).toFixed(3);
+    pdAplica(); pdPainelAb(); pdDesenha(); }); }
 const pdEl=()=>$("pdDes");
 function pdTam(){ const el=pdEl(); if(!el) return [800,500]; const r=el.getBoundingClientRect(); return [Math.max(200,r.width),Math.max(200,r.height)]; }
 function pdEnquadra(){ const [cw,ch]=pdTam(), W=(GG&&!GG.vazio)?GG.bb:{x0:0,y0:0,x1:10,y1:8}, mg=1.5, w=W.x1-W.x0+2*mg, h=W.y1-W.y0+2*mg, mpp=Math.max(w/cw,h/ch,0.002);
@@ -8579,9 +8624,13 @@ function pdPainel(){ const P=$("pdPanel"), w=S.walls[PD.sel]; if(!P) return; if(
       const j=S.walls.length-1; S.ab.forEach(ab=>{ if(Math.round(num(ab.w))===i&&num(ab.d)>=L0/2-1e-6){ ab.w=j; ab.d=+(num(ab.d)-L0/2).toFixed(3); } }); }
     pdAplica(); pdPainel(); pdDesenha(); }); }
 function pdBarra(){ const b=$("pdBar"); if(!b) return;
-  b.innerHTML=`<div class="row" style="margin:0;gap:6px;flex-wrap:wrap;align-items:center">${[["des","✏️ Desenhar"],["sel","👆 Selecionar"],["mao","✋ Mover vista"]].map(([v,t])=>`<button class="btn${PD.ferr===v?" pri":""}" data-pf="${v}" aria-pressed="${PD.ferr===v}">${t}</button>`).join("")}
-    <label style="font-size:13px;display:flex;gap:6px;align-items:center">Tipo<select data-pb="tp" style="width:auto;max-width:260px">${opcoesTipoPar(PD.tp)}</select></label>
-    <label style="font-size:13px;display:flex;gap:6px;align-items:center">Espessura (cm)<input type="number" step="0.5" min="2" data-pb="e" value="${PD.e}" placeholder="${f((tipoPar(PD.tp)&&tipoPar(PD.tp)[2]||num(S.esp))*100,1).replace(",0","")}" style="width:72px"></label>
+  b.innerHTML=`<div class="row" style="margin:0;gap:6px;flex-wrap:wrap;align-items:center">${[["des","✏️ Desenhar"],["ab","🚪 Portas e janelas"],["sel","👆 Selecionar"],["mao","✋ Mover vista"]].map(([v,t])=>`<button class="btn${PD.ferr===v?" pri":""}" data-pf="${v}" aria-pressed="${PD.ferr===v}">${t}</button>`).join("")}
+    ${PD.ferr==="ab"?`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Pôr<select data-pab="t" style="width:auto">${["Janela","Porta","Vão"].map(t=>`<option${PD.ab.t===t?" selected":""}>${t}</option>`).join("")}</select></label>
+    ${PD.ab.t!=="Vão"?`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Modelo<select data-pab="mod" style="width:auto;max-width:220px">${opcoesMod(PD.ab.t,PD.ab.mod||modPadrao({t:PD.ab.t,l:PD.ab.l,a:PD.ab.a}))}</select></label>`:""}
+    <label style="font-size:13px;display:flex;gap:6px;align-items:center">Largura (m)<input type="number" step="0.05" data-pab="l" value="${PD.ab.l}" style="width:70px"></label>
+    <label style="font-size:13px;display:flex;gap:6px;align-items:center">Altura (m)<input type="number" step="0.05" data-pab="a" value="${PD.ab.a}" style="width:70px"></label>
+    ${PD.ab.t==="Janela"?`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Peitoril (m)<input type="number" step="0.05" data-pab="p" value="${PD.ab.p}" style="width:70px"></label>`:""}`:`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Tipo<select data-pb="tp" style="width:auto;max-width:260px">${opcoesTipoPar(PD.tp)}</select></label>
+    <label style="font-size:13px;display:flex;gap:6px;align-items:center">Espessura (cm)<input type="number" step="0.5" min="2" data-pb="e" value="${PD.e}" placeholder="${f((tipoPar(PD.tp)&&tipoPar(PD.tp)[2]||num(S.esp))*100,1).replace(",0","")}" style="width:72px"></label>`}
     <label style="font-size:13px;display:flex;gap:6px;align-items:center">Grade<select data-pb="grade" style="width:auto">${[[0.01,"1 cm"],[0.05,"5 cm"],[0.10,"10 cm"],[0.25,"25 cm"]].map(([v,t])=>`<option value="${v}"${Math.abs(v-PD.grade)<1e-6?" selected":""}>${t}</option>`).join("")}</select></label>
     <label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" data-pb="orto"${PD.orto?" checked":""}>Travar 90° e 45°</label>
     <button class="btn" data-pz="-1" aria-label="Afastar">−</button><button class="btn" data-pz="1" aria-label="Aproximar">+</button><button class="btn" data-pz="0">Enquadrar</button></div>`; }
@@ -8594,7 +8643,18 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
   if(G){ (G.rooms||[]).forEach(r=>out.push(`<polygon points="${pts(r.poly)}" fill="#f8fafc"/>`));
     G.walls.forEach(w=>{ const cor=w.fam==="dw"||w.fam==="sf"?"#e9d8a6":w.fam==="conc"?"#b8bec8":w.fam==="vidro"?"#bfe3f2":w.fam==="mad"?"#d9b48a":w.fam==="bloco"?"#c7ccd4":"#cfd5de";
       out.push(`<polygon points="${pts(w.poly)}" fill="${PD.sel===w.i?"#93c5fd":cor}" stroke="${PD.sel===w.i?"#2563eb":"#1f2937"}" stroke-width="${PD.sel===w.i?2:1}" vector-effect="non-scaling-stroke"/>`); });
-    G.abs.forEach(g=>{ const h=g.w.h+0.004, P=[[g.p0[0]+g.nX*h,g.p0[1]+g.nY*h],[g.p1[0]+g.nX*h,g.p1[1]+g.nY*h],[g.p1[0]-g.nX*h,g.p1[1]-g.nY*h],[g.p0[0]-g.nX*h,g.p0[1]-g.nY*h]]; out.push(`<polygon points="${pts(P)}" fill="#fff" stroke="#64748b" stroke-width="1" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/>`); });
+    G.abs.forEach(g=>{ const h=g.w.h+0.004, P=[[g.p0[0]+g.nX*h,g.p0[1]+g.nY*h],[g.p1[0]+g.nX*h,g.p1[1]+g.nY*h],[g.p1[0]-g.nX*h,g.p1[1]-g.nY*h],[g.p0[0]-g.nX*h,g.p0[1]-g.nY*h]], sel=g.k===PD.selAb, cor=g.tipo==="Janela"?"#0891b2":g.tipo==="Porta"?"#b45309":"#64748b";
+      out.push(`<polygon points="${pts(P)}" fill="${sel?"#dbeafe":"#fff"}" stroke="${sel?"#2563eb":cor}" stroke-width="${sel?2:1.2}" vector-effect="non-scaling-stroke"/>`);
+      if(g.tipo==="Janela") out.push(`<line x1="${g.p0[0]}" y1="${g.p0[1]}" x2="${g.p1[0]}" y2="${g.p1[1]}" stroke="${cor}" stroke-width="1" vector-effect="non-scaling-stroke"/>`);
+      if(g.tipo==="Porta"){ const sg=abLado(g), r=g.l, hg=g.dob?g.p1:g.p0, ot=g.dob?g.p0:g.p1, ld=(g.lado||sg), tip=[hg[0]+g.nX*(r)*ld,hg[1]+g.nY*(r)*ld];
+        out.push(`<line x1="${hg[0]+g.nX*h*ld}" y1="${hg[1]+g.nY*h*ld}" x2="${tip[0]}" y2="${tip[1]}" stroke="${cor}" stroke-width="1.2" vector-effect="non-scaling-stroke"/><path d="M${tip[0]},${tip[1]} A${r},${r} 0 0 ${((ot[0]-hg[0])*g.nY-(ot[1]-hg[1])*g.nX)*ld>0?1:0} ${ot[0]+g.nX*h*ld},${ot[1]+g.nY*h*ld}" fill="none" stroke="${cor}" stroke-width="0.8" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/>`); }
+      if(g.l/m>26) out.push(tx((g.p0[0]+g.p1[0])/2-g.nX*(h+8*m)*abLado(g),(g.p0[1]+g.p1[1])/2-g.nY*(h+8*m)*abLado(g),g.cod||g.tipo[0],10,cor)); });
+    // cotas temporárias da esquadria escolhida: da parede da esquerda até ela, a largura e dela até a parede da direita
+    if(PD.selAb>=0){ const V=abVizinhos(PD.selAb); if(V){ const g=V.g, w=V.w, sg=abLado(g), o=(w.h+18*m)*sg, Pt=s=>[w.x1+w.ux*s+w.nX*o,w.y1+w.uy*s+w.nY*o], an=Math.atan2(w.uy,w.ux)*180/Math.PI, rot=an>90||an<-90?an+180:an;
+      [[V.esq,g.d],[g.d,g.d+g.l],[g.d+g.l,V.dir]].forEach(([s0,s1],j)=>{ if(s1-s0<0.005) return; const a=Pt(s0), b=Pt(s1), c=Pt((s0+s1)/2), cor=j===1?"#475569":"#2563eb";
+        out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${cor}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`);
+        [a,b].forEach(q=>out.push(`<line x1="${q[0]-w.nX*5*m}" y1="${q[1]-w.nY*5*m}" x2="${q[0]+w.nX*5*m}" y2="${q[1]+w.nY*5*m}" stroke="${cor}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`));
+        out.push(`<g transform="rotate(${rot} ${c[0]} ${c[1]})">${tx(c[0],c[1]-7*m,f(s1-s0),j===1?11:12.5,cor)}</g>`); }); } }
     (G.rooms||[]).forEach(r=>{ if(r.n&&r.area>1) out.push(tx(r.cx,r.cy,`${r.n} ${f(r.area)} m²`,11,"#64748b")); }); }
   // comprimento e espessura de cada parede (de perto)
   S.walls.forEach((w,i)=>{ const a=[num(w.x1),num(w.y1)], b=[num(w.x2),num(w.y2)], L=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L<0.05) return; const px=L/m;
@@ -8621,6 +8681,12 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
     ptrs.set(ev.pointerId,[ev.clientX,ev.clientY]);
     if(ptrs.size===2){ const [a,b]=[...ptrs.values()]; gesto={d:Math.hypot(b[0]-a[0],b[1]-a[1]),c:[(a[0]+b[0])/2,(a[1]+b[1])/2]}; toque=null; arrV=null; return; }
     const p=pdMundo(ev); toque={x:ev.clientX,y:ev.clientY,p,mao:PD.ferr==="mao"||ev.button===1||ev.button===2,v0:{...PD.vista},moveu:false};
+    if((PD.ferr==="ab"||PD.ferr==="sel")&&!toque.mao&&GG&&!GG.vazio){ const tol=8*PD.vista.mpp; let hit=null;
+      GG.abs.forEach(g=>{ const d=distSeg(p,{x1:g.p0[0],y1:g.p0[1],x2:g.p1[0],y2:g.p1[1]}); if(d<g.w.h+tol&&(!hit||d<hit.d)) hit={g,d}; });
+      if(!hit&&PD.ferr==="ab"){ let bw=null; GG.walls.forEach(w=>{ const d=distSeg(p,w); if(d<w.h+tol*1.5&&(!bw||d<bw.d)) bw={w,d}; });
+        if(bw){ const s0=(p[0]-bw.w.x1)*bw.w.ux+(p[1]-bw.w.y1)*bw.w.uy; if(bw.w.L<0.5) pdMsg("Parede curta demais."); else { const k=abNovo(bw.w,s0); GG=geom(); PD.selAb=k; PD.sel=-1; toque.novo=true; hit={g:GG.abs.find(x=>x.k===k)}; } }
+        else pdMsg("Toque em cima de uma parede para pôr a "+PD.ab.t.toLowerCase()+"."); }
+      if(hit&&hit.g){ const g=hit.g, sP=(p[0]-g.w.x1)*g.w.ux+(p[1]-g.w.y1)*g.w.uy; PD.selAb=g.k; PD.sel=-1; toque.ab={k:g.k,off:g.d-sP}; pdPainelAb(); pdDesenha(); return; } }
     if(PD.ferr==="sel"&&!toque.mao){ const tol=12*PD.vista.mpp; let v=null; S.walls.forEach((w,i)=>[[w.x1,w.y1],[w.x2,w.y2]].forEach(([x,y])=>{ const d=Math.hypot(num(x)-p[0],num(y)-p[1]); if(d<tol&&(!v||d<v.d)) v={x:num(x),y:num(y),d}; }));
       if(v){ const lig=[]; S.walls.forEach((w,i)=>[["x1","y1"],["x2","y2"]].forEach(([a,b])=>{ if(Math.hypot(num(w[a])-v.x,num(w[b])-v.y)<0.005) lig.push([i,a,b]); })); arrV={v,lig}; } }
     if(PD.ferr==="des"&&!toque.mao){ PD.cur=p; PD.snap=pdEncaixa(p,PD.ini); pdDesenha(); } },true);
@@ -8629,14 +8695,17 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
     if(gesto&&ptrs.size===2){ const [a,b]=[...ptrs.values()], d=Math.hypot(b[0]-a[0],b[1]-a[1]), c=[(a[0]+b[0])/2,(a[1]+b[1])/2]; PD.vista.x0-=(c[0]-gesto.c[0])*PD.vista.mpp; PD.vista.y0-=(c[1]-gesto.c[1])*PD.vista.mpp; pdZoom(d/gesto.d,c[0],c[1]); gesto={d,c}; return; }
     if(toque&&Math.hypot(ev.clientX-toque.x,ev.clientY-toque.y)>6) toque.moveu=true;
     if(toque&&toque.mao){ PD.vista.x0=toque.v0.x0-(ev.clientX-toque.x)*PD.vista.mpp; PD.vista.y0=toque.v0.y0-(ev.clientY-toque.y)*PD.vista.mpp; pdDesenha(); return; }
+    if(toque&&toque.ab&&toque.moveu){ abArrasta(toque.ab.k,pdMundo(ev),toque.ab.off); pdDesenha(); return; }
     if(arrV&&toque&&toque.moveu){ const p=pdMundo(ev), ig=new Set(arrV.lig.map(l=>l[0])), sn=pdEncaixa(p,null,ig); arrV.lig.forEach(([i,a,b])=>{ S.walls[i][a]=sn.p[0]; S.walls[i][b]=sn.p[1]; }); PD.snap=sn; GG=geom(); pdDesenha(); return; }
     if(PD.ferr==="des"){ const p=pdMundo(ev); PD.cur=p; PD.snap=pdEncaixa(p,PD.ini); pdDesenha(); } },true);
   const fim=ev=>{ if(!ptrs.has(ev.pointerId)) return; ptrs.delete(ev.pointerId); if(gesto){ if(ptrs.size<2) gesto=null; return; } const t=toque; toque=null; if(!t) return;
     if(t.mao) return;
+    if(t.ab){ if(t.moveu||t.novo){ pdAplica(); const V=abVizinhos(t.ab.k); pdMsg(V?`${t.novo?"Colocada":"Movida"}: ${f(V.dA)} m ${V.nA} e ${f(V.dB)} m ${V.nB}.`:""); } pdPainelAb(); pdDesenha(); return; }
     if(arrV){ const a=arrV; arrV=null; if(t.moveu){ pdAplica(); pdMsg("Canto movido."); pdDesenha(); return; } }
     const p=pdMundo(ev);
     if(PD.ferr==="des"){ pdPonto(p); return; }
-    if(PD.ferr==="sel"){ const tol=10*PD.vista.mpp; let b=null; S.walls.forEach((w,i)=>{ const d=distSeg(p,{x1:num(w.x1),y1:num(w.y1),x2:num(w.x2),y2:num(w.y2)})-espPar(w)/2; if(d<tol&&(!b||d<b.d)) b={i,d}; }); PD.sel=b?b.i:-1; pdPainel(); pdDesenha(); } };
+    if(PD.ferr==="ab"){ PD.selAb=-1; pdPainelAb(); pdDesenha(); return; }
+    if(PD.ferr==="sel"){ PD.selAb=-1; const tol=10*PD.vista.mpp; let b=null; S.walls.forEach((w,i)=>{ const d=distSeg(p,{x1:num(w.x1),y1:num(w.y1),x2:num(w.x2),y2:num(w.y2)})-espPar(w)/2; if(d<tol&&(!b||d<b.d)) b={i,d}; }); PD.sel=b?b.i:-1; pdPainel(); pdDesenha(); } };
   document.addEventListener("pointerup",fim,true); document.addEventListener("pointercancel",ev=>{ ptrs.delete(ev.pointerId); gesto=null; toque=null; arrV=null; },true);
   document.addEventListener("wheel",ev=>{ const E=el(); if(!E||!E.contains(ev.target)) return; ev.preventDefault(); pdZoom(Math.exp(-ev.deltaY*0.0015),ev.clientX,ev.clientY); },{passive:false});
   document.addEventListener("contextmenu",ev=>{ const E=el(); if(E&&E.contains(ev.target)) ev.preventDefault(); });
@@ -8645,16 +8714,20 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
     if(ev.key==="Enter"&&ativo&&ativo.id==="pdLen"){ ev.preventDefault(); pdComprimento(); return; }
     // como no SketchUp: com o desenho em andamento, os números digitados vão direto para o comprimento
     if(!emCampo&&PD.ini&&/^[0-9.,]$/.test(ev.key)){ const i=$("pdLen"); i.value=""; i.focus(); }
+    if(!emCampo&&(ev.key==="Delete"||ev.key==="Backspace")&&PD.selAb>=0){ ev.preventDefault(); S.ab.splice(PD.selAb,1); PD.selAb=-1; pdAplica(); pdPainelAb(); pdDesenha(); return; }
     if(!emCampo&&(ev.key==="Delete"||ev.key==="Backspace")&&PD.sel>=0){ ev.preventDefault(); pdApagar(PD.sel); } });
   document.addEventListener("click",ev=>{ const b=ev.target.closest("[data-pf],[data-pz],[data-pdir],[data-pdac]"); if(!b||!b.closest("#pdSheet")) return;
-    if(b.dataset.pf){ PD.ferr=b.dataset.pf; if(PD.ferr!=="des"){ PD.ini=null; PD.snap=null; } if(PD.ferr!=="sel"){ PD.sel=-1; pdPainel(); } pdBarra(); pdDesenha(); pdMsg({des:"Toque no começo da parede.",sel:"Toque numa parede para mudar tipo e espessura; arraste a bolinha da ponta para mover o canto.",mao:"Arraste para mover a vista."}[PD.ferr]); }
+    if(b.dataset.pf){ PD.ferr=b.dataset.pf; if(PD.ferr!=="des"){ PD.ini=null; PD.snap=null; } if(PD.ferr!=="sel"){ PD.sel=-1; pdPainel(); } if(PD.ferr!=="sel"&&PD.ferr!=="ab"){ PD.selAb=-1; pdPainelAb(); } pdBarra(); pdDesenha(); pdMsg({des:"Toque no começo da parede.",ab:"Toque em cima de uma parede para pôr a esquadria; toque numa porta ou janela e arraste para a direita ou a esquerda.",sel:"Toque numa parede para mudar tipo e espessura; arraste a bolinha da ponta para mover o canto.",mao:"Arraste para mover a vista."}[PD.ferr]); }
     if(b.dataset.pz!=null){ const z=+b.dataset.pz; if(z===0){ pdEnquadra(); pdDesenha(); } else pdZoom(z>0?1.4:1/1.4); }
     if(b.dataset.pdir){ const [dx,dy]=b.dataset.pdir.split(",").map(Number); pdComprimento([dx,dy]); }
     if(b.dataset.pdac==="fim") pdFim(); if(b.dataset.pdac==="desf"){ if(UNDO.length){ $("btnDesfazer").click(); PD.ini=null; pdDesenha(); } } });
-  document.addEventListener("change",ev=>{ const t=ev.target; if(!t.dataset||!t.dataset.pb) return; const c=t.dataset.pb;
+  document.addEventListener("change",ev=>{ const t=ev.target; if(t.dataset&&t.dataset.pab){ const c=t.dataset.pab, A=PD.ab;
+      if(c==="t"){ A.t=t.value; const df=ABDEF[A.t]; A.a=df.a; A.p=df.p; A.l=df.l; A.mod=""; } else if(c==="mod") A.mod=t.value; else if(num(t.value)>=0) A[c]=num(t.value);
+      pdGuarda(); pdBarra(); return; }
+    if(!t.dataset||!t.dataset.pb) return; const c=t.dataset.pb;
     if(c==="tp"){ PD.tp=t.value; PD.e=""; } if(c==="e") PD.e=num(t.value)>=2?+num(t.value).toFixed(1):""; if(c==="grade") PD.grade=num(t.value)||0.05; if(c==="orto") PD.orto=t.checked; pdGuarda(); pdBarra(); pdDesenha(); });
   window.addEventListener("resize",()=>pdDesenha()); }
-{ const r0=render; render=function(){ const v=r0.apply(this,arguments); try{ if(PD.sel>=S.walls.length) PD.sel=-1; pdDesenha(); }catch(e){} return v; }; }
+{ const r0=render; render=function(){ const v=r0.apply(this,arguments); try{ if(PD.sel>=S.walls.length) PD.sel=-1; if(PD.selAb>=S.ab.length) PD.selAb=-1; pdDesenha(); }catch(e){} return v; }; }
 setTimeout(()=>{ try{ pdBarra(); pdEnquadra(); pdDesenha(); }catch(e){} },0);
 /* ======================================================================
    ZOOM NAS PLANTAS DE EDIÇÃO (pedido do Eliel, 6.38): aproximar o desenho para pôr caixas, tubos e peças com
