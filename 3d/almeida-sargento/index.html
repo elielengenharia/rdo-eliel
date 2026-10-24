@@ -1258,15 +1258,23 @@ function splitInterior() {
     groups.forEach((gp) => {
       const m = mats[gp.materialIndex];
       if (!WALL_RE.test(m.name)) { const s = newIdx.length; for (let i = gp.start; i < gp.start + gp.count; i++) newIdx.push(vtx(i)); newGroups.push({ start: s, count: gp.count, materialIndex: gp.materialIndex }); return; }
-      const ext = [], int = [];
+      const ext = [], int = [], T = [];
+      const kk = (p) => Math.round(p.x * 200) + ',' + Math.round(p.y * 200) + ',' + Math.round(p.z * 200);
       for (let i = gp.start; i < gp.start + gp.count; i += 3) {
         const i0 = vtx(i), i1 = vtx(i + 1), i2 = vtx(i + 2);
         a.fromBufferAttribute(pos, i0).applyMatrix4(mesh.matrixWorld); b.fromBufferAttribute(pos, i1).applyMatrix4(mesh.matrixWorld); c.fromBufferAttribute(pos, i2).applyMatrix4(mesh.matrixWorld);
-        n.subVectors(c, b).cross(a.clone().sub(b)).normalize(); cen.copy(a).add(b).add(c).divideScalar(3);
+        n.subVectors(c, b).cross(a.clone().sub(b)); const area = n.length() / 2; n.normalize(); cen.copy(a).add(b).add(c).divideScalar(3);
         let inside = false;
         if (n.lengthSq() > 0.5 && !/_EXT$/.test(m.name)) inside = blocked(cen, n, 0.02) && blocked(cen, n.clone().negate(), 0.02) && blocked(cen.clone().addScaledVector(n, 0.03), UP, 0) && blocked(cen.clone().addScaledVector(n, -0.03), UP, 0);
-        (inside ? int : ext).push(i0, i1, i2);
+        T.push({ i0, i1, i2, n: n.clone(), d: n.dot(a), area, inside, k: [kk(a), kk(b), kk(c)] });
       }
+      // decide por face inteira (triângulos vizinhos no mesmo plano): evita parede meio clara, meio escura cortada na diagonal
+      const porK = new Map(); T.forEach((t, ti) => t.k.forEach((k) => { let l = porK.get(k); if (!l) porK.set(k, (l = [])); l.push(ti); }));
+      const reg = new Int32Array(T.length).fill(-1), somaIn = [], somaTot = [];
+      for (let s0 = 0; s0 < T.length; s0++) { if (reg[s0] >= 0) continue; const r = somaIn.length; somaIn.push(0); somaTot.push(0); const fila = [s0]; reg[s0] = r;
+        while (fila.length) { const ti = fila.pop(), t = T[ti]; somaTot[r] += t.area; if (t.inside) somaIn[r] += t.area;
+          for (const k of t.k) for (const u of porK.get(k)) { if (reg[u] >= 0) continue; const tu = T[u]; if (tu.n.dot(t.n) > 0.999 && Math.abs(tu.d - t.d) < 0.005) { reg[u] = r; fila.push(u); } } } }
+      T.forEach((t, ti) => { const r = reg[ti]; (somaIn[r] > somaTot[r] / 2 ? int : ext).push(t.i0, t.i1, t.i2); });
       if (ext.length) { newGroups.push({ start: newIdx.length, count: ext.length, materialIndex: gp.materialIndex }); newIdx.push(...ext); }
       if (int.length) {
         if (!intMatFor.has(m)) { const im = m.clone(); im.name = 'INT_' + INT_MATS.length; im.map = null; im.color.set('#f3f1ec'); im.roughness = 0.9; INT_MATS.push(im); matsByName[im.name] = im; intMatFor.set(m, im); }
