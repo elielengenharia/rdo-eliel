@@ -177,7 +177,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
       <button class="btn" id="comeceOk" type="button">Entendi</button></div>
     <div class="sheet" id="pdSheet">
       <h2>Desenhar paredes</h2>
-      <p class="cap">Como no SketchUp: escolha o <b>tipo</b> da parede (da genérica ao drywall, bloco, concreto ou vidro) e a <b>espessura</b>, toque no começo e vá tocando em cada canto; toque de novo no último ponto para parar. A parede gruda nas <b>pontas</b> (quadrado verde), no <b>meio</b> e no <b>eixo</b> de outra parede (encontro em T), trava em <b>90° e 45°</b> e se <b>alinha</b> com as pontas (linha roxa). Para a medida exata, digite o <b>comprimento</b> e toque na seta (ou Enter). Em <b>Selecionar</b>, toque numa parede para trocar tipo e espessura; arraste a bolinha da ponta para mover o canto. Em <b>Portas e janelas</b>, escolha janela, porta ou vão e toque em cima da parede: aparecem em azul as <b>distâncias até as paredes</b> dos dois lados; toque nela e <b>arraste</b> para a direita ou a esquerda (ela para no meio do vão), ou digite a distância no painel. Dois dedos (ou a roda do mouse) dão zoom.</p>
+      <p class="cap">Como no SketchUp: escolha o <b>tipo</b> da parede (da genérica ao drywall, bloco, concreto ou vidro) e a <b>espessura</b>, toque no começo e vá tocando em cada canto; toque de novo no último ponto para parar. A parede gruda nas <b>pontas</b> (quadrado verde), no <b>meio</b> e no <b>eixo</b> de outra parede (encontro em T), trava em <b>90° e 45°</b> e se <b>alinha</b> com as pontas (linha roxa). Para a medida exata, digite o <b>comprimento</b> e toque na seta (ou Enter). Em <b>Selecionar</b>, toque numa parede para trocar tipo e espessura; arraste a bolinha da ponta para mover o canto. Em <b>Portas e janelas</b>, escolha janela, porta ou vão e toque em cima da parede: aparecem em azul as <b>distâncias até as paredes</b> dos dois lados; toque nela e <b>arraste</b> para a direita ou a esquerda (ela para no meio do vão), ou digite a distância no painel. Para apagar, use a <b>🧽 Apagar</b> e toque na parede, porta ou janela (ou <b>↶ Desfazer</b> logo depois de errar). Dois dedos (ou a roda do mouse) dão zoom.</p>
       <div id="pdBar" style="margin:4px 0 6px"></div>
       <div class="row" style="margin:0 0 6px;gap:6px;flex-wrap:wrap;align-items:center"><label style="font-size:13px;display:flex;gap:6px;align-items:center">Comprimento (m)<input type="text" inputmode="decimal" id="pdLen" placeholder="ex.: 3,50" style="width:90px"></label>
         <button class="btn" data-pdir="1,0" aria-label="Para a direita">→</button><button class="btn" data-pdir="-1,0" aria-label="Para a esquerda">←</button><button class="btn" data-pdir="0,-1" aria-label="Para cima">↑</button><button class="btn" data-pdir="0,1" aria-label="Para baixo">↓</button><button class="btn" data-pdir="1,-1" aria-label="Diagonal para cima e direita">↗</button><button class="btn" data-pdir="1,1" aria-label="Diagonal para baixo e direita">↘</button>
@@ -816,7 +816,7 @@ svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif;fill:var(--ink
    arco, texto) em metros; a mesma lista vira SVG na tela, PDF e DXF.
    ====================================================================== */
 let PDF_SO=null;   // PDF só com estas folhas (lado), ex.: só a escada
-const VERSAO="versão 6.62 · portas e janelas na área de desenho com o símbolo certo de cada modelo", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
+const VERSAO="versão 6.63 · borracha na área de desenho: toca na parede, porta ou janela e apaga", VERSAO_N=VERSAO.split(" · ")[0];   // nas pranchas vai só o número
 const $=id=>document.getElementById(id);
 const today=new Date().toLocaleDateString("pt-BR");
 const f=(n,d=2)=>(isFinite(n)?(+n).toFixed(d).replace(".",","):"—");
@@ -8612,7 +8612,7 @@ function pdPainel(){ const P=$("pdPanel"), w=S.walls[PD.sel]; if(!P) return; if(
     <label>Comprimento (m)<input type="number" step="0.01" min="0.05" data-pp="L" value="${+L.toFixed(3)}"></label>
     <label>Situação<select data-pp="st">${ST_PAR.map(([v,t])=>`<option value="${v}"${(w.st||"e")===v?" selected":""}>${t}</option>`).join("")}</select></label></div>
     <div class="row" style="margin:0;flex-wrap:wrap"><button class="btn" data-pa="todas">Este tipo e espessura em todas as paredes</button><button class="btn" data-pa="padrao">Usar nas próximas</button><button class="btn" data-pa="meio">Dividir ao meio</button><button class="btn dng" data-pa="del">Excluir parede</button><button class="btn x" data-pa="x" aria-label="Fechar">×</button></div>
-    <p class="cap" style="margin:6px 0 0">${T[0]==="gen"?`Genérica: usa a espessura do projeto (${f(num(S.esp)*100,0)} cm, em Dados).`:esc(T[1])+"."} A parede cresce para os dois lados do eixo. Para mover um canto, arraste a bolinha da ponta.</p>`;
+    <p class="cap" style="margin:6px 0 0">${T[0]==="gen"?`Genérica: usa a espessura do projeto (${f(num(S.esp)*100,0)} cm, em Dados).`:esc(T[1])+"."} A parede cresce para os dois lados do eixo. Para mover um canto, arraste a bolinha da ponta. Para apagar várias de uma vez, use a 🧽 Apagar.</p>`;
   P.querySelectorAll("[data-pp]").forEach(el=>el.addEventListener("change",()=>{ const c=el.dataset.pp;
     if(c==="tp"){ if(el.value==="gen") delete w.tp; else w.tp=el.value; delete w.e; if(famPar(w)==="dw") w.mat="dw"; else delete w.mat; }
     if(c==="e"){ const v=num(el.value)/100; if(v>=0.02){ const Td=tipoPar(w.tp), base=Td&&Td[2]>0?Td[2]:num(S.esp); if(Math.abs(v-base)<1e-4) delete w.e; else w.e=+v.toFixed(3); } }
@@ -8629,7 +8629,7 @@ function pdPainel(){ const P=$("pdPanel"), w=S.walls[PD.sel]; if(!P) return; if(
       const j=S.walls.length-1; S.ab.forEach(ab=>{ if(Math.round(num(ab.w))===i&&num(ab.d)>=L0/2-1e-6){ ab.w=j; ab.d=+(num(ab.d)-L0/2).toFixed(3); } }); }
     pdAplica(); pdPainel(); pdDesenha(); }); }
 function pdBarra(){ const b=$("pdBar"); if(!b) return;
-  b.innerHTML=`<div class="row" style="margin:0;gap:6px;flex-wrap:wrap;align-items:center">${[["des","✏️ Desenhar"],["ab","🚪 Portas e janelas"],["sel","👆 Selecionar"],["mao","✋ Mover vista"]].map(([v,t])=>`<button class="btn${PD.ferr===v?" pri":""}" data-pf="${v}" aria-pressed="${PD.ferr===v}">${t}</button>`).join("")}
+  b.innerHTML=`<div class="row" style="margin:0;gap:6px;flex-wrap:wrap;align-items:center">${[["des","✏️ Desenhar"],["ab","🚪 Portas e janelas"],["sel","👆 Selecionar"],["apg","🧽 Apagar"],["mao","✋ Mover vista"]].map(([v,t])=>`<button class="btn${PD.ferr===v?" pri":""}" data-pf="${v}" aria-pressed="${PD.ferr===v}">${t}</button>`).join("")}
     ${PD.ferr==="ab"?`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Pôr<select data-pab="t" style="width:auto">${["Janela","Porta","Vão"].map(t=>`<option${PD.ab.t===t?" selected":""}>${t}</option>`).join("")}</select></label>
     ${PD.ab.t!=="Vão"?`<label style="font-size:13px;display:flex;gap:6px;align-items:center">Modelo<select data-pab="mod" style="width:auto;max-width:220px">${opcoesMod(PD.ab.t,PD.ab.mod||modPadrao({t:PD.ab.t,l:PD.ab.l,a:PD.ab.a}))}</select></label>`:""}
     <label style="font-size:13px;display:flex;gap:6px;align-items:center">Largura (m)<input type="number" step="0.05" data-pab="l" value="${PD.ab.l}" style="width:70px"></label>
@@ -8715,6 +8715,12 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
     if(arrV){ const a=arrV; arrV=null; if(t.moveu){ pdAplica(); pdMsg("Canto movido."); pdDesenha(); return; } }
     const p=pdMundo(ev);
     if(PD.ferr==="des"){ pdPonto(p); return; }
+    if(PD.ferr==="apg"){ const tol=10*PD.vista.mpp; let ha=null, hw=null;   // 6.63: borracha: toca e apaga (porta/janela primeiro, senão a parede)
+      (GG&&GG.abs||[]).forEach(g=>{ const d=distSeg(p,{x1:g.p0[0],y1:g.p0[1],x2:g.p1[0],y2:g.p1[1]}); if(d<g.w.h+tol&&(!ha||d<ha.d)) ha={k:g.k,d,n:g.cod||g.tipo}; });
+      if(ha){ S.ab.splice(ha.k,1); PD.selAb=-1; pdAplica(); pdMsg(`${ha.n} apagada. Para voltar, toque em ↶ Desfazer.`); pdDesenha(); return; }
+      S.walls.forEach((w,i)=>{ const d=distSeg(p,{x1:num(w.x1),y1:num(w.y1),x2:num(w.x2),y2:num(w.y2)})-espPar(w)/2; if(d<tol&&(!hw||d<hw.d)) hw={i,d}; });
+      if(hw){ const L=Math.hypot(num(S.walls[hw.i].x2)-num(S.walls[hw.i].x1),num(S.walls[hw.i].y2)-num(S.walls[hw.i].y1)); pdApagar(hw.i); pdMsg(`Parede de ${f(L)} m apagada (com as portas e janelas dela). Para voltar, toque em ↶ Desfazer.`); }
+      else pdMsg("Toque em cima da parede, porta ou janela que quer apagar."); return; }
     if(PD.ferr==="ab"){ PD.selAb=-1; pdPainelAb(); pdDesenha(); return; }
     if(PD.ferr==="sel"){ PD.selAb=-1; const tol=10*PD.vista.mpp; let b=null; S.walls.forEach((w,i)=>{ const d=distSeg(p,{x1:num(w.x1),y1:num(w.y1),x2:num(w.x2),y2:num(w.y2)})-espPar(w)/2; if(d<tol&&(!b||d<b.d)) b={i,d}; }); PD.sel=b?b.i:-1; pdPainel(); pdDesenha(); } };
   document.addEventListener("pointerup",fim,true); document.addEventListener("pointercancel",ev=>{ ptrs.delete(ev.pointerId); gesto=null; toque=null; arrV=null; },true);
@@ -8728,10 +8734,10 @@ function pdDesenha(){ const el=pdEl(); if(!el||el.closest("[hidden]")) return; i
     if(!emCampo&&(ev.key==="Delete"||ev.key==="Backspace")&&PD.selAb>=0){ ev.preventDefault(); S.ab.splice(PD.selAb,1); PD.selAb=-1; pdAplica(); pdPainelAb(); pdDesenha(); return; }
     if(!emCampo&&(ev.key==="Delete"||ev.key==="Backspace")&&PD.sel>=0){ ev.preventDefault(); pdApagar(PD.sel); } });
   document.addEventListener("click",ev=>{ const b=ev.target.closest("[data-pf],[data-pz],[data-pdir],[data-pdac]"); if(!b||!b.closest("#pdSheet")) return;
-    if(b.dataset.pf){ PD.ferr=b.dataset.pf; if(PD.ferr!=="des"){ PD.ini=null; PD.snap=null; } if(PD.ferr!=="sel"){ PD.sel=-1; pdPainel(); } if(PD.ferr!=="sel"&&PD.ferr!=="ab"){ PD.selAb=-1; pdPainelAb(); } pdBarra(); pdDesenha(); pdMsg({des:"Toque no começo da parede.",ab:"Toque em cima de uma parede para pôr a esquadria; toque numa porta ou janela e arraste para a direita ou a esquerda.",sel:"Toque numa parede para mudar tipo e espessura; arraste a bolinha da ponta para mover o canto.",mao:"Arraste para mover a vista."}[PD.ferr]); }
+    if(b.dataset.pf){ PD.ferr=b.dataset.pf; if(PD.ferr!=="des"){ PD.ini=null; PD.snap=null; } if(PD.ferr!=="sel"){ PD.sel=-1; pdPainel(); } if(PD.ferr!=="sel"&&PD.ferr!=="ab"){ PD.selAb=-1; pdPainelAb(); } pdBarra(); pdDesenha(); pdMsg({des:"Toque no começo da parede.",apg:"Borracha: toque na parede, porta ou janela para apagar. Errou? ↶ Desfazer.",ab:"Toque em cima de uma parede para pôr a esquadria; toque numa porta ou janela e arraste para a direita ou a esquerda.",sel:"Toque numa parede para mudar tipo e espessura; arraste a bolinha da ponta para mover o canto.",mao:"Arraste para mover a vista."}[PD.ferr]); }
     if(b.dataset.pz!=null){ const z=+b.dataset.pz; if(z===0){ pdEnquadra(); pdDesenha(); } else pdZoom(z>0?1.4:1/1.4); }
     if(b.dataset.pdir){ const [dx,dy]=b.dataset.pdir.split(",").map(Number); pdComprimento([dx,dy]); }
-    if(b.dataset.pdac==="fim") pdFim(); if(b.dataset.pdac==="desf"){ if(UNDO.length){ $("btnDesfazer").click(); PD.ini=null; pdDesenha(); } } });
+    if(b.dataset.pdac==="fim") pdFim(); if(b.dataset.pdac==="desf"){ if(UNDO.length){ $("btnDesfazer").click(); PD.ini=null; PD.selAb=-1; PD.sel=-1; pdPainel(); pdDesenha(); pdMsg("Desfeito."); } else pdMsg("Nada para desfazer."); } });
   document.addEventListener("change",ev=>{ const t=ev.target;
     if(t.matches&&t.matches("[data-pbon]")){ PD.bon=Math.max(0,num(t.value)); pdGuarda(); pdDesenha(); if(PD.selAb>=0) pdPainelAb(); return; }
     if(t.matches&&t.matches("[data-pcot]")){ PD.cotasTodas=t.checked; pdGuarda(); pdDesenha(); return; }
